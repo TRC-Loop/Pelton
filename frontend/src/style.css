@@ -1,0 +1,27 @@
+:root {
+    --font-sans: "Familjen Grotesk", -apple-system, BlinkMacSystemFont, "Segoe UI",
+    "Roboto", "Helvetica Neue", sans-serif;
+    --font-mono: "Spline Sans Mono", ui-monospace, "SFMono-Regular", "Menlo",
+    "Consolas", monospace;
+}
+
+html {
+    background-color: rgba(27, 38, 54, 1);
+    text-align: center;
+    color: white;
+}
+
+body {
+    margin: 0;
+    color: white;
+    font-family: var(--font-sans);
+}
+
+code, pre, .mono {
+    font-family: var(--font-mono);
+}
+
+#app {
+    height: 100vh;
+    text-align: center;
+}

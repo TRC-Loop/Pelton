@@ -1,0 +1,9 @@
+build/bin
+node_modules
+frontend/dist
+
+# compiled binaries at repo root
+/Pelton
+/Pelton.exe
+
+.DS_Store
