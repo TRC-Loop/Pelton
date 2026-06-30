@@ -1,0 +1,179 @@
+/*
+  tokens.css is the single source of truth for every color, space, radius, font
+  and size in pelton. a theme is nothing more than one of these named token sets.
+  the default theme lives here as light and dark variants so that "more themes
+  later" means shipping another token set in this exact shape, not refactoring
+  components. user generated themes would be another file overriding the same
+  variables.
+
+  hard rule: components reference these variables and never literal values. a hex
+  or px sneaking into a component is a bug.
+
+  token contract (the complete surface every theme must define):
+    surfaces   --surface-base/raised/overlay/sunken/hover, --selection-bg
+    text       --text-primary/secondary/tertiary/inverse, --link
+    borders    --border-subtle/default/strong, --hairline (width)
+    accent     --accent (runtime), --accent-fg (runtime), --selection-bg, --link
+    semantic   --success/-bg, --warning/-bg, --danger/-bg
+    radii      --radius-control, --radius-card, --radius-none
+    fonts      --font-ui, --font-mono
+    type       --fz-list, --fz-body, --fz-label, --fz-meta, --fz-heading, weights
+    spacing    --space-1..6 (fixed) plus density driven row/pane spacing
+    elevation  --shadow-overlay
+
+  accent handling:
+    --accent is injected at runtime from the user's chosen hex (default #465AF2).
+    --accent-fg (black or white) is computed in accent.ts from the hex luminance
+    so text on an accent surface stays legible for any chosen color.
+    --selection-bg and --link are derived from --accent here with color-mix so we
+    only ever ask the user for one color. dark mode lightens the link derivation.
+*/
+
+:root {
+  /* fonts. bundled locally via @fontsource, no runtime cdn. */
+  --font-ui: "Familjen Grotesk", system-ui, -apple-system, sans-serif;
+  --font-mono: "Spline Sans Mono", ui-monospace, "SFMono-Regular", monospace;
+
+  /* type sizes. message list 13px, body 13-14, labels/meta 11-12. */
+  --fz-meta: 11px;
+  --fz-label: 12px;
+  --fz-list: 13px;
+  --fz-body: 14px;
+  --fz-heading: 16px;
+  --fz-title: 20px;
+
+  --fw-regular: 400;
+  --fw-medium: 500;
+  --fw-semibold: 600;
+  --fw-bold: 700;
+
+  /* fixed spacing scale. density only swaps the row/pane tokens further down. */
+  --space-1: 2px;
+  --space-2: 4px;
+  --space-3: 8px;
+  --space-4: 12px;
+  --space-5: 16px;
+  --space-6: 24px;
+
+  /* radii. 5px for controls and cards; 0 for single-sided accent borders. */
+  --radius-control: 5px;
+  --radius-card: 5px;
+  --radius-none: 0;
+
+  /* borders are hairlines throughout. */
+  --hairline: 0.5px;
+
+  /* accent. --accent and --accent-fg are overwritten at runtime by accent.ts.
+     the derivations below stay in css so they track whatever accent is set. */
+  --accent: #465af2;
+  --accent-fg: #ffffff;
+  --selection-bg: color-mix(in srgb, var(--accent) 14%, transparent);
+  --selection-bg-strong: color-mix(in srgb, var(--accent) 22%, transparent);
+  --link: var(--accent);
+
+  /* elevation, used sparingly for overlays and popovers. */
+  --shadow-overlay: 0 8px 24px rgba(0, 0, 0, 0.18);
+
+  /* default density (medium) row + pane spacing. overridden per density below. */
+  --row-pad-y: 8px;
+  --row-pad-x: 12px;
+  --row-gap: 3px;
+  --list-line-height: 1.4;
+  --pane-pad: 16px;
+  --control-height: 30px;
+  --stack-gap: 10px;
+}
+
+/* light theme (default). */
+:root,
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  --surface-base: #f6f6f7;
+  --surface-raised: #ffffff;
+  --surface-overlay: #ffffff;
+  --surface-sunken: #efeff1;
+  --surface-hover: #ececef;
+
+  --text-primary: #1a1b1e;
+  --text-secondary: #4a4d54;
+  --text-tertiary: #797d86;
+  --text-inverse: #ffffff;
+
+  --border-subtle: rgba(0, 0, 0, 0.06);
+  --border-default: rgba(0, 0, 0, 0.12);
+  --border-strong: rgba(0, 0, 0, 0.22);
+
+  --success: #1a7f4b;
+  --success-bg: color-mix(in srgb, #1a7f4b 12%, transparent);
+  --warning: #9a6700;
+  --warning-bg: color-mix(in srgb, #9a6700 14%, transparent);
+  --danger: #c0392b;
+  --danger-bg: color-mix(in srgb, #c0392b 12%, transparent);
+}
+
+/* dark theme. every token has a dark value so the toggle never leaves a gap. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --surface-base: #111214;
+  --surface-raised: #1a1c1f;
+  --surface-overlay: #222428;
+  --surface-sunken: #161719;
+  --surface-hover: #25282d;
+
+  --text-primary: #ecedee;
+  --text-secondary: #b4b7bd;
+  --text-tertiary: #7e828b;
+  --text-inverse: #ffffff;
+
+  --border-subtle: rgba(255, 255, 255, 0.06);
+  --border-default: rgba(255, 255, 255, 0.12);
+  --border-strong: rgba(255, 255, 255, 0.22);
+
+  /* lighten the link derivation so the accent reads on dark surfaces. */
+  --link: color-mix(in srgb, var(--accent) 72%, white);
+  --selection-bg: color-mix(in srgb, var(--accent) 22%, transparent);
+  --selection-bg-strong: color-mix(in srgb, var(--accent) 32%, transparent);
+
+  --success: #3fb27a;
+  --success-bg: color-mix(in srgb, #3fb27a 16%, transparent);
+  --warning: #d9a441;
+  --warning-bg: color-mix(in srgb, #d9a441 16%, transparent);
+  --danger: #e5675a;
+  --danger-bg: color-mix(in srgb, #e5675a 16%, transparent);
+
+  --shadow-overlay: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+/* density variants. these swap only spacing and line-height tokens, so every
+   component stays density-agnostic. medium is the default already on :root. */
+:root[data-density="compact"] {
+  --row-pad-y: 5px;
+  --row-pad-x: 10px;
+  --row-gap: 2px;
+  --list-line-height: 1.3;
+  --pane-pad: 12px;
+  --control-height: 27px;
+  --stack-gap: 8px;
+}
+
+:root[data-density="medium"] {
+  --row-pad-y: 8px;
+  --row-pad-x: 12px;
+  --row-gap: 3px;
+  --list-line-height: 1.4;
+  --pane-pad: 16px;
+  --control-height: 30px;
+  --stack-gap: 10px;
+}
+
+:root[data-density="luxe"] {
+  --row-pad-y: 13px;
+  --row-pad-x: 16px;
+  --row-gap: 5px;
+  --list-line-height: 1.55;
+  --pane-pad: 22px;
+  --control-height: 34px;
+  --stack-gap: 14px;
+}

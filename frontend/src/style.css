@@ -1,27 +1,103 @@
-:root {
-    --font-sans: "Familjen Grotesk", -apple-system, BlinkMacSystemFont, "Segoe UI",
-    "Roboto", "Helvetica Neue", sans-serif;
-    --font-mono: "Spline Sans Mono", ui-monospace, "SFMono-Regular", "Menlo",
-    "Consolas", monospace;
+/*
+  global base styles. all values come from tokens.css; this file only wires the
+  reset and base element styling to those tokens. no literal colors live here.
+*/
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
 }
 
-html {
-    background-color: rgba(27, 38, 54, 1);
-    text-align: center;
-    color: white;
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
 }
 
 body {
-    margin: 0;
-    color: white;
-    font-family: var(--font-sans);
-}
-
-code, pre, .mono {
-    font-family: var(--font-mono);
+  background-color: var(--surface-base);
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  font-size: var(--fz-body);
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  /* desktop app: never select chrome text or rubber-band scroll the window. the
+     -webkit- prefix is required: the macos webview (wkwebview) ignores the
+     unprefixed property, which is why selection leaked everywhere before. */
+  -webkit-user-select: none;
+  user-select: none;
+  overflow: hidden;
 }
 
 #app {
-    height: 100vh;
-    text-align: center;
+  height: 100vh;
+  width: 100vw;
+}
+
+code,
+pre,
+.mono {
+  font-family: var(--font-mono);
+}
+
+button {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+}
+
+input,
+textarea,
+select {
+  font-family: inherit;
+  font-size: inherit;
+  color: var(--text-primary);
+  /* form fields are the one place text selection should work. */
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+a {
+  color: var(--link);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+/* a single, consistent focus ring for keyboard users, using the accent. */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+  border-radius: var(--radius-control);
+}
+
+/* thin, theme-aware scrollbars. */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 999px;
+  border: 3px solid transparent;
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-tertiary);
+  background-clip: padding-box;
+  border: 3px solid transparent;
+}
+
+/* allow real text selection inside rendered mail bodies and editors. */
+.selectable,
+.selectable * {
+  -webkit-user-select: text;
+  user-select: text;
 }

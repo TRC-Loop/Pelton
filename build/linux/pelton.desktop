@@ -1,0 +1,14 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Pelton
+GenericName=Email Client
+Comment=Open-source desktop email client
+Exec=Pelton %u
+Icon=pelton
+Terminal=false
+Categories=Network;Email;Office;
+Keywords=email;mail;imap;smtp;inbox;
+StartupNotify=true
+StartupWMClass=Pelton
+MimeType=x-scheme-handler/mailto;

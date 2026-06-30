@@ -2,12 +2,19 @@
   "$schema": "https://wails.io/schemas/config.v2.json",
   "name": "Pelton",
   "outputfilename": "Pelton",
-  "frontend:install": "npm install",
-  "frontend:build": "npm run build",
-  "frontend:dev:watcher": "npm run dev",
+  "frontend:install": "pnpm install",
+  "frontend:build": "pnpm run build",
+  "frontend:dev:watcher": "pnpm run dev",
   "frontend:dev:serverUrl": "auto",
   "author": {
-    "name": "Arne K. (TRC-Loop)",
+    "name": "Arne K.",
     "email": "me@arne.sh"
+  },
+  "info": {
+    "companyName": "Arne K.",
+    "productName": "Pelton",
+    "productVersion": "0.1.0",
+    "copyright": "Copyright (c) 2026 Arne K. and the Pelton contributors. Licensed under GPL-3.0-or-later.",
+    "comments": "Open-source desktop email client. https://github.com/TRC-Loop/Pelton"
   }
 }

@@ -1,0 +1,63 @@
+<script lang="ts">
+  // a segmented switch for the three compose editor modes. wysiwyg is marked as
+  // basic since it is the stubbed editor for now.
+  import { createEventDispatcher } from 'svelte'
+  import type { EditorMode } from '../../lib/types'
+
+  export let mode: EditorMode
+
+  const dispatch = createEventDispatcher<{ change: EditorMode }>()
+
+  const modes: { key: EditorMode; label: string; title: string }[] = [
+    { key: 'plaintext', label: 'Plain', title: 'Plain text' },
+    { key: 'markdown', label: 'Markdown', title: 'Markdown, rendered to html on send' },
+    { key: 'wysiwyg', label: 'Rich', title: 'Rich text (basic editor for now)' },
+  ]
+</script>
+
+<div class="switch" role="tablist" aria-label="Editor mode">
+  {#each modes as m (m.key)}
+    <button
+      type="button"
+      role="tab"
+      aria-selected={mode === m.key}
+      class:active={mode === m.key}
+      title={m.title}
+      on:click={() => dispatch('change', m.key)}
+    >
+      {m.label}
+    </button>
+  {/each}
+</div>
+
+<style>
+  .switch {
+    display: inline-flex;
+    border: var(--hairline) solid var(--border-default);
+    border-radius: var(--radius-control);
+    overflow: hidden;
+  }
+
+  button {
+    border: none;
+    background: var(--surface-raised);
+    color: var(--text-secondary);
+    padding: var(--space-1) var(--space-3);
+    font-size: var(--fz-meta);
+    cursor: pointer;
+    border-right: var(--hairline) solid var(--border-subtle);
+  }
+
+  button:last-child {
+    border-right: none;
+  }
+
+  button:hover {
+    background: var(--surface-hover);
+  }
+
+  button.active {
+    background: var(--selection-bg);
+    color: var(--text-primary);
+  }
+</style>

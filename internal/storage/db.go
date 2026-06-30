@@ -1,0 +1,268 @@
+// Package storage is the local SQLite cache and settings store for Pelton.
+//
+// It persists everything the imap layer fetches (folders, message metadata,
+// bodies and attachments) so the app can render without hitting the server on
+// every read, plus a key value store for ui preferences. It never holds
+// credentials: those live in the os keyring, referenced only by account id.
+//
+// The driver is the pure go modernc.org/sqlite so cross compiling needs no cgo.
+package storage
+
+import (
+	"context"
+	"database/sql"
+	"embed"
+	"fmt"
+	"os"
+	"path/filepath"
+	"sort"
+	"strconv"
+	"strings"
+	"time"
+
+	_ "modernc.org/sqlite"
+)
+
+const (
+	driverName = "sqlite"
+
+	appDirName         = "Pelton"
+	dbFileName         = "pelton.db"
+	attachmentsDirName = "attachments"
+
+	// dirPerm is used for every directory we create under the config dir.
+	dirPerm = 0o755
+
+	migrationsDir   = "migrations"
+	migrationSuffix = ".sql"
+)
+
+// timestampLayout is the single format used for every text timestamp column.
+const timestampLayout = time.RFC3339
+
+//go:embed migrations/*.sql
+var migrationFiles embed.FS
+
+// execer is satisfied by both *sql.DB and *sql.Tx so query helpers can run
+// either standalone or inside a transaction.
+type execer interface {
+	ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error)
+	QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error)
+	QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row
+}
+
+// DB is a handle to the Pelton store. It owns the sql connection pool and the
+// on disk attachments root.
+type DB struct {
+	sql            *sql.DB
+	attachmentsDir string
+}
+
+// DefaultPath returns the database path inside the user config directory,
+// os.UserConfigDir()/Pelton/pelton.db.
+func DefaultPath() (string, error) {
+	dir, err := os.UserConfigDir()
+	if err != nil {
+		return "", fmt.Errorf("storage: locate user config dir: %w", err)
+	}
+	return filepath.Join(dir, appDirName, dbFileName), nil
+}
+
+// Open opens (creating it and its parent directory if needed) the database at
+// path and configures the connection pool. Attachments are stored alongside it
+// under an "attachments" directory in the same folder. Call RunMigrations next.
+func Open(path string) (*DB, error) {
+	baseDir := filepath.Dir(path)
+	if err := os.MkdirAll(baseDir, dirPerm); err != nil {
+		return nil, fmt.Errorf("storage: create db dir %q: %w", baseDir, err)
+	}
+
+	sqlDB, err := sql.Open(driverName, dataSourceName(path))
+	if err != nil {
+		return nil, fmt.Errorf("storage: open db %q: %w", path, err)
+	}
+	if err := sqlDB.Ping(); err != nil {
+		return nil, fmt.Errorf("storage: ping db %q: %w", path, err)
+	}
+
+	return &DB{
+		sql:            sqlDB,
+		attachmentsDir: filepath.Join(baseDir, attachmentsDirName),
+	}, nil
+}
+
+// dataSourceName builds the dsn. the pragmas are set as query params so they
+// apply to every connection the pool opens, not just the first one. wal
+// improves read and write concurrency, foreign_keys enforces the cascades.
+func dataSourceName(path string) string {
+	const params = "_pragma=journal_mode(WAL)&_pragma=foreign_keys(1)&_pragma=busy_timeout(5000)"
+	return fmt.Sprintf("file:%s?%s", path, params)
+}
+
+// Close closes the underlying connection pool.
+func (d *DB) Close() error {
+	if err := d.sql.Close(); err != nil {
+		return fmt.Errorf("storage: close db: %w", err)
+	}
+	return nil
+}
+
+// migration is one embedded sql file paired with its numeric version.
+type migration struct {
+	version int
+	name    string
+	sql     string
+}
+
+// RunMigrations applies every embedded migration that has not run yet, in
+// version order, each in its own transaction. It is idempotent and safe to call
+// on every startup.
+func (d *DB) RunMigrations(ctx context.Context) error {
+	if err := d.ensureMigrationsTable(ctx); err != nil {
+		return err
+	}
+
+	applied, err := d.appliedMigrations(ctx)
+	if err != nil {
+		return err
+	}
+
+	migrations, err := loadMigrations()
+	if err != nil {
+		return err
+	}
+
+	for _, m := range migrations {
+		if applied[m.version] {
+			continue
+		}
+		if err := d.applyMigration(ctx, m); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+const createMigrationsTable = `
+CREATE TABLE IF NOT EXISTS schema_migrations (
+    id         INTEGER PRIMARY KEY,
+    applied_at TEXT NOT NULL
+)`
+
+func (d *DB) ensureMigrationsTable(ctx context.Context) error {
+	if _, err := d.sql.ExecContext(ctx, createMigrationsTable); err != nil {
+		return fmt.Errorf("storage: create schema_migrations: %w", err)
+	}
+	return nil
+}
+
+func (d *DB) appliedMigrations(ctx context.Context) (map[int]bool, error) {
+	rows, err := d.sql.QueryContext(ctx, `SELECT id FROM schema_migrations`)
+	if err != nil {
+		return nil, fmt.Errorf("storage: read schema_migrations: %w", err)
+	}
+	defer rows.Close()
+
+	applied := make(map[int]bool)
+	for rows.Next() {
+		var id int
+		if err := rows.Scan(&id); err != nil {
+			return nil, fmt.Errorf("storage: scan migration id: %w", err)
+		}
+		applied[id] = true
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("storage: iterate migrations: %w", err)
+	}
+	return applied, nil
+}
+
+func (d *DB) applyMigration(ctx context.Context, m migration) error {
+	tx, err := d.sql.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("storage: begin migration %d: %w", m.version, err)
+	}
+	defer tx.Rollback()
+
+	if _, err := tx.ExecContext(ctx, m.sql); err != nil {
+		return fmt.Errorf("storage: run migration %d (%s): %w", m.version, m.name, err)
+	}
+	const insert = `INSERT INTO schema_migrations (id, applied_at) VALUES (?, ?)`
+	if _, err := tx.ExecContext(ctx, insert, m.version, nowText()); err != nil {
+		return fmt.Errorf("storage: record migration %d: %w", m.version, err)
+	}
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("storage: commit migration %d: %w", m.version, err)
+	}
+	return nil
+}
+
+// loadMigrations reads the embedded sql files and sorts them by the numeric
+// prefix in their filename, for example 0001_init.sql.
+func loadMigrations() ([]migration, error) {
+	entries, err := migrationFiles.ReadDir(migrationsDir)
+	if err != nil {
+		return nil, fmt.Errorf("storage: read migrations dir: %w", err)
+	}
+
+	migrations := make([]migration, 0, len(entries))
+	for _, e := range entries {
+		if e.IsDir() || !strings.HasSuffix(e.Name(), migrationSuffix) {
+			continue
+		}
+		version, err := versionFromName(e.Name())
+		if err != nil {
+			return nil, err
+		}
+		content, err := migrationFiles.ReadFile(migrationsDir + "/" + e.Name())
+		if err != nil {
+			return nil, fmt.Errorf("storage: read migration %q: %w", e.Name(), err)
+		}
+		migrations = append(migrations, migration{version: version, name: e.Name(), sql: string(content)})
+	}
+
+	sort.Slice(migrations, func(i, j int) bool {
+		return migrations[i].version < migrations[j].version
+	})
+	return migrations, nil
+}
+
+// versionFromName parses the leading digits of a migration filename.
+func versionFromName(name string) (int, error) {
+	prefix := name
+	if i := strings.IndexByte(name, '_'); i >= 0 {
+		prefix = name[:i]
+	}
+	version, err := strconv.Atoi(prefix)
+	if err != nil {
+		return 0, fmt.Errorf("storage: bad migration name %q: %w", name, err)
+	}
+	return version, nil
+}
+
+// nowText returns the current utc time in the shared timestamp layout.
+func nowText() string {
+	return time.Now().UTC().Format(timestampLayout)
+}
+
+// parseTime parses a stored timestamp, tolerating an empty string as the zero
+// time so optional date columns do not error.
+func parseTime(s string) (time.Time, error) {
+	if s == "" {
+		return time.Time{}, nil
+	}
+	t, err := time.Parse(timestampLayout, s)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("storage: parse time %q: %w", s, err)
+	}
+	return t, nil
+}
+
+// formatTime renders a time for storage, leaving the zero time as an empty
+// string rather than a misleading year zero timestamp.
+func formatTime(t time.Time) string {
+	if t.IsZero() {
+		return ""
+	}
+	return t.UTC().Format(timestampLayout)
+}

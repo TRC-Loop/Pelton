@@ -14,7 +14,10 @@
      */
     "allowJs": true,
     "checkJs": true,
-    "isolatedModules": true
+    "isolatedModules": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "moduleResolution": "bundler"
   },
   "include": [
     "src/**/*.d.ts",

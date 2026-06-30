@@ -1,0 +1,164 @@
+<script lang="ts">
+  // the toast stack for transient feedback (queued, saved, errors). each toast
+  // shows a kind icon, its message and a close button, and animates in and out.
+  // the stack anchors to the corner or edge the user chose in settings. purely
+  // ephemeral ui state.
+  import { fly, fade } from 'svelte/transition'
+  import { IconCircleCheck, IconAlertCircle, IconInfoCircle, IconX } from '@tabler/icons-svelte'
+  import { toasts, dismiss } from '../../stores/toast'
+  import { prefs } from '../../stores/prefs'
+  import type { ToastKind } from '../../stores/toast'
+  import type { ToastPosition } from '../../lib/types'
+
+  const icons = {
+    success: IconCircleCheck,
+    error: IconAlertCircle,
+    info: IconInfoCircle,
+  }
+
+  $: position = ($prefs.toastPosition as ToastPosition) ?? 'bottom-right'
+  // toasts fly in from the nearest edge: downward for top positions, upward for
+  // bottom positions.
+  $: flyY = position.startsWith('top') ? -16 : 16
+
+  function iconFor(kind: ToastKind) {
+    return icons[kind]
+  }
+</script>
+
+<div class={`stack ${position}`} aria-live="polite">
+  {#each $toasts as toast (toast.id)}
+    <div
+      class={`toast ${toast.kind}`}
+      role="status"
+      in:fly={{ y: flyY, duration: 200 }}
+      out:fade={{ duration: 150 }}
+    >
+      <span class="icon" aria-hidden="true">
+        <svelte:component this={iconFor(toast.kind)} size={17} stroke={1.7} />
+      </span>
+      <span class="message">{toast.message}</span>
+      {#if toast.action}
+        <button type="button" class="action" on:click={toast.action.run}>{toast.action.label}</button>
+      {/if}
+      <button type="button" class="close" aria-label="Dismiss notification" on:click={() => dismiss(toast.id)}>
+        <IconX size={14} stroke={1.8} />
+      </button>
+    </div>
+  {/each}
+</div>
+
+<style>
+  .stack {
+    position: fixed;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    z-index: 200;
+    padding: var(--space-5);
+    pointer-events: none;
+  }
+
+  /* anchoring. the stack only occupies its corner; toasts capture pointer events
+     themselves so the rest of the app stays clickable. */
+  .stack.top-left {
+    top: 0;
+    left: 0;
+    align-items: flex-start;
+  }
+  .stack.top-center {
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    align-items: center;
+  }
+  .stack.top-right {
+    top: 0;
+    right: 0;
+    align-items: flex-end;
+  }
+  .stack.bottom-left {
+    bottom: 0;
+    left: 0;
+    align-items: flex-start;
+  }
+  .stack.bottom-center {
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    align-items: center;
+  }
+  .stack.bottom-right {
+    bottom: 0;
+    right: 0;
+    align-items: flex-end;
+  }
+
+  .toast {
+    pointer-events: auto;
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    border: var(--hairline) solid var(--border-default);
+    border-radius: var(--radius-card);
+    background: var(--surface-overlay);
+    color: var(--text-primary);
+    box-shadow: var(--shadow-overlay);
+    padding: var(--space-3) var(--space-3) var(--space-3) var(--space-4);
+    font-size: var(--fz-label);
+    max-width: 52ch;
+  }
+
+  /* the kind is carried by the icon color, not a border. */
+  .toast.success .icon {
+    color: var(--success);
+  }
+  .toast.error .icon {
+    color: var(--danger);
+  }
+  .toast.info .icon {
+    color: var(--accent);
+  }
+
+  .icon {
+    display: inline-flex;
+    flex-shrink: 0;
+  }
+
+  .message {
+    flex: 1;
+    line-height: 1.4;
+  }
+
+  .action {
+    flex-shrink: 0;
+    padding: var(--space-1) var(--space-3);
+    border: var(--hairline) solid var(--border-default);
+    border-radius: var(--radius-control);
+    background: var(--surface-raised);
+    color: var(--accent);
+    font-size: var(--fz-label);
+    font-weight: var(--fw-medium);
+    cursor: pointer;
+  }
+
+  .action:hover {
+    background: var(--surface-hover);
+  }
+
+  .close {
+    display: inline-flex;
+    border: none;
+    background: transparent;
+    color: var(--text-tertiary);
+    cursor: pointer;
+    padding: var(--space-1);
+    border-radius: var(--radius-control);
+    flex-shrink: 0;
+  }
+
+  .close:hover {
+    background: var(--surface-hover);
+    color: var(--text-primary);
+  }
+</style>

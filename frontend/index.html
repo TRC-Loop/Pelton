@@ -4,9 +4,28 @@
     <meta charset="UTF-8"/>
     <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
     <title>Pelton</title>
+    <style>
+        /* instant splash painted before the bundle and svelte mount, so the
+           window never shows blank while loading. removed once the app mounts.
+           inline and token-free on purpose: it must render with zero deps. */
+        html, body { margin: 0; height: 100%; background: #111214; }
+        #splash {
+            position: fixed; inset: 0; display: flex; align-items: center;
+            justify-content: center; flex-direction: column; gap: 14px;
+            background: #111214; color: #7e828b;
+            font-family: -apple-system, system-ui, sans-serif; font-size: 13px;
+        }
+        #splash .ring {
+            width: 26px; height: 26px; border-radius: 999px;
+            border: 2px solid #2a2c30; border-top-color: #465af2;
+            animation: spin .7s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
 </head>
 <body>
 <div id="app"></div>
+<div id="splash"><div class="ring"></div><div>Loading Pelton…</div></div>
 <script src="./src/main.ts" type="module"></script>
 </body>
 </html>
