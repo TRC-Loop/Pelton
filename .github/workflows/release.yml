@@ -265,7 +265,7 @@ jobs:
       - name: Install system build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev build-essential pkg-config rpm-build python3-pip
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev build-essential pkg-config rpm python3-pip
 
       - name: Install wails CLI + copr-cli
         run: |
