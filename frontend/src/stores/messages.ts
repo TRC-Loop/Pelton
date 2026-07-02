@@ -59,9 +59,10 @@ export async function loadMore(): Promise<void> {
   if (state.data.items.length >= state.data.total) {
     return
   }
-  currentOffset += PAGE_SIZE
+  const nextOffset = currentOffset + PAGE_SIZE
   try {
-    const { items, total } = await fetchPage(currentSelection, currentOffset)
+    const { items, total } = await fetchPage(currentSelection, nextOffset)
+    currentOffset = nextOffset
     messageList.update((s) => {
       if (s.status !== 'ready' || !s.data) {
         return s
@@ -69,7 +70,9 @@ export async function loadMore(): Promise<void> {
       return ready({ items: [...s.data.items, ...items], total, searching: false })
     })
   } catch (err) {
-    // keep the existing list; surface the error without discarding loaded rows.
+    // leave currentOffset unchanged so a retry re-requests this same page
+    // instead of skipping it; keep the existing list and surface the error
+    // without discarding loaded rows.
     messageList.update((s) => (s.data ? s : failed(errorMessage(err))))
   }
 }
@@ -106,10 +109,15 @@ export function removeFromList(id: number): void {
     if (s.status !== 'ready' || !s.data) {
       return s
     }
+    const items = s.data.items.filter((m) => m.id !== id)
+    // only decrement total if the id was actually loaded (e.g. deleting from
+    // the detail view for a message outside the currently loaded page must
+    // not desync total from the real remaining count).
+    const removed = items.length !== s.data.items.length
     return ready({
       ...s.data,
-      items: s.data.items.filter((m) => m.id !== id),
-      total: Math.max(0, s.data.total - 1),
+      items,
+      total: removed ? Math.max(0, s.data.total - 1) : s.data.total,
     })
   })
 }
