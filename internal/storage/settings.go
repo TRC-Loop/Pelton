@@ -104,3 +104,47 @@ func (d *DB) SetJSON(ctx context.Context, key string, value any) error {
 	}
 	return d.Set(ctx, key, string(encoded))
 }
+
+// Setting pairs a key/value with its last write time, used by config sync to
+// compare local state against an exported snapshot.
+type Setting struct {
+	Key       string
+	Value     string
+	UpdatedAt string
+}
+
+// AllSettings returns every stored setting, for exporting a full snapshot.
+func (d *DB) AllSettings(ctx context.Context) ([]Setting, error) {
+	rows, err := d.sql.QueryContext(ctx, `SELECT key, value, updated_at FROM settings`)
+	if err != nil {
+		return nil, fmt.Errorf("storage: list settings: %w", err)
+	}
+	defer rows.Close()
+
+	var out []Setting
+	for rows.Next() {
+		var s Setting
+		if err := rows.Scan(&s.Key, &s.Value, &s.UpdatedAt); err != nil {
+			return nil, fmt.Errorf("storage: scan setting: %w", err)
+		}
+		out = append(out, s)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("storage: iterate settings: %w", err)
+	}
+	return out, nil
+}
+
+// SetIfNewer writes key to value only if there is no existing row or the
+// existing row's updated_at is not newer than updatedAt, so importing a
+// snapshot never clobbers a more recent local change (last write wins).
+func (d *DB) SetIfNewer(ctx context.Context, key, value, updatedAt string) error {
+	const query = `
+INSERT INTO settings (key, value, updated_at) VALUES (?, ?, ?)
+ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
+WHERE excluded.updated_at >= settings.updated_at`
+	if _, err := d.sql.ExecContext(ctx, query, key, value, updatedAt); err != nil {
+		return fmt.Errorf("storage: set setting if newer %q: %w", key, err)
+	}
+	return nil
+}

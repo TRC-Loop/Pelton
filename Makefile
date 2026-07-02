@@ -1,6 +1,6 @@
 # Pelton - email client (Wails + Svelte)
 
-.PHONY: build build-mac build-win build-linux run app-dev dev clean tidy deps licenses icon
+.PHONY: build build-mac build-win build-linux dmg run app-dev dev clean tidy deps licenses icon
 
 # version string injected into the binary. it prefers the latest git tag (with a
 # short commit suffix on untagged commits) and falls back to "dev". it is wired
@@ -20,6 +20,21 @@ icon:
 # macOS build that also installs the Liquid Glass icon into the .app.
 build-mac: build icon
 
+# macOS build packaged into a distributable .dmg (build/bin/Pelton.dmg), with a
+# drag-to-Applications drop link. Needs create-dmg (`brew install create-dmg`).
+dmg: build-mac
+	rm -f build/bin/Pelton.dmg
+	create-dmg \
+		--volname "Pelton" \
+		--volicon "build/bin/Pelton.app/Contents/Resources/pelton.icns" \
+		--window-size 540 380 \
+		--icon-size 128 \
+		--icon "Pelton.app" 130 170 \
+		--app-drop-link 410 170 \
+		--hide-extension "Pelton.app" \
+		"build/bin/Pelton.dmg" \
+		"build/bin/Pelton.app"
+
 # windows build (amd64). cross-compiling from another OS needs the appropriate
 # toolchain (mingw-w64) and webview2; run on Windows for a no-fuss build.
 build-win:
@@ -35,10 +50,13 @@ build-linux:
 
 # run the whole app in dev mode: make sure go + npm deps are present, regenerate
 # the typescript bindings from the go methods, then launch wails dev with hot
-# reload for both the go backend and the svelte frontend.
+# reload for both the go backend and the svelte frontend. PELTON_DEV points the
+# app at a separate Pelton-dev config/database directory (see
+# internal/storage/db.go), so testing here never touches a real install's
+# accounts, mail cache or settings.
 run: deps
 	wails generate module
-	wails dev -ldflags "$(LDFLAGS)"
+	PELTON_DEV=1 wails dev -ldflags "$(LDFLAGS)"
 
 dev: run
 

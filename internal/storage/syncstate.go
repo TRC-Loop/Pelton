@@ -82,6 +82,17 @@ func (d *DB) MarkDeletePending(ctx context.Context, id int64) error {
 	return requireOneRow(res, ErrMessageNotFound)
 }
 
+// ClearDeletePending undoes a pending local deletion, as long as the row is still
+// cached (a sync has not yet expunged it on the server and dropped it locally).
+func (d *DB) ClearDeletePending(ctx context.Context, id int64) error {
+	res, err := d.sql.ExecContext(ctx,
+		`UPDATE messages SET pending_delete = 0 WHERE id = ?`, id)
+	if err != nil {
+		return fmt.Errorf("storage: clear delete pending on message %d: %w", id, err)
+	}
+	return requireOneRow(res, ErrMessageNotFound)
+}
+
 // FolderLastSeenUID returns the high water mark recorded for a folder.
 func (d *DB) FolderLastSeenUID(ctx context.Context, folderID int64) (uint32, error) {
 	var uid uint32

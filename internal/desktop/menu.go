@@ -39,11 +39,25 @@ func (a *App) buildMenu() *menu.Menu {
 	fileMenu.AddSeparator()
 	fileMenu.AddText("Export Message as PDF…", keys.CmdOrCtrl("p"), a.menuAction("export-pdf"))
 
-	// mailbox menu: sync and account management.
+	// mailbox menu: sync, account management, and the message-level actions
+	// that make sense to reach without the mouse (or a memorized shortcut).
+	// Undo has no accelerator here since Cmd/Ctrl+Z is already handled by the
+	// app's own keydown handler (the undo-send/delete/archive chain); binding
+	// it again here would double-fire.
 	mailMenu := root.AddSubmenu("Mailbox")
 	mailMenu.AddText("Sync Now", keys.CmdOrCtrl("r"), a.menuAction("sync"))
 	mailMenu.AddSeparator()
 	mailMenu.AddText("Add Mailbox…", keys.CmdOrCtrl("m"), a.menuAction("add-mailbox"))
+	mailMenu.AddSeparator()
+	mailMenu.AddText("Undo", nil, a.menuAction("undo"))
+	mailMenu.AddSeparator()
+	mailMenu.AddText("Mark as Read", nil, a.menuAction("mark-read"))
+	mailMenu.AddText("Mark as Unread", nil, a.menuAction("mark-unread"))
+	mailMenu.AddText("Flag / Unflag", nil, a.menuAction("flag"))
+	mailMenu.AddText("Archive", nil, a.menuAction("archive"))
+	mailMenu.AddText("Delete Message", nil, a.menuAction("delete-message"))
+	mailMenu.AddSeparator()
+	mailMenu.AddText("Low Power Mode", nil, a.menuAction("toggle-low-power"))
 
 	// view menu: a reliable fullscreen toggle. the native green button can be
 	// inconsistent in some setups, so this guarantees the app can go fullscreen.

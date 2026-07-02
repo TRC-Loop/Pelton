@@ -5,6 +5,7 @@
   import { createEventDispatcher } from 'svelte'
   import { IconChevronRight } from '@tabler/icons-svelte'
   import { prefs } from '../../stores/prefs'
+  import { t } from '../../lib/i18n'
 
   export let label: string
   export let count: number = 0
@@ -18,8 +19,10 @@
   // indent nested folders by depth. the base inset keeps the caret aligned.
   $: indent = `calc(var(--space-3) + ${depth} * var(--space-4))`
   // one vertical guide line per ancestor level when the user enables them, each
-  // aligned under that ancestor's caret.
-  $: guides = $prefs.sidebarIndentGuides ? Array.from({ length: depth }, (_, i) => i) : []
+  // aligned under that ancestor's caret. top-level rows (inbox, bin, and so on)
+  // have no ancestor, but still draw their own level-0 guide so the tree reads
+  // consistently from the root down.
+  $: guides = $prefs.sidebarIndentGuides ? Array.from({ length: Math.max(depth, 1) }, (_, i) => i) : []
 </script>
 
 <div class="row" class:active style={`padding-left:${indent}`}>
@@ -35,7 +38,7 @@
       type="button"
       class="caret"
       class:open={expanded}
-      aria-label={expanded ? 'Collapse' : 'Expand'}
+      aria-label={expanded ? $t('sidebar.collapse') : $t('sidebar.expand')}
       on:click|stopPropagation={() => dispatch('toggle')}
     >
       <IconChevronRight size={14} stroke={1.8} />
@@ -48,7 +51,7 @@
     <span class="icon" aria-hidden="true"><slot /></span>
     <span class="label">{label}</span>
     {#if count > 0}
-      <span class="count" aria-label={`${count} unread`}>{count}</span>
+      <span class="count" aria-label={`${count} ${$t('sidebar.unreadSuffix')}`}>{count}</span>
     {/if}
   </button>
 </div>

@@ -10,8 +10,10 @@ import (
 	"context"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"sync"
 
+	"github.com/TRC-Loop/Pelton/internal/configsync"
 	"github.com/TRC-Loop/Pelton/internal/outbox"
 	"github.com/TRC-Loop/Pelton/internal/search"
 	"github.com/TRC-Loop/Pelton/internal/storage"
@@ -24,6 +26,7 @@ type App struct {
 	log   *slog.Logger
 	store *storage.DB
 	index *search.Index
+	sync  *configsync.Manager
 	// searchMu serializes index backfills so a startup pass and a post-sync pass
 	// do not advance the watermark concurrently.
 	searchMu sync.Mutex
@@ -59,6 +62,16 @@ func (a *App) startup(ctx context.Context) {
 	a.store = store
 	a.queue = outbox.NewQueue(store)
 
+	if dbPath, pathErr := storage.DefaultPath(); pathErr == nil {
+		a.sync = configsync.New(store, filepath.Dir(dbPath), a.log)
+		a.sync.OnSync(func(cfg configsync.Config) {
+			a.emit(EventConfigSync, cfg)
+		})
+		if err := a.sync.Start(ctx); err != nil {
+			a.log.Warn("start config sync", "err", err)
+		}
+	}
+
 	// open the search index and bring it up to date in the background so startup
 	// is not blocked by a large backfill. a failure here only disables search.
 	if idx, err := openSearchIndex(); err != nil {
@@ -69,11 +82,19 @@ func (a *App) startup(ctx context.Context) {
 	}
 
 	a.startBackgroundServices()
+
+	// off by default; only runs at all if the user turned on a check
+	// frequency in settings. backgrounded so a slow/unreachable network never
+	// delays startup.
+	go a.maybeAutoCheckForUpdates(ctx)
 }
 
 // shutdown is the wails OnShutdown hook. It closes the store so the sqlite wal
 // is checkpointed cleanly.
 func (a *App) shutdown(ctx context.Context) {
+	if a.sync != nil {
+		a.sync.Close()
+	}
 	if a.index != nil {
 		if err := a.index.Close(); err != nil {
 			a.log.Error("close search index", "err", err)
@@ -91,6 +112,14 @@ func (a *App) shutdown(ctx context.Context) {
 func openStore(ctx context.Context) (*storage.DB, error) {
 	path, err := storage.DefaultPath()
 	if err != nil {
+		return nil, err
+	}
+	// if a previous run's full-cache config sync armed a restore (the live db
+	// cannot be swapped out from under an open connection), apply it now,
+	// before anything opens the database.
+	stateDir := filepath.Dir(path)
+	attachmentsDir := filepath.Join(stateDir, "attachments")
+	if err := configsync.ApplyPendingFullRestore(stateDir, path, attachmentsDir); err != nil {
 		return nil, err
 	}
 	store, err := storage.Open(path)

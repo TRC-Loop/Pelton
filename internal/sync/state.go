@@ -3,9 +3,32 @@ package sync
 import (
 	"context"
 	"fmt"
+	"strings"
+
+	"github.com/emersion/go-imap/v2"
 
 	"github.com/TRC-Loop/Pelton/internal/storage"
 )
+
+// labelKeywords maps color indices 1..8 to the Thunderbird-style imap keywords
+// Pelton uses to sync flag colors across clients.
+var labelKeywords = []imap.Flag{
+	"$Label1", "$Label2", "$Label3", "$Label4",
+	"$Label5", "$Label6", "$Label7", "$Label8",
+}
+
+// colorFromFlags returns the color index (1..8) encoded by a message's keyword
+// flags, or 0 when none is present.
+func colorFromFlags(flags []imap.Flag) int {
+	for _, f := range flags {
+		for i, lf := range labelKeywords {
+			if strings.EqualFold(string(f), string(lf)) {
+				return i + 1
+			}
+		}
+	}
+	return 0
+}
 
 // FolderSyncState is the per-folder state that makes the next sync cheaper:
 // the UIDVALIDITY we last saw and the highest uid we have processed. The set of
@@ -58,18 +81,22 @@ func highestUID(servers []ServerMessage) uint32 {
 }
 
 // loadServerView fetches the uid+flags of every message in the selected mailbox
-// and converts them to reconcile inputs.
-func loadServerView(client mailClient) ([]ServerMessage, error) {
+// and converts them to reconcile inputs. It also returns the color label encoded
+// in each message's keyword flags (uid -> color, 0 when none), so the caller can
+// adopt server-side color changes when color syncing is on.
+func loadServerView(client mailClient) ([]ServerMessage, map[uint32]int, error) {
 	headers, err := client.FetchAllFlags()
 	if err != nil {
-		return nil, fmt.Errorf("sync: load server view: %w", err)
+		return nil, nil, fmt.Errorf("sync: load server view: %w", err)
 	}
 	servers := make([]ServerMessage, 0, len(headers))
+	colors := make(map[uint32]int, len(headers))
 	for _, h := range headers {
 		servers = append(servers, ServerMessage{
 			UID:   uint32(h.UID),
 			Flags: imapFlagsToStorage(h.Flags),
 		})
+		colors[uint32(h.UID)] = colorFromFlags(h.Flags)
 	}
-	return servers, nil
+	return servers, colors, nil
 }

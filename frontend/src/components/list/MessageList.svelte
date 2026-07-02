@@ -21,6 +21,10 @@
     IconFlagFilled,
     IconTrash,
     IconX,
+    IconClockPause,
+    IconDownload,
+    IconDownloadOff,
+    IconFolderSymlink,
   } from '@tabler/icons-svelte'
   import { selection, searchQuery, openMessageId, openMessage } from '../../stores/selection'
   import {
@@ -30,6 +34,7 @@
     runSearch,
     patchInList,
     removeFromList,
+    restoreToList,
     emptyFilter,
     type SearchFilter,
   } from '../../stores/messages'
@@ -40,11 +45,25 @@
     selectRange,
   } from '../../stores/listselect'
   import { prefs } from '../../stores/prefs'
-  import { setSeen, setFlagged, deleteMessage, getMessage } from '../../lib/api'
+  import {
+    setSeen,
+    setFlagged,
+    deleteMessage,
+    getMessage,
+    setFlagColor,
+    downloadMessageOffline,
+    removeOffline,
+    archiveMessage,
+  } from '../../lib/api'
   import { openReply, openForward } from '../../stores/compose'
+  import { openSnooze } from '../../stores/snooze'
+  import { openMove } from '../../stores/move'
+  import { recordDeleted } from '../../stores/undodelete'
+  import { recordArchived } from '../../stores/undoarchive'
   import { openContextMenu, type MenuEntry } from '../../stores/contextmenu'
-  import { errorMessage, toastError } from '../../stores/toast'
-  import type { Selection, MessageSummary } from '../../lib/types'
+  import { errorMessage, toastError, toastSuccess } from '../../stores/toast'
+  import type { Selection, MessageSummary, SwipeAction, EditorMode } from '../../lib/types'
+  import { t } from '../../lib/i18n'
 
   let listEl: HTMLDivElement
   let activeIndex = -1
@@ -126,6 +145,16 @@
   // actions never act on rows that have scrolled out of the data.
   $: selectedItems = items.filter((m) => $selectedIds.has(m.id))
   $: selectionCount = selectedItems.length
+
+  // keep the keyboard-nav highlight in sync with whichever message is open,
+  // however it got opened (click, Enter, or the in-app vim motions), so a
+  // stale arrow-key position never leaves two rows looking selected at once.
+  $: if ($openMessageId !== null) {
+    const openIdx = items.findIndex((m) => m.id === $openMessageId)
+    if (openIdx !== -1) {
+      activeIndex = openIdx
+    }
+  }
 
   // search handling. the list shows ranked results when there is a query or an
   // active date filter, and the selection's normal list otherwise.
@@ -256,6 +285,7 @@
   async function remove(item: MessageSummary): Promise<void> {
     try {
       await deleteMessage(item.id)
+      recordDeleted(item)
       removeFromList(item.id)
       if ($openMessageId === item.id) {
         openMessageId.set(null)
@@ -298,6 +328,7 @@
     for (const item of targets) {
       try {
         await deleteMessage(item.id)
+        recordDeleted(item)
         removeFromList(item.id)
         if ($openMessageId === item.id) {
           openMessageId.set(null)
@@ -309,10 +340,12 @@
   }
 
   // reply/forward need the full message (for quoting), so load it first.
+  $: editorMode = $prefs.defaultEditorMode as EditorMode
+
   async function replyTo(item: MessageSummary, all: boolean): Promise<void> {
     try {
       const detail = await getMessage(item.id)
-      openReply(detail, 'plaintext', all)
+      openReply(detail, editorMode, all)
     } catch (err) {
       toastError(errorMessage(err))
     }
@@ -321,9 +354,80 @@
   async function forward(item: MessageSummary): Promise<void> {
     try {
       const detail = await getMessage(item.id)
-      openForward(detail, 'plaintext')
+      openForward(detail, editorMode)
     } catch (err) {
       toastError(errorMessage(err))
+    }
+  }
+
+  // setColor applies a flag color to a row (0 clears), optimistically.
+  async function setColor(item: MessageSummary, color: number): Promise<void> {
+    patchInList(item.id, { flagColor: color })
+    try {
+      await setFlagColor(item.id, color)
+    } catch (err) {
+      toastError(errorMessage(err))
+    }
+  }
+
+  // archive moves a row to the account's Archive folder, removing it from the
+  // current view optimistically.
+  async function archive(item: MessageSummary): Promise<void> {
+    removeFromList(item.id)
+    if ($openMessageId === item.id) {
+      openMessageId.set(null)
+    }
+    try {
+      const undo = await archiveMessage(item.id)
+      if (undo.messageId) {
+        recordArchived(item, undo.messageId, undo.originalFolderId)
+      }
+    } catch (err) {
+      toastError(errorMessage(err))
+      // the move failed; bring the row back so nothing is silently lost.
+      restoreToList(item)
+    }
+  }
+
+  // toggleOffline pins or unpins a row for offline availability.
+  async function toggleOffline(item: MessageSummary): Promise<void> {
+    const next = !item.offline
+    patchInList(item.id, { offline: next })
+    try {
+      if (next) {
+        await downloadMessageOffline(item.id)
+        toastSuccess($t('messageList.toast.savedOffline'))
+      } else {
+        await removeOffline(item.id)
+      }
+    } catch (err) {
+      toastError(errorMessage(err))
+    }
+  }
+
+  // performSwipe runs the configured action for a swipe direction on a row.
+  function performSwipe(item: MessageSummary, dir: 'left' | 'right'): void {
+    const action = (dir === 'left' ? $prefs.swipeLeftAction : $prefs.swipeRightAction) as SwipeAction
+    switch (action) {
+      case 'delete':
+        void remove(item)
+        break
+      case 'read':
+      case 'unread':
+        void toggleSeen(item)
+        break
+      case 'flag':
+        void toggleFlag(item)
+        break
+      case 'archive':
+        void archive(item)
+        break
+      case 'snooze':
+        openSnooze(item.id, item.subject)
+        break
+      case 'none':
+      default:
+        break
     }
   }
 
@@ -336,31 +440,38 @@
       const anyUnflagged = selectedItems.some((m) => !m.flagged)
       const entries: MenuEntry[] = [
         anyUnread
-          ? { label: `Mark ${selectionCount} as read`, icon: IconMailOpened, action: () => void bulkSetSeen(true) }
-          : { label: `Mark ${selectionCount} as unread`, icon: IconMailFilled, action: () => void bulkSetSeen(false) },
+          ? { label: $t('messageList.bulk.markReadCount').replace('{n}', String(selectionCount)), icon: IconMailOpened, action: () => void bulkSetSeen(true) }
+          : { label: $t('messageList.bulk.markUnreadCount').replace('{n}', String(selectionCount)), icon: IconMailFilled, action: () => void bulkSetSeen(false) },
         anyUnflagged
-          ? { label: `Flag ${selectionCount}`, icon: IconFlagFilled, action: () => void bulkSetFlagged(true) }
-          : { label: `Unflag ${selectionCount}`, icon: IconFlag, action: () => void bulkSetFlagged(false) },
+          ? { label: $t('messageList.bulk.flagCount').replace('{n}', String(selectionCount)), icon: IconFlagFilled, action: () => void bulkSetFlagged(true) }
+          : { label: $t('messageList.bulk.unflagCount').replace('{n}', String(selectionCount)), icon: IconFlag, action: () => void bulkSetFlagged(false) },
         'separator',
-        { label: `Delete ${selectionCount}`, icon: IconTrash, danger: true, action: () => void bulkDelete() },
+        { label: $t('messageList.bulk.deleteCount').replace('{n}', String(selectionCount)), icon: IconTrash, danger: true, action: () => void bulkDelete() },
       ]
       openContextMenu(event.clientX, event.clientY, entries)
       return
     }
     const entries: MenuEntry[] = [
-      { label: 'Open', icon: IconMail, action: () => open(items.indexOf(item)) },
-      { label: 'Reply', icon: IconArrowBackUp, action: () => void replyTo(item, false) },
-      { label: 'Reply all', icon: IconArrowBackUp, action: () => void replyTo(item, true) },
-      { label: 'Forward', icon: IconArrowForwardUp, action: () => void forward(item) },
+      { label: $t('messageList.menu.open'), icon: IconMail, action: () => open(items.indexOf(item)) },
+      { label: $t('action.reply'), icon: IconArrowBackUp, action: () => void replyTo(item, false) },
+      { label: $t('shortcut.replyAll'), icon: IconArrowBackUp, action: () => void replyTo(item, true) },
+      { label: $t('action.forward'), icon: IconArrowForwardUp, action: () => void forward(item) },
       'separator',
       item.seen
-        ? { label: 'Mark as unread', icon: IconMailFilled, action: () => void toggleSeen(item) }
-        : { label: 'Mark as read', icon: IconMailOpened, action: () => void toggleSeen(item) },
+        ? { label: $t('shortcut.markUnread'), icon: IconMailFilled, action: () => void toggleSeen(item) }
+        : { label: $t('shortcut.markRead'), icon: IconMailOpened, action: () => void toggleSeen(item) },
       item.flagged
-        ? { label: 'Unflag', icon: IconFlag, action: () => void toggleFlag(item) }
-        : { label: 'Flag', icon: IconFlagFilled, action: () => void toggleFlag(item) },
+        ? { label: $t('messageList.unflag'), icon: IconFlag, action: () => void toggleFlag(item) }
+        : { label: $t('messageList.flag'), icon: IconFlagFilled, action: () => void toggleFlag(item) },
+      { kind: 'colors', current: item.flagColor, onPick: (color) => void setColor(item, color) },
       'separator',
-      { label: 'Delete', icon: IconTrash, danger: true, action: () => void remove(item) },
+      { label: $t('messageList.menu.snooze'), icon: IconClockPause, action: () => openSnooze(item.id, item.subject) },
+      { label: $t('messageList.menu.moveTo'), icon: IconFolderSymlink, action: () => openMove(item) },
+      item.offline
+        ? { label: $t('messageList.menu.removeOffline'), icon: IconDownloadOff, action: () => void toggleOffline(item) }
+        : { label: $t('shortcut.downloadOffline'), icon: IconDownload, action: () => void toggleOffline(item) },
+      'separator',
+      { label: $t('action.delete'), icon: IconTrash, danger: true, action: () => void remove(item) },
     ]
     openContextMenu(event.clientX, event.clientY, entries)
   }
@@ -396,32 +507,32 @@
 
   {#if selectionCount > 0}
     <div class="select-bar">
-      <button type="button" class="clear" aria-label="Clear selection" on:click={clearSelection}>
+      <button type="button" class="clear" aria-label={$t('messageList.clearSelection')} on:click={clearSelection}>
         <IconX size={15} stroke={1.9} />
       </button>
       {#if $prefs.showSelectedCount}
-        <span class="sel-count">{selectionCount} selected</span>
+        <span class="sel-count">{selectionCount} {$t('messageList.selectedSuffix')}</span>
       {/if}
       <span class="sel-spacer"></span>
       {#if selectedItems.some((m) => !m.seen)}
-        <button type="button" class="act" title="Mark as read" on:click={() => bulkSetSeen(true)}>
+        <button type="button" class="act" title={$t('shortcut.markRead')} on:click={() => bulkSetSeen(true)}>
           <IconMailOpened size={16} stroke={1.7} />
         </button>
       {:else}
-        <button type="button" class="act" title="Mark as unread" on:click={() => bulkSetSeen(false)}>
+        <button type="button" class="act" title={$t('shortcut.markUnread')} on:click={() => bulkSetSeen(false)}>
           <IconMailFilled size={16} stroke={1.7} />
         </button>
       {/if}
       {#if selectedItems.some((m) => !m.flagged)}
-        <button type="button" class="act" title="Flag" on:click={() => bulkSetFlagged(true)}>
+        <button type="button" class="act" title={$t('messageList.flag')} on:click={() => bulkSetFlagged(true)}>
           <IconFlagFilled size={16} stroke={1.7} />
         </button>
       {:else}
-        <button type="button" class="act" title="Unflag" on:click={() => bulkSetFlagged(false)}>
+        <button type="button" class="act" title={$t('messageList.unflag')} on:click={() => bulkSetFlagged(false)}>
           <IconFlag size={16} stroke={1.7} />
         </button>
       {/if}
-      <button type="button" class="act danger" title="Delete" on:click={bulkDelete}>
+      <button type="button" class="act danger" title={$t('action.delete')} on:click={bulkDelete}>
         <IconTrash size={16} stroke={1.7} />
       </button>
     </div>
@@ -431,9 +542,9 @@
       {#if $messageList.data}
         <span class="count">
           {#if $messageList.data.searching}
-            {items.length} result{items.length === 1 ? '' : 's'}
+            {items.length} {items.length === 1 ? $t('messageList.result') : $t('messageList.results')}
           {:else}
-            {$messageList.data.total} message{$messageList.data.total === 1 ? '' : 's'}
+            {$messageList.data.total} {$messageList.data.total === 1 ? $t('messageList.message') : $t('messageList.messages')}
           {/if}
         </span>
       {/if}
@@ -444,7 +555,7 @@
     class="rows"
     role="listbox"
     tabindex="0"
-    aria-label="Messages"
+    aria-label={$t('messageList.ariaLabel')}
     aria-multiselectable={$prefs.multiSelectEnabled}
     aria-activedescendant={activeIndex >= 0 ? `msg-${items[activeIndex]?.id}` : undefined}
     bind:this={listEl}
@@ -452,13 +563,13 @@
     on:scroll={onScroll}
   >
     {#if $messageList.status === 'loading' && items.length === 0}
-      <Spinner label="Loading messages" />
+      <Spinner label={$t('messageList.loading')} />
     {:else if $messageList.status === 'error'}
       <ErrorState message={$messageList.error} onRetry={() => loadList($selection)} />
     {:else if items.length === 0}
       <EmptyState
-        title={$searchQuery ? 'No matching messages' : 'No messages here'}
-        detail={$searchQuery ? 'Try a different search.' : 'This view is empty.'}
+        title={$searchQuery ? $t('messageList.empty.noMatch') : $t('messageList.empty.noMessages')}
+        detail={$searchQuery ? $t('messageList.empty.tryDifferentSearch') : $t('messageList.empty.viewEmpty')}
       >
         <IconMail size={28} stroke={1.4} />
       </EmptyState>
@@ -475,6 +586,7 @@
             checked={$selectedIds.has(item.id)}
             on:click={(e) => onRowClick(e, index)}
             on:contextmenu={(e) => onContext(e, item)}
+            on:swipe={(e) => performSwipe(item, e.detail)}
           />
         </div>
       {/each}
@@ -482,7 +594,7 @@
         <div class="spacer" style={`height:${bottomPad}px`} aria-hidden="true"></div>
       {/if}
       {#if $messageList.status === 'loading'}
-        <Spinner label="Loading more" inline />
+        <Spinner label={$t('messageList.loadingMore')} inline />
       {/if}
     {/if}
   </div>

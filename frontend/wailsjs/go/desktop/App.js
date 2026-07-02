@@ -18,12 +18,28 @@ export function AppVersion() {
   return window['go']['desktop']['App']['AppVersion']();
 }
 
+export function ArchiveMessage(arg1) {
+  return window['go']['desktop']['App']['ArchiveMessage'](arg1);
+}
+
 export function CancelSend(arg1) {
   return window['go']['desktop']['App']['CancelSend'](arg1);
 }
 
+export function CheckForUpdates() {
+  return window['go']['desktop']['App']['CheckForUpdates']();
+}
+
 export function ClearSentOutbox() {
   return window['go']['desktop']['App']['ClearSentOutbox']();
+}
+
+export function ConfigureConfigSync(arg1, arg2, arg3, arg4) {
+  return window['go']['desktop']['App']['ConfigureConfigSync'](arg1, arg2, arg3, arg4);
+}
+
+export function DeleteAddress(arg1) {
+  return window['go']['desktop']['App']['DeleteAddress'](arg1);
 }
 
 export function DeleteDraft(arg1) {
@@ -38,8 +54,24 @@ export function DeleteSignature(arg1) {
   return window['go']['desktop']['App']['DeleteSignature'](arg1);
 }
 
+export function DisableConfigSync() {
+  return window['go']['desktop']['App']['DisableConfigSync']();
+}
+
 export function DiscoverConfig(arg1) {
   return window['go']['desktop']['App']['DiscoverConfig'](arg1);
+}
+
+export function DownloadMessageOffline(arg1) {
+  return window['go']['desktop']['App']['DownloadMessageOffline'](arg1);
+}
+
+export function DownloadRange(arg1, arg2) {
+  return window['go']['desktop']['App']['DownloadRange'](arg1, arg2);
+}
+
+export function EstimateDownloadRange(arg1) {
+  return window['go']['desktop']['App']['EstimateDownloadRange'](arg1);
 }
 
 export function ExportMessagePrintView(arg1) {
@@ -48,6 +80,10 @@ export function ExportMessagePrintView(arg1) {
 
 export function GetAccountSignatures(arg1) {
   return window['go']['desktop']['App']['GetAccountSignatures'](arg1);
+}
+
+export function GetConfigSyncStatus() {
+  return window['go']['desktop']['App']['GetConfigSyncStatus']();
 }
 
 export function GetMessage(arg1) {
@@ -72,6 +108,10 @@ export function Licenses() {
 
 export function ListAccounts() {
   return window['go']['desktop']['App']['ListAccounts']();
+}
+
+export function ListAddresses() {
+  return window['go']['desktop']['App']['ListAddresses']();
 }
 
 export function ListDrafts() {
@@ -102,8 +142,28 @@ export function ListUnifiedViews() {
   return window['go']['desktop']['App']['ListUnifiedViews']();
 }
 
+export function MoveMessage(arg1, arg2) {
+  return window['go']['desktop']['App']['MoveMessage'](arg1, arg2);
+}
+
+export function PickConfigSyncFolder() {
+  return window['go']['desktop']['App']['PickConfigSyncFolder']();
+}
+
 export function ProgramLicense() {
   return window['go']['desktop']['App']['ProgramLicense']();
+}
+
+export function ReadAttachment(arg1, arg2) {
+  return window['go']['desktop']['App']['ReadAttachment'](arg1, arg2);
+}
+
+export function RemoveOffline(arg1) {
+  return window['go']['desktop']['App']['RemoveOffline'](arg1);
+}
+
+export function SaveAllAttachments(arg1) {
+  return window['go']['desktop']['App']['SaveAllAttachments'](arg1);
 }
 
 export function SaveAttachment(arg1, arg2) {
@@ -122,6 +182,10 @@ export function Search(arg1) {
   return window['go']['desktop']['App']['Search'](arg1);
 }
 
+export function SearchAddresses(arg1, arg2) {
+  return window['go']['desktop']['App']['SearchAddresses'](arg1, arg2);
+}
+
 export function SendMessage(arg1) {
   return window['go']['desktop']['App']['SendMessage'](arg1);
 }
@@ -132,6 +196,10 @@ export function SenderPhotos(arg1) {
 
 export function SetAccountSignatures(arg1, arg2, arg3) {
   return window['go']['desktop']['App']['SetAccountSignatures'](arg1, arg2, arg3);
+}
+
+export function SetFlagColor(arg1, arg2) {
+  return window['go']['desktop']['App']['SetFlagColor'](arg1, arg2);
 }
 
 export function SetFlagged(arg1, arg2) {
@@ -146,8 +214,20 @@ export function SetSetting(arg1, arg2) {
   return window['go']['desktop']['App']['SetSetting'](arg1, arg2);
 }
 
+export function SetWindowTitle(arg1) {
+  return window['go']['desktop']['App']['SetWindowTitle'](arg1);
+}
+
+export function SnoozeMessage(arg1, arg2, arg3) {
+  return window['go']['desktop']['App']['SnoozeMessage'](arg1, arg2, arg3);
+}
+
 export function TestConnection(arg1) {
   return window['go']['desktop']['App']['TestConnection'](arg1);
+}
+
+export function TriggerConfigSync() {
+  return window['go']['desktop']['App']['TriggerConfigSync']();
 }
 
 export function TriggerSync() {
@@ -156,4 +236,16 @@ export function TriggerSync() {
 
 export function TrustSenderImages(arg1) {
   return window['go']['desktop']['App']['TrustSenderImages'](arg1);
+}
+
+export function UnarchiveMessage(arg1, arg2) {
+  return window['go']['desktop']['App']['UnarchiveMessage'](arg1, arg2);
+}
+
+export function UndoDelete(arg1) {
+  return window['go']['desktop']['App']['UndoDelete'](arg1);
+}
+
+export function UnsnoozeMessage(arg1) {
+  return window['go']['desktop']['App']['UnsnoozeMessage'](arg1);
 }

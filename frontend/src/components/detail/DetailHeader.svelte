@@ -5,13 +5,14 @@
   import TechBadges from '../common/TechBadges.svelte'
   import { prefs } from '../../stores/prefs'
   import { formatFullDate, displayName } from '../../lib/format'
+  import { t } from '../../lib/i18n'
   import type { MessageDetail } from '../../lib/types'
 
   export let detail: MessageDetail
 </script>
 
 <header class="head">
-  <h1 class="subject">{detail.subject || '(no subject)'}</h1>
+  <h1 class="subject">{detail.subject || $t('detail.noSubject')}</h1>
 
   <div class="from-row">
     <Avatar name={detail.fromName} email={detail.fromAddress} size={36} />
@@ -23,8 +24,8 @@
         {/if}
       </div>
       <div class="recipients">
-        {#if detail.toAddresses}<span>to {detail.toAddresses}</span>{/if}
-        {#if detail.ccAddresses}<span class="cc">cc {detail.ccAddresses}</span>{/if}
+        {#if detail.toAddresses}<span>{$t('detail.header.to')} {detail.toAddresses}</span>{/if}
+        {#if detail.ccAddresses}<span class="cc">{$t('detail.header.cc')} {detail.ccAddresses}</span>{/if}
       </div>
     </div>
     {#if $prefs.showDateTime}

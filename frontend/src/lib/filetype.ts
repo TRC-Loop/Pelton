@@ -29,3 +29,28 @@ export function fileIcon(contentType: string, filename: string): ComponentType {
   if (type.startsWith('text/') || ['txt', 'md', 'log'].includes(ext)) return IconFileText
   return IconFile
 }
+
+// what the in-app previewer can render. Everything else opens externally.
+export type PreviewKind = 'pdf' | 'image' | 'text' | 'none'
+
+const textExts = [
+  'txt', 'md', 'markdown', 'log', 'csv', 'tsv', 'json', 'xml', 'yaml', 'yml',
+  'js', 'ts', 'jsx', 'tsx', 'go', 'py', 'rs', 'c', 'h', 'cpp', 'java', 'rb',
+  'sh', 'bash', 'zsh', 'toml', 'ini', 'conf', 'css', 'html', 'svelte', 'sql',
+]
+
+// previewKind classifies an attachment for the previewer.
+export function previewKind(contentType: string, filename: string): PreviewKind {
+  const type = (contentType || '').toLowerCase()
+  const ext = filename.includes('.') ? filename.split('.').pop()!.toLowerCase() : ''
+  if (type === 'application/pdf' || ext === 'pdf') return 'pdf'
+  if (type.startsWith('image/') || ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp'].includes(ext)) return 'image'
+  if (type.startsWith('text/') || textExts.includes(ext)) return 'text'
+  return 'none'
+}
+
+// isMarkdown reports whether an attachment should render as markdown.
+export function isMarkdown(filename: string): boolean {
+  const ext = filename.includes('.') ? filename.split('.').pop()!.toLowerCase() : ''
+  return ext === 'md' || ext === 'markdown'
+}

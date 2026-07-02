@@ -22,6 +22,8 @@ import type {
   TestConnectionRequest,
   Signature,
   AccountSignatures,
+  AddressBookEntry,
+  AttachmentContent,
 } from './types'
 
 // listAccounts returns every configured account.
@@ -85,6 +87,36 @@ export function deleteMessage(id: number): Promise<void> {
   return App.DeleteMessage(id)
 }
 
+// undoDelete reverses a pending delete while the message is still cached.
+export function undoDelete(id: number): Promise<void> {
+  return App.UndoDelete(id)
+}
+
+// ArchiveUndo is what undo-archive needs: the message's stable rfc Message-ID and
+// the folder it came from. messageId is empty when the message had no Message-ID
+// (undo not possible then).
+export interface ArchiveUndo {
+  messageId: string
+  originalFolderId: number
+}
+
+// archiveMessage moves a message to its account's Archive folder on the server,
+// returning the info needed to undo it.
+export function archiveMessage(id: number): Promise<ArchiveUndo> {
+  return App.ArchiveMessage(id)
+}
+
+// unarchiveMessage moves an archived message back to its original folder,
+// locating it by rfc Message-ID.
+export function unarchiveMessage(messageId: string, originalFolderId: number): Promise<void> {
+  return App.UnarchiveMessage(messageId, originalFolderId)
+}
+
+// moveMessage moves a message to any folder of its account, returning undo info.
+export function moveMessage(id: number, destFolderId: number): Promise<ArchiveUndo> {
+  return App.MoveMessage(id, destFolderId)
+}
+
 // SearchRequest is a ranked search over cached mail: free text plus an optional
 // date window. afterUnix/beforeUnix are unix seconds; 0 leaves that side open.
 export interface SearchRequest {
@@ -139,6 +171,22 @@ export function triggerSync(): Promise<void> {
 // the about section.
 export function appVersion(): Promise<string> {
   return App.AppVersion()
+}
+
+// UpdateCheckResult mirrors the go DTO of the same name.
+export interface UpdateCheckResult {
+  checked: boolean
+  available: boolean
+  currentVersion: string
+  latestVersion: string
+  releaseUrl: string
+  error: string
+}
+
+// checkForUpdates does an immediate GitHub-releases check (the "Check now"
+// button in settings), regardless of the update_check_frequency setting.
+export function checkForUpdates(): Promise<UpdateCheckResult> {
+  return App.CheckForUpdates()
 }
 
 // cancelSend pulls a still-queued message back out of the outbox during its
@@ -262,6 +310,121 @@ export function setAccountSignatures(
   return App.SetAccountSignatures(accountId, headerId, footerId)
 }
 
+// --- flag color, snooze, offline ---
+
+// setFlagColor sets a message's color label (0 clears, 1..8 pick a color).
+export function setFlagColor(id: number, color: number): Promise<void> {
+  return App.SetFlagColor(id, color)
+}
+
+// downloadMessageOffline / removeOffline pin or unpin a single message.
+export function downloadMessageOffline(id: number): Promise<void> {
+  return App.DownloadMessageOffline(id)
+}
+
+export function removeOffline(id: number): Promise<void> {
+  return App.RemoveOffline(id)
+}
+
+// snoozeMessage schedules a message to resurface at untilRFC3339; hideNow also
+// hides it from the list until then.
+export function snoozeMessage(id: number, untilRFC3339: string, hideNow: boolean): Promise<void> {
+  return App.SnoozeMessage(id, untilRFC3339, hideNow)
+}
+
+export function unsnoozeMessage(id: number): Promise<void> {
+  return App.UnsnoozeMessage(id)
+}
+
+// --- attachments (preview, save-all) ---
+
+// readAttachment returns an attachment's bytes for the in-app previewer.
+export function readAttachment(messageId: number, attachmentId: number): Promise<AttachmentContent> {
+  return App.ReadAttachment(messageId, attachmentId)
+}
+
+// saveAllAttachments prompts for a directory and writes every attachment there,
+// returning the directory (empty if cancelled).
+export function saveAllAttachments(messageId: number): Promise<string> {
+  return App.SaveAllAttachments(messageId)
+}
+
+// --- offline range download ---
+
+// downloadRange downloads all mail since the start date that is not cached yet.
+export function downloadRange(startDate: string, includeAttachments: boolean): Promise<void> {
+  return App.DownloadRange(startDate, includeAttachments)
+}
+
+// estimateDownloadRange reports how many messages and roughly how many bytes
+// a downloadRange call with the same start date would fetch, so the settings
+// ui can show a size estimate before the user commits to it.
+export interface DownloadEstimate {
+  messageCount: number
+  totalBytes: number
+}
+export function estimateDownloadRange(startDate: string): Promise<DownloadEstimate> {
+  return App.EstimateDownloadRange(startDate)
+}
+
+// --- settings sync ---
+
+export interface ConfigSyncStatus {
+  enabled: boolean
+  mode: string
+  path: string
+  syncSettings: boolean
+  emailScope: string
+  lastSyncUnix: number
+  lastError: string
+}
+
+export function getConfigSyncStatus(): Promise<ConfigSyncStatus> {
+  return App.GetConfigSyncStatus()
+}
+
+export function configureConfigSync(
+  mode: string,
+  path: string,
+  syncSettings: boolean,
+  emailScope: string,
+): Promise<ConfigSyncStatus> {
+  return App.ConfigureConfigSync(mode, path, syncSettings, emailScope)
+}
+
+export function disableConfigSync(): Promise<ConfigSyncStatus> {
+  return App.DisableConfigSync()
+}
+
+export function triggerConfigSync(): Promise<ConfigSyncStatus> {
+  return App.TriggerConfigSync()
+}
+
+export function pickConfigSyncFolder(): Promise<string> {
+  return App.PickConfigSyncFolder()
+}
+
+// --- address book ---
+
+export function searchAddresses(query: string, limit: number): Promise<AddressBookEntry[]> {
+  return App.SearchAddresses(query, limit)
+}
+
+export function listAddresses(): Promise<AddressBookEntry[]> {
+  return App.ListAddresses()
+}
+
+export function deleteAddress(email: string): Promise<void> {
+  return App.DeleteAddress(email)
+}
+
+// --- window ---
+
+// setWindowTitle updates the native window title to reflect context.
+export function setWindowTitle(title: string): void {
+  void App.SetWindowTitle(title)
+}
+
 // getUIPrefs returns all ui preferences with defaults applied server-side.
 export function getUIPrefs(): Promise<UIPrefs> {
   return App.GetUIPrefs()
@@ -311,4 +474,19 @@ export const SettingKeys = {
   uiScale: 'ui_scale',
   messageFontSize: 'message_font_size',
   showFlaggedCount: 'show_flagged_count',
+  flagColorSync: 'flag_color_sync',
+  showOfflineIndicator: 'show_offline_indicator',
+  swipeEnabled: 'swipe_enabled',
+  swipeLeftAction: 'swipe_left_action',
+  swipeRightAction: 'swipe_right_action',
+  composeVimMode: 'compose_vim_mode',
+  downloadIncludeAttachments: 'download_include_attachments',
+  appVimMode: 'app_vim_mode',
+  language: 'language',
+  lowPowerMode: 'low_power_mode',
+  autoSyncIntervalSeconds: 'auto_sync_interval_seconds',
+  defaultEditorMode: 'default_editor_mode',
+  composeAutocomplete: 'compose_autocomplete',
+  composeChips: 'compose_chips',
+  updateCheckFrequency: 'update_check_frequency',
 } as const

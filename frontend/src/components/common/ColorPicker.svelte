@@ -6,6 +6,7 @@
   // gradients here are intrinsic to a color picker, not theme chrome.
   import { createEventDispatcher } from 'svelte'
   import { isValidHex, normalizeHex } from '../../theme/accent'
+  import { t } from '../../lib/i18n'
 
   export let value = '#465AF2'
 
@@ -180,7 +181,7 @@
       bind:value={hexText}
       on:input={onHexInput}
       spellcheck="false"
-      aria-label="Hex color"
+      aria-label={$t('common.colorPicker.hexLabel')}
       placeholder="#RRGGBB"
     />
   </div>

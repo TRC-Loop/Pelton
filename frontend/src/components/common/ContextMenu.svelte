@@ -4,7 +4,10 @@
   // outside interaction. it is the only context menu in the app; the webview's
   // default is suppressed globally.
   import { tick } from 'svelte'
+  import { IconX } from '@tabler/icons-svelte'
   import { contextMenu, closeContextMenu, type MenuItem } from '../../stores/contextmenu'
+  import { flagColors } from '../../theme/flagcolors'
+  import { t } from '../../lib/i18n'
 
   let menuEl: HTMLDivElement
   let left = 0
@@ -15,26 +18,49 @@
     void place($contextMenu.x, $contextMenu.y)
   }
 
+  // the app applies an interface zoom via css `zoom` on <html>. under zoom,
+  // pointer clientX/Y stay in unscaled screen pixels while a fixed element is
+  // positioned in the zoomed layout space, so the raw coordinates land the menu
+  // in the wrong place. convert cursor and viewport into layout space by dividing
+  // by the scale (a no-op at 100%). offsetWidth/Height are already layout-space.
+  function uiScale(): number {
+    const raw = getComputedStyle(document.documentElement).getPropertyValue('--ui-scale')
+    const n = parseFloat(raw)
+    return n > 0 ? n : 1
+  }
+
   async function place(x: number, y: number): Promise<void> {
-    left = x
-    top = y
+    const scale = uiScale()
+    const mx = x / scale
+    const my = y / scale
+    left = mx
+    top = my
     await tick()
     if (!menuEl) {
       return
     }
-    const rect = menuEl.getBoundingClientRect()
     const pad = 8
-    if (x + rect.width + pad > window.innerWidth) {
-      left = Math.max(pad, window.innerWidth - rect.width - pad)
+    const vw = window.innerWidth / scale
+    const vh = window.innerHeight / scale
+    const w = menuEl.offsetWidth
+    const h = menuEl.offsetHeight
+    if (mx + w + pad > vw) {
+      left = Math.max(pad, vw - w - pad)
     }
-    if (y + rect.height + pad > window.innerHeight) {
-      top = Math.max(pad, window.innerHeight - rect.height - pad)
+    if (my + h + pad > vh) {
+      top = Math.max(pad, vh - h - pad)
     }
   }
 
   function run(item: MenuItem): void {
     closeContextMenu()
     item.action()
+  }
+
+  // pickColor fires the swatch row's callback and closes the menu.
+  function pickColor(onPick: (color: number) => void, color: number): void {
+    closeContextMenu()
+    onPick(color)
   }
 </script>
 
@@ -45,6 +71,30 @@
     {#each $contextMenu.entries as entry}
       {#if entry === 'separator'}
         <div class="sep" role="separator"></div>
+      {:else if 'kind' in entry}
+        <div class="swatches" role="group" aria-label={$t('common.contextMenu.flagColor')}>
+          <button
+            type="button"
+            class="swatch clear"
+            class:active={entry.current === 0}
+            title={$t('common.contextMenu.noColor')}
+            aria-label={$t('common.contextMenu.noColor')}
+            on:click={() => pickColor(entry.onPick, 0)}
+          >
+            <IconX size={12} stroke={2} />
+          </button>
+          {#each flagColors as c}
+            <button
+              type="button"
+              class="swatch"
+              class:active={entry.current === c.index}
+              style={`--sw:${c.hex}`}
+              title={c.name}
+              aria-label={c.name}
+              on:click={() => pickColor(entry.onPick, c.index)}
+            ></button>
+          {/each}
+        </div>
       {:else}
         <button type="button" class="item" class:danger={entry.danger} role="menuitem" on:click={() => run(entry)}>
           {#if entry.icon}
@@ -116,5 +166,49 @@
     height: var(--hairline);
     margin: var(--space-1) var(--space-2);
     background: var(--border-subtle);
+  }
+
+  .swatches {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    flex-wrap: wrap;
+  }
+
+  .swatch {
+    width: 18px;
+    height: 18px;
+    border-radius: 999px;
+    border: var(--hairline) solid var(--border-default);
+    background: var(--sw, transparent);
+    cursor: pointer;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-tertiary);
+    transition: transform 0.08s ease;
+  }
+
+  .swatch:hover {
+    transform: scale(1.18);
+  }
+
+  .swatch.active {
+    box-shadow: 0 0 0 2px var(--accent);
+  }
+
+  .swatch.clear {
+    background: var(--surface-hover);
+    border-color: var(--border-default);
+    color: var(--text-secondary);
+  }
+
+  /* the clear (no color) swatch is active by default; keep its ring subtle so the
+     X does not read as an odd outlined glyph. */
+  .swatch.clear.active {
+    box-shadow: none;
+    border-color: var(--text-tertiary);
   }
 </style>

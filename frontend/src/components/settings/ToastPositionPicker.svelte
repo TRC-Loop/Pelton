@@ -5,6 +5,7 @@
   import { createEventDispatcher } from 'svelte'
   import { IconCircleCheck } from '@tabler/icons-svelte'
   import type { ToastPosition } from '../../lib/types'
+  import { t } from '../../lib/i18n'
 
   export let value: string
 
@@ -22,12 +23,19 @@
   // the position currently being previewed on hover, or null.
   let preview: ToastPosition | null = null
 
-  function labelFor(p: ToastPosition): string {
-    return p.replace('-', ' ')
+  const positionKeys: Record<ToastPosition, string> = {
+    'top-left': 'settingsPanel.posTopLeft',
+    'top-center': 'settingsPanel.posTopCenter',
+    'top-right': 'settingsPanel.posTopRight',
+    'bottom-left': 'settingsPanel.posBottomLeft',
+    'bottom-center': 'settingsPanel.posBottomCenter',
+    'bottom-right': 'settingsPanel.posBottomRight',
   }
+
+  $: labelFor = (p: ToastPosition): string => $t(positionKeys[p])
 </script>
 
-<div class="grid" role="group" aria-label="Notification position">
+<div class="grid" role="group" aria-label={$t('settings.toastPosition')}>
   {#each positions as p (p)}
     <button
       type="button"
@@ -51,7 +59,7 @@
   <!-- a sample notification at the real screen position being hovered. -->
   <div class={`preview-toast ${preview}`} aria-hidden="true">
     <IconCircleCheck size={16} stroke={1.7} />
-    <span>Notification preview</span>
+    <span>{$t('settingsPanel.notificationPreview')}</span>
   </div>
 {/if}
 

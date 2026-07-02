@@ -15,6 +15,7 @@
     IconInfoCircle,
   } from '@tabler/icons-svelte'
   import IconButton from '../common/IconButton.svelte'
+  import { t } from '../../lib/i18n'
 
   export let flagged: boolean = false
 
@@ -28,41 +29,43 @@
     print: void
     info: void
   }>()
+
+  $: flagLabel = flagged ? $t('detail.toolbar.unflag') : $t('detail.toolbar.flag')
 </script>
 
-<div class="toolbar" role="toolbar" aria-label="Message actions">
-  <IconButton label="Reply" on:click={() => dispatch('reply')}>
+<div class="toolbar" role="toolbar" aria-label={$t('detail.toolbar.ariaLabel')}>
+  <IconButton label={$t('action.reply')} on:click={() => dispatch('reply')}>
     <IconArrowBackUp size={18} stroke={1.6} />
   </IconButton>
-  <IconButton label="Reply all" on:click={() => dispatch('replyAll')}>
+  <IconButton label={$t('detail.toolbar.replyAll')} on:click={() => dispatch('replyAll')}>
     <IconArrowBackUpDouble size={18} stroke={1.6} />
   </IconButton>
-  <IconButton label="Forward" on:click={() => dispatch('forward')}>
+  <IconButton label={$t('action.forward')} on:click={() => dispatch('forward')}>
     <IconArrowForwardUp size={18} stroke={1.6} />
   </IconButton>
 
   <span class="divider" aria-hidden="true"></span>
 
-  <IconButton label="Archive" on:click={() => dispatch('archive')}>
+  <IconButton label={$t('action.archive')} on:click={() => dispatch('archive')}>
     <IconArchive size={18} stroke={1.6} />
   </IconButton>
-  <IconButton label={flagged ? 'Unflag' : 'Flag'} active={flagged} on:click={() => dispatch('toggleFlag')}>
+  <IconButton label={flagLabel} active={flagged} on:click={() => dispatch('toggleFlag')}>
     {#if flagged}
       <IconFlagFilled size={18} />
     {:else}
       <IconFlag size={18} stroke={1.6} />
     {/if}
   </IconButton>
-  <IconButton label="Delete" danger on:click={() => dispatch('delete')}>
+  <IconButton label={$t('action.delete')} danger on:click={() => dispatch('delete')}>
     <IconTrash size={18} stroke={1.6} />
   </IconButton>
 
   <span class="divider" aria-hidden="true"></span>
 
-  <IconButton label="Print" on:click={() => dispatch('print')}>
+  <IconButton label={$t('detail.toolbar.print')} on:click={() => dispatch('print')}>
     <IconPrinter size={18} stroke={1.6} />
   </IconButton>
-  <IconButton label="Message info" on:click={() => dispatch('info')}>
+  <IconButton label={$t('detail.toolbar.messageInfo')} on:click={() => dispatch('info')}>
     <IconInfoCircle size={18} stroke={1.6} />
   </IconButton>
 </div>

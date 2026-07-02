@@ -8,17 +8,18 @@
   import { IconX, IconCopy, IconCheck } from '@tabler/icons-svelte'
   import { formatFullDate, formatBytes } from '../../lib/format'
   import { toastSuccess, toastError } from '../../stores/toast'
+  import { t } from '../../lib/i18n'
   import type { MessageDetail } from '../../lib/types'
 
   export let detail: MessageDetail
 
   const dispatch = createEventDispatcher<{ close: void }>()
 
-  const pgpLabel: Record<string, string> = {
-    none: 'No PGP markers',
-    signed: 'PGP signed',
-    encrypted: 'PGP encrypted',
-  }
+  $: pgpLabel = {
+    none: $t('detail.infoModal.pgp.none'),
+    signed: $t('detail.infoModal.pgp.signed'),
+    encrypted: $t('detail.infoModal.pgp.encrypted'),
+  } as Record<string, string>
 
   interface Field {
     label: string
@@ -28,30 +29,30 @@
   $: fields = buildFields(detail)
   function buildFields(d: MessageDetail): Field[] {
     const list: Field[] = [
-      { label: 'Subject', value: d.subject || '(no subject)' },
-      { label: 'From', value: d.fromName ? `${d.fromName} <${d.fromAddress}>` : d.fromAddress },
-      { label: 'To', value: d.toAddresses || '—' },
+      { label: $t('detail.infoModal.subject'), value: d.subject || $t('detail.noSubject') },
+      { label: $t('detail.infoModal.from'), value: d.fromName ? `${d.fromName} <${d.fromAddress}>` : d.fromAddress },
+      { label: $t('detail.infoModal.to'), value: d.toAddresses || '—' },
     ]
     if (d.ccAddresses) {
-      list.push({ label: 'Cc', value: d.ccAddresses })
+      list.push({ label: $t('detail.infoModal.cc'), value: d.ccAddresses })
     }
     list.push(
-      { label: 'Date', value: formatFullDate(d.date) || d.date },
-      { label: 'Account', value: d.accountEmail },
-      { label: 'Folder', value: d.folderName },
-      { label: 'Format', value: d.isHtml ? 'HTML' : 'Plain text' },
-      { label: 'Remote content', value: d.hasRemoteContent ? 'Present (blocked by default)' : 'None' },
-      { label: 'Encryption', value: pgpLabel[d.pgp] ?? d.pgp },
+      { label: $t('detail.infoModal.date'), value: formatFullDate(d.date) || d.date },
+      { label: $t('detail.infoModal.account'), value: d.accountEmail },
+      { label: $t('detail.infoModal.folder'), value: d.folderName },
+      { label: $t('detail.infoModal.format'), value: d.isHtml ? $t('detail.infoModal.formatHtml') : $t('detail.infoModal.formatPlain') },
+      { label: $t('detail.infoModal.remoteContent'), value: d.hasRemoteContent ? $t('detail.infoModal.remoteContentPresent') : $t('detail.infoModal.remoteContentNone') },
+      { label: $t('detail.infoModal.encryption'), value: pgpLabel[d.pgp] ?? d.pgp },
     )
     if (d.attachments.length > 0) {
       const names = d.attachments.map((a) => `${a.filename} (${formatBytes(a.sizeBytes)})`).join(', ')
-      list.push({ label: 'Attachments', value: names })
+      list.push({ label: $t('detail.infoModal.attachments'), value: names })
     }
     return list
   }
 
   function buildMarkdown(): string {
-    const lines = ['## Message details', '']
+    const lines = [`## ${$t('detail.infoModal.markdownHeading')}`, '']
     for (const f of fields) {
       lines.push(`- **${f.label}:** ${f.value}`)
     }
@@ -61,18 +62,18 @@
   async function copyAll(): Promise<void> {
     try {
       await navigator.clipboard.writeText(buildMarkdown())
-      toastSuccess('Copied message details as Markdown.')
+      toastSuccess($t('detail.infoModal.copiedMarkdown'))
     } catch {
-      toastError('Could not copy to the clipboard.')
+      toastError($t('detail.infoModal.copyFailed'))
     }
   }
 
   async function copyOne(field: Field): Promise<void> {
     try {
       await navigator.clipboard.writeText(field.value)
-      toastSuccess(`Copied ${field.label.toLowerCase()}.`)
+      toastSuccess($t('detail.infoModal.copiedField').replace('{field}', field.label.toLowerCase()))
     } catch {
-      toastError('Could not copy to the clipboard.')
+      toastError($t('detail.infoModal.copyFailed'))
     }
   }
 
@@ -88,10 +89,10 @@
 <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
 <div class="overlay" on:click={() => dispatch('close')}>
   <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions a11y-no-noninteractive-element-interactions -->
-  <div class="modal" role="dialog" aria-modal="true" aria-label="Message information" on:click|stopPropagation>
+  <div class="modal" role="dialog" aria-modal="true" aria-label={$t('detail.infoModal.dialogLabel')} tabindex="-1" on:click|stopPropagation>
     <header>
-      <span class="title">Message info</span>
-      <button type="button" class="close" aria-label="Close" on:click={() => dispatch('close')}>
+      <span class="title">{$t('detail.infoModal.title')}</span>
+      <button type="button" class="close" aria-label={$t('detail.attachments.close')} on:click={() => dispatch('close')}>
         <IconX size={18} stroke={1.8} />
       </button>
     </header>
@@ -101,17 +102,16 @@
         <div class="field">
           <span class="key">{field.label}</span>
           <span class="val">{field.value}</span>
-          <button type="button" class="copy" aria-label={`Copy ${field.label}`} on:click={() => copyOne(field)}>
+          <button type="button" class="copy" aria-label={$t('detail.infoModal.copyAriaLabel').replace('{field}', field.label)} on:click={() => copyOne(field)}>
             <IconCopy size={14} stroke={1.6} />
           </button>
         </div>
       {/each}
 
       <div class="field note">
-        <span class="key">Authentication</span>
+        <span class="key">{$t('detail.infoModal.authentication')}</span>
         <span class="val muted">
-          Raw headers and SPF / DKIM / DMARC results are not available yet. They are a planned
-          on-demand fetch, so nothing here is guessed.
+          {$t('detail.infoModal.authenticationNote')}
         </span>
       </div>
     </div>
@@ -119,7 +119,7 @@
     <footer>
       <button type="button" class="primary" on:click={copyAll}>
         <IconCheck size={15} stroke={1.8} />
-        Copy as Markdown
+        {$t('detail.infoModal.copyAsMarkdown')}
       </button>
     </footer>
   </div>

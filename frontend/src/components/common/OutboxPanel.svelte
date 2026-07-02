@@ -7,12 +7,13 @@
   import { createEventDispatcher } from 'svelte'
   import { outbox } from '../../stores/outbox'
   import type { OutboxRow } from '../../lib/types'
+  import { t } from '../../lib/i18n'
 
   const dispatch = createEventDispatcher<{ close: void }>()
 
-  function recipientLabel(row: OutboxRow): string {
+  function recipientLabel(row: OutboxRow, tFn: (key: string) => string): string {
     if (row.recipients.length === 0) {
-      return '(no recipients)'
+      return tFn('common.outboxPanel.noRecipients')
     }
     if (row.recipients.length === 1) {
       return row.recipients[0]
@@ -21,16 +22,16 @@
   }
 </script>
 
-<div class="panel" role="dialog" aria-label="Outbox">
+<div class="panel" role="dialog" aria-label={$t('common.outboxPanel.title')}>
   <header>
-    <span class="title">Outbox</span>
-    <button type="button" class="close" aria-label="Close outbox" on:click={() => dispatch('close')}>
+    <span class="title">{$t('common.outboxPanel.title')}</span>
+    <button type="button" class="close" aria-label={$t('common.outboxPanel.close')} on:click={() => dispatch('close')}>
       <IconX size={14} stroke={1.8} />
     </button>
   </header>
 
   {#if $outbox.length === 0}
-    <p class="empty">Nothing queued.</p>
+    <p class="empty">{$t('common.outboxPanel.empty')}</p>
   {:else}
     <ul>
       {#each $outbox as row (row.id)}
@@ -45,13 +46,13 @@
             {/if}
           </span>
           <span class="body">
-            <span class="to">{recipientLabel(row)}</span>
+            <span class="to">{recipientLabel(row, $t)}</span>
             {#if row.state === 'sending'}
               <span class="bar"><span class="fill"></span></span>
             {:else if row.state === 'failed'}
-              <span class="err">{row.lastError || 'Send failed'}</span>
+              <span class="err">{row.lastError || $t('common.outboxPanel.sendFailed')}</span>
             {:else}
-              <span class="muted">Queued</span>
+              <span class="muted">{$t('common.outboxPanel.queued')}</span>
             {/if}
           </span>
         </li>

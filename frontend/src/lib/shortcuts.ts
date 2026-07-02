@@ -8,8 +8,26 @@
 
 import { isMac } from './i18n'
 
-// ShortcutAction is the set of app-wide actions a shortcut can trigger.
-export type ShortcutAction = 'compose' | 'preferences' | 'sync' | 'search' | 'add-mailbox'
+// ShortcutAction is the set of app-wide actions a shortcut can trigger. The
+// second group are message-level actions that act on the open message; they ship
+// unbound (empty default combo) so the user can assign keys to the right-click
+// menu items if they want.
+export type ShortcutAction =
+  | 'compose'
+  | 'preferences'
+  | 'sync'
+  | 'search'
+  | 'add-mailbox'
+  | 'reply'
+  | 'reply-all'
+  | 'forward'
+  | 'mark-read'
+  | 'mark-unread'
+  | 'flag'
+  | 'snooze'
+  | 'download-offline'
+  | 'delete-message'
+  | 'archive'
 
 // Shortcut pairs an action with its default combo and the label key for display.
 export interface Shortcut {
@@ -26,6 +44,17 @@ export const shortcuts: Shortcut[] = [
   { action: 'sync', combo: 'mod+r', labelKey: 'shortcut.sync' },
   { action: 'add-mailbox', combo: 'mod+m', labelKey: 'shortcut.addMailbox' },
   { action: 'search', combo: 'mod+f', labelKey: 'shortcut.search' },
+  // message-level actions, unbound by default.
+  { action: 'reply', combo: '', labelKey: 'shortcut.reply' },
+  { action: 'reply-all', combo: '', labelKey: 'shortcut.replyAll' },
+  { action: 'forward', combo: '', labelKey: 'shortcut.forward' },
+  { action: 'mark-read', combo: '', labelKey: 'shortcut.markRead' },
+  { action: 'mark-unread', combo: '', labelKey: 'shortcut.markUnread' },
+  { action: 'flag', combo: '', labelKey: 'shortcut.flag' },
+  { action: 'snooze', combo: '', labelKey: 'shortcut.snooze' },
+  { action: 'download-offline', combo: '', labelKey: 'shortcut.downloadOffline' },
+  { action: 'delete-message', combo: '', labelKey: 'shortcut.deleteMessage' },
+  { action: 'archive', combo: '', labelKey: 'shortcut.archive' },
 ]
 
 // ParsedCombo is a combo broken into its modifier flags and final key.
@@ -117,7 +146,12 @@ export function matchShortcut(
   bindings: Record<string, string>,
 ): ShortcutAction | null {
   for (const action of Object.keys(bindings)) {
-    if (comboMatches(event, bindings[action])) {
+    const combo = bindings[action]
+    // an empty combo is an unbound action; never match it.
+    if (!combo) {
+      continue
+    }
+    if (comboMatches(event, combo)) {
       return action as ShortcutAction
     }
   }

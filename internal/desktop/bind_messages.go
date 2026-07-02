@@ -195,6 +195,15 @@ func (a *App) DeleteMessage(id int64) error {
 	return a.store.MarkDeletePending(a.ctx, id)
 }
 
+// UndoDelete reverses a pending delete while the message is still cached (before
+// the next sync expunges it), bringing the row back into the list.
+func (a *App) UndoDelete(id int64) error {
+	if err := a.ready(); err != nil {
+		return err
+	}
+	return a.store.ClearDeletePending(a.ctx, id)
+}
+
 // SaveAttachment prompts for a destination and writes the attachment file there,
 // returning the chosen path (empty if the user cancelled). messageID scopes the
 // lookup so the id cannot reach another message's files.

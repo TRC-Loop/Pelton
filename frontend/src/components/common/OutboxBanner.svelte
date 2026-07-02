@@ -4,6 +4,7 @@
   // failures visible instead of silent. hidden when the outbox is empty.
   import { IconSend, IconAlertTriangle } from '@tabler/icons-svelte'
   import { outbox } from '../../stores/outbox'
+  import { t } from '../../lib/i18n'
 
   // outbox states mirror the backend outbox package constants.
   $: pending = $outbox.filter((r) => r.state === 'queued' || r.state === 'sending')
@@ -15,13 +16,13 @@
     {#if pending.length > 0}
       <span class="item">
         <IconSend size={13} stroke={1.7} />
-        {pending.length} sending
+        {pending.length} {$t('common.outbox.sendingSuffix')}
       </span>
     {/if}
     {#if failed.length > 0}
       <span class="item failed" title={failed[0].lastError}>
         <IconAlertTriangle size={13} stroke={1.7} />
-        {failed.length} failed
+        {failed.length} {$t('common.outbox.failedSuffix')}
       </span>
     {/if}
   </div>

@@ -18,6 +18,7 @@
     IconQuote,
     IconHeading,
   } from '@tabler/icons-svelte'
+  import { t } from '../../lib/i18n'
 
   // the initial html to seed the editor with (a draft or reply body).
   export let content = ''
@@ -90,7 +91,7 @@
       return
     }
     const prev = (editor.getAttributes('link').href as string) ?? ''
-    const url = window.prompt('Link URL', prev)
+    const url = window.prompt($t('compose.toolbar.linkUrlPrompt'), prev)
     if (url === null) {
       return
     }
@@ -103,29 +104,29 @@
 </script>
 
 <div class="rich">
-  <div class="toolbar" role="toolbar" aria-label="Formatting">
-    <button type="button" class:on={active('bold')} title="Bold" aria-label="Bold" on:click={toggleBold}>
+  <div class="toolbar" role="toolbar" aria-label={$t('compose.toolbar.ariaLabel')}>
+    <button type="button" class:on={active('bold')} title={$t('compose.toolbar.bold')} aria-label={$t('compose.toolbar.bold')} on:click={toggleBold}>
       <IconBold size={16} stroke={1.8} />
     </button>
-    <button type="button" class:on={active('italic')} title="Italic" aria-label="Italic" on:click={toggleItalic}>
+    <button type="button" class:on={active('italic')} title={$t('compose.toolbar.italic')} aria-label={$t('compose.toolbar.italic')} on:click={toggleItalic}>
       <IconItalic size={16} stroke={1.8} />
     </button>
-    <button type="button" class:on={active('code')} title="Inline code" aria-label="Inline code" on:click={toggleCode}>
+    <button type="button" class:on={active('code')} title={$t('compose.toolbar.inlineCode')} aria-label={$t('compose.toolbar.inlineCode')} on:click={toggleCode}>
       <IconCode size={16} stroke={1.8} />
     </button>
-    <button type="button" class:on={active('heading', { level: 2 })} title="Heading" aria-label="Heading" on:click={toggleHeading}>
+    <button type="button" class:on={active('heading', { level: 2 })} title={$t('compose.toolbar.heading')} aria-label={$t('compose.toolbar.heading')} on:click={toggleHeading}>
       <IconHeading size={16} stroke={1.8} />
     </button>
-    <button type="button" class:on={active('link')} title="Link" aria-label="Link" on:click={setLink}>
+    <button type="button" class:on={active('link')} title={$t('compose.toolbar.link')} aria-label={$t('compose.toolbar.link')} on:click={setLink}>
       <IconLink size={16} stroke={1.8} />
     </button>
-    <button type="button" class:on={active('bulletList')} title="Bullet list" aria-label="Bullet list" on:click={toggleBullet}>
+    <button type="button" class:on={active('bulletList')} title={$t('compose.toolbar.bulletList')} aria-label={$t('compose.toolbar.bulletList')} on:click={toggleBullet}>
       <IconList size={16} stroke={1.8} />
     </button>
-    <button type="button" class:on={active('orderedList')} title="Numbered list" aria-label="Numbered list" on:click={toggleOrdered}>
+    <button type="button" class:on={active('orderedList')} title={$t('compose.toolbar.numberedList')} aria-label={$t('compose.toolbar.numberedList')} on:click={toggleOrdered}>
       <IconListNumbers size={16} stroke={1.8} />
     </button>
-    <button type="button" class:on={active('blockquote')} title="Quote" aria-label="Quote" on:click={toggleQuote}>
+    <button type="button" class:on={active('blockquote')} title={$t('compose.toolbar.quote')} aria-label={$t('compose.toolbar.quote')} on:click={toggleQuote}>
       <IconQuote size={16} stroke={1.8} />
     </button>
   </div>

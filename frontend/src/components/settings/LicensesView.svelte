@@ -8,6 +8,7 @@
   import { IconChevronRight, IconLicense } from '@tabler/icons-svelte'
   import { licenses, programLicense, type LicenseEntry } from '../../lib/api'
   import { errorMessage } from '../../stores/toast'
+  import { t } from '../../lib/i18n'
 
   let entries: LicenseEntry[] = []
   let loading = true
@@ -45,26 +46,30 @@
 
   $: goEntries = entries.filter((e) => e.group === 'go')
   $: npmEntries = entries.filter((e) => e.group === 'npm')
+  $: sections = [
+    { label: $t('settingsPanel.goModules'), list: goEntries },
+    { label: $t('settingsPanel.frontendPackages'), list: npmEntries },
+  ]
 </script>
 
 <div class="licenses">
   <button type="button" class="program" on:click={toggleGpl}>
     <IconLicense size={15} stroke={1.6} />
-    <span>Pelton is licensed under GPL-3.0</span>
+    <span>Pelton {$t('settingsPanel.isLicensedUnder')} GPL-3.0</span>
     <IconChevronRight size={14} stroke={1.8} class={gplOpen ? 'chev open' : 'chev'} />
   </button>
   {#if gplOpen}
-    <pre class="text selectable">{gplText || 'Loading…'}</pre>
+    <pre class="text selectable">{gplText || $t('settingsPanel.loading')}</pre>
   {/if}
 
   {#if loading}
-    <p class="muted">Loading licenses…</p>
+    <p class="muted">{$t('settingsPanel.loadingLicenses')}</p>
   {:else if error}
     <p class="err">{error}</p>
   {:else if entries.length === 0}
-    <p class="muted">No license manifest found. Run <code>make licenses</code> and rebuild.</p>
+    <p class="muted">{$t('settingsPanel.noManifest')} <code>make licenses</code> {$t('settingsPanel.andRebuild')}</p>
   {:else}
-    {#each [{ label: 'Go modules', list: goEntries }, { label: 'Frontend packages', list: npmEntries }] as section}
+    {#each sections as section}
       {#if section.list.length > 0}
         <h4>{section.label}</h4>
         <ul>

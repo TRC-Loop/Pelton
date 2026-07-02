@@ -7,6 +7,7 @@
   import { IconCircleCheck, IconAlertCircle, IconInfoCircle, IconX } from '@tabler/icons-svelte'
   import { toasts, dismiss } from '../../stores/toast'
   import { prefs } from '../../stores/prefs'
+  import { t } from '../../lib/i18n'
   import type { ToastKind } from '../../stores/toast'
   import type { ToastPosition } from '../../lib/types'
 
@@ -41,7 +42,7 @@
       {#if toast.action}
         <button type="button" class="action" on:click={toast.action.run}>{toast.action.label}</button>
       {/if}
-      <button type="button" class="close" aria-label="Dismiss notification" on:click={() => dismiss(toast.id)}>
+      <button type="button" class="close" aria-label={$t('common.toasts.dismiss')} on:click={() => dismiss(toast.id)}>
         <IconX size={14} stroke={1.8} />
       </button>
     </div>

@@ -30,7 +30,44 @@ const (
 	// action string (preferences, compose, sync, add-mailbox, about) the frontend
 	// maps to an action.
 	EventMenu = "menu:action"
+	// EventDownloadProgress fires during a bulk offline range download so the
+	// status bar can show a progress bar with percent and eta.
+	EventDownloadProgress = "download:progress"
+	// EventAttachmentProgress fires while saving one or more attachments.
+	EventAttachmentProgress = "attachment:progress"
+	// EventConfigSync fires after every config sync pass (success or failure)
+	// with the current configsync.Config, so the settings ui stays live.
+	EventConfigSync = "configsync:status"
+	// EventUpdateAvailable fires after an automatic (frequency-driven) update
+	// check completes, so the about section can show a notice without polling.
+	// It is not fired for a manual "check now" call, which returns its result
+	// directly to the caller instead.
+	EventUpdateAvailable = "update:available"
 )
+
+// DownloadProgressEvent is the payload for EventDownloadProgress. Running is
+// false on the final event (done, cancelled, or failed); Error is set on failure.
+type DownloadProgressEvent struct {
+	Running    bool   `json:"running"`
+	Done       int    `json:"done"`
+	Total      int    `json:"total"`
+	Percent    int    `json:"percent"`
+	ETASeconds int    `json:"etaSeconds"`
+	Label      string `json:"label"`
+	Error      string `json:"error"`
+}
+
+// AttachmentProgressEvent is the payload for EventAttachmentProgress. It reports
+// byte progress for the current file plus how many files are done in a save-all.
+type AttachmentProgressEvent struct {
+	Running    bool   `json:"running"`
+	Filename   string `json:"filename"`
+	BytesDone  int64  `json:"bytesDone"`
+	BytesTotal int64  `json:"bytesTotal"`
+	FilesDone  int    `json:"filesDone"`
+	FilesTotal int    `json:"filesTotal"`
+	Error      string `json:"error"`
+}
 
 // MailNewEvent is the payload for EventMailNew.
 type MailNewEvent struct {

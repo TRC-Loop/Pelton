@@ -10,9 +10,17 @@ export function AllowDomainImages(arg1:number):Promise<void>;
 
 export function AppVersion():Promise<string>;
 
+export function ArchiveMessage(arg1:number):Promise<desktop.ArchiveUndoDTO>;
+
 export function CancelSend(arg1:number):Promise<boolean>;
 
+export function CheckForUpdates():Promise<desktop.UpdateCheckResult>;
+
 export function ClearSentOutbox():Promise<void>;
+
+export function ConfigureConfigSync(arg1:string,arg2:string,arg3:boolean,arg4:string):Promise<desktop.ConfigSyncStatusDTO>;
+
+export function DeleteAddress(arg1:string):Promise<void>;
 
 export function DeleteDraft(arg1:number):Promise<void>;
 
@@ -20,11 +28,21 @@ export function DeleteMessage(arg1:number):Promise<void>;
 
 export function DeleteSignature(arg1:number):Promise<void>;
 
+export function DisableConfigSync():Promise<desktop.ConfigSyncStatusDTO>;
+
 export function DiscoverConfig(arg1:string):Promise<desktop.DiscoveredDTO>;
+
+export function DownloadMessageOffline(arg1:number):Promise<void>;
+
+export function DownloadRange(arg1:string,arg2:boolean):Promise<void>;
+
+export function EstimateDownloadRange(arg1:string):Promise<desktop.DownloadEstimateDTO>;
 
 export function ExportMessagePrintView(arg1:number):Promise<void>;
 
 export function GetAccountSignatures(arg1:number):Promise<desktop.AccountSignaturesDTO>;
+
+export function GetConfigSyncStatus():Promise<desktop.ConfigSyncStatusDTO>;
 
 export function GetMessage(arg1:number):Promise<desktop.MessageDetailDTO>;
 
@@ -37,6 +55,8 @@ export function GetUIPrefs():Promise<desktop.UIPrefsDTO>;
 export function Licenses():Promise<string>;
 
 export function ListAccounts():Promise<Array<desktop.AccountDTO>>;
+
+export function ListAddresses():Promise<Array<desktop.AddressBookEntryDTO>>;
 
 export function ListDrafts():Promise<Array<desktop.DraftDTO>>;
 
@@ -52,7 +72,17 @@ export function ListSignatures():Promise<Array<desktop.SignatureDTO>>;
 
 export function ListUnifiedViews():Promise<Array<desktop.UnifiedViewDTO>>;
 
+export function MoveMessage(arg1:number,arg2:number):Promise<desktop.ArchiveUndoDTO>;
+
+export function PickConfigSyncFolder():Promise<string>;
+
 export function ProgramLicense():Promise<string>;
+
+export function ReadAttachment(arg1:number,arg2:number):Promise<desktop.AttachmentContentDTO>;
+
+export function RemoveOffline(arg1:number):Promise<void>;
+
+export function SaveAllAttachments(arg1:number):Promise<string>;
 
 export function SaveAttachment(arg1:number,arg2:number):Promise<string>;
 
@@ -62,11 +92,15 @@ export function SaveSignature(arg1:desktop.SignatureDTO):Promise<desktop.Signatu
 
 export function Search(arg1:desktop.SearchRequestDTO):Promise<Array<desktop.MessageSummaryDTO>>;
 
+export function SearchAddresses(arg1:string,arg2:number):Promise<Array<desktop.AddressBookEntryDTO>>;
+
 export function SendMessage(arg1:desktop.ComposeRequest):Promise<number>;
 
 export function SenderPhotos(arg1:string):Promise<Array<string>>;
 
 export function SetAccountSignatures(arg1:number,arg2:number,arg3:number):Promise<void>;
+
+export function SetFlagColor(arg1:number,arg2:number):Promise<void>;
 
 export function SetFlagged(arg1:number,arg2:boolean):Promise<void>;
 
@@ -74,8 +108,20 @@ export function SetSeen(arg1:number,arg2:boolean):Promise<void>;
 
 export function SetSetting(arg1:string,arg2:string):Promise<void>;
 
+export function SetWindowTitle(arg1:string):Promise<void>;
+
+export function SnoozeMessage(arg1:number,arg2:string,arg3:boolean):Promise<void>;
+
 export function TestConnection(arg1:desktop.TestConnectionRequest):Promise<void>;
+
+export function TriggerConfigSync():Promise<desktop.ConfigSyncStatusDTO>;
 
 export function TriggerSync():Promise<void>;
 
 export function TrustSenderImages(arg1:number):Promise<void>;
+
+export function UnarchiveMessage(arg1:string,arg2:number):Promise<void>;
+
+export function UndoDelete(arg1:number):Promise<void>;
+
+export function UnsnoozeMessage(arg1:number):Promise<void>;

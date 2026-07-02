@@ -5,6 +5,7 @@
   // menu events, and handles the app-wide keyboard shortcuts.
   import { onMount, onDestroy } from 'svelte'
   import { get } from 'svelte/store'
+  import { t } from './lib/i18n'
 
   import Sidebar from './components/sidebar/Sidebar.svelte'
   import MessageList from './components/list/MessageList.svelte'
@@ -14,22 +15,48 @@
   import StatusBar from './components/common/StatusBar.svelte'
   import ContextMenu from './components/common/ContextMenu.svelte'
   import Resizer from './components/common/Resizer.svelte'
+  import SnoozeDialog from './components/detail/SnoozeDialog.svelte'
+  import AttachmentPreview from './components/detail/AttachmentPreview.svelte'
+  import MoveDialog from './components/detail/MoveDialog.svelte'
 
-  import { initPrefs, prefs, setPaneWidths } from './stores/prefs'
+  import { initPrefs, prefs, setPaneWidths, setLowPowerMode } from './stores/prefs'
   import { loadSidebar, refreshSidebar, sidebar } from './stores/accounts'
   import { initSidebarState } from './stores/sidebarstate'
   import { loadSignatures } from './stores/signatures'
   import { loadOutbox, syncing, lastSynced } from './stores/outbox'
   import { selection } from './stores/selection'
-  import { loadList } from './stores/messages'
-  import { composeSessions, openCompose, initComposePrefs } from './stores/compose'
-  import { triggerSync, getSetting, setSetting, SettingKeys, exportMessagePrintView } from './lib/api'
+  import { loadList, messageList } from './stores/messages'
+  import { initProgress } from './stores/progress'
+  import { composeSessions, openCompose, initComposePrefs, openReply, openForward } from './stores/compose'
+  import { openSnooze } from './stores/snooze'
+  import { patchInList, removeFromList } from './stores/messages'
+  import {
+    triggerSync,
+    getSetting,
+    setSetting,
+    SettingKeys,
+    exportMessagePrintView,
+    setWindowTitle,
+    setSeen,
+    setFlagged,
+    deleteMessage,
+    getMessage,
+    downloadMessageOffline,
+    archiveMessage,
+  } from './lib/api'
+  import { recordArchived } from './stores/undoarchive'
   import { onMailNew, onSyncState, onOutboxChanged, onMenu, type Unsubscribe } from './lib/events'
   import { matchShortcut, comboHasModifier, type ShortcutAction } from './lib/shortcuts'
   import { bindings, recording, initShortcuts } from './stores/shortcuts'
   import { triggerUndo } from './stores/undosend'
+  import { recordDeleted, triggerUndoDelete } from './stores/undodelete'
+  import { triggerUndoArchive } from './stores/undoarchive'
   import { openMessageId } from './stores/selection'
   import { errorMessage, toastError, toastInfo } from './stores/toast'
+  import { moveTarget } from './stores/move'
+  import { snoozeTarget } from './stores/snooze'
+  import { previewTarget } from './stores/preview'
+  import type { EditorMode } from './lib/types'
 
   let settingsOpen = false
   let wizardOpen = false
@@ -47,12 +74,34 @@
   }
   $: locked = $prefs.paneLocked
 
+  // keep the native window title in sync with context: the open message's subject
+  // when reading, otherwise the current folder/view name.
+  $: updateWindowTitle($openMessageId, $selection, $messageList, $t)
+  function updateWindowTitle(
+    id: number | null,
+    sel: typeof $selection,
+    list: typeof $messageList,
+    tFn: (key: string) => string,
+  ): void {
+    let title = 'Pelton'
+    if (id !== null) {
+      const item = list.data?.items?.find((m) => m.id === id)
+      if (item) {
+        title = `${item.subject || tFn('app.noSubject')} - Pelton`
+      }
+    } else if (sel) {
+      title = `${sel.label} - Pelton`
+    }
+    setWindowTitle(title)
+  }
+
   onMount(async () => {
     await initPrefs()
     await initSidebarState()
     await initComposePrefs()
     void initShortcuts()
     void loadSignatures()
+    initProgress()
     await loadSidebar()
     await loadOutbox()
 
@@ -102,13 +151,15 @@
     return data.accounts[0].id
   }
 
+  $: editorMode = $prefs.defaultEditorMode as EditorMode
+
   function startCompose(): void {
     const accountId = composeAccountId()
     if (accountId === null) {
-      toastError('Add a mailbox before composing.')
+      toastError(get(t)('app.toast.addMailboxFirst'))
       return
     }
-    openCompose(accountId, 'plaintext')
+    openCompose(accountId, editorMode)
   }
 
   async function runSync(): Promise<void> {
@@ -134,7 +185,7 @@
   function onMailboxAdded(): void {
     wizardOpen = false
     void refreshSidebar()
-    toastInfo('Mailbox added and syncing.')
+    toastInfo(get(t)('app.toast.mailboxAdded'))
   }
 
   // onboarding completion is persisted so it shows only once. re-run clears it
@@ -163,14 +214,85 @@
   function exportPdf(): void {
     const id = get(openMessageId)
     if (id === null) {
-      toastInfo('Open a message first to export it.')
+      toastInfo(get(t)('app.toast.exportOpenFirst'))
       return
     }
     exportMessagePrintView(id).catch((err) => toastError(errorMessage(err)))
   }
 
+  // currentMessage resolves the open message summary from the loaded list, so the
+  // message-level shortcuts can act on it.
+  function currentMessage() {
+    const id = get(openMessageId)
+    if (id === null) {
+      return null
+    }
+    return get(messageList).data?.items?.find((m) => m.id === id) ?? null
+  }
+
+  // messageAction runs a message-level shortcut on the open message, mirroring the
+  // right-click menu. it no-ops (with a hint) when no message is open.
+  async function messageAction(action: ShortcutAction): Promise<void> {
+    const msg = currentMessage()
+    if (!msg) {
+      toastInfo(get(t)('app.toast.openMessageFirst'))
+      return
+    }
+    try {
+      switch (action) {
+        case 'reply':
+        case 'reply-all':
+          openReply(await getMessage(msg.id), editorMode, action === 'reply-all')
+          break
+        case 'forward':
+          openForward(await getMessage(msg.id), editorMode)
+          break
+        case 'mark-read':
+          patchInList(msg.id, { seen: true })
+          await setSeen(msg.id, true)
+          break
+        case 'mark-unread':
+          patchInList(msg.id, { seen: false })
+          await setSeen(msg.id, false)
+          break
+        case 'flag':
+          patchInList(msg.id, { flagged: !msg.flagged })
+          await setFlagged(msg.id, !msg.flagged)
+          break
+        case 'snooze':
+          openSnooze(msg.id, msg.subject)
+          break
+        case 'download-offline':
+          patchInList(msg.id, { offline: true })
+          await downloadMessageOffline(msg.id)
+          break
+        case 'delete-message':
+          await deleteMessage(msg.id)
+          recordDeleted(msg)
+          removeFromList(msg.id)
+          if (get(openMessageId) === msg.id) {
+            openMessageId.set(null)
+          }
+          break
+        case 'archive': {
+          const undo = await archiveMessage(msg.id)
+          if (undo.messageId) {
+            recordArchived(msg, undo.messageId, undo.originalFolderId)
+          }
+          removeFromList(msg.id)
+          if (get(openMessageId) === msg.id) {
+            openMessageId.set(null)
+          }
+          break
+        }
+      }
+    } catch (err) {
+      toastError(errorMessage(err))
+    }
+  }
+
   // dispatch maps an action (from a shortcut or a menu item) to its handler.
-  function dispatchAction(action: ShortcutAction | 'about' | 'export-pdf'): void {
+  function dispatchAction(action: ShortcutAction | 'about' | 'export-pdf' | 'undo' | 'toggle-low-power'): void {
     switch (action) {
       case 'compose':
         startCompose()
@@ -191,13 +313,33 @@
         focusSearch()
         break
       case 'about':
-        toastInfo('Pelton, an open-source mail client.')
+        toastInfo(get(t)('app.toast.about'))
+        break
+      case 'reply':
+      case 'reply-all':
+      case 'forward':
+      case 'mark-read':
+      case 'mark-unread':
+      case 'flag':
+      case 'snooze':
+      case 'download-offline':
+      case 'delete-message':
+      case 'archive':
+        void messageAction(action)
+        break
+      case 'undo':
+        if (!triggerUndo() && !triggerUndoDelete() && !triggerUndoArchive()) {
+          toastInfo(get(t)('app.toast.nothingToUndo'))
+        }
+        break
+      case 'toggle-low-power':
+        setLowPowerMode(!$prefs.lowPowerMode)
         break
     }
   }
 
   function handleMenu(action: string): void {
-    dispatchAction(action as ShortcutAction | 'about' | 'export-pdf')
+    dispatchAction(action as ShortcutAction | 'about' | 'export-pdf' | 'undo' | 'toggle-low-power')
   }
 
   // suppress the webview's default context menu (inspect/reload) everywhere. the
@@ -212,15 +354,124 @@
     event.preventDefault()
   }
 
+  // in-app vim navigation: when enabled, plain h/j/k/l (and gg/G) move around
+  // the message list and open/close the reading pane, mirroring mutt-style
+  // navigation instead of just the compose editor. it never fires in a text
+  // field, while a dialog/panel is open, or with a modifier held (so cmd+j
+  // etc. still reach the normal shortcut path).
+  let lastVimKey = ''
+  let lastVimKeyAt = 0
+
+  function vimNavList(): { id: number }[] {
+    return get(messageList).data?.items ?? []
+  }
+
+  function vimMove(delta: number): void {
+    const items = vimNavList()
+    if (items.length === 0) {
+      return
+    }
+    const currentId = get(openMessageId)
+    const idx = currentId === null ? -1 : items.findIndex((m) => m.id === currentId)
+    const next = idx === -1 ? (delta > 0 ? 0 : items.length - 1) : Math.min(Math.max(idx + delta, 0), items.length - 1)
+    openMessageId.set(items[next].id)
+  }
+
+  function vimJump(toLast: boolean): void {
+    const items = vimNavList()
+    if (items.length === 0) {
+      return
+    }
+    openMessageId.set(toLast ? items[items.length - 1].id : items[0].id)
+  }
+
+  function anyDialogOpen(): boolean {
+    return (
+      settingsOpen ||
+      wizardOpen ||
+      onboardingOpen ||
+      $composeSessions.length > 0 ||
+      $moveTarget !== null ||
+      $snoozeTarget !== null ||
+      $previewTarget !== null
+    )
+  }
+
+  // vim navigation is scoped to the list/reading pane: it must not hijack h/l
+  // while the user is browsing the sidebar (folders, accounts) or any other
+  // chrome, so it only fires when focus is outside the sidebar.
+  function inSidebar(target: EventTarget | null): boolean {
+    const el = target as HTMLElement | null
+    return !!el?.closest?.('.sidebar')
+  }
+
+  function tryVimNav(event: KeyboardEvent): boolean {
+    if (!$prefs.appVimMode || event.metaKey || event.ctrlKey || event.altKey || event.shiftKey) {
+      return false
+    }
+    if (isEditableTarget(event.target) || inSidebar(event.target) || anyDialogOpen()) {
+      return false
+    }
+    const now = Date.now()
+    switch (event.key) {
+      case 'j':
+        vimMove(1)
+        break
+      case 'k':
+        vimMove(-1)
+        break
+      case 'l':
+      case 'Enter':
+        if (get(openMessageId) === null) {
+          vimMove(1)
+        }
+        break
+      case 'h':
+      case 'Escape':
+        openMessageId.set(null)
+        break
+      case 'g':
+        if (lastVimKey === 'g' && now - lastVimKeyAt < 500) {
+          vimJump(false)
+          lastVimKey = ''
+          return true
+        }
+        lastVimKey = 'g'
+        lastVimKeyAt = now
+        return true
+      case 'G':
+        vimJump(true)
+        break
+      default:
+        lastVimKey = ''
+        return false
+    }
+    lastVimKey = ''
+    return true
+  }
+
   function onKeydown(event: KeyboardEvent): void {
     // while the settings panel is capturing a new binding, let it have the keys.
     if ($recording) {
       return
     }
+    if (tryVimNav(event)) {
+      event.preventDefault()
+      return
+    }
     // cmd/ctrl+z undoes a pending delayed send, when one is in its window. it
     // takes priority over other shortcuts and is swallowed only if it acted.
     if ((event.metaKey || event.ctrlKey) && !event.shiftKey && event.key.toLowerCase() === 'z') {
+      // undo-send takes priority; otherwise undo the last message deletion.
       if (triggerUndo()) {
+        event.preventDefault()
+        return
+      }
+      if (triggerUndoDelete()) {
+        event.preventDefault()
+        return
+      }
+      if (triggerUndoArchive()) {
         event.preventDefault()
         return
       }
@@ -277,9 +528,9 @@
       on:sync={runSync}
       on:addMailbox={addMailbox}
     />
-    <Resizer disabled={locked} label="Resize sidebar" on:resize={resizeSidebar} on:end={commitPanes} />
+    <Resizer disabled={locked} label={$t('app.pane.resizeSidebar')} on:resize={resizeSidebar} on:end={commitPanes} />
     <MessageList />
-    <Resizer disabled={locked} label="Resize message list" on:resize={resizeList} on:end={commitPanes} />
+    <Resizer disabled={locked} label={$t('app.pane.resizeMessageList')} on:resize={resizeList} on:end={commitPanes} />
     <MessageDetail />
   </div>
 
@@ -321,6 +572,9 @@
 
 <Toasts />
 <ContextMenu />
+<SnoozeDialog />
+<AttachmentPreview />
+<MoveDialog />
 
 <style>
   .shell {

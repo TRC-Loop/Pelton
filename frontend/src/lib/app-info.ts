@@ -8,7 +8,8 @@ export const APP = {
   tagline: 'An open-source desktop mail client.',
   repo: 'https://github.com/TRC-Loop/Pelton',
   issues: 'https://github.com/TRC-Loop/Pelton/issues',
+  contributors: 'https://github.com/TRC-Loop/Pelton/graphs/contributors',
   license: 'GPL-3.0',
   licenseUrl: 'https://www.gnu.org/licenses/gpl-3.0.html',
-  author: 'Arne K. (TRC-Loop)',
+  author: 'Arne K.',
 } as const

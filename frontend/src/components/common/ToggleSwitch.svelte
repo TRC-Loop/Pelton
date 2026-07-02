@@ -38,9 +38,11 @@
     width: 36px;
     height: 20px;
     padding: 0;
-    border: var(--hairline) solid var(--border-strong, var(--border-default));
+    /* the off state needs enough contrast to read as a control: a visible filled
+       track plus a defined border, not just a faint sunken well. */
+    border: var(--hairline) solid var(--text-tertiary);
     border-radius: 999px;
-    background: var(--surface-sunken);
+    background: var(--text-tertiary);
     cursor: pointer;
     transition: background 0.14s ease, border-color 0.14s ease;
   }

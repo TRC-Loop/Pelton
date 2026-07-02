@@ -114,6 +114,21 @@ export function removeFromList(id: number): void {
   })
 }
 
+// restoreToList re-inserts a previously removed row (used by undo-delete),
+// keeping the newest-first order by date.
+export function restoreToList(summary: MessageSummary): void {
+  messageList.update((s) => {
+    if (s.status !== 'ready' || !s.data) {
+      return s
+    }
+    if (s.data.items.some((m) => m.id === summary.id)) {
+      return s
+    }
+    const items = [...s.data.items, summary].sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0))
+    return ready({ ...s.data, items, total: s.data.total + 1 })
+  })
+}
+
 // patchInList applies a partial update to one row, for optimistic flag changes.
 export function patchInList(id: number, patch: Partial<MessageSummary>): void {
   messageList.update((s) => {

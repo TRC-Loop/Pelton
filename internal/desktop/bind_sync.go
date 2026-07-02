@@ -25,6 +25,40 @@ var syncMu sync.Mutex
 func (a *App) startBackgroundServices() {
 	go a.runOutboxWorker()
 	go a.runInitialSyncAndIdle()
+	go a.runSnoozePoller()
+	go a.harvestAddressBook()
+	go a.runAutoSyncLoop()
+}
+
+// runAutoSyncLoop periodically runs a full sync pass across every account, on
+// top of the always-on imap idle push (which not every server supports, and
+// which can silently drop on flaky networks). the interval is a user setting
+// (0 disables it); a short base tick lets a changed interval or low-power
+// toggle take effect promptly without needing its own change-notification
+// channel. it does nothing while low-power mode is on.
+func (a *App) runAutoSyncLoop() {
+	const baseTick = 5 * time.Second
+	ticker := time.NewTicker(baseTick)
+	defer ticker.Stop()
+	lastRun := time.Now()
+	for {
+		select {
+		case <-a.ctx.Done():
+			return
+		case <-ticker.C:
+			interval := a.intSetting(settingAutoSync, 900)
+			if interval <= 0 || a.lowPowerMode() {
+				continue
+			}
+			if time.Since(lastRun) < time.Duration(interval)*time.Second {
+				continue
+			}
+			lastRun = time.Now()
+			if err := a.TriggerSync(); err != nil && !errors.Is(err, errNoCredentials) {
+				a.log.Error("auto sync", "err", err)
+			}
+		}
+	}
 }
 
 // runOutboxWorker drains the outbox, resolving smtp credentials per message from
@@ -147,6 +181,7 @@ func (a *App) syncFolders(client *pimap.Client, accountID int64) error {
 		return err
 	}
 	engine := psync.NewEngine(client, a.store, a.log)
+	engine.ColorSync = a.boolSetting(settingFlagColorSync, false)
 
 	newTotal := 0
 	for i, f := range folders {
@@ -171,6 +206,9 @@ func (a *App) syncFolders(client *pimap.Client, accountID int64) error {
 	// path so the search backfill never holds up the next sync.
 	if newTotal > 0 {
 		go a.indexNewMessages()
+		if !a.lowPowerMode() {
+			go a.harvestAddressBook()
+		}
 	}
 	return nil
 }

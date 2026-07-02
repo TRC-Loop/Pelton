@@ -9,6 +9,8 @@
   import { sidebar } from '../../stores/accounts'
   import { errorMessage, toastError } from '../../stores/toast'
   import type { Signature, AccountSignatures } from '../../lib/types'
+  import { get } from 'svelte/store'
+  import { t } from '../../lib/i18n'
 
   $: accounts = $sidebar.data?.accounts ?? []
   $: headers = $signatures.filter((s) => s.kind === 'header')
@@ -31,7 +33,7 @@
 
   async function save(): Promise<void> {
     if (!draft.name.trim()) {
-      toastError('Give the signature a name.')
+      toastError(get(t)('signatures.needName'))
       return
     }
     try {
@@ -89,15 +91,12 @@
   }
 </script>
 
-<h3>Signatures</h3>
-<p class="hint">
-  Write header and footer blocks once, then assign a default per mailbox below. New messages start
-  with the assigned blocks; you can change them per message from the compose footer.
-</p>
+<h3>{$t('signatures.title')}</h3>
+<p class="hint">{$t('signatures.hint')}</p>
 
 <div class="blocks">
   {#if $signatures.length === 0}
-    <p class="empty">No signatures yet.</p>
+    <p class="empty">{$t('signatures.empty')}</p>
   {:else}
     {#each $signatures as s (s.id)}
       <div class="block">
@@ -107,10 +106,10 @@
           <span class="fmt">{s.format}</span>
         </div>
         <div class="block-actions">
-          <button type="button" class="icon-btn" aria-label="Edit" on:click={() => startEdit(s)}>
+          <button type="button" class="icon-btn" aria-label={$t('signatures.edit')} on:click={() => startEdit(s)}>
             <IconPencil size={15} stroke={1.6} />
           </button>
-          <button type="button" class="icon-btn danger" aria-label="Delete" on:click={() => remove(s.id)}>
+          <button type="button" class="icon-btn danger" aria-label={$t('signatures.delete')} on:click={() => remove(s.id)}>
             <IconTrash size={15} stroke={1.6} />
           </button>
         </div>
@@ -122,52 +121,52 @@
 {#if editing}
   <div class="editor">
     <div class="editor-row">
-      <input class="field" placeholder="Name" bind:value={draft.name} />
+      <input class="field" placeholder={$t('signatures.namePlaceholder')} bind:value={draft.name} />
       <select class="field" bind:value={draft.kind}>
-        <option value="header">Header</option>
-        <option value="footer">Footer</option>
+        <option value="header">{$t('signatures.kindHeader')}</option>
+        <option value="footer">{$t('signatures.kindFooter')}</option>
       </select>
       <select class="field" bind:value={draft.format}>
         <option value="markdown">Markdown</option>
         <option value="html">HTML</option>
       </select>
     </div>
-    <textarea class="content" rows="6" placeholder="Signature content…" bind:value={draft.content}></textarea>
+    <textarea class="content" rows="6" placeholder={$t('signatures.contentPlaceholder')} bind:value={draft.content}></textarea>
     <div class="editor-actions">
-      <button type="button" class="ghost" on:click={() => (editing = false)}>Cancel</button>
-      <button type="button" class="primary" on:click={save}>Save signature</button>
+      <button type="button" class="ghost" on:click={() => (editing = false)}>{$t('signatures.cancel')}</button>
+      <button type="button" class="primary" on:click={save}>{$t('signatures.save')}</button>
     </div>
   </div>
 {:else}
   <button type="button" class="add" on:click={startNew}>
     <IconPlus size={15} stroke={1.8} />
-    New signature
+    {$t('signatures.new')}
   </button>
 {/if}
 
 {#if accounts.length > 0}
-  <h4>Per-mailbox defaults</h4>
+  <h4>{$t('signatures.perMailboxDefaults')}</h4>
   <div class="assign">
     {#each accounts as acc (acc.id)}
       <div class="assign-row">
         <span class="assign-acc" title={acc.email}>{acc.email}</span>
         <label class="assign-field">
-          <span>Header</span>
+          <span>{$t('signatures.kindHeader')}</span>
           <select
             value={assignments[acc.id]?.headerId ?? 0}
             on:change={(e) => setAssignment(acc.id, 'header', Number(e.currentTarget.value))}
           >
-            <option value={0}>None</option>
+            <option value={0}>{$t('signatures.none')}</option>
             {#each headers as s (s.id)}<option value={s.id}>{s.name}</option>{/each}
           </select>
         </label>
         <label class="assign-field">
-          <span>Footer</span>
+          <span>{$t('signatures.kindFooter')}</span>
           <select
             value={assignments[acc.id]?.footerId ?? 0}
             on:change={(e) => setAssignment(acc.id, 'footer', Number(e.currentTarget.value))}
           >
-            <option value={0}>None</option>
+            <option value={0}>{$t('signatures.none')}</option>
             {#each footers as s (s.id)}<option value={s.id}>{s.name}</option>{/each}
           </select>
         </label>

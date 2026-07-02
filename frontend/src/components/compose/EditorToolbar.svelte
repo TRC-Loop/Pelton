@@ -15,34 +15,35 @@
     IconEye,
     IconPencil,
   } from '@tabler/icons-svelte'
+  import { t } from '../../lib/i18n'
 
   export let preview = false
 
   const dispatch = createEventDispatcher<{ format: string; togglePreview: void }>()
 
-  const actions = [
-    { name: 'bold', icon: IconBold, label: 'Bold' },
-    { name: 'italic', icon: IconItalic, label: 'Italic' },
-    { name: 'code', icon: IconCode, label: 'Code' },
-    { name: 'link', icon: IconLink, label: 'Link' },
-    { name: 'heading', icon: IconHeading, label: 'Heading' },
-    { name: 'list', icon: IconList, label: 'List' },
-    { name: 'quote', icon: IconQuote, label: 'Quote' },
+  $: actions = [
+    { name: 'bold', icon: IconBold, label: $t('compose.toolbar.bold') },
+    { name: 'italic', icon: IconItalic, label: $t('compose.toolbar.italic') },
+    { name: 'code', icon: IconCode, label: $t('compose.toolbar.code') },
+    { name: 'link', icon: IconLink, label: $t('compose.toolbar.link') },
+    { name: 'heading', icon: IconHeading, label: $t('compose.toolbar.heading') },
+    { name: 'list', icon: IconList, label: $t('compose.toolbar.list') },
+    { name: 'quote', icon: IconQuote, label: $t('compose.toolbar.quote') },
   ]
 </script>
 
-<div class="toolbar" role="toolbar" aria-label="Formatting">
+<div class="toolbar" role="toolbar" aria-label={$t('compose.toolbar.ariaLabel')}>
   {#each actions as a (a.name)}
     <button type="button" title={a.label} aria-label={a.label} disabled={preview} on:click={() => dispatch('format', a.name)}>
       <svelte:component this={a.icon} size={16} stroke={1.7} />
     </button>
   {/each}
   <span class="spacer"></span>
-  <button type="button" class="preview-btn" class:active={preview} title="Toggle preview" on:click={() => dispatch('togglePreview')}>
+  <button type="button" class="preview-btn" class:active={preview} title={$t('compose.toolbar.togglePreview')} on:click={() => dispatch('togglePreview')}>
     {#if preview}
-      <IconPencil size={15} stroke={1.7} /> Edit
+      <IconPencil size={15} stroke={1.7} /> {$t('compose.toolbar.edit')}
     {:else}
-      <IconEye size={15} stroke={1.7} /> Preview
+      <IconEye size={15} stroke={1.7} /> {$t('compose.toolbar.preview')}
     {/if}
   </button>
 </div>

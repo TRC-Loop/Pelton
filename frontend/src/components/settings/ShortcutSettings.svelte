@@ -3,6 +3,7 @@
   // be rebound by clicking Change and pressing the new keys; a search box filters
   // the list, and each row (and the whole set) can be reset to the default.
   // capturing is exact: the recorded combo includes every held modifier.
+  import { get } from 'svelte/store'
   import { IconSearch, IconX, IconRotateClockwise } from '@tabler/icons-svelte'
   import { shortcuts as registry, eventToCombo, type ShortcutAction } from '../../lib/shortcuts'
   import { bindings, recording, setBinding, resetBinding, resetAll, conflictsFor } from '../../stores/shortcuts'
@@ -15,12 +16,13 @@
   let conflictMsg = ''
 
   // filter rows by their localized label (and the action key as a fallback).
+  // $t is a dependency so this re-filters when the language changes too.
   $: rows = registry.filter((s) => {
     const q = query.trim().toLowerCase()
     if (!q) {
       return true
     }
-    return t(s.labelKey).toLowerCase().includes(q) || s.action.includes(q)
+    return $t(s.labelKey).toLowerCase().includes(q) || s.action.includes(q)
   })
 
   function startRecord(action: ShortcutAction): void {
@@ -53,7 +55,7 @@
     }
     const clash = conflictsFor(recordingAction, combo)
     if (clash) {
-      conflictMsg = `Already used by “${t(registryLabel(clash))}”`
+      conflictMsg = `${get(t)('shortcuts.alreadyUsedBy')} “${get(t)(registryLabel(clash))}”`
       return
     }
     setBinding(recordingAction, combo)
@@ -70,36 +72,38 @@
 <div class="head-row">
   <div class="search">
     <IconSearch size={15} stroke={1.6} />
-    <input type="search" placeholder="Search shortcuts" aria-label="Search shortcuts" bind:value={query} />
+    <input type="search" placeholder={$t('shortcuts.searchPlaceholder')} aria-label={$t('shortcuts.searchPlaceholder')} bind:value={query} />
     {#if query}
-      <button type="button" class="clear" aria-label="Clear" on:click={() => (query = '')}>
+      <button type="button" class="clear" aria-label={$t('shortcuts.clear')} on:click={() => (query = '')}>
         <IconX size={14} stroke={1.8} />
       </button>
     {/if}
   </div>
-  <button type="button" class="reset-all" on:click={resetAll} title="Reset all shortcuts to defaults">
-    <IconRotateClockwise size={14} stroke={1.7} /> Reset all
+  <button type="button" class="reset-all" on:click={resetAll} title={$t('shortcuts.resetAllTitle')}>
+    <IconRotateClockwise size={14} stroke={1.7} /> {$t('shortcuts.resetAll')}
   </button>
 </div>
 
 <ul class="list">
   {#each rows as sc (sc.action)}
     <li>
-      <span class="label">{t(sc.labelKey)}</span>
+      <span class="label">{$t(sc.labelKey)}</span>
       <div class="controls">
         {#if recordingAction === sc.action}
-          <span class="recording">Press keys… <kbd>Esc</kbd> to cancel</span>
-        {:else}
+          <span class="recording">{$t('shortcuts.pressKeys')} <kbd>Esc</kbd> {$t('shortcuts.toCancel')}</span>
+        {:else if $bindings[sc.action]}
           <kbd>{shortcutLabel($bindings[sc.action])}</kbd>
+        {:else}
+          <span class="unset">{$t('shortcuts.notSet')}</span>
         {/if}
         <button type="button" class="change" on:click={() => startRecord(sc.action)}>
-          {recordingAction === sc.action ? 'Recording' : 'Change'}
+          {recordingAction === sc.action ? $t('shortcuts.recording') : $t('shortcuts.change')}
         </button>
         <button
           type="button"
           class="reset"
-          aria-label="Reset to default"
-          title="Reset to default"
+          aria-label={$t('shortcuts.resetToDefault')}
+          title={$t('shortcuts.resetToDefault')}
           on:click={() => resetBinding(sc.action)}
         >
           <IconRotateClockwise size={14} stroke={1.7} />
@@ -108,12 +112,12 @@
     </li>
   {/each}
   {#if rows.length === 0}
-    <li class="empty">No shortcuts match “{query}”.</li>
+    <li class="empty">{$t('shortcuts.noMatch')} “{query}”.</li>
   {/if}
 </ul>
 
 {#if conflictMsg}
-  <p class="conflict">{conflictMsg}. Pick a different combination.</p>
+  <p class="conflict">{conflictMsg}. {$t('shortcuts.pickDifferent')}</p>
 {/if}
 
 <style>

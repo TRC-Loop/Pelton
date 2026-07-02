@@ -1,0 +1,322 @@
+name: Release builds
+
+# Builds Pelton for every published GitHub Release and attaches the installers
+# as release assets. All builds are unsigned (no Apple notarization, no
+# Windows code signing) - see README/CI notes for what that means for users.
+# workflow_dispatch is there so the build steps can be tested without cutting
+# a real release; it just skips the upload step.
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  GO_VERSION: "1.25"
+  WAILS_VERSION: "v2.10.1"
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # macOS: built separately per architecture (not a universal binary), each as
+  # its own .app + .dmg, per the project's request to ship distinct Intel and
+  # Apple Silicon builds.
+  # ---------------------------------------------------------------------------
+  macos:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: macos-13
+            label: intel
+          - arch: arm64
+            runner: macos-14
+            label: applesilicon
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Install wails CLI
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@${{ env.WAILS_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          go mod download
+          cd frontend && pnpm install --frozen-lockfile
+
+      - name: Resolve version
+        id: version
+        run: echo "version=${GITHUB_REF_NAME:-dev}" >> "$GITHUB_OUTPUT"
+
+      - name: Build (${{ matrix.arch }})
+        run: wails build -platform darwin/${{ matrix.arch }} -ldflags "-X main.version=${{ steps.version.outputs.version }}"
+
+      # Best-effort: the Liquid Glass dynamic icon needs actool from a recent
+      # enough Xcode (macOS 26 / Xcode 26). If the hosted runner's Xcode is
+      # older, this step just leaves the .app with the static .icns fallback
+      # that's already embedded via Info.plist - it does not fail the build.
+      - name: Compile Liquid Glass icon (best-effort)
+        run: |
+          if xcrun --find actool >/dev/null 2>&1; then
+            scripts/build-icon.sh || echo "actool present but icon compile failed; shipping static .icns fallback"
+          else
+            echo "actool not available on this runner; shipping static .icns fallback"
+          fi
+
+      # Ad-hoc self-sign (no certificate, no secrets, free). This is not
+      # notarization and does not remove the Gatekeeper "unidentified
+      # developer" prompt, but it stops the app from being flagged as
+      # "damaged" after download/zip, which unsigned-and-unstamped bundles are
+      # prone to.
+      - name: Ad-hoc codesign
+        run: codesign --force --deep -s - "build/bin/Pelton.app"
+
+      - name: Zip .app
+        run: ditto -c -k --sequesterRsrc --keepParent "build/bin/Pelton.app" "build/bin/Pelton-${{ steps.version.outputs.version }}-macos-${{ matrix.label }}-app.zip"
+
+      - name: Install create-dmg
+        run: brew install create-dmg
+
+      - name: Build .dmg
+        run: |
+          rm -f "build/bin/Pelton.dmg"
+          create-dmg \
+            --volname "Pelton" \
+            --volicon "build/bin/Pelton.app/Contents/Resources/pelton.icns" \
+            --window-size 540 380 \
+            --icon-size 128 \
+            --icon "Pelton.app" 130 170 \
+            --app-drop-link 410 170 \
+            --hide-extension "Pelton.app" \
+            "build/bin/Pelton-${{ steps.version.outputs.version }}-macos-${{ matrix.label }}.dmg" \
+            "build/bin/Pelton.app"
+
+      - name: Upload to release
+        if: github.event_name == 'release'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload "${{ github.event.release.tag_name }}" \
+            "build/bin/Pelton-${{ steps.version.outputs.version }}-macos-${{ matrix.label }}.dmg" \
+            "build/bin/Pelton-${{ steps.version.outputs.version }}-macos-${{ matrix.label }}-app.zip" \
+            --clobber
+
+  # ---------------------------------------------------------------------------
+  # Windows amd64, packaged with Wails' built-in NSIS installer support (free,
+  # no signing). windows-latest ships NSIS preinstalled.
+  # ---------------------------------------------------------------------------
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Install wails CLI
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@${{ env.WAILS_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          go mod download
+          cd frontend
+          pnpm install --frozen-lockfile
+
+      - name: Resolve version
+        id: version
+        shell: bash
+        run: echo "version=${GITHUB_REF_NAME:-dev}" >> "$GITHUB_OUTPUT"
+
+      - name: Build + NSIS installer
+        run: wails build -platform windows/amd64 -nsis -ldflags "-X main.version=${{ steps.version.outputs.version }}"
+
+      - name: Rename installer
+        shell: bash
+        run: mv "build/bin/Pelton-amd64-installer.exe" "build/bin/Pelton-${{ steps.version.outputs.version }}-windows-amd64-installer.exe"
+
+      - name: Upload to release
+        if: github.event_name == 'release'
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload "${{ github.event.release.tag_name }}" \
+            "build/bin/Pelton-${{ steps.version.outputs.version }}-windows-amd64-installer.exe" \
+            --clobber
+
+  # ---------------------------------------------------------------------------
+  # Linux: a Fedora .rpm built with nfpm (free, MIT-licensed, no external
+  # signing service). Package metadata lives in .github/nfpm/pelton.yaml.
+  # ---------------------------------------------------------------------------
+  linux-fedora:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Install system build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev build-essential pkg-config rpm
+
+      - name: Install wails CLI
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@${{ env.WAILS_VERSION }}
+
+      - name: Install nfpm
+        run: go install github.com/goreleaser/nfpm/v2/cmd/nfpm@latest
+
+      - name: Install dependencies
+        run: |
+          go mod download
+          cd frontend && pnpm install --frozen-lockfile
+
+      - name: Resolve version
+        id: version
+        run: |
+          raw="${GITHUB_REF_NAME:-0.0.0-dev}"
+          echo "version=$raw" >> "$GITHUB_OUTPUT"
+          echo "rpm_version=${raw#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Build
+        run: wails build -platform linux/amd64 -ldflags "-X main.version=${{ steps.version.outputs.version }}"
+
+      - name: Build .rpm
+        env:
+          VERSION: ${{ steps.version.outputs.rpm_version }}
+        run: nfpm package --config .github/nfpm/pelton.yaml --packager rpm --target "build/bin/Pelton-${{ steps.version.outputs.version }}-linux-fedora-x86_64.rpm"
+
+      - name: Upload to release
+        if: github.event_name == 'release'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload "${{ github.event.release.tag_name }}" \
+            "build/bin/Pelton-${{ steps.version.outputs.version }}-linux-fedora-x86_64.rpm" \
+            --clobber
+
+  # ---------------------------------------------------------------------------
+  # Fedora Copr: submits a source RPM to Fedora's free community repo hosting
+  # (copr.fedorainfracloud.org) so users get real `dnf` installs:
+  #   sudo dnf copr enable <COPR_USERNAME>/pelton
+  #   sudo dnf install pelton
+  # Copr does the actual RPM build on its own chroots; the spec
+  # (.github/copr/pelton.spec) does no compilation, it just installs the
+  # binary this job already built here (with full network access, unlike
+  # Copr's sandboxed builders). Needs the COPR_LOGIN/COPR_USERNAME/COPR_TOKEN
+  # secrets and a Copr project named "pelton" to already exist - see the repo
+  # docs/PR description for the one-time setup steps.
+  # ---------------------------------------------------------------------------
+  fedora-copr:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Install system build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev build-essential pkg-config rpm-build python3-pip
+
+      - name: Install wails CLI + copr-cli
+        run: |
+          go install github.com/wailsapp/wails/v2/cmd/wails@${{ env.WAILS_VERSION }}
+          pip install --user copr-cli
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Install dependencies
+        run: |
+          go mod download
+          cd frontend && pnpm install --frozen-lockfile
+
+      - name: Resolve version
+        id: version
+        run: |
+          raw="${GITHUB_REF_NAME:-0.0.0-dev}"
+          echo "rpm_version=${raw#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Build
+        run: wails build -platform linux/amd64 -ldflags "-X main.version=${{ steps.version.outputs.rpm_version }}"
+
+      - name: Assemble source tarball
+        env:
+          VERSION: ${{ steps.version.outputs.rpm_version }}
+        run: |
+          stage="pelton-$VERSION"
+          mkdir -p "$stage"
+          cp build/bin/Pelton "$stage/pelton"
+          cp build/linux/pelton.desktop "$stage/pelton.desktop"
+          cp build/icons/pelton-default.png "$stage/pelton.png"
+          tar czf ".github/copr/pelton-$VERSION.tar.gz" "$stage"
+
+      - name: Build SRPM
+        env:
+          VERSION: ${{ steps.version.outputs.rpm_version }}
+        run: |
+          mkdir -p ~/rpmbuild/SOURCES ~/rpmbuild/SRPMS
+          cp ".github/copr/pelton-$VERSION.tar.gz" ~/rpmbuild/SOURCES/
+          rpmbuild -bs --define "_pelton_version $VERSION" ".github/copr/pelton.spec"
+          cp ~/rpmbuild/SRPMS/*.src.rpm "pelton-$VERSION.src.rpm"
+
+      - name: Configure copr-cli credentials
+        env:
+          COPR_LOGIN: ${{ secrets.COPR_LOGIN }}
+          COPR_USERNAME: ${{ secrets.COPR_USERNAME }}
+          COPR_TOKEN: ${{ secrets.COPR_TOKEN }}
+        run: |
+          mkdir -p ~/.config
+          cat > ~/.config/copr << EOF
+          [copr-cli]
+          login = $COPR_LOGIN
+          username = $COPR_USERNAME
+          token = $COPR_TOKEN
+          copr_url = https://copr.fedorainfracloud.org
+          EOF
+          chmod 600 ~/.config/copr
+
+      - name: Submit build to Copr
+        env:
+          VERSION: ${{ steps.version.outputs.rpm_version }}
+          COPR_USERNAME: ${{ secrets.COPR_USERNAME }}
+        run: copr-cli build "$COPR_USERNAME/pelton" "pelton-$VERSION.src.rpm" --nowait

@@ -25,11 +25,25 @@ function svgToDataUri(svg: string): string {
   return `data:image/svg+xml,${encodeURIComponent(svg)}`
 }
 
+// escapeXml neutralizes the characters that would otherwise break the svg's
+// xml. label comes from a sender's display name, so a crafted or malformed
+// From header (starting with "<" or "&", say) must not be able to produce
+// invalid xml, which would make the data uri fail to decode and fall through
+// to the browser's broken image icon instead of the generated placeholder.
+function escapeXml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;')
+}
+
 // initialsSvg renders a disc with one or two letters. mono forces grayscale.
 function initialsSvg(seed: string, label: string, mono: boolean): string {
   const h = hash(seed)
   const bg = mono ? `hsl(0 0% ${28 + (h % 14)}%)` : `hsl(${h % 360} 48% 45%)`
-  const text = label || '•'
+  const text = escapeXml(label || '•')
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
 <circle cx="50" cy="50" r="50" fill="${bg}"/>
 <text x="50" y="50" dy="0.35em" text-anchor="middle" fill="#fff" font-family="system-ui, sans-serif" font-size="42" font-weight="600">${text}</text>

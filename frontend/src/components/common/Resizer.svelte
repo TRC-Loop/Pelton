@@ -4,11 +4,13 @@
   // new widths. when disabled (panes locked in settings) it is inert. it is also
   // keyboard adjustable with the arrow keys for accessibility.
   import { createEventDispatcher } from 'svelte'
+  import { t } from '../../lib/i18n'
 
   export let disabled: boolean = false
-  export let label: string = 'Resize panel'
+  export let label: string = ''
 
   const dispatch = createEventDispatcher<{ resize: number; end: void }>()
+  $: resolvedLabel = label || $t('common.resizer.default')
 
   let dragging = false
   let lastX = 0
@@ -66,7 +68,7 @@
   class:dragging
   role="separator"
   aria-orientation="vertical"
-  aria-label={label}
+  aria-label={resolvedLabel}
   tabindex={disabled ? -1 : 0}
   on:pointerdown={onPointerDown}
   on:pointermove={onPointerMove}

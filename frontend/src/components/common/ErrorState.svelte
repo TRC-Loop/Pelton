@@ -1,15 +1,17 @@
 <script lang="ts">
   // an explicit error pane with an optional retry. used wherever an async load
   // can fail so the user sees the reason instead of a blank column.
+  import { t } from '../../lib/i18n'
+
   export let message: string
   export let onRetry: (() => void) | null = null
 </script>
 
 <div class="error" role="alert">
-  <p class="title">Something went wrong</p>
+  <p class="title">{$t('common.errorState.title')}</p>
   <p class="detail">{message}</p>
   {#if onRetry}
-    <button type="button" class="retry" on:click={onRetry}>Try again</button>
+    <button type="button" class="retry" on:click={onRetry}>{$t('common.errorState.retry')}</button>
   {/if}
 </div>
 

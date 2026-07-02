@@ -12,15 +12,19 @@
   import ErrorState from '../common/ErrorState.svelte'
   import { openMessageId } from '../../stores/selection'
   import { messageDetail, loadMessage, clearMessage } from '../../stores/message'
-  import { setFlagged, deleteMessage } from '../../lib/api'
+  import { setFlagged, deleteMessage, archiveMessage } from '../../lib/api'
   import { removeFromList, patchInList } from '../../stores/messages'
+  import { recordDeleted } from '../../stores/undodelete'
+  import { recordArchived } from '../../stores/undoarchive'
   import { openReply, openForward } from '../../stores/compose'
-  import { errorMessage, toastError, toastInfo } from '../../stores/toast'
-  import type { MessageDetail } from '../../lib/types'
+  import { errorMessage, toastError } from '../../stores/toast'
+  import { prefs } from '../../stores/prefs'
+  import { t } from '../../lib/i18n'
+  import { get } from 'svelte/store'
+  import type { MessageDetail, EditorMode } from '../../lib/types'
 
-  // default editor mode for replies and forwards. the compose pane lets the user
-  // switch; plaintext keeps quoting clean by default.
-  const replyMode = 'plaintext'
+  // default editor mode for replies and forwards, from settings.
+  $: replyMode = $prefs.defaultEditorMode as EditorMode
 
   let infoOpen = false
 
@@ -48,6 +52,7 @@
   async function remove(detail: MessageDetail): Promise<void> {
     try {
       await deleteMessage(detail.id)
+      recordDeleted(detail)
       removeFromList(detail.id)
       openMessageId.set(null)
     } catch (err) {
@@ -55,11 +60,19 @@
     }
   }
 
-  // archive needs an imap move, which has no binding yet. we tell the user
-  // honestly rather than pretend it worked.
-  // TODO(backend): add a MoveMessage binding (imap MOVE) and wire archive to it.
-  function archive(): void {
-    toastInfo('Archiving needs the move binding, coming in a follow-up step.')
+  // archive moves the message to the account's Archive folder via the imap move
+  // binding, then closes the pane and drops it from the list.
+  async function archive(detail: MessageDetail): Promise<void> {
+    try {
+      const undo = await archiveMessage(detail.id)
+      if (undo.messageId) {
+        recordArchived(detail, undo.messageId, undo.originalFolderId)
+      }
+      removeFromList(detail.id)
+      openMessageId.set(null)
+    } catch (err) {
+      toastError(errorMessage(err))
+    }
   }
 
   // print builds a clean, self-contained document from the already-sanitized
@@ -71,10 +84,12 @@
   }
 
   function printMessage(detail: MessageDetail): void {
+    const noSubject = get(t)('detail.noSubject')
+    const toLabel = get(t)('detail.print.to')
     const bodyHtml = detail.isHtml
       ? detail.bodyHtmlSafe
       : `<pre style="white-space:pre-wrap;font:14px/1.5 ui-monospace,monospace">${escapeHtml(detail.bodyPlain)}</pre>`
-    const doc = `<!doctype html><html><head><meta charset="utf-8"><title>${escapeHtml(detail.subject || '(no subject)')}</title>
+    const doc = `<!doctype html><html><head><meta charset="utf-8"><title>${escapeHtml(detail.subject || noSubject)}</title>
 <style>
   body{font:14px/1.6 system-ui,sans-serif;color:#111;margin:24px}
   .hdr{border-bottom:1px solid #ccc;padding-bottom:12px;margin-bottom:16px}
@@ -83,10 +98,10 @@
   img{max-width:100%}
 </style></head><body>
 <div class="hdr">
-  <h1>${escapeHtml(detail.subject || '(no subject)')}</h1>
+  <h1>${escapeHtml(detail.subject || noSubject)}</h1>
   <div><strong>${escapeHtml(detail.fromName || detail.fromAddress)}</strong> &lt;${escapeHtml(detail.fromAddress)}&gt;</div>
   <div>${escapeHtml(detail.date)}</div>
-  <div>To: ${escapeHtml(detail.toAddresses)}</div>
+  <div>${escapeHtml(toLabel)} ${escapeHtml(detail.toAddresses)}</div>
 </div>
 ${bodyHtml}
 </body></html>`
@@ -104,7 +119,7 @@ ${bodyHtml}
     const idoc = frame.contentDocument || win?.document
     if (!win || !idoc) {
       document.body.removeChild(frame)
-      toastError('Could not open the print dialog.')
+      toastError(get(t)('detail.print.dialogFailed'))
       return
     }
     idoc.open()
@@ -130,7 +145,7 @@ ${bodyHtml}
       <img class="placeholder-logo" src={peltonLogo} alt="Pelton" draggable="false" />
     </div>
   {:else if $messageDetail.status === 'loading' && !$messageDetail.data}
-    <Spinner label="Loading message" />
+    <Spinner label={$t('detail.loadingMessage')} />
   {:else if $messageDetail.status === 'error'}
     <ErrorState message={$messageDetail.error} onRetry={() => $openMessageId && loadMessage($openMessageId)} />
   {:else if $messageDetail.data}
@@ -141,7 +156,7 @@ ${bodyHtml}
         on:reply={() => openReply(detail, replyMode, false)}
         on:replyAll={() => openReply(detail, replyMode, true)}
         on:forward={() => openForward(detail, replyMode)}
-        on:archive={archive}
+        on:archive={() => archive(detail)}
         on:delete={() => remove(detail)}
         on:toggleFlag={() => toggleFlag(detail)}
         on:print={() => printMessage(detail)}
@@ -211,10 +226,10 @@ ${bodyHtml}
     flex-direction: column;
   }
 
-  /* the html body iframe needs a real height; give the wrap room to grow. */
+  /* the html body iframe now sizes itself to its content (single scrollbar in the
+     outer .scroll), so the wrap hugs it instead of stretching and leaving a gap. */
   .body-wrap {
-    flex: 1;
-    min-height: 320px;
+    flex: 0 0 auto;
     margin-top: var(--space-4);
     display: flex;
     flex-direction: column;

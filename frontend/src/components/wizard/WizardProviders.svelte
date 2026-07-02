@@ -4,6 +4,7 @@
   import { createEventDispatcher } from 'svelte'
   import { IconBrandGoogle, IconBrandWindows, IconBrandApple, IconBrandYahoo, IconMail, IconServer } from '@tabler/icons-svelte'
   import { providerPresets, type ProviderPreset } from '../../lib/providers'
+  import { t } from '../../lib/i18n'
 
   const dispatch = createEventDispatcher<{ pick: ProviderPreset }>()
 
@@ -19,8 +20,8 @@
 </script>
 
 <div class="step">
-  <h3>Add a mailbox</h3>
-  <p class="lead">Choose your email provider to get started.</p>
+  <h3>{$t('wizard.step.provider.title')}</h3>
+  <p class="lead">{$t('wizard.step.provider.lead')}</p>
 
   <div class="grid">
     {#each providerPresets as preset (preset.id)}
@@ -28,7 +29,7 @@
         <svelte:component this={icons[preset.id] ?? IconMail} size={22} stroke={1.5} />
         <span class="label">{preset.label}</span>
         {#if preset.kind === 'oauth'}
-          <span class="tag">Sign in</span>
+          <span class="tag">{$t('wizard.provider.signIn')}</span>
         {/if}
       </button>
     {/each}

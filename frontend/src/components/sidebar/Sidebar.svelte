@@ -20,14 +20,14 @@
   <div class="top">
     <button type="button" class="compose-btn" on:click={() => dispatch('compose')}>
       <IconPencil size={16} stroke={1.8} />
-      <span>Compose</span>
+      <span>{$t('action.compose')}</span>
     </button>
     <button
       type="button"
       class="sync-btn"
       class:spinning={$syncing}
-      aria-label="Sync now"
-      title="Sync now"
+      aria-label={$t('shortcut.sync')}
+      title={$t('shortcut.sync')}
       on:click={() => dispatch('sync')}
     >
       <IconRefresh size={16} stroke={1.8} />
@@ -36,19 +36,19 @@
 
   <div class="scroll">
     {#if $sidebar.status === 'loading' && !$sidebar.data}
-      <Spinner label="Loading mailboxes" />
+      <Spinner label={$t('sidebar.loading.mailboxes')} />
     {:else if $sidebar.status === 'error'}
       <ErrorState message={$sidebar.error} onRetry={loadSidebar} />
     {:else if $sidebar.data}
       {#if $sidebar.data.accounts.length === 0}
         <EmptyState
-          title="No mailboxes yet"
-          detail="Add a mailbox to start. You can also create one with the cli tools."
+          title={$t('sidebar.empty.title')}
+          detail={$t('sidebar.empty.detail')}
         >
           <IconMailbox size={28} stroke={1.4} />
           <button slot="action" type="button" class="add-mailbox" on:click={() => dispatch('addMailbox')}>
             <IconPlus size={15} stroke={1.8} />
-            {t('addMailbox.cta')}
+            {$t('addMailbox.cta')}
           </button>
         </EmptyState>
       {:else}

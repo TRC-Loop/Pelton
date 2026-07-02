@@ -7,6 +7,7 @@
   import { prefs } from '../../stores/prefs'
   import { collapsedAccounts, toggleAccountCollapsed } from '../../stores/sidebarstate'
   import type { Account, Folder } from '../../lib/types'
+  import { t } from '../../lib/i18n'
 
   export let account: Account
   export let folders: Folder[]
@@ -36,7 +37,7 @@
   </button>
   {#if expanded}
     {#if roots.length === 0}
-      <p class="empty-note">No folders synced yet</p>
+      <p class="empty-note">{$t('sidebar.account.noFolders')}</p>
     {:else}
       {#each roots as folder (folder.id)}
         <FolderNode {folder} {folders} depth={0} />

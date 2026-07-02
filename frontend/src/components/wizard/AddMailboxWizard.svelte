@@ -5,6 +5,7 @@
   // their own client id). this component is code-split and only loaded when the
   // user opens it, so its cost is not paid at startup.
   import { createEventDispatcher, onMount } from 'svelte'
+  import { get } from 'svelte/store'
   import { IconX, IconArrowLeft, IconCheck } from '@tabler/icons-svelte'
   import WizardProviders from './WizardProviders.svelte'
   import Spinner from '../common/Spinner.svelte'
@@ -12,6 +13,7 @@
   import { errorMessage } from '../../stores/toast'
   import { providerPresets, type ProviderPreset } from '../../lib/providers'
   import type { AddAccountRequest, Account } from '../../lib/types'
+  import { t } from '../../lib/i18n'
 
   const dispatch = createEventDispatcher<{ close: void; added: Account }>()
 
@@ -123,7 +125,7 @@
 
   async function addPassword(): Promise<void> {
     step = 'working'
-    workingMessage = 'Connecting and discovering folders…'
+    workingMessage = get(t)('wizard.working.connecting')
     try {
       const account = await addPasswordAccount(draft)
       finish(account)
@@ -134,7 +136,7 @@
 
   async function signIn(): Promise<void> {
     step = 'working'
-    workingMessage = 'Waiting for sign-in in your browser…'
+    workingMessage = get(t)('wizard.working.signIn')
     try {
       const account = await addOAuthAccount(draft)
       finish(account)
@@ -163,17 +165,17 @@
   $: canSignIn = draft.email.includes('@') && draft.clientId !== ''
 </script>
 
-<div class="screen" role="dialog" aria-modal="true" aria-label="Add mailbox">
+<div class="screen" role="dialog" aria-modal="true" aria-label={$t('addMailbox.cta')}>
   <header class="head">
     {#if step === 'config' || step === 'oauth'}
-      <button type="button" class="icon" aria-label="Back" on:click={back}>
+      <button type="button" class="icon" aria-label={$t('wizard.back')} on:click={back}>
         <IconArrowLeft size={18} stroke={1.8} />
       </button>
     {:else}
       <span class="icon-spacer"></span>
     {/if}
-    <span class="title">Add mailbox</span>
-    <button type="button" class="icon" aria-label="Close" on:click={() => dispatch('close')}>
+    <span class="title">{$t('addMailbox.cta')}</span>
+    <button type="button" class="icon" aria-label={$t('wizard.close')} on:click={() => dispatch('close')}>
       <IconX size={18} stroke={1.8} />
     </button>
   </header>
@@ -187,87 +189,84 @@
         {#if preset?.note}<p class="note">{preset.note}</p>{/if}
 
         <label class="field">
-          <span>Email</span>
-          <input type="email" bind:value={draft.email} on:blur={maybeDiscover} placeholder="you@example.com" />
+          <span>{$t('wizard.field.email')}</span>
+          <input type="email" bind:value={draft.email} on:blur={maybeDiscover} placeholder={$t('wizard.field.emailPlaceholder')} />
         </label>
         <label class="field">
-          <span>Display name</span>
-          <input type="text" bind:value={draft.displayName} placeholder="Your name" />
+          <span>{$t('wizard.field.displayName')}</span>
+          <input type="text" bind:value={draft.displayName} placeholder={$t('wizard.field.displayNamePlaceholder')} />
         </label>
         <label class="field">
-          <span>Password</span>
-          <input type="password" bind:value={draft.password} placeholder="Password or app password" />
+          <span>{$t('wizard.field.password')}</span>
+          <input type="password" bind:value={draft.password} placeholder={$t('wizard.field.passwordPlaceholder')} />
         </label>
 
         <div class="servers">
-          <label class="field"><span>IMAP host</span><input type="text" bind:value={draft.imapHost} /></label>
-          <label class="field narrow"><span>Port</span><input type="number" bind:value={draft.imapPort} /></label>
+          <label class="field"><span>{$t('wizard.field.imapHost')}</span><input type="text" bind:value={draft.imapHost} /></label>
+          <label class="field narrow"><span>{$t('wizard.field.port')}</span><input type="number" bind:value={draft.imapPort} /></label>
         </div>
         <div class="servers">
-          <label class="field"><span>SMTP host</span><input type="text" bind:value={draft.smtpHost} /></label>
-          <label class="field narrow"><span>Port</span><input type="number" bind:value={draft.smtpPort} /></label>
+          <label class="field"><span>{$t('wizard.field.smtpHost')}</span><input type="text" bind:value={draft.smtpHost} /></label>
+          <label class="field narrow"><span>{$t('wizard.field.port')}</span><input type="number" bind:value={draft.smtpPort} /></label>
         </div>
 
         <button type="button" class="disclosure" on:click={() => (showAdvanced = !showAdvanced)}>
-          {showAdvanced ? 'Hide' : 'Advanced'} connection settings
+          {showAdvanced ? $t('wizard.advanced.hide') : $t('wizard.advanced.show')} {$t('wizard.advanced.connectionSettings')}
         </button>
         {#if showAdvanced}
           <div class="advanced">
-            <span class="adv-label">IMAP security</span>
-            <div class="seg" role="radiogroup" aria-label="IMAP security">
+            <span class="adv-label">{$t('wizard.advanced.imapSecurity')}</span>
+            <div class="seg" role="radiogroup" aria-label={$t('wizard.advanced.imapSecurity')}>
               <button type="button" class:on={imapTLS === 'ssl'} on:click={() => setTLS('ssl')}>SSL / TLS</button>
               <button type="button" class:on={imapTLS === 'starttls'} on:click={() => setTLS('starttls')}>STARTTLS</button>
             </div>
             <p class="adv-hint">
-              SSL / TLS uses port 993, STARTTLS uses port 143. Most servers use SSL / TLS; pick STARTTLS only
-              if your provider requires it.
+              {$t('wizard.advanced.tlsHint')}
             </p>
           </div>
         {/if}
 
-        {#if testOk === true}<p class="ok"><IconCheck size={14} stroke={2} /> Connection works.</p>{/if}
+        {#if testOk === true}<p class="ok"><IconCheck size={14} stroke={2} /> {$t('wizard.connectionWorks')}</p>{/if}
         {#if error}<p class="err">{error}</p>{/if}
 
         <div class="actions">
           <button type="button" class="ghost" on:click={test} disabled={testing || !canSubmitPassword}>
-            {testing ? 'Testing…' : 'Test connection'}
+            {testing ? $t('wizard.testing') : $t('wizard.testConnection')}
           </button>
           <button type="button" class="primary" on:click={addPassword} disabled={!canSubmitPassword}>
-            Add mailbox
+            {$t('addMailbox.cta')}
           </button>
         </div>
       {:else if step === 'oauth'}
-        <h3>Sign in to {preset?.label}</h3>
+        <h3>{$t('wizard.step.oauth.title')} {preset?.label}</h3>
         <p class="note">
-          OAuth uses your own registered client id (a desktop OAuth client). Paste it below; sign-in opens in
-          your browser and no client secret is stored.
+          {$t('wizard.step.oauth.note')}
         </p>
 
         <label class="field">
-          <span>Email</span>
-          <input type="email" bind:value={draft.email} placeholder="you@example.com" />
+          <span>{$t('wizard.field.email')}</span>
+          <input type="email" bind:value={draft.email} placeholder={$t('wizard.field.emailPlaceholder')} />
         </label>
         <label class="field">
-          <span>Display name</span>
-          <input type="text" bind:value={draft.displayName} placeholder="Your name" />
+          <span>{$t('wizard.field.displayName')}</span>
+          <input type="text" bind:value={draft.displayName} placeholder={$t('wizard.field.displayNamePlaceholder')} />
         </label>
         <label class="field">
-          <span>OAuth client id</span>
+          <span>{$t('wizard.field.oauthClientId')}</span>
           <input type="text" bind:value={draft.clientId} placeholder="xxxxx.apps.googleusercontent.com" />
         </label>
 
         {#if preset?.allowClientSecret}
           <button type="button" class="disclosure" on:click={() => (showAdvanced = !showAdvanced)}>
-            {showAdvanced ? 'Hide' : 'Advanced'}
+            {showAdvanced ? $t('wizard.advanced.hide') : $t('wizard.advanced.show')}
           </button>
           {#if showAdvanced}
             <label class="field">
-              <span>OAuth client secret (optional)</span>
-              <input type="password" bind:value={draft.clientSecret} placeholder="Only for confidential-client apps" />
+              <span>{$t('wizard.field.oauthClientSecret')}</span>
+              <input type="password" bind:value={draft.clientSecret} placeholder={$t('wizard.field.oauthClientSecretPlaceholder')} />
             </label>
             <p class="adv-hint">
-              Leave blank for a normal desktop (public) app registration. Set this only if your Microsoft
-              Entra app is registered as a confidential client that requires a secret.
+              {$t('wizard.advanced.clientSecretHint')}
             </p>
           {/if}
         {/if}
@@ -276,7 +275,7 @@
 
         <div class="actions">
           <button type="button" class="primary" on:click={signIn} disabled={!canSignIn}>
-            Sign in with {preset?.label}
+            {$t('wizard.signInWith')} {preset?.label}
           </button>
         </div>
       {:else if step === 'working'}
@@ -284,16 +283,16 @@
       {:else if step === 'done'}
         <div class="result">
           <IconCheck size={32} stroke={1.6} />
-          <h3>Mailbox added</h3>
-          <p class="note">{draft.email} is syncing now.</p>
-          <button type="button" class="primary" on:click={() => dispatch('close')}>Done</button>
+          <h3>{$t('wizard.done.title')}</h3>
+          <p class="note">{draft.email} {$t('wizard.done.syncing')}</p>
+          <button type="button" class="primary" on:click={() => dispatch('close')}>{$t('wizard.done.button')}</button>
         </div>
       {:else if step === 'error'}
         <div class="result">
-          <h3>Could not add mailbox</h3>
+          <h3>{$t('wizard.error.title')}</h3>
           <p class="err">{error}</p>
           <button type="button" class="ghost" on:click={() => (step = preset?.kind === 'oauth' ? 'oauth' : 'config')}>
-            Back
+            {$t('wizard.back')}
           </button>
         </div>
       {/if}

@@ -5,9 +5,10 @@
 // source of truth.
 
 import { writable } from 'svelte/store'
-import type { UIPrefs, ThemePref, DensityPref } from '../lib/types'
+import type { UIPrefs, ThemePref, DensityPref, EditorMode } from '../lib/types'
 import { getUIPrefs, setSetting, SettingKeys } from '../lib/api'
 import { applyTheme, applyDensity, applyAccent, applyScale, watchSystemTheme } from '../theme/theme'
+import { setLocale, type Locale } from '../lib/i18n'
 
 // defaults match the backend defaults so the ui renders sanely even before the
 // first load resolves.
@@ -40,6 +41,21 @@ const defaults: UIPrefs = {
   uiScale: '1',
   messageFontSize: 14,
   showFlaggedCount: true,
+  flagColorSync: false,
+  showOfflineIndicator: true,
+  swipeEnabled: true,
+  swipeLeftAction: 'delete',
+  swipeRightAction: 'unread',
+  composeVimMode: false,
+  downloadIncludeAttachments: true,
+  appVimMode: false,
+  language: 'en',
+  lowPowerMode: false,
+  autoSyncIntervalSeconds: 900,
+  defaultEditorMode: 'plaintext',
+  composeAutocomplete: true,
+  composeChips: true,
+  updateCheckFrequency: 'off',
 }
 
 export const prefs = writable<UIPrefs>(defaults)
@@ -50,6 +66,7 @@ function applyAll(p: UIPrefs): void {
   applyDensity(p.density as DensityPref)
   applyAccent(p.accent)
   applyScale(p.uiScale)
+  setLocale(p.language as Locale)
 }
 
 // initPrefs loads preferences, applies them, and keeps the theme in sync with
@@ -102,6 +119,101 @@ export function setMessageFontSize(size: number): void {
 export function setShowFlaggedCount(value: boolean): void {
   prefs.update((p) => ({ ...p, showFlaggedCount: value }))
   void setSetting(SettingKeys.showFlaggedCount, String(value))
+}
+
+// setFlagColorSync toggles pushing color labels to the server as imap keywords.
+export function setFlagColorSync(value: boolean): void {
+  prefs.update((p) => ({ ...p, flagColorSync: value }))
+  void setSetting(SettingKeys.flagColorSync, String(value))
+}
+
+// setShowOfflineIndicator toggles the little downloaded badge on pinned messages.
+export function setShowOfflineIndicator(value: boolean): void {
+  prefs.update((p) => ({ ...p, showOfflineIndicator: value }))
+  void setSetting(SettingKeys.showOfflineIndicator, String(value))
+}
+
+// setSwipeEnabled toggles trackpad swipe gestures on message rows.
+export function setSwipeEnabled(value: boolean): void {
+  prefs.update((p) => ({ ...p, swipeEnabled: value }))
+  void setSetting(SettingKeys.swipeEnabled, String(value))
+}
+
+// setSwipeLeftAction / setSwipeRightAction pick what each swipe direction does.
+export function setSwipeLeftAction(action: string): void {
+  prefs.update((p) => ({ ...p, swipeLeftAction: action }))
+  void setSetting(SettingKeys.swipeLeftAction, action)
+}
+
+export function setSwipeRightAction(action: string): void {
+  prefs.update((p) => ({ ...p, swipeRightAction: action }))
+  void setSetting(SettingKeys.swipeRightAction, action)
+}
+
+// setComposeVimMode toggles vim keybindings in the compose editor.
+export function setComposeVimMode(value: boolean): void {
+  prefs.update((p) => ({ ...p, composeVimMode: value }))
+  void setSetting(SettingKeys.composeVimMode, String(value))
+}
+
+// setDownloadIncludeAttachments remembers the range-download attachment choice.
+export function setDownloadIncludeAttachments(value: boolean): void {
+  prefs.update((p) => ({ ...p, downloadIncludeAttachments: value }))
+  void setSetting(SettingKeys.downloadIncludeAttachments, String(value))
+}
+
+// setAppVimMode toggles global vim-style navigation of the app window.
+export function setAppVimMode(value: boolean): void {
+  prefs.update((p) => ({ ...p, appVimMode: value }))
+  void setSetting(SettingKeys.appVimMode, String(value))
+}
+
+// setLanguage persists the chosen ui locale and applies it immediately.
+export function setLanguage(language: Locale): void {
+  prefs.update((p) => ({ ...p, language }))
+  setLocale(language)
+  void setSetting(SettingKeys.language, language)
+}
+
+// setLowPowerMode toggles pausing periodic auto-sync, bulk downloads and
+// address-book rescans.
+export function setLowPowerMode(value: boolean): void {
+  prefs.update((p) => ({ ...p, lowPowerMode: value }))
+  void setSetting(SettingKeys.lowPowerMode, String(value))
+}
+
+// setDefaultEditorMode sets the editor a new compose session starts in.
+export function setDefaultEditorMode(mode: EditorMode): void {
+  prefs.update((p) => ({ ...p, defaultEditorMode: mode }))
+  void setSetting(SettingKeys.defaultEditorMode, mode)
+}
+
+// setComposeAutocomplete toggles address-book suggestions while typing a
+// recipient.
+export function setComposeAutocomplete(value: boolean): void {
+  prefs.update((p) => ({ ...p, composeAutocomplete: value }))
+  void setSetting(SettingKeys.composeAutocomplete, String(value))
+}
+
+// setComposeChips toggles rendering recipients as removable chips versus a
+// plain comma-separated text field.
+export function setComposeChips(value: boolean): void {
+  prefs.update((p) => ({ ...p, composeChips: value }))
+  void setSetting(SettingKeys.composeChips, String(value))
+}
+
+// setUpdateCheckFrequency persists how often the app checks GitHub releases
+// for a newer version: 'off', 'startup', 'weekly', or 'monthly'.
+export function setUpdateCheckFrequency(value: string): void {
+  prefs.update((p) => ({ ...p, updateCheckFrequency: value }))
+  void setSetting(SettingKeys.updateCheckFrequency, value)
+}
+
+// setAutoSyncInterval persists how often a full sync pass runs, in seconds (0
+// disables it).
+export function setAutoSyncInterval(seconds: number): void {
+  prefs.update((p) => ({ ...p, autoSyncIntervalSeconds: seconds }))
+  void setSetting(SettingKeys.autoSyncIntervalSeconds, String(seconds))
 }
 
 export function setAccent(accent: string): void {

@@ -1,12 +1,16 @@
 <script lang="ts">
   // a small, accessible loading indicator. label describes what is loading.
-  export let label: string = 'Loading'
+  import { t } from '../../lib/i18n'
+
+  export let label: string = ''
   export let inline: boolean = false
+
+  $: resolvedLabel = label || $t('common.spinner.loading')
 </script>
 
 <div class="spinner-wrap" class:inline role="status" aria-live="polite">
   <span class="spinner" aria-hidden="true"></span>
-  <span class="label">{label}</span>
+  <span class="label">{resolvedLabel}</span>
 </div>
 
 <style>

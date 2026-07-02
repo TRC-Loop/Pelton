@@ -4,7 +4,7 @@
   // to its title bar or expanded to fill the window. markdown mode gets a
   // formatting toolbar and a github-style live preview. send enqueues to the
   // outbox (with the undo-send window when enabled); save stores a local draft.
-  import { tick, onMount } from 'svelte'
+  import { onMount } from 'svelte'
   import { marked } from 'marked'
   import {
     IconX,
@@ -13,6 +13,7 @@
     IconMinus,
     IconArrowsDiagonal,
     IconArrowsDiagonalMinimize2,
+    IconTrash,
   } from '@tabler/icons-svelte'
   import AddressFields from './AddressFields.svelte'
   import EditorModeSwitch from './EditorModeSwitch.svelte'
@@ -28,13 +29,25 @@
   import { prefs } from '../../stores/prefs'
   import { buildRequest, hasRecipients } from '../../lib/mailcompose'
   import { errorMessage, toastError, toastSuccess } from '../../stores/toast'
+  import type CodeMirrorEditor from './CodeMirrorEditor.svelte'
   import type { EditorMode } from '../../lib/types'
+  import { t } from '../../lib/i18n'
 
   export let session: ComposeSession
 
   let sending = false
   let preview = false
-  let bodyEl: HTMLTextAreaElement
+  let confirmClose = false
+  // the CodeMirror editor instance, used by the markdown toolbar to format the
+  // selection. one editor is mounted per non-wysiwyg mode.
+  let editor: CodeMirrorEditor
+
+  // CodeMirror is code-split (it is sizeable) and loaded the first time a
+  // non-wysiwyg compose is shown, keeping it out of the startup bundle.
+  let CMEditor: typeof CodeMirrorEditor | null = null
+  $: if (session.mode !== 'wysiwyg' && !CMEditor) {
+    void import('./CodeMirrorEditor.svelte').then((m) => (CMEditor = m.default))
+  }
 
   // the rich editor (tiptap) is code-split: it only loads when the session is in
   // wysiwyg mode, keeping prosemirror out of the main bundle.
@@ -109,68 +122,41 @@
     updateCompose(session.id, { minimized: !session.minimized })
   }
 
-  // applyFormat wraps the selection (or inserts a placeholder) with the markdown
-  // for the requested action, then restores focus and the caret.
-  async function applyFormat(action: string): Promise<void> {
-    if (!bodyEl) {
+  // applyFormat applies the requested markdown formatting to the CodeMirror
+  // selection via the editor's exposed methods (which dispatch the change and
+  // keep focus/caret correct).
+  function applyFormat(action: string): void {
+    if (!editor) {
       return
     }
-    const start = bodyEl.selectionStart
-    const end = bodyEl.selectionEnd
-    const val = session.body
-    const sel = val.slice(start, end)
-    let next = val
-    let caret = end
-
-    const wrap = (token: string, placeholder: string): void => {
-      const inner = sel || placeholder
-      next = val.slice(0, start) + token + inner + token + val.slice(end)
-      caret = start + token.length + inner.length + token.length
-    }
-    const linePrefix = (prefix: string): void => {
-      const lineStart = val.lastIndexOf('\n', start - 1) + 1
-      const block = val.slice(lineStart, end) || prefix
-      const prefixed = block.split('\n').map((l) => prefix + l).join('\n')
-      next = val.slice(0, lineStart) + prefixed + val.slice(end)
-      caret = lineStart + prefixed.length
-    }
-
     switch (action) {
       case 'bold':
-        wrap('**', 'bold text')
+        editor.wrapSelection('**', 'bold text')
         break
       case 'italic':
-        wrap('*', 'italic text')
+        editor.wrapSelection('*', 'italic text')
         break
       case 'code':
-        wrap('`', 'code')
+        editor.wrapSelection('`', 'code')
         break
-      case 'link': {
-        const text = sel || 'link'
-        next = val.slice(0, start) + `[${text}](https://)` + val.slice(end)
-        caret = start + text.length + 3
+      case 'link':
+        editor.insertLink()
         break
-      }
       case 'heading':
-        linePrefix('## ')
+        editor.linePrefix('## ')
         break
       case 'list':
-        linePrefix('- ')
+        editor.linePrefix('- ')
         break
       case 'quote':
-        linePrefix('> ')
+        editor.linePrefix('> ')
         break
     }
-
-    updateCompose(session.id, { body: next })
-    await tick()
-    bodyEl.focus()
-    bodyEl.setSelectionRange(caret, caret)
   }
 
   async function send(): Promise<void> {
     if (!hasRecipients(session)) {
-      toastError('Add at least one recipient before sending.')
+      toastError($t('compose.error.noRecipients'))
       return
     }
     sending = true
@@ -187,7 +173,7 @@
       if (delay > 0) {
         scheduleUndo(id, snapshot, delay)
       } else {
-        toastSuccess('Message queued for sending.')
+        toastSuccess($t('compose.toast.queued'))
       }
     } catch (err) {
       toastError(errorMessage(err))
@@ -200,38 +186,101 @@
     try {
       const id = await saveDraft(session.draftId, buildRequest(session))
       updateCompose(session.id, { draftId: id })
-      toastSuccess('Draft saved.')
+      toastSuccess($t('compose.toast.draftSaved'))
     } catch (err) {
       toastError(errorMessage(err))
     }
   }
+
+  // hasContent decides whether closing needs a save/discard prompt: any
+  // recipient, subject or body text counts, but a session that was only ever
+  // opened and never touched should close silently.
+  function hasContent(): boolean {
+    return (
+      session.to.trim().length > 0 ||
+      session.cc.trim().length > 0 ||
+      session.bcc.trim().length > 0 ||
+      session.subject.trim().length > 0 ||
+      session.body.trim().length > 0
+    )
+  }
+
+  function requestClose(): void {
+    if (hasContent()) {
+      confirmClose = true
+      return
+    }
+    closeCompose(session.id)
+  }
+
+  async function saveAndClose(): Promise<void> {
+    try {
+      await saveDraft(session.draftId, buildRequest(session))
+      toastSuccess($t('compose.toast.draftSaved'))
+      closeCompose(session.id)
+    } catch (err) {
+      toastError(errorMessage(err))
+    }
+  }
+
+  async function discardAndClose(): Promise<void> {
+    confirmClose = false
+    try {
+      if (session.draftId) {
+        await deleteDraft(session.draftId)
+      }
+    } catch (err) {
+      toastError(errorMessage(err))
+    }
+    closeCompose(session.id)
+  }
 </script>
 
-<div class="compose" class:fullscreen={session.fullscreen} class:minimized={session.minimized} role="dialog" aria-label="Compose message">
+<div class="compose" class:fullscreen={session.fullscreen} class:minimized={session.minimized} role="dialog" aria-label={$t('compose.dialog.ariaLabel')}>
   <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
   <header class="head" on:dblclick={toggleMinimize}>
-    <span class="title">{session.subject || 'Compose'}</span>
+    <span class="title">{session.subject || $t('compose.title.untitled')}</span>
     <div class="win">
-      <button type="button" class="win-btn" aria-label="Minimize" title="Minimize" on:click={toggleMinimize}>
+      <button type="button" class="win-btn" aria-label={$t('compose.window.minimize')} title={$t('compose.window.minimize')} on:click={toggleMinimize}>
         <IconMinus size={15} stroke={1.8} />
       </button>
-      <button type="button" class="win-btn" aria-label={session.fullscreen ? 'Restore' : 'Fullscreen'} title={session.fullscreen ? 'Restore' : 'Fullscreen'} on:click={toggleFullscreen}>
+      <button type="button" class="win-btn" aria-label={session.fullscreen ? $t('compose.window.restore') : $t('compose.window.fullscreen')} title={session.fullscreen ? $t('compose.window.restore') : $t('compose.window.fullscreen')} on:click={toggleFullscreen}>
         {#if session.fullscreen}
           <IconArrowsDiagonalMinimize2 size={15} stroke={1.8} />
         {:else}
           <IconArrowsDiagonal size={15} stroke={1.8} />
         {/if}
       </button>
-      <button type="button" class="win-btn" aria-label="Close compose" on:click={() => closeCompose(session.id)}>
+      <button type="button" class="win-btn" aria-label={$t('compose.window.close')} on:click={requestClose}>
         <IconX size={16} stroke={1.8} />
       </button>
     </div>
   </header>
 
+  {#if confirmClose}
+    <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
+    <div class="confirm-backdrop" on:click={() => (confirmClose = false)}>
+      <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions a11y-no-noninteractive-element-interactions -->
+      <div class="confirm-box" role="dialog" aria-modal="true" aria-label={$t('compose.confirmClose.ariaLabel')} tabindex="-1" on:click|stopPropagation>
+        <p>{$t('compose.confirmClose.message')}</p>
+        <div class="confirm-actions">
+          <button type="button" class="confirm-discard" on:click={discardAndClose}>
+            <IconTrash size={14} stroke={1.7} />
+            {$t('action.discard')}
+          </button>
+          <button type="button" class="confirm-save" on:click={saveAndClose}>
+            <IconDeviceFloppy size={14} stroke={1.7} />
+            {$t('compose.confirmClose.saveToDrafts')}
+          </button>
+        </div>
+      </div>
+    </div>
+  {/if}
+
   {#if !session.minimized}
     {#if accounts.length > 1}
       <div class="from">
-        <label for={`from-${session.id}`}>From</label>
+        <label for={`from-${session.id}`}>{$t('compose.field.from')}</label>
         <select
           id={`from-${session.id}`}
           value={session.accountId}
@@ -256,30 +305,36 @@
             on:change={(e) => updateCompose(session.id, { body: e.detail })}
           />
         {:else}
-          <div class="editor-loading">Loading editor…</div>
+          <div class="editor-loading">{$t('compose.editor.loading')}</div>
         {/if}
       {:else if session.mode === 'markdown'}
         <EditorToolbar {preview} on:format={(e) => applyFormat(e.detail)} on:togglePreview={() => (preview = !preview)} />
         {#if preview}
           <div class="preview selectable">{@html previewHtml}</div>
+        {:else if CMEditor}
+          <svelte:component
+            this={CMEditor}
+            bind:this={editor}
+            content={session.body}
+            placeholder={$t('compose.editor.placeholderMarkdown')}
+            vimEnabled={$prefs.composeVimMode}
+            on:change={(e) => updateCompose(session.id, { body: e.detail })}
+          />
         {:else}
-          <textarea
-            class="body selectable"
-            bind:this={bodyEl}
-            aria-label="Message body"
-            placeholder="Write markdown…"
-            value={session.body}
-            on:input={(e) => updateCompose(session.id, { body: e.currentTarget.value })}
-          ></textarea>
+          <div class="editor-loading">{$t('compose.editor.loading')}</div>
         {/if}
+      {:else if CMEditor}
+        <svelte:component
+          this={CMEditor}
+          bind:this={editor}
+          content={session.body}
+          placeholder={$t('compose.editor.placeholderPlain')}
+          vimEnabled={$prefs.composeVimMode}
+          mono
+          on:change={(e) => updateCompose(session.id, { body: e.detail })}
+        />
       {:else}
-        <textarea
-          class="body mono selectable"
-          aria-label="Message body"
-          placeholder="Write your message…"
-          value={session.body}
-          on:input={(e) => updateCompose(session.id, { body: e.currentTarget.value })}
-        ></textarea>
+        <div class="editor-loading">Loading editor…</div>
       {/if}
     </div>
 
@@ -290,16 +345,16 @@
     <footer class="foot">
       <button type="button" class="send" disabled={sending} on:click={send}>
         <IconSend size={15} stroke={1.7} />
-        {sending ? 'Sending…' : 'Send'}
+        {sending ? $t('compose.action.sending') : $t('action.send')}
       </button>
       <button type="button" class="save" on:click={save}>
         <IconDeviceFloppy size={15} stroke={1.6} />
-        Save draft
+        {$t('action.saveDraft')}
       </button>
       <span class="spacer"></span>
       {#if $signatures.length > 0}
-        <select class="sig-select" aria-label="Insert signature" on:change={insertSignature}>
-          <option value="" disabled selected>Signature…</option>
+        <select class="sig-select" aria-label={$t('compose.signature.ariaLabel')} on:change={insertSignature}>
+          <option value="" disabled selected>{$t('compose.signature.placeholder')}</option>
           {#each $signatures as sig (sig.id)}
             <option value={sig.id}>{sig.name}</option>
           {/each}
@@ -312,6 +367,7 @@
 
 <style>
   .compose {
+    position: relative;
     display: flex;
     flex-direction: column;
     width: 460px;
@@ -418,20 +474,17 @@
   }
 
   .editor {
+    position: relative;
     flex: 1;
     min-height: 0;
     display: flex;
     flex-direction: column;
   }
 
-  .body,
   .preview {
     flex: 1;
     width: 100%;
     min-height: 0;
-    border: none;
-    outline: none;
-    resize: none;
     background: transparent;
     color: var(--text-primary);
     font-size: var(--fz-body);
@@ -448,10 +501,6 @@
     justify-content: center;
     color: var(--text-tertiary);
     font-size: var(--fz-label);
-  }
-
-  .body.mono {
-    font-family: var(--font-mono);
   }
 
   /* a light github-style rendered preview. */
@@ -529,5 +578,64 @@
   .send:disabled {
     opacity: 0.6;
     cursor: default;
+  }
+
+  .confirm-backdrop {
+    position: absolute;
+    inset: 0;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--scrim, rgba(0, 0, 0, 0.4));
+    backdrop-filter: blur(1px);
+  }
+
+  .confirm-box {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    width: min(320px, calc(100% - var(--space-5)));
+    padding: var(--space-4);
+    border: var(--hairline) solid var(--border-default);
+    border-radius: var(--radius-card);
+    background: var(--surface-overlay);
+    box-shadow: var(--shadow-overlay);
+  }
+
+  .confirm-box p {
+    margin: 0;
+    font-size: var(--fz-label);
+    color: var(--text-primary);
+  }
+
+  .confirm-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--space-2);
+  }
+
+  .confirm-discard,
+  .confirm-save {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    border: var(--hairline) solid var(--border-default);
+    border-radius: var(--radius-control);
+    background: var(--surface-raised);
+    color: var(--text-primary);
+    cursor: pointer;
+    font-size: var(--fz-label);
+  }
+
+  .confirm-discard:hover {
+    background: var(--danger-bg, var(--surface-hover));
+    color: var(--danger, var(--text-primary));
+    border-color: var(--danger, var(--border-default));
+  }
+
+  .confirm-save:hover {
+    background: var(--surface-hover);
   }
 </style>

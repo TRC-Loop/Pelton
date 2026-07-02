@@ -4,12 +4,14 @@
   // backend sanitization. plaintext renders in the mono font. remote images are
   // blocked by the backend by default; a per-message affordance asks the backend
   // to re-render with remote content allowed.
+  import { onDestroy } from 'svelte'
   import { IconPhoto, IconUserCheck, IconWorldCheck } from '@tabler/icons-svelte'
   import { prefs } from '../../stores/prefs'
   import { getMessageHtml, trustSenderImages, allowDomainImages } from '../../lib/api'
   import { setBodyHtml } from '../../stores/message'
   import { errorMessage, toastError, toastSuccess } from '../../stores/toast'
   import { displayName } from '../../lib/format'
+  import { t } from '../../lib/i18n'
   import type { MessageDetail } from '../../lib/types'
 
   export let detail: MessageDetail
@@ -23,6 +25,7 @@
   $: if (detail.id !== lastId) {
     lastId = detail.id
     remoteLoaded = detail.remoteAllowed
+    frameHeight = 320
   }
 
   $: senderLabel = displayName(detail.fromName, detail.fromAddress)
@@ -69,6 +72,47 @@
 
   $: srcdoc = buildSrcdoc(detail.bodyHtmlSafe, $prefs.theme, remoteLoaded, $prefs.messageFontSize)
 
+  // the iframe is sized to its content height so the reading pane has a single
+  // scrollbar instead of a nested one (which the interface zoom made worse). the
+  // sandbox stays script-free; allow-same-origin only lets us measure the content
+  // height, it does not run any of the email's scripts (there are none: the CSP is
+  // default-src 'none' and allow-scripts is not set).
+  let frame: HTMLIFrameElement
+  let frameHeight = 320
+  let resizeObserver: ResizeObserver | null = null
+
+  // measuring documentElement/body.scrollHeight is unreliable here: per spec
+  // scrollHeight can never be smaller than the viewport (the iframe's own
+  // current height), so once the iframe grows it can never be measured back
+  // down, and the height only ratchets upward, leaving a growing gap below
+  // short emails. a ResizeObserver on the body's own border box reports its
+  // true content size independent of the iframe's current height.
+  function measure(): void {
+    const doc = frame?.contentDocument
+    const body = doc?.body
+    if (!body) {
+      return
+    }
+    const h = body.getBoundingClientRect().height
+    frameHeight = Math.max(40, Math.ceil(h))
+  }
+
+  function onFrameLoad(): void {
+    resizeObserver?.disconnect()
+    resizeObserver = null
+    const doc = frame?.contentDocument
+    const body = doc?.body
+    if (!body) {
+      measure()
+      return
+    }
+    measure()
+    resizeObserver = new ResizeObserver(() => measure())
+    resizeObserver.observe(body)
+  }
+
+  onDestroy(() => resizeObserver?.disconnect())
+
   async function loadRemote(): Promise<void> {
     try {
       const html = await getMessageHtml(detail.id, true)
@@ -83,7 +127,7 @@
   async function trustSender(): Promise<void> {
     try {
       await trustSenderImages(detail.id)
-      toastSuccess(`Images from ${senderLabel} will load from now on.`)
+      toastSuccess($t('detail.mailBody.imagesTrusted').replace('{who}', senderLabel))
       await loadRemote()
     } catch (err) {
       toastError(errorMessage(err))
@@ -94,7 +138,7 @@
   async function trustDomain(): Promise<void> {
     try {
       await allowDomainImages(detail.id)
-      toastSuccess(`Images from ${senderDomain} will load from now on.`)
+      toastSuccess($t('detail.mailBody.imagesTrusted').replace('{who}', senderDomain ?? ''))
       await loadRemote()
     } catch (err) {
       toastError(errorMessage(err))
@@ -105,26 +149,26 @@
 {#if detail.hasRemoteContent && !remoteLoaded}
   <div class="remote-bar">
     <div class="remote-info">
-      <span class="remote-text">Remote images are blocked to protect your privacy.</span>
+      <span class="remote-text">{$t('detail.mailBody.remoteBlocked')}</span>
       {#if detail.remoteHosts && detail.remoteHosts.length > 0}
         <span class="remote-hosts" title={detail.remoteHosts.join(', ')}>
-          from {detail.remoteHosts.slice(0, 3).join(', ')}{detail.remoteHosts.length > 3 ? ` +${detail.remoteHosts.length - 3} more` : ''}
+          {$t('detail.mailBody.from')} {detail.remoteHosts.slice(0, 3).join(', ')}{detail.remoteHosts.length > 3 ? ` ${$t('detail.mailBody.more').replace('{count}', String(detail.remoteHosts.length - 3))}` : ''}
         </span>
       {/if}
     </div>
     <div class="remote-actions">
       <button type="button" class="remote-btn" on:click={loadRemote}>
         <IconPhoto size={14} stroke={1.6} />
-        Load once
+        {$t('detail.mailBody.loadOnce')}
       </button>
-      <button type="button" class="remote-btn" on:click={trustSender} title={`Always load images from ${senderLabel}`}>
+      <button type="button" class="remote-btn" on:click={trustSender} title={$t('detail.mailBody.alwaysLoadFrom').replace('{who}', senderLabel)}>
         <IconUserCheck size={14} stroke={1.6} />
-        This sender
+        {$t('detail.mailBody.thisSender')}
       </button>
       {#if senderDomain}
-        <button type="button" class="remote-btn" on:click={trustDomain} title={`Always load images from ${senderDomain}`}>
+        <button type="button" class="remote-btn" on:click={trustDomain} title={$t('detail.mailBody.alwaysLoadFrom').replace('{who}', senderDomain)}>
           <IconWorldCheck size={14} stroke={1.6} />
-          This domain
+          {$t('detail.mailBody.thisDomain')}
         </button>
       {/if}
     </div>
@@ -132,7 +176,15 @@
 {/if}
 
 {#if detail.isHtml}
-  <iframe class="body-frame" title="Message content" sandbox="" {srcdoc}></iframe>
+  <iframe
+    class="body-frame"
+    title={$t('detail.mailBody.iframeTitle')}
+    sandbox="allow-same-origin"
+    bind:this={frame}
+    on:load={onFrameLoad}
+    style={`height:${frameHeight}px`}
+    {srcdoc}
+  ></iframe>
 {:else}
   <pre class="body-plain mono selectable" style={`font-size:${$prefs.messageFontSize}px`}>{detail.bodyPlain}</pre>
 {/if}
@@ -196,11 +248,22 @@
     background: var(--surface-hover);
   }
 
+  /* height is set inline from the measured content height so the pane has a single
+     scrollbar. a min-height avoids a flash of collapse before the first measure.
+     the iframe is a nested browsing context, but its rendering still gets pulled
+     along by the ancestor's CSS zoom (the app-wide interface scale, applied on
+     <html> in theme.ts) since zoom is not a normal non-inherited property for
+     replaced elements. that means email content ends up zoomed twice: once by
+     its own messageFontSize, and again by whatever interface scale the user
+     picked. dividing back out by --ui-scale here cancels the ancestor's zoom so
+     the reading pane always renders at true size regardless of interface zoom. */
   .body-frame {
+    display: block;
     width: 100%;
-    height: 100%;
+    min-height: 120px;
     border: none;
     background: var(--surface-raised);
+    zoom: calc(1 / var(--ui-scale, 1));
   }
 
   .body-plain {

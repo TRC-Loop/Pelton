@@ -30,6 +30,9 @@ type Engine struct {
 	client mailClient
 	store  *storage.DB
 	log    *slog.Logger
+	// ColorSync, when true, adopts server-side flag colors (Thunderbird $LabelN
+	// keywords) into the local cache during each folder sync.
+	ColorSync bool
 }
 
 // NewEngine wires an imap client and the store together. A nil logger is
@@ -102,13 +105,19 @@ func (e *Engine) SyncFolder(ctx context.Context, folder storage.Folder) (FolderS
 	}
 	locals, localByUID := localView(localStates)
 
-	servers, err := loadServerView(e.client)
+	servers, serverColors, err := loadServerView(e.client)
 	if err != nil {
 		return res, err
 	}
 
 	plan := BuildPlan(locals, servers)
 	e.executePlan(ctx, folder, plan, localByUID, &res)
+
+	// adopt server-side color labels when color syncing is on. this runs after the
+	// plan so newly fetched messages already have local rows to color.
+	if e.ColorSync {
+		e.adoptColors(ctx, folder, serverColors)
+	}
 
 	newHigh := max(highestUID(servers), state.LastSeenUID)
 	if err := e.store.SetFolderLastSeenUID(ctx, folder.ID, newHigh); err != nil {
@@ -147,6 +156,34 @@ func (e *Engine) handleUIDValidity(ctx context.Context, folder storage.Folder, s
 	}
 	folder.UIDValidity = server
 	return folder, reset, nil
+}
+
+// adoptColors makes the server authoritative for flag colors: for each cached
+// message whose stored color differs from the server keyword, it writes the
+// server's color (0 clears). It only writes on a difference, so a steady state
+// costs no writes.
+func (e *Engine) adoptColors(ctx context.Context, folder storage.Folder, serverColors map[uint32]int) {
+	states, err := e.store.ListMessageStates(ctx, folder.ID)
+	if err != nil {
+		e.log.Error("color sync: list states", "folder", folder.IMAPPath, "err", err)
+		return
+	}
+	current, err := e.store.FolderFlagColors(ctx, folder.ID)
+	if err != nil {
+		e.log.Error("color sync: current colors", "folder", folder.IMAPPath, "err", err)
+		return
+	}
+	for _, s := range states {
+		desired, ok := serverColors[s.UID]
+		if !ok {
+			continue
+		}
+		if current[s.UID] != desired {
+			if err := e.store.SetFlagColor(ctx, s.ID, desired); err != nil {
+				e.log.Error("color sync: set color", "uid", s.UID, "err", err)
+			}
+		}
+	}
 }
 
 // executePlan applies a reconciled plan. pull actions and flag pushes run

@@ -39,7 +39,7 @@ type ComposeRequest struct {
 	Text        string              `json:"text"`
 	HTML        string              `json:"html"`
 	InReplyTo   string              `json:"inReplyTo"`
-	References   []string           `json:"references"`
+	References  []string            `json:"references"`
 	Attachments []ComposeAttachment `json:"attachments"`
 }
 
@@ -70,6 +70,16 @@ func (a *App) SendMessage(req ComposeRequest) (int64, error) {
 		return 0, err
 	}
 	a.emit(EventOutboxChanged, nil)
+
+	// harvest every recipient into the address book so autocomplete learns from
+	// who the user writes to. best effort: a failure here must not fail the send.
+	for _, group := range [][]AddressDTO{req.To, req.Cc, req.Bcc} {
+		for _, addr := range group {
+			if err := a.store.RecordAddress(a.ctx, addr.Email, addr.Name); err != nil {
+				a.log.Error("record recipient address", "email", addr.Email, "err", err)
+			}
+		}
+	}
 	return id, nil
 }
 
@@ -216,14 +226,14 @@ func (a *App) loadDrafts() ([]DraftDTO, error) {
 
 // OutboxRowDTO is one queued or failed message for the outbox view.
 type OutboxRowDTO struct {
-	ID            int64  `json:"id"`
-	AccountID     int64  `json:"accountId"`
+	ID            int64    `json:"id"`
+	AccountID     int64    `json:"accountId"`
 	Recipients    []string `json:"recipients"`
-	State         string `json:"state"`
-	Attempts      int    `json:"attempts"`
-	LastError     string `json:"lastError"`
-	NextAttemptAt string `json:"nextAttemptAt"`
-	CreatedAt     string `json:"createdAt"`
+	State         string   `json:"state"`
+	Attempts      int      `json:"attempts"`
+	LastError     string   `json:"lastError"`
+	NextAttemptAt string   `json:"nextAttemptAt"`
+	CreatedAt     string   `json:"createdAt"`
 }
 
 // ListOutbox returns the current outbox, so the ui can show queued, sending and

@@ -6,6 +6,7 @@
   import { IconCheck } from '@tabler/icons-svelte'
   import { prefs, setAccent } from '../../stores/prefs'
   import { ACCENT_PRESETS, isValidHex, normalizeHex } from '../../theme/accent'
+  import { t } from '../../lib/i18n'
 
   // the hex text the user is typing, seeded from the current accent.
   let hexInput = ''
@@ -34,16 +35,16 @@
 </script>
 
 <div class="accent">
-  <span class="label">Accent</span>
+  <span class="label">{$t('settingsPanel.accentLabel')}</span>
 
-  <div class="swatches" role="group" aria-label="Accent presets">
+  <div class="swatches" role="group" aria-label={$t('settingsPanel.accentPresets')}>
     {#each ACCENT_PRESETS as preset (preset)}
       <button
         type="button"
         class="swatch"
         class:selected={normalizeHex(preset) === current}
         style={`background:${preset}`}
-        aria-label={`Accent ${preset}`}
+        aria-label={`${$t('settingsPanel.accentLabel')} ${preset}`}
         aria-pressed={normalizeHex(preset) === current}
         on:click={() => pick(preset)}
       >
@@ -60,7 +61,7 @@
       type="text"
       spellcheck="false"
       autocomplete="off"
-      aria-label="Accent hex value"
+      aria-label={$t('settingsPanel.accentHexValue')}
       placeholder="#465AF2"
       value={hexInput}
       on:input={onHexInput}
@@ -68,7 +69,7 @@
   </div>
 
   {#if hexInput !== '' && !valid}
-    <p class="hint">Enter a valid hex color, like #465AF2.</p>
+    <p class="hint">{$t('settingsPanel.accentHexHint')}</p>
   {/if}
 </div>
 

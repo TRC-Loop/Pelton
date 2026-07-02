@@ -59,13 +59,23 @@ type DB struct {
 }
 
 // DefaultPath returns the database path inside the user config directory,
-// os.UserConfigDir()/Pelton/pelton.db.
+// os.UserConfigDir()/Pelton/pelton.db. When the PELTON_DEV environment
+// variable is set (the `make run`/`wails dev` loop sets it), it uses
+// Pelton-dev instead, so a local dev/test run never touches a real install's
+// accounts, cache or settings.
 func DefaultPath() (string, error) {
 	dir, err := os.UserConfigDir()
 	if err != nil {
 		return "", fmt.Errorf("storage: locate user config dir: %w", err)
 	}
-	return filepath.Join(dir, appDirName, dbFileName), nil
+	return filepath.Join(dir, dataDirName(), dbFileName), nil
+}
+
+func dataDirName() string {
+	if os.Getenv("PELTON_DEV") != "" {
+		return appDirName + "-dev"
+	}
+	return appDirName
 }
 
 // Open opens (creating it and its parent directory if needed) the database at
@@ -103,6 +113,23 @@ func dataSourceName(path string) string {
 func (d *DB) Close() error {
 	if err := d.sql.Close(); err != nil {
 		return fmt.Errorf("storage: close db: %w", err)
+	}
+	return nil
+}
+
+// AttachmentsDir returns the on disk attachments root, for callers (like
+// config sync) that mirror it alongside the database file.
+func (d *DB) AttachmentsDir() string {
+	return d.attachmentsDir
+}
+
+// Snapshot writes a consistent, point-in-time copy of the database to destPath
+// using SQLite's VACUUM INTO, which is safe to run against a live database
+// (unlike a raw file copy, which can catch a writer mid transaction). destPath
+// must not already exist.
+func (d *DB) Snapshot(ctx context.Context, destPath string) error {
+	if _, err := d.sql.ExecContext(ctx, `VACUUM INTO ?`, destPath); err != nil {
+		return fmt.Errorf("storage: snapshot db to %q: %w", destPath, err)
 	}
 	return nil
 }

@@ -14,7 +14,15 @@ export interface MenuItem {
   danger?: boolean
 }
 
-export type MenuEntry = MenuItem | 'separator'
+// a color-swatch row for picking a message flag color inline. current is the
+// selected color (0 = none); onPick fires with the chosen index (0 clears).
+export interface MenuColors {
+  kind: 'colors'
+  current: number
+  onPick: (color: number) => void
+}
+
+export type MenuEntry = MenuItem | 'separator' | MenuColors
 
 export interface MenuState {
   x: number

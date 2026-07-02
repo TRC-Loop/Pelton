@@ -4,36 +4,42 @@
   // the session store.
   import ChipInput from './ChipInput.svelte'
   import { updateCompose, type ComposeSession } from '../../stores/compose'
+  import { prefs } from '../../stores/prefs'
+  import { t } from '../../lib/i18n'
 
   export let session: ComposeSession
 </script>
 
 <div class="fields">
   <div class="field">
-    <label for={`to-${session.id}`}>To</label>
+    <label for={`to-${session.id}`}>{$t('compose.field.to')}</label>
     <ChipInput
       id={`to-${session.id}`}
-      label="To"
+      label={$t('compose.field.to')}
       value={session.to}
+      chipsEnabled={$prefs.composeChips}
+      autocompleteEnabled={$prefs.composeAutocomplete}
       on:change={(e) => updateCompose(session.id, { to: e.detail })}
     />
     <div class="reveal">
       {#if !session.showCc}
-        <button type="button" on:click={() => updateCompose(session.id, { showCc: true })}>Cc</button>
+        <button type="button" on:click={() => updateCompose(session.id, { showCc: true })}>{$t('compose.field.cc')}</button>
       {/if}
       {#if !session.showBcc}
-        <button type="button" on:click={() => updateCompose(session.id, { showBcc: true })}>Bcc</button>
+        <button type="button" on:click={() => updateCompose(session.id, { showBcc: true })}>{$t('compose.field.bcc')}</button>
       {/if}
     </div>
   </div>
 
   {#if session.showCc}
     <div class="field">
-      <label for={`cc-${session.id}`}>Cc</label>
+      <label for={`cc-${session.id}`}>{$t('compose.field.cc')}</label>
       <ChipInput
         id={`cc-${session.id}`}
-        label="Cc"
+        label={$t('compose.field.cc')}
         value={session.cc}
+        chipsEnabled={$prefs.composeChips}
+        autocompleteEnabled={$prefs.composeAutocomplete}
         on:change={(e) => updateCompose(session.id, { cc: e.detail })}
       />
     </div>
@@ -41,18 +47,20 @@
 
   {#if session.showBcc}
     <div class="field">
-      <label for={`bcc-${session.id}`}>Bcc</label>
+      <label for={`bcc-${session.id}`}>{$t('compose.field.bcc')}</label>
       <ChipInput
         id={`bcc-${session.id}`}
-        label="Bcc"
+        label={$t('compose.field.bcc')}
         value={session.bcc}
+        chipsEnabled={$prefs.composeChips}
+        autocompleteEnabled={$prefs.composeAutocomplete}
         on:change={(e) => updateCompose(session.id, { bcc: e.detail })}
       />
     </div>
   {/if}
 
   <div class="field">
-    <label for={`subject-${session.id}`}>Subject</label>
+    <label for={`subject-${session.id}`}>{$t('compose.field.subject')}</label>
     <input
       id={`subject-${session.id}`}
       type="text"

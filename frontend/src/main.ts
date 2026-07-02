@@ -15,6 +15,7 @@ import '@fontsource/spline-sans-mono/700.css'
 import './theme/tokens.css'
 import './style.css'
 
+import { mount } from 'svelte'
 import App from './App.svelte'
 
 const target = document.getElementById('app')
@@ -22,7 +23,7 @@ if (!target) {
   throw new Error('pelton: #app mount point missing')
 }
 
-const app = new App({ target })
+const app = mount(App, { target })
 
 // remove the pre-mount splash now that svelte has taken over.
 document.getElementById('splash')?.remove()

@@ -16,6 +16,7 @@
   import type { UnifiedView, ViewKey } from '../../lib/types'
   import { selection, selectView } from '../../stores/selection'
   import { prefs } from '../../stores/prefs'
+  import { t } from '../../lib/i18n'
 
   export let views: UnifiedView[]
 
@@ -45,8 +46,8 @@
   }
 </script>
 
-<nav class="views" aria-label="Unified views">
-  <header class="group-head">Unified</header>
+<nav class="views" aria-label={$t('sidebar.unifiedViews.ariaLabel')}>
+  <header class="group-head">{$t('sidebar.unifiedViews.heading')}</header>
   {#each views as view (view.key)}
     <SidebarRow
       label={view.label}

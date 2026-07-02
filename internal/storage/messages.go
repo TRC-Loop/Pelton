@@ -46,6 +46,13 @@ type Message struct {
 	BodyHTML       string
 	HasAttachments bool
 	SizeBytes      int64
+	// FlagColor is 0 (none) or 1..8, a small palette enum kept separate from the
+	// Flags bitmask. SnoozeUntil (empty when not snoozed) and SnoozeHidden drive
+	// the local snooze. Offline is 1 when the user pinned the message offline.
+	FlagColor    int
+	SnoozeUntil  string
+	SnoozeHidden bool
+	Offline      bool
 }
 
 // IncomingAttachment is attachment metadata together with its content, handed
@@ -213,21 +220,25 @@ func (d *DB) DeleteMessage(ctx context.Context, id int64) error {
 const selectMessageColumns = `
 SELECT id, account_id, folder_id, uid, message_id, subject, from_address,
        from_name, to_addresses, cc_addresses, date, flags, body_plain,
-       body_html, has_attachments, size_bytes`
+       body_html, has_attachments, size_bytes, flag_color, snooze_until,
+       snooze_hidden, offline`
 
 const selectMessageByID = selectMessageColumns + `
 FROM messages WHERE id = ?`
 
 func scanMessage(row rowScanner) (*Message, error) {
 	var (
-		m      Message
-		date   string
-		flags  uint8
-		hasAtt int
+		m            Message
+		date         string
+		flags        uint8
+		hasAtt       int
+		snoozeHidden int
+		offline      int
 	)
 	if err := row.Scan(&m.ID, &m.AccountID, &m.FolderID, &m.UID, &m.MessageID,
 		&m.Subject, &m.FromAddress, &m.FromName, &m.ToAddresses, &m.CcAddresses,
-		&date, &flags, &m.BodyPlain, &m.BodyHTML, &hasAtt, &m.SizeBytes); err != nil {
+		&date, &flags, &m.BodyPlain, &m.BodyHTML, &hasAtt, &m.SizeBytes,
+		&m.FlagColor, &m.SnoozeUntil, &snoozeHidden, &offline); err != nil {
 		return nil, err
 	}
 	t, err := parseTime(date)
@@ -237,6 +248,8 @@ func scanMessage(row rowScanner) (*Message, error) {
 	m.Date = t
 	m.Flags = Flag(flags)
 	m.HasAttachments = hasAtt != 0
+	m.SnoozeHidden = snoozeHidden != 0
+	m.Offline = offline != 0
 	return &m, nil
 }
 

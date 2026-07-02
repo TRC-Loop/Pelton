@@ -6,7 +6,7 @@
   import { createEventDispatcher } from 'svelte'
   import { IconSearch, IconX, IconCalendar, IconCheck } from '@tabler/icons-svelte'
   import { prefs } from '../../stores/prefs'
-  import { shortcutLabel } from '../../lib/i18n'
+  import { shortcutLabel, t } from '../../lib/i18n'
   import { emptyFilter, type SearchFilter } from '../../stores/messages'
 
   export let value: string = ''
@@ -32,11 +32,11 @@
 
   // presets are computed relative to now so "last 7 days" always means the most
   // recent week.
-  const presets: { key: string; label: string; days: number }[] = [
-    { key: 'any', label: 'Any time', days: 0 },
-    { key: '7', label: 'Last 7 days', days: 7 },
-    { key: '30', label: 'Last 30 days', days: 30 },
-    { key: '365', label: 'Last 12 months', days: 365 },
+  $: presets = [
+    { key: 'any', label: $t('messageList.search.anyTime'), days: 0 },
+    { key: '7', label: $t('messageList.search.last7Days'), days: 7 },
+    { key: '30', label: $t('messageList.search.last30Days'), days: 30 },
+    { key: '365', label: $t('messageList.search.last12Months'), days: 365 },
   ]
 
   function onInput(event: Event): void {
@@ -90,13 +90,13 @@
     <IconSearch size={15} stroke={1.6} class="search-icon" />
     <input
       type="search"
-      placeholder="Search mail"
-      aria-label="Search mail"
+      placeholder={$t('messageList.search.placeholder')}
+      aria-label={$t('messageList.search.placeholder')}
       {value}
       on:input={onInput}
     />
     {#if value}
-      <button type="button" class="clear" aria-label="Clear search" on:click={clear}>
+      <button type="button" class="clear" aria-label={$t('messageList.search.clearSearch')} on:click={clear}>
         <IconX size={14} stroke={1.8} />
       </button>
     {:else if $prefs.showShortcutHints}
@@ -109,9 +109,9 @@
       type="button"
       class="filter-btn"
       class:active={filterActive}
-      aria-label="Filter by date"
+      aria-label={$t('messageList.search.filterByDate')}
       aria-expanded={showFilter}
-      title="Filter by date"
+      title={$t('messageList.search.filterByDate')}
       on:click={() => (showFilter = !showFilter)}
     >
       <IconCalendar size={16} stroke={1.7} />
@@ -129,18 +129,18 @@
         {/each}
 
         <div class="custom">
-          <span class="custom-label">Custom range</span>
+          <span class="custom-label">{$t('messageList.search.customRange')}</span>
           <label class="date">
-            <span>From</span>
+            <span>{$t('messageList.search.from')}</span>
             <input type="date" bind:value={customFrom} />
           </label>
           <label class="date">
-            <span>To</span>
+            <span>{$t('messageList.search.to')}</span>
             <input type="date" bind:value={customTo} />
           </label>
           <div class="custom-actions">
-            <button type="button" class="ghost" on:click={clearFilter}>Clear</button>
-            <button type="button" class="primary" on:click={applyCustom}>Apply</button>
+            <button type="button" class="ghost" on:click={clearFilter}>{$t('messageList.search.clear')}</button>
+            <button type="button" class="primary" on:click={applyCustom}>{$t('messageList.search.apply')}</button>
           </div>
         </div>
       </div>

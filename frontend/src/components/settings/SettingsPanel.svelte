@@ -17,8 +17,14 @@
     IconLayoutColumns,
     IconEye,
     IconKeyboard,
-    IconRocket,
     IconInfoCircle,
+    IconHandMove,
+    IconCloudDownload,
+    IconCloudCog,
+    IconAddressBook,
+    IconWriting,
+    IconLanguage,
+    IconBatteryEco,
   } from '@tabler/icons-svelte'
   import { createEventDispatcher } from 'svelte'
   import SegmentedSetting from './SegmentedSetting.svelte'
@@ -27,10 +33,14 @@
   import ToastPositionPicker from './ToastPositionPicker.svelte'
   import ShortcutSettings from './ShortcutSettings.svelte'
   import SignaturesSection from './SignaturesSection.svelte'
+  import AddressBookSection from './AddressBookSection.svelte'
+  import ConfigSyncSection from './ConfigSyncSection.svelte'
+  import RowLayoutPreview from './RowLayoutPreview.svelte'
   import AboutSection from './AboutSection.svelte'
   import ToggleSwitch from '../common/ToggleSwitch.svelte'
+  import LanguageSelect from '../common/LanguageSelect.svelte'
   import { pfpDataUri, type PfpStyle } from '../../lib/pfp'
-  import { initials } from '../../lib/format'
+  import { initials, formatBytes } from '../../lib/format'
   import {
     prefs,
     setTheme,
@@ -54,66 +64,212 @@
     setRowShowAvatar,
     setRowShowSnippet,
     setPreviewLines,
+    setFlagColorSync,
+    setShowOfflineIndicator,
+    setSwipeEnabled,
+    setSwipeLeftAction,
+    setSwipeRightAction,
+    setComposeVimMode,
+    setAppVimMode,
+    setDownloadIncludeAttachments,
+    setLanguage,
+    setLowPowerMode,
+    setAutoSyncInterval,
+    setDefaultEditorMode,
+    setComposeAutocomplete,
+    setComposeChips,
   } from '../../stores/prefs'
+  import type { Locale } from '../../lib/i18n'
+  import { downloadRange, estimateDownloadRange } from '../../lib/api'
+  import { downloadProgress } from '../../stores/progress'
+  import { toastError, errorMessage } from '../../stores/toast'
   import { t } from '../../lib/i18n'
-  import type { ThemePref, DensityPref } from '../../lib/types'
+  import type { ThemePref, DensityPref, EditorMode } from '../../lib/types'
+
+  let editorModeOptions: { key: EditorMode; label: string }[] = []
+  $: editorModeOptions = [
+    { key: 'plaintext', label: $t('settingsPanel.editorMode.plaintext') },
+    { key: 'markdown', label: $t('settingsPanel.editorMode.markdown') },
+    { key: 'wysiwyg', label: $t('settingsPanel.editorMode.wysiwyg') },
+  ]
 
   const dispatch = createEventDispatcher<{ close: void; rerunOnboarding: void }>()
+  $: currentLocale = $prefs.language as Locale
 
   // left-nav categories. each maps to a block rendered on the right.
-  const categories = [
-    { key: 'appearance', label: 'Appearance', icon: IconPalette },
-    { key: 'list', label: 'Message list', icon: IconList },
-    { key: 'sidebar', label: 'Sidebar', icon: IconLayoutSidebar },
-    { key: 'avatars', label: 'Avatars', icon: IconUserCircle },
-    { key: 'signatures', label: 'Signatures', icon: IconSignature },
-    { key: 'sending', label: 'Sending', icon: IconSend2 },
-    { key: 'privacy', label: 'Privacy', icon: IconShieldLock },
-    { key: 'notifications', label: 'Notifications', icon: IconBell },
-    { key: 'panes', label: 'Panes', icon: IconLayoutColumns },
-    { key: 'display', label: 'Message display', icon: IconEye },
-    { key: 'shortcuts', label: 'Shortcuts', icon: IconKeyboard },
-    { key: 'start', label: 'Getting started', icon: IconRocket },
-    { key: 'about', label: 'About', icon: IconInfoCircle },
+  $: categories = [
+    { key: 'appearance', label: $t('settingsPanel.category.appearance'), icon: IconPalette },
+    { key: 'language', label: $t('settings.language'), icon: IconLanguage },
+    { key: 'list', label: $t('settingsPanel.category.list'), icon: IconList },
+    { key: 'sidebar', label: $t('settingsPanel.category.sidebar'), icon: IconLayoutSidebar },
+    { key: 'avatars', label: $t('settingsPanel.category.avatars'), icon: IconUserCircle },
+    { key: 'signatures', label: $t('settingsPanel.category.signatures'), icon: IconSignature },
+    { key: 'sending', label: $t('settingsPanel.category.sending'), icon: IconSend2 },
+    { key: 'privacy', label: $t('settingsPanel.category.privacy'), icon: IconShieldLock },
+    { key: 'notifications', label: $t('settingsPanel.category.notifications'), icon: IconBell },
+    { key: 'panes', label: $t('settings.panes'), icon: IconLayoutColumns },
+    { key: 'display', label: $t('settingsPanel.category.display'), icon: IconEye },
+    { key: 'gestures', label: $t('settingsPanel.category.gestures'), icon: IconHandMove },
+    { key: 'offline', label: $t('settingsPanel.category.offline'), icon: IconCloudDownload },
+    { key: 'power', label: $t('settingsPanel.category.power'), icon: IconBatteryEco },
+    { key: 'contacts', label: $t('settingsPanel.category.contacts'), icon: IconAddressBook },
+    { key: 'sync', label: $t('settingsPanel.category.sync'), icon: IconCloudCog },
+    { key: 'composing', label: $t('settingsPanel.category.composing'), icon: IconWriting },
+    { key: 'shortcuts', label: $t('settingsPanel.category.shortcuts'), icon: IconKeyboard },
+    { key: 'about', label: $t('settingsPanel.category.about'), icon: IconInfoCircle },
   ]
+
+  // auto-sync interval presets, in seconds (0 = off).
+  $: autoSyncOptions = [
+    { key: '0', label: $t('settingsPanel.unit.off') },
+    { key: '30', label: $t('settingsPanel.unit.s30') },
+    { key: '300', label: $t('settingsPanel.unit.m5') },
+    { key: '900', label: $t('settingsPanel.unit.m15') },
+    { key: '1800', label: $t('settingsPanel.unit.m30') },
+    { key: '3600', label: $t('settingsPanel.unit.h1') },
+    { key: '21600', label: $t('settingsPanel.unit.h6') },
+    { key: '43200', label: $t('settingsPanel.unit.h12') },
+    { key: '86400', label: $t('settingsPanel.unit.h24') },
+  ]
+  function onAutoSyncInterval(event: CustomEvent<string>): void {
+    setAutoSyncInterval(Number(event.detail))
+  }
+
+  // swipe gesture actions (trackpad). shown in the two direction dropdowns.
+  $: swipeActionOptions = [
+    { key: 'none', label: $t('settingsPanel.swipeAction.none') },
+    { key: 'delete', label: $t('settingsPanel.swipeAction.delete') },
+    { key: 'read', label: $t('settingsPanel.swipeAction.read') },
+    { key: 'unread', label: $t('settingsPanel.swipeAction.unread') },
+    { key: 'flag', label: $t('settingsPanel.swipeAction.flag') },
+    { key: 'archive', label: $t('settingsPanel.swipeAction.archive') },
+    { key: 'snooze', label: $t('settingsPanel.swipeAction.snooze') },
+  ]
+
+  // offline range download state. the start date defaults to one year ago.
+  let downloadStart = defaultDownloadStart()
+  function defaultDownloadStart(): string {
+    const d = new Date()
+    d.setFullYear(d.getFullYear() - 1)
+    return d.toISOString().slice(0, 10)
+  }
+
+  // quick presets sit next to the native date input so picking a common range
+  // (rather than fiddling with the bare calendar widget) is one click.
+  $: downloadPresets = [
+    { key: '1w', label: $t('settingsPanel.preset.lastWeek'), days: 7 },
+    { key: '1m', label: $t('settingsPanel.preset.lastMonth'), days: 30 },
+    { key: '3m', label: $t('settingsPanel.preset.last3Months'), days: 90 },
+    { key: '6m', label: $t('settingsPanel.preset.last6Months'), days: 180 },
+    { key: '1y', label: $t('settingsPanel.preset.lastYear'), days: 365 },
+    { key: 'all', label: $t('settingsPanel.preset.allTime'), days: 0 },
+  ]
+  function applyPreset(days: number): void {
+    const d = new Date()
+    if (days === 0) {
+      d.setFullYear(d.getFullYear() - 20) // effectively "everything"
+    } else {
+      d.setDate(d.getDate() - days)
+    }
+    downloadStart = d.toISOString().slice(0, 10)
+  }
+
+  async function startDownload(): Promise<void> {
+    if (!downloadStart) {
+      return
+    }
+    try {
+      await downloadRange(downloadStart, $prefs.downloadIncludeAttachments)
+    } catch (err) {
+      toastError(errorMessage(err))
+    }
+  }
+
+  // the size estimate re-fetches whenever the start date changes (debounced,
+  // since it walks every account over imap). the attachment toggle does not
+  // change what is fetched (the raw message is the same either way; only what
+  // gets kept on disk differs), so it does not need to trigger a re-estimate.
+  let estimate: { messageCount: number; totalBytes: number } | null = null
+  let estimating = false
+  let estimateError = ''
+  let estimateTimer: ReturnType<typeof setTimeout>
+  $: void downloadStart, scheduleEstimate()
+
+  function scheduleEstimate(): void {
+    clearTimeout(estimateTimer)
+    estimate = null
+    estimateError = ''
+    if (!downloadStart) {
+      return
+    }
+    estimateTimer = setTimeout(runEstimate, 500)
+  }
+
+  async function runEstimate(): Promise<void> {
+    const start = downloadStart
+    estimating = true
+    try {
+      const result = await estimateDownloadRange(start)
+      if (start === downloadStart) {
+        estimate = result
+      }
+    } catch (err) {
+      if (start === downloadStart) {
+        estimateError = errorMessage(err)
+      }
+    } finally {
+      if (start === downloadStart) {
+        estimating = false
+      }
+    }
+  }
+
+  // select handlers (the cast lives in script; inline ts casts break the parser).
+  function onSwipeLeft(event: Event): void {
+    setSwipeLeftAction((event.currentTarget as HTMLSelectElement).value)
+  }
+  function onSwipeRight(event: Event): void {
+    setSwipeRightAction((event.currentTarget as HTMLSelectElement).value)
+  }
   let active = 'appearance'
 
-  const themeOptions = [
-    { key: 'system', label: 'System' },
-    { key: 'light', label: 'Light' },
-    { key: 'dark', label: 'Dark' },
+  $: themeOptions = [
+    { key: 'system', label: $t('onboarding.theme.system') },
+    { key: 'light', label: $t('onboarding.theme.light') },
+    { key: 'dark', label: $t('onboarding.theme.dark') },
   ]
 
-  const densityOptions = [
-    { key: 'compact', label: 'Compact' },
-    { key: 'medium', label: 'Medium' },
-    { key: 'luxe', label: 'Luxe' },
+  $: densityOptions = [
+    { key: 'compact', label: $t('onboarding.density.compact') },
+    { key: 'medium', label: $t('onboarding.density.medium') },
+    { key: 'luxe', label: $t('onboarding.density.luxe') },
   ]
 
   // interface zoom. values are string multipliers applied as css zoom.
-  const scaleOptions = [
-    { key: '0.9', label: '90%' },
-    { key: '1', label: '100%' },
-    { key: '1.1', label: '110%' },
-    { key: '1.25', label: '125%' },
-    { key: '1.5', label: '150%' },
+  $: scaleOptions = [
+    { key: '0.9', label: $t('settingsPanel.scale.90') },
+    { key: '1', label: $t('settingsPanel.scale.100') },
+    { key: '1.1', label: $t('settingsPanel.scale.110') },
+    { key: '1.17', label: $t('settingsPanel.scale.117') },
+    { key: '1.25', label: $t('settingsPanel.scale.125') },
+    { key: '1.5', label: $t('settingsPanel.scale.150') },
   ]
 
   // base font size (px) for rendered email content.
-  const messageFontOptions = [
-    { key: '12', label: 'Small' },
-    { key: '14', label: 'Default' },
-    { key: '16', label: 'Large' },
-    { key: '18', label: 'Larger' },
-    { key: '20', label: 'Largest' },
+  $: messageFontOptions = [
+    { key: '12', label: $t('onboarding.font.small') },
+    { key: '14', label: $t('onboarding.font.default') },
+    { key: '16', label: $t('onboarding.font.large') },
+    { key: '18', label: $t('onboarding.font.larger') },
+    { key: '20', label: $t('onboarding.font.largest') },
   ]
 
-  const sendDelayOptions = [
-    { key: '0', label: 'Off' },
-    { key: '5', label: '5s' },
-    { key: '10', label: '10s' },
-    { key: '30', label: '30s' },
-    { key: '60', label: '60s' },
+  $: sendDelayOptions = [
+    { key: '0', label: $t('settingsPanel.unit.off') },
+    { key: '5', label: $t('settingsPanel.unit.s5') },
+    { key: '10', label: $t('settingsPanel.unit.s10') },
+    { key: '30', label: $t('settingsPanel.unit.s30') },
+    { key: '60', label: $t('settingsPanel.unit.s60') },
   ]
 
   function onSendDelay(event: CustomEvent<string>): void {
@@ -135,44 +291,45 @@
   }
 
   // sender-photo fallback chain. "Generated" never touches the network.
-  const avatarSourceOptions = [
-    { key: 'bimi_gravatar', label: 'Logo → Gravatar' },
-    { key: 'gravatar_bimi', label: 'Gravatar → Logo' },
-    { key: 'pfp', label: 'Generated' },
+  $: avatarSourceOptions = [
+    { key: 'bimi_gravatar', label: $t('settingsPanel.avatarSource.bimiGravatar') },
+    { key: 'gravatar_bimi', label: $t('settingsPanel.avatarSource.gravatarBimi') },
+    { key: 'pfp', label: $t('settingsPanel.avatarSource.generated') },
   ]
 
   // generated placeholder styles, previewed with a sample sender so the look is
   // obvious before choosing.
   const sampleEmail = 'potato@pelton.email'
   const sampleInitials = initials('', sampleEmail)
-  const avatarStyleOptions: { key: PfpStyle; label: string }[] = [
-    { key: 'initials', label: 'Classic' },
-    { key: 'mono', label: 'Monochrome' },
-    { key: 'pixel', label: 'Pixel' },
-    { key: 'geometric', label: 'Geometric' },
+  let avatarStyleOptions: { key: PfpStyle; label: string }[] = []
+  $: avatarStyleOptions = [
+    { key: 'initials', label: $t('onboarding.avatar.classic') },
+    { key: 'mono', label: $t('onboarding.avatar.mono') },
+    { key: 'pixel', label: $t('onboarding.avatar.pixel') },
+    { key: 'geometric', label: $t('onboarding.avatar.geometric') },
   ]
   function stylePreview(style: PfpStyle): string {
     return pfpDataUri(style, sampleEmail, sampleInitials)
   }
 
-  const flagOptions = [
-    { key: 'flag', label: 'Flag icon' },
-    { key: 'left', label: 'Left bar' },
-    { key: 'both', label: 'Bar + icon' },
-    { key: 'off', label: 'Off' },
+  $: flagOptions = [
+    { key: 'flag', label: $t('onboarding.flagopt.icon') },
+    { key: 'left', label: $t('onboarding.flagopt.left') },
+    { key: 'both', label: $t('onboarding.flagopt.both') },
+    { key: 'off', label: $t('onboarding.flagopt.off') },
   ]
 
-  const rowTemplateOptions = [
-    { key: 'relaxed', label: 'Relaxed' },
-    { key: 'comfortable', label: 'Comfortable' },
-    { key: 'compact', label: 'Compact' },
-    { key: 'single', label: 'Single line' },
+  $: rowTemplateOptions = [
+    { key: 'relaxed', label: $t('onboarding.row.relaxed') },
+    { key: 'comfortable', label: $t('onboarding.row.comfortable') },
+    { key: 'compact', label: $t('onboarding.row.compact') },
+    { key: 'single', label: $t('onboarding.row.single') },
   ]
 
-  const previewLineOptions = [
-    { key: '1', label: '1 line' },
-    { key: '2', label: '2 lines' },
-    { key: '3', label: '3 lines' },
+  $: previewLineOptions = [
+    { key: '1', label: $t('settingsPanel.previewLines.1') },
+    { key: '2', label: $t('settingsPanel.previewLines.2') },
+    { key: '3', label: $t('settingsPanel.previewLines.3') },
   ]
 
   $: snippetCapable = $prefs.rowTemplate === 'relaxed' || $prefs.rowTemplate === 'comfortable'
@@ -194,16 +351,16 @@
 
 <svelte:window on:keydown={onKeydown} />
 
-<div class="screen" role="dialog" aria-modal="true" aria-label="Settings">
+<div class="screen" role="dialog" aria-modal="true" aria-label={$t('settings.title')}>
   <header class="head">
-    <h2>Settings</h2>
-    <button type="button" class="close" aria-label="Close settings" on:click={() => dispatch('close')}>
+    <h2>{$t('settings.title')}</h2>
+    <button type="button" class="close" aria-label={$t('settingsPanel.closeAria')} on:click={() => dispatch('close')}>
       <IconX size={20} stroke={1.8} />
     </button>
   </header>
 
   <div class="body">
-    <nav class="nav" aria-label="Settings categories">
+    <nav class="nav" aria-label={$t('settingsPanel.navAria')}>
       {#each categories as cat (cat.key)}
         <button
           type="button"
@@ -219,125 +376,130 @@
     </nav>
 
     <div class="content">
-      {#if active === 'appearance'}
+      {#if active === 'language'}
         <section>
-          <h3>Appearance</h3>
-          <SegmentedSetting label="Theme" value={$prefs.theme} options={themeOptions} on:change={onTheme} />
+          <h3>{$t('settings.language')}</h3>
+          <p class="hint">{$t('settings.languageHint')}</p>
+          <LanguageSelect value={currentLocale} onSelect={setLanguage} />
+        </section>
+      {:else if active === 'appearance'}
+        <section>
+          <h3>{$t('settingsPanel.category.appearance')}</h3>
+          <SegmentedSetting label={$t('settingsPanel.label.theme')} value={$prefs.theme} options={themeOptions} on:change={onTheme} />
           <AccentPicker />
-          <SegmentedSetting label="Density" value={$prefs.density} options={densityOptions} on:change={onDensity} />
+          <SegmentedSetting label={$t('settingsPanel.label.density')} value={$prefs.density} options={densityOptions} on:change={onDensity} />
           <SegmentedSetting
-            label="Interface scale"
+            label={$t('settingsPanel.label.interfaceScale')}
             value={$prefs.uiScale}
             options={scaleOptions}
             on:change={(e) => setUIScale(e.detail)}
           />
-          <p class="hint">Zooms the whole interface. Make everything a bit bigger or smaller.</p>
+          <p class="hint">{$t('settingsPanel.hint.interfaceScale')}</p>
         </section>
       {:else if active === 'list'}
         <section>
-          <h3>Message list</h3>
+          <h3>{$t('settingsPanel.category.list')}</h3>
           <SegmentedSetting
-            label="Row layout"
+            label={$t('settingsPanel.label.rowLayout')}
             value={$prefs.rowTemplate}
             options={rowTemplateOptions}
             on:change={(e) => setRowTemplate(e.detail)}
           />
-          <div class="toggle" class:disabled={$prefs.rowTemplate === 'single'} title="The avatar is hidden on the single-line layout.">
-            <span class="row-label">Show sender avatar</span>
+          <RowLayoutPreview />
+          <div class="toggle" class:disabled={$prefs.rowTemplate === 'single'} title={$t('settingsPanel.hint.avatarHiddenSingleLine')}>
+            <span class="row-label">{$t('settingsPanel.toggle.showSenderAvatar')}</span>
             <ToggleSwitch
               checked={$prefs.rowShowAvatar}
               disabled={$prefs.rowTemplate === 'single'}
-              label="Show sender avatar"
+              label={$t('settingsPanel.toggle.showSenderAvatar')}
               on:change={(e) => setRowShowAvatar(e.detail)}
             />
           </div>
-          <div class="toggle" class:disabled={!snippetCapable} title="Previews show on the relaxed and comfortable layouts.">
-            <span class="row-label">Show message preview</span>
+          <div class="toggle" class:disabled={!snippetCapable} title={$t('settingsPanel.hint.previewShowsOn')}>
+            <span class="row-label">{$t('settingsPanel.toggle.showMessagePreview')}</span>
             <ToggleSwitch
               checked={$prefs.rowShowSnippet}
               disabled={!snippetCapable}
-              label="Show message preview"
+              label={$t('settingsPanel.toggle.showMessagePreview')}
               on:change={(e) => setRowShowSnippet(e.detail)}
             />
           </div>
           {#if snippetCapable && $prefs.rowShowSnippet}
             <SegmentedSetting
-              label="Preview lines"
+              label={$t('settingsPanel.label.previewLines')}
               value={String($prefs.previewLines)}
               options={previewLineOptions}
               on:change={(e) => setPreviewLines(Number(e.detail))}
             />
           {/if}
           <SegmentedSetting
-            label="Flagged highlight"
+            label={$t('settingsPanel.label.flaggedHighlight')}
             value={$prefs.flagHighlight}
             options={flagOptions}
             on:change={(e) => setFlagHighlight(e.detail)}
           />
-          <p class="hint">“Bar + icon” shows a left edge bar together with the flag icon.</p>
+          <p class="hint">{$t('settingsPanel.hint.barIconFlag')}</p>
           <div class="toggle">
-            <span class="row-label">Show mailbox email instead of name</span>
+            <span class="row-label">{$t('settingsPanel.toggle.showMailboxEmail')}</span>
             <ToggleSwitch
               checked={$prefs.showAccountEmail}
-              label="Show mailbox email instead of name"
+              label={$t('settingsPanel.toggle.showMailboxEmail')}
               on:change={(e) => setShowAccountEmail(e.detail)}
             />
           </div>
-          <div class="toggle" title="Cmd/Ctrl-click or Shift-click rows to select several at once.">
-            <span class="row-label">Select multiple messages at once</span>
+          <div class="toggle" title={$t('settingsPanel.hint.multiSelect')}>
+            <span class="row-label">{$t('settingsPanel.toggle.multiSelect')}</span>
             <ToggleSwitch
               checked={$prefs.multiSelectEnabled}
-              label="Select multiple messages at once"
+              label={$t('settingsPanel.toggle.multiSelect')}
               on:change={(e) => setMultiSelectEnabled(e.detail)}
             />
           </div>
           <div class="toggle" class:disabled={!$prefs.multiSelectEnabled}>
-            <span class="row-label">Show “N selected” count</span>
+            <span class="row-label">{$t('settingsPanel.toggle.showSelectedCount')}</span>
             <ToggleSwitch
               checked={$prefs.showSelectedCount}
               disabled={!$prefs.multiSelectEnabled}
-              label="Show selected count"
+              label={$t('settingsPanel.toggle.showSelectedCountAria')}
               on:change={(e) => setShowSelectedCount(e.detail)}
             />
           </div>
         </section>
       {:else if active === 'sidebar'}
         <section>
-          <h3>Sidebar</h3>
-          <div class="toggle" title="Draw vertical guide lines connecting nested folders.">
-            <span class="row-label">Show folder indent guides</span>
+          <h3>{$t('settingsPanel.category.sidebar')}</h3>
+          <div class="toggle" title={$t('settingsPanel.hint.indentGuides')}>
+            <span class="row-label">{$t('settingsPanel.toggle.indentGuides')}</span>
             <ToggleSwitch
               checked={$prefs.sidebarIndentGuides}
-              label="Show folder indent guides"
+              label={$t('settingsPanel.toggle.indentGuides')}
               on:change={(e) => setSidebarIndentGuides(e.detail)}
             />
           </div>
-          <div class="toggle" title="Hide the count and bold styling on the Flagged view (the entry stays).">
-            <span class="row-label">Show flagged count</span>
+          <div class="toggle" title={$t('settingsPanel.hint.flaggedCount')}>
+            <span class="row-label">{$t('settingsPanel.toggle.flaggedCount')}</span>
             <ToggleSwitch
               checked={$prefs.showFlaggedCount}
-              label="Show flagged count"
+              label={$t('settingsPanel.toggle.flaggedCount')}
               on:change={(e) => setShowFlaggedCount(e.detail)}
             />
           </div>
         </section>
       {:else if active === 'avatars'}
         <section>
-          <h3>Avatars</h3>
+          <h3>{$t('settingsPanel.category.avatars')}</h3>
           <SegmentedSetting
-            label="Sender photos"
+            label={$t('settingsPanel.label.senderPhotos')}
             value={$prefs.avatarSource}
             options={avatarSourceOptions}
             on:change={(e) => setAvatarSource(e.detail)}
           />
           <p class="hint">
-            “Logo” is the sender domain's verified BIMI logo. Logo and Gravatar fetch images over the
-            network when you open a message; “Generated” stays fully offline. When no photo is found,
-            the generated style below is used.
+            {$t('settingsPanel.hint.avatarSource')}
           </p>
 
           <div class="field">
-            <span class="row-label">Generated style</span>
+            <span class="row-label">{$t('settingsPanel.label.generatedStyle')}</span>
             <div class="style-grid">
               {#each avatarStyleOptions as opt (opt.key)}
                 <button
@@ -352,7 +514,7 @@
                 </button>
               {/each}
             </div>
-            <p class="hint">Preview sender: {sampleEmail}</p>
+            <p class="hint">{$t('settingsPanel.hint.previewSender')} {sampleEmail}</p>
           </div>
         </section>
       {:else if active === 'signatures'}
@@ -361,44 +523,43 @@
         </section>
       {:else if active === 'sending'}
         <section>
-          <h3>Sending</h3>
+          <h3>{$t('settingsPanel.category.sending')}</h3>
           <SegmentedSetting
-            label="Undo send window"
+            label={$t('settingsPanel.label.undoSendWindow')}
             value={String($prefs.sendDelaySeconds)}
             options={sendDelayOptions}
             on:change={onSendDelay}
           />
-          <p class="hint">Hold outgoing mail briefly so you can undo. Press ⌘Z or use the Undo button.</p>
+          <p class="hint">{$t('settingsPanel.hint.undoSend')}</p>
         </section>
       {:else if active === 'privacy'}
         <section>
-          <h3>Privacy</h3>
-          <div class="toggle" title="Disables remote-image blocking for every message.">
-            <span class="row-label">Always load remote images</span>
+          <h3>{$t('settingsPanel.category.privacy')}</h3>
+          <div class="toggle" title={$t('settingsPanel.hint.remoteImagesToggle')}>
+            <span class="row-label">{$t('settingsPanel.toggle.alwaysLoadImages')}</span>
             <ToggleSwitch
               checked={$prefs.alwaysLoadImages}
-              label="Always load remote images"
+              label={$t('settingsPanel.toggle.alwaysLoadImages')}
               on:change={(e) => onImagesToggle(e.detail)}
             />
           </div>
           {#if confirmImages}
             <div class="warn">
               <p>
-                Remote images can track when and where you open a message. Loading them for every
-                message removes that protection. You can still trust individual senders instead.
+                {$t('settingsPanel.warn.remoteImages')}
               </p>
               <div class="warn-actions">
-                <button type="button" class="ghost-btn" on:click={() => (confirmImages = false)}>Cancel</button>
-                <button type="button" class="danger-btn" on:click={confirmEnableImages}>Enable anyway</button>
+                <button type="button" class="ghost-btn" on:click={() => (confirmImages = false)}>{$t('settingsPanel.button.cancel')}</button>
+                <button type="button" class="danger-btn" on:click={confirmEnableImages}>{$t('settingsPanel.button.enableAnyway')}</button>
               </div>
             </div>
           {/if}
         </section>
       {:else if active === 'notifications'}
         <section>
-          <h3>Notifications</h3>
+          <h3>{$t('settingsPanel.category.notifications')}</h3>
           <div class="row">
-            <span class="row-label">{t('settings.toastPosition')}</span>
+            <span class="row-label">{$t('settings.toastPosition')}</span>
             <ToastPositionPicker
               value={$prefs.toastPosition}
               on:change={(e) => setToastPosition(e.detail)}
@@ -407,55 +568,229 @@
         </section>
       {:else if active === 'panes'}
         <section>
-          <h3>{t('settings.panes')}</h3>
-          <div class="toggle" title="Prevents dragging the column dividers.">
-            <span class="row-label">{t('settings.lockPanes')}</span>
+          <h3>{$t('settings.panes')}</h3>
+          <div class="toggle" title={$t('settingsPanel.hint.lockPanes')}>
+            <span class="row-label">{$t('settings.lockPanes')}</span>
             <ToggleSwitch
               checked={$prefs.paneLocked}
-              label={t('settings.lockPanes')}
+              label={$t('settings.lockPanes')}
               on:change={(e) => setPaneLocked(e.detail)}
             />
           </div>
         </section>
       {:else if active === 'display'}
         <section>
-          <h3>Message display</h3>
+          <h3>{$t('settingsPanel.category.display')}</h3>
           <SegmentedSetting
-            label="Email text size"
+            label={$t('onboarding.extras.fontSize')}
             value={String($prefs.messageFontSize)}
             options={messageFontOptions}
             on:change={(e) => setMessageFontSize(Number(e.detail))}
           />
-          <p class="hint">Sets the base font size of the message content you read.</p>
+          <p class="hint">{$t('settingsPanel.hint.fontSize')}</p>
           <TechToggles />
+        </section>
+      {:else if active === 'gestures'}
+        <section>
+          <h3>{$t('settingsPanel.heading.gestures')}</h3>
+          <div class="toggle" title={$t('settingsPanel.hint.swipeEnable')}>
+            <span class="row-label">{$t('settingsPanel.toggle.swipeEnabled')}</span>
+            <ToggleSwitch
+              checked={$prefs.swipeEnabled}
+              label={$t('settingsPanel.toggle.swipeEnabled')}
+              on:change={(e) => setSwipeEnabled(e.detail)}
+            />
+          </div>
+          <div class="row" class:disabled={!$prefs.swipeEnabled}>
+            <span class="row-label">{$t('settingsPanel.label.swipeLeft')}</span>
+            <select
+              class="select"
+              disabled={!$prefs.swipeEnabled}
+              value={$prefs.swipeLeftAction}
+              on:change={onSwipeLeft}
+            >
+              {#each swipeActionOptions as opt}
+                <option value={opt.key}>{opt.label}</option>
+              {/each}
+            </select>
+          </div>
+          <div class="row" class:disabled={!$prefs.swipeEnabled}>
+            <span class="row-label">{$t('settingsPanel.label.swipeRight')}</span>
+            <select
+              class="select"
+              disabled={!$prefs.swipeEnabled}
+              value={$prefs.swipeRightAction}
+              on:change={onSwipeRight}
+            >
+              {#each swipeActionOptions as opt}
+                <option value={opt.key}>{opt.label}</option>
+              {/each}
+            </select>
+          </div>
+          <p class="hint">{$t('settingsPanel.hint.swipeWork')}</p>
+        </section>
+      {:else if active === 'power'}
+        <section>
+          <h3>{$t('settingsPanel.category.power')}</h3>
+          <div class="toggle" title={$t('settingsPanel.hint.lowPowerToggle')}>
+            <span class="row-label">{$t('settingsPanel.toggle.lowPowerMode')}</span>
+            <ToggleSwitch
+              checked={$prefs.lowPowerMode}
+              label={$t('settingsPanel.toggle.lowPowerMode')}
+              on:change={(e) => setLowPowerMode(e.detail)}
+            />
+          </div>
+          <p class="hint">
+            {$t('settingsPanel.hint.lowPowerDetail')}
+          </p>
+          <SegmentedSetting
+            label={$t('settingsPanel.label.autoSyncInterval')}
+            value={String($prefs.autoSyncIntervalSeconds)}
+            options={autoSyncOptions}
+            on:change={onAutoSyncInterval}
+          />
+          <p class="hint">
+            {$t('settingsPanel.hint.autoSyncDetail')}
+          </p>
+        </section>
+      {:else if active === 'offline'}
+        <section>
+          <h3>{$t('settingsPanel.category.offline')}</h3>
+          <div class="toggle" title={$t('settingsPanel.hint.offlineIndicator')}>
+            <span class="row-label">{$t('settingsPanel.toggle.offlineIndicator')}</span>
+            <ToggleSwitch
+              checked={$prefs.showOfflineIndicator}
+              label={$t('settingsPanel.toggle.offlineIndicator')}
+              on:change={(e) => setShowOfflineIndicator(e.detail)}
+            />
+          </div>
+          <div class="toggle" title={$t('settingsPanel.hint.flagColorSync')}>
+            <span class="row-label">{$t('settingsPanel.toggle.flagColorSync')}</span>
+            <ToggleSwitch
+              checked={$prefs.flagColorSync}
+              label={$t('settingsPanel.toggle.flagColorSync')}
+              on:change={(e) => setFlagColorSync(e.detail)}
+            />
+          </div>
+
+          <div class="field">
+            <span class="row-label">{$t('settingsPanel.label.downloadOffline')}</span>
+            <p class="hint">
+              {$t('settingsPanel.hint.downloadOffline')}
+            </p>
+            <div class="download-presets">
+              {#each downloadPresets as p (p.key)}
+                <button type="button" class="preset-btn" on:click={() => applyPreset(p.days)}>{p.label}</button>
+              {/each}
+            </div>
+            <div class="download-row">
+              <input type="date" class="select" bind:value={downloadStart} />
+              <button
+                type="button"
+                class="action-btn"
+                disabled={!!$downloadProgress && $downloadProgress.running}
+                on:click={startDownload}
+              >
+                {$downloadProgress && $downloadProgress.running ? $t('settingsPanel.button.downloading') : $t('settingsPanel.button.download')}
+              </button>
+            </div>
+            <div class="toggle" title={$t('settingsPanel.hint.includeAttachments')}>
+              <span class="row-label">{$t('settingsPanel.toggle.includeAttachments')}</span>
+              <ToggleSwitch
+                checked={$prefs.downloadIncludeAttachments}
+                label={$t('settingsPanel.toggle.includeAttachments')}
+                on:change={(e) => setDownloadIncludeAttachments(e.detail)}
+              />
+            </div>
+            <p class="hint estimate">
+              {#if estimating}
+                {$t('settingsPanel.estimate.estimating')}
+              {:else if estimateError}
+                {$t('settingsPanel.estimate.errorPrefix')} {estimateError}
+              {:else if estimate}
+                {#if estimate.messageCount === 0}
+                  {$t('settingsPanel.estimate.empty')}
+                {:else}
+                  ~{formatBytes(estimate.totalBytes)} {$t('settingsPanel.estimate.across')} {estimate.messageCount.toLocaleString()} {$t('settingsPanel.estimate.messages')}
+                {/if}
+              {/if}
+            </p>
+          </div>
+        </section>
+      {:else if active === 'contacts'}
+        <section>
+          <AddressBookSection />
+        </section>
+      {:else if active === 'sync'}
+        <section>
+          <h3>{$t('settingsPanel.category.sync')}</h3>
+          <ConfigSyncSection />
+        </section>
+      {:else if active === 'composing'}
+        <section>
+          <h3>{$t('settingsPanel.category.composing')}</h3>
+          <SegmentedSetting
+            label={$t('settingsPanel.label.defaultEditor')}
+            value={$prefs.defaultEditorMode}
+            options={editorModeOptions}
+            on:change={(e) => setDefaultEditorMode(e.detail as EditorMode)}
+          />
+          <p class="hint">{$t('settingsPanel.hint.defaultEditor')}</p>
+          <div class="toggle" title={$t('settingsPanel.hint.autocomplete')}>
+            <span class="row-label">{$t('settingsPanel.toggle.autocomplete')}</span>
+            <ToggleSwitch
+              checked={$prefs.composeAutocomplete}
+              label={$t('settingsPanel.toggle.autocomplete')}
+              on:change={(e) => setComposeAutocomplete(e.detail)}
+            />
+          </div>
+          <div class="toggle" title={$t('settingsPanel.hint.chipRecipients')}>
+            <span class="row-label">{$t('settingsPanel.toggle.chipRecipients')}</span>
+            <ToggleSwitch
+              checked={$prefs.composeChips}
+              label={$t('settingsPanel.toggle.chipRecipients')}
+              on:change={(e) => setComposeChips(e.detail)}
+            />
+          </div>
+          {#if !$prefs.composeChips}
+            <p class="hint">{$t('settingsPanel.hint.plainRecipients')}</p>
+          {/if}
+          <div class="toggle" title={$t('settingsPanel.hint.vimEditor')}>
+            <span class="row-label">{$t('onboarding.extras.vimEditor')} <span class="badge-experimental">{$t('common.experimental')}</span></span>
+            <ToggleSwitch
+              checked={$prefs.composeVimMode}
+              label={$t('onboarding.extras.vimEditor')}
+              on:change={(e) => setComposeVimMode(e.detail)}
+            />
+          </div>
+          <p class="hint">{$t('settingsPanel.hint.vimEditorDetail')}</p>
         </section>
       {:else if active === 'shortcuts'}
         <section>
-          <h3>{t('settings.shortcuts')}</h3>
+          <h3>{$t('settings.shortcuts')}</h3>
           <div class="toggle">
-            <span class="row-label">Show keyboard shortcut hints in the app</span>
+            <span class="row-label">{$t('settingsPanel.toggle.shortcutHints')}</span>
             <ToggleSwitch
               checked={$prefs.showShortcutHints}
-              label="Show keyboard shortcut hints in the app"
+              label={$t('settingsPanel.toggle.shortcutHints')}
               on:change={(e) => setShortcutHints(e.detail)}
             />
           </div>
-          <ShortcutSettings />
-        </section>
-      {:else if active === 'start'}
-        <section>
-          <h3>Getting started</h3>
-          <div class="row">
-            <span class="row-label">Re-run the welcome tour</span>
-            <button type="button" class="action-btn" on:click={() => dispatch('rerunOnboarding')}>
-              Re-run onboarding
-            </button>
+          <div class="toggle" title={$t('settingsPanel.hint.appVim')}>
+            <span class="row-label">{$t('onboarding.extras.appVim')} <span class="badge-experimental">{$t('common.experimental')}</span></span>
+            <ToggleSwitch
+              checked={$prefs.appVimMode}
+              label={$t('onboarding.extras.appVim')}
+              on:change={(e) => setAppVimMode(e.detail)}
+            />
           </div>
+          <p class="hint">{$t('settingsPanel.hint.appVimDetail')}</p>
+          <ShortcutSettings />
         </section>
       {:else if active === 'about'}
         <section>
-          <h3>About</h3>
-          <AboutSection />
+          <h3>{$t('settingsPanel.category.about')}</h3>
+          <AboutSection on:rerunOnboarding={() => dispatch('rerunOnboarding')} />
         </section>
       {/if}
     </div>
@@ -594,6 +929,21 @@
     line-height: 1.5;
   }
 
+  /* a small marker for features that are still rough around the edges. */
+  .badge-experimental {
+    display: inline-block;
+    margin-left: var(--space-2);
+    padding: 1px 6px;
+    border-radius: var(--radius-control);
+    background: var(--warning-bg, var(--surface-sunken));
+    color: var(--warning, var(--text-secondary));
+    font-size: var(--fz-meta);
+    font-weight: var(--fw-semibold);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    vertical-align: middle;
+  }
+
   /* generated-style chooser: a small grid of previewed cards. */
   .style-grid {
     display: grid;
@@ -701,5 +1051,52 @@
   .toggle.disabled {
     opacity: 0.45;
     cursor: default;
+  }
+
+  .row.disabled {
+    opacity: 0.45;
+  }
+
+  .select {
+    padding: var(--space-2) var(--space-3);
+    border: var(--hairline) solid var(--border-default);
+    border-radius: var(--radius-control);
+    background: var(--surface-raised);
+    color: var(--text-primary);
+    font: inherit;
+    cursor: pointer;
+  }
+
+  .download-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    margin-top: var(--space-3);
+  }
+
+  .download-presets {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    margin-top: var(--space-3);
+  }
+
+  .preset-btn {
+    padding: var(--space-1) var(--space-3);
+    border: var(--hairline) solid var(--border-default);
+    border-radius: 999px;
+    background: var(--surface-raised);
+    color: var(--text-secondary);
+    font-size: var(--fz-meta);
+    cursor: pointer;
+  }
+
+  .preset-btn:hover {
+    background: var(--surface-hover);
+    color: var(--text-primary);
+  }
+
+  .estimate {
+    min-height: 1.4em;
   }
 </style>

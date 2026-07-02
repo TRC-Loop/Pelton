@@ -102,8 +102,10 @@ func (d *DB) UnreadCount(ctx context.Context, folderIDs []int64) (int, error) {
 func messageWhere(q MessageQuery) (string, []any) {
 	placeholders, args := inClause(q.FolderIDs)
 	// pending_delete rows are awaiting server expunge; hide them from the list so
-	// a local delete disappears immediately and reappears nowhere.
-	where := "pending_delete = 0 AND folder_id IN (" + placeholders + ")"
+	// a local delete disappears immediately and reappears nowhere. snooze_hidden
+	// rows are snoozed-and-hidden; they stay out of the list until the snooze fires
+	// (the poller flips the bit back).
+	where := "pending_delete = 0 AND snooze_hidden = 0 AND folder_id IN (" + placeholders + ")"
 	if q.RequireFlags != 0 {
 		// every requested flag bit must be set: (flags & mask) = mask.
 		where += " AND (flags & ?) = ?"

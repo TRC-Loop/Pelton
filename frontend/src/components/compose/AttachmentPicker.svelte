@@ -8,6 +8,7 @@
   import { fileIcon } from '../../lib/filetype'
   import { errorMessage, toastError } from '../../stores/toast'
   import type { ComposeAttachment } from '../../lib/types'
+  import { t } from '../../lib/i18n'
 
   export let session: ComposeSession
 
@@ -80,7 +81,7 @@
 <div class="picker">
   <button type="button" class="attach" on:click={() => input.click()}>
     <IconPaperclip size={15} stroke={1.6} />
-    Attach
+    {$t('compose.attach.button')}
   </button>
   <input bind:this={input} type="file" multiple hidden on:change={onPick} />
 
@@ -93,7 +94,7 @@
             <span class="name" title={att.filename}>{att.filename}</span>
             <span class="size">{formatBytes(att.contentBase64.length * 0.75)}</span>
           </span>
-          <button type="button" class="rm" aria-label={`Remove ${att.filename}`} on:click={() => remove(index)}>
+          <button type="button" class="rm" aria-label={`${$t('compose.attach.remove')} ${att.filename}`} on:click={() => remove(index)}>
             <IconX size={13} stroke={1.8} />
           </button>
         </div>

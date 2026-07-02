@@ -1,0 +1,37 @@
+name: pelton
+arch: amd64
+platform: linux
+version: ${VERSION}
+section: mail
+priority: optional
+maintainer: "Arne K. <me@arne.sh>"
+description: |
+  Open-source cross-platform desktop email client.
+vendor: "Arne K. and the Pelton contributors"
+homepage: "https://github.com/TRC-Loop/Pelton"
+license: GPL-3.0-or-later
+
+# Fedora ships the webkit2gtk4.1/gtk3 runtime under these package names as of
+# Fedora 39+. If a release build fails to install on a given Fedora version,
+# this is the first place to check (`dnf provides` on the target box) and
+# adjust.
+depends:
+  - gtk3
+  - webkit2gtk4.1
+
+contents:
+  - src: ./build/bin/Pelton
+    dst: /usr/bin/pelton
+    file_info:
+      mode: 0755
+  - src: ./build/linux/pelton.desktop
+    dst: /usr/share/applications/pelton.desktop
+  - src: ./build/icons/pelton-default.png
+    dst: /usr/share/icons/hicolor/1024x1024/apps/pelton.png
+  - src: ./build/icons/pelton-default.png
+    dst: /usr/share/pixmaps/pelton.png
+
+rpm:
+  group: Applications/Internet
+  scripts:
+    posttrans: ./.github/nfpm/posttrans.sh

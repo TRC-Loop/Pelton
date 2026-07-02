@@ -11,6 +11,10 @@ export const EventNames = {
   syncState: 'sync:state',
   outboxChanged: 'outbox:changed',
   menu: 'menu:action',
+  downloadProgress: 'download:progress',
+  attachmentProgress: 'attachment:progress',
+  configSyncStatus: 'configsync:status',
+  updateAvailable: 'update:available',
 } as const
 
 // payloads, mirroring the go event structs.
@@ -29,6 +33,47 @@ export interface SyncProgressEvent {
 
 export interface SyncStateEvent {
   running: boolean
+  error: string
+}
+
+export interface DownloadProgressEvent {
+  running: boolean
+  done: number
+  total: number
+  percent: number
+  etaSeconds: number
+  label: string
+  error: string
+}
+
+export interface AttachmentProgressEvent {
+  running: boolean
+  filename: string
+  bytesDone: number
+  bytesTotal: number
+  filesDone: number
+  filesTotal: number
+  error: string
+}
+
+export interface ConfigSyncStatusEvent {
+  enabled: boolean
+  mode: string
+  path: string
+  syncSettings: boolean
+  emailScope: string
+  lastSyncUnix: number
+  lastError: string
+}
+
+// UpdateAvailableEvent mirrors go's UpdateCheckResult, fired after an
+// automatic (frequency-driven) update check completes.
+export interface UpdateAvailableEvent {
+  checked: boolean
+  available: boolean
+  currentVersion: string
+  latestVersion: string
+  releaseUrl: string
   error: string
 }
 
@@ -60,4 +105,26 @@ export function onOutboxChanged(cb: () => void): Unsubscribe {
 // action string (preferences, compose, sync, add-mailbox, about).
 export function onMenu(cb: (action: string) => void): Unsubscribe {
   return EventsOn(EventNames.menu, (action: string) => cb(action))
+}
+
+// onDownloadProgress fires during a bulk offline range download.
+export function onDownloadProgress(cb: (e: DownloadProgressEvent) => void): Unsubscribe {
+  return EventsOn(EventNames.downloadProgress, (e: DownloadProgressEvent) => cb(e))
+}
+
+// onAttachmentProgress fires while saving one or more attachments.
+export function onAttachmentProgress(cb: (e: AttachmentProgressEvent) => void): Unsubscribe {
+  return EventsOn(EventNames.attachmentProgress, (e: AttachmentProgressEvent) => cb(e))
+}
+
+// onConfigSyncStatus fires after every settings-sync pass (success or
+// failure), so the settings ui can reflect status live without polling.
+export function onConfigSyncStatus(cb: (e: ConfigSyncStatusEvent) => void): Unsubscribe {
+  return EventsOn(EventNames.configSyncStatus, (e: ConfigSyncStatusEvent) => cb(e))
+}
+
+// onUpdateAvailable fires after an automatic update check completes (never
+// for a manual "check now", which gets its result directly instead).
+export function onUpdateAvailable(cb: (e: UpdateAvailableEvent) => void): Unsubscribe {
+  return EventsOn(EventNames.updateAvailable, (e: UpdateAvailableEvent) => cb(e))
 }

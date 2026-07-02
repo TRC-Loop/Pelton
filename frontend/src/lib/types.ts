@@ -51,6 +51,11 @@ export interface MessageSummary {
   hasAttachments: boolean
   pgp: string
   auth: string
+  // flagColor is 0 (none) or 1..8. offline marks a user-pinned message.
+  // snoozeUntil is a stored timestamp (empty when not snoozed).
+  flagColor: number
+  offline: boolean
+  snoozeUntil: string
 }
 
 export interface MessageDetail extends MessageSummary {
@@ -171,7 +176,66 @@ export interface UIPrefs {
   messageFontSize: number
   // showFlaggedCount shows the count and bold styling on the sidebar Flagged view.
   showFlaggedCount: boolean
+  // flagColorSync pushes color labels to the server as imap keywords.
+  flagColorSync: boolean
+  // showOfflineIndicator shows the little downloaded badge on pinned messages.
+  showOfflineIndicator: boolean
+  // swipe gestures on message rows (trackpad only).
+  swipeEnabled: boolean
+  swipeLeftAction: string
+  swipeRightAction: string
+  // composeVimMode enables vim keybindings in the compose editor.
+  composeVimMode: boolean
+  // downloadIncludeAttachments is the remembered default for the range download.
+  downloadIncludeAttachments: boolean
+  // appVimMode enables global vim-style navigation (h/j/k/l) for moving around
+  // the app window itself, outside of compose.
+  appVimMode: boolean
+  // language is the ui locale code (en, de, fr, nl, es).
+  language: string
+  // lowPowerMode pauses periodic auto-sync, bulk downloads and address-book
+  // rescans. autoSyncIntervalSeconds is how often a full sync pass runs on top
+  // of the always-on imap idle push (0 disables it).
+  lowPowerMode: boolean
+  autoSyncIntervalSeconds: number
+  // defaultEditorMode is the editor a new compose session starts in
+  // (plaintext, markdown, or wysiwyg).
+  defaultEditorMode: string
+  // composeAutocomplete offers address-book suggestions while typing a
+  // recipient. composeChips renders recipients as removable chips; when off,
+  // the recipient fields fall back to a plain comma-separated text input.
+  composeAutocomplete: boolean
+  composeChips: boolean
+  // updateCheckFrequency controls the automatic GitHub-releases update check:
+  // 'off' (default), 'startup', 'weekly', or 'monthly'.
+  updateCheckFrequency: string
 }
+
+// a harvested contact for compose autocomplete and the settings manager.
+export interface AddressBookEntry {
+  email: string
+  name: string
+  useCount: number
+  lastUsed: string
+  createdAt: string
+}
+
+// an attachment's bytes for the in-app previewer. data is base64; tooLarge is
+// set (with empty data) when the file exceeds the preview cap.
+export interface AttachmentContent {
+  filename: string
+  contentType: string
+  sizeBytes: number
+  data: string
+  tooLarge: boolean
+}
+
+// the eight flag colors. index 0 means "no color"; 1..8 map to the palette in
+// theme/flagcolors.ts and to imap $Label1..$Label8 when syncing is on.
+export type FlagColor = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8
+
+// swipe gesture actions for message rows.
+export type SwipeAction = 'none' | 'delete' | 'read' | 'unread' | 'flag' | 'archive' | 'snooze'
 
 // list row layouts, from most spacious to a single dense line.
 export type RowTemplate = 'relaxed' | 'comfortable' | 'compact' | 'single'

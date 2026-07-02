@@ -64,6 +64,26 @@ export namespace desktop {
 	        this.clientSecret = source["clientSecret"];
 	    }
 	}
+	export class AddressBookEntryDTO {
+	    email: string;
+	    name: string;
+	    useCount: number;
+	    lastUsed: string;
+	    createdAt: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new AddressBookEntryDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.email = source["email"];
+	        this.name = source["name"];
+	        this.useCount = source["useCount"];
+	        this.lastUsed = source["lastUsed"];
+	        this.createdAt = source["createdAt"];
+	    }
+	}
 	export class AddressDTO {
 	    name: string;
 	    email: string;
@@ -76,6 +96,40 @@ export namespace desktop {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.name = source["name"];
 	        this.email = source["email"];
+	    }
+	}
+	export class ArchiveUndoDTO {
+	    messageId: string;
+	    originalFolderId: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new ArchiveUndoDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.messageId = source["messageId"];
+	        this.originalFolderId = source["originalFolderId"];
+	    }
+	}
+	export class AttachmentContentDTO {
+	    filename: string;
+	    contentType: string;
+	    sizeBytes: number;
+	    data: string;
+	    tooLarge: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new AttachmentContentDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.filename = source["filename"];
+	        this.contentType = source["contentType"];
+	        this.sizeBytes = source["sizeBytes"];
+	        this.data = source["data"];
+	        this.tooLarge = source["tooLarge"];
 	    }
 	}
 	export class AttachmentDTO {
@@ -166,6 +220,30 @@ export namespace desktop {
 		    return a;
 		}
 	}
+	export class ConfigSyncStatusDTO {
+	    enabled: boolean;
+	    mode: string;
+	    path: string;
+	    syncSettings: boolean;
+	    emailScope: string;
+	    lastSyncUnix: number;
+	    lastError: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new ConfigSyncStatusDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.enabled = source["enabled"];
+	        this.mode = source["mode"];
+	        this.path = source["path"];
+	        this.syncSettings = source["syncSettings"];
+	        this.emailScope = source["emailScope"];
+	        this.lastSyncUnix = source["lastSyncUnix"];
+	        this.lastError = source["lastError"];
+	    }
+	}
 	export class DiscoveredDTO {
 	    imapHost: string;
 	    imapPort: number;
@@ -186,6 +264,20 @@ export namespace desktop {
 	        this.smtpPort = source["smtpPort"];
 	        this.oauth = source["oauth"];
 	        this.source = source["source"];
+	    }
+	}
+	export class DownloadEstimateDTO {
+	    messageCount: number;
+	    totalBytes: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new DownloadEstimateDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.messageCount = source["messageCount"];
+	        this.totalBytes = source["totalBytes"];
 	    }
 	}
 	export class DraftDTO {
@@ -288,6 +380,9 @@ export namespace desktop {
 	    hasAttachments: boolean;
 	    pgp: string;
 	    auth: string;
+	    flagColor: number;
+	    offline: boolean;
+	    snoozeUntil: string;
 	    toAddresses: string;
 	    ccAddresses: string;
 	    bodyPlain: string;
@@ -319,6 +414,9 @@ export namespace desktop {
 	        this.hasAttachments = source["hasAttachments"];
 	        this.pgp = source["pgp"];
 	        this.auth = source["auth"];
+	        this.flagColor = source["flagColor"];
+	        this.offline = source["offline"];
+	        this.snoozeUntil = source["snoozeUntil"];
 	        this.toAddresses = source["toAddresses"];
 	        this.ccAddresses = source["ccAddresses"];
 	        this.bodyPlain = source["bodyPlain"];
@@ -364,6 +462,9 @@ export namespace desktop {
 	    hasAttachments: boolean;
 	    pgp: string;
 	    auth: string;
+	    flagColor: number;
+	    offline: boolean;
+	    snoozeUntil: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new MessageSummaryDTO(source);
@@ -386,6 +487,9 @@ export namespace desktop {
 	        this.hasAttachments = source["hasAttachments"];
 	        this.pgp = source["pgp"];
 	        this.auth = source["auth"];
+	        this.flagColor = source["flagColor"];
+	        this.offline = source["offline"];
+	        this.snoozeUntil = source["snoozeUntil"];
 	    }
 	}
 	export class MessageListDTO {
@@ -546,6 +650,21 @@ export namespace desktop {
 	    uiScale: string;
 	    messageFontSize: number;
 	    showFlaggedCount: boolean;
+	    flagColorSync: boolean;
+	    showOfflineIndicator: boolean;
+	    swipeEnabled: boolean;
+	    swipeLeftAction: string;
+	    swipeRightAction: string;
+	    composeVimMode: boolean;
+	    downloadIncludeAttachments: boolean;
+	    appVimMode: boolean;
+	    language: string;
+	    lowPowerMode: boolean;
+	    autoSyncIntervalSeconds: number;
+	    defaultEditorMode: string;
+	    composeAutocomplete: boolean;
+	    composeChips: boolean;
+	    updateCheckFrequency: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new UIPrefsDTO(source);
@@ -581,6 +700,21 @@ export namespace desktop {
 	        this.uiScale = source["uiScale"];
 	        this.messageFontSize = source["messageFontSize"];
 	        this.showFlaggedCount = source["showFlaggedCount"];
+	        this.flagColorSync = source["flagColorSync"];
+	        this.showOfflineIndicator = source["showOfflineIndicator"];
+	        this.swipeEnabled = source["swipeEnabled"];
+	        this.swipeLeftAction = source["swipeLeftAction"];
+	        this.swipeRightAction = source["swipeRightAction"];
+	        this.composeVimMode = source["composeVimMode"];
+	        this.downloadIncludeAttachments = source["downloadIncludeAttachments"];
+	        this.appVimMode = source["appVimMode"];
+	        this.language = source["language"];
+	        this.lowPowerMode = source["lowPowerMode"];
+	        this.autoSyncIntervalSeconds = source["autoSyncIntervalSeconds"];
+	        this.defaultEditorMode = source["defaultEditorMode"];
+	        this.composeAutocomplete = source["composeAutocomplete"];
+	        this.composeChips = source["composeChips"];
+	        this.updateCheckFrequency = source["updateCheckFrequency"];
 	    }
 	}
 	export class UnifiedViewDTO {
@@ -599,6 +733,28 @@ export namespace desktop {
 	        this.label = source["label"];
 	        this.unreadCount = source["unreadCount"];
 	        this.totalCount = source["totalCount"];
+	    }
+	}
+	export class UpdateCheckResult {
+	    checked: boolean;
+	    available: boolean;
+	    currentVersion: string;
+	    latestVersion: string;
+	    releaseUrl: string;
+	    error: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new UpdateCheckResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.checked = source["checked"];
+	        this.available = source["available"];
+	        this.currentVersion = source["currentVersion"];
+	        this.latestVersion = source["latestVersion"];
+	        this.releaseUrl = source["releaseUrl"];
+	        this.error = source["error"];
 	    }
 	}
 

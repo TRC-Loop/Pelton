@@ -3,19 +3,21 @@
   // basic since it is the stubbed editor for now.
   import { createEventDispatcher } from 'svelte'
   import type { EditorMode } from '../../lib/types'
+  import { t } from '../../lib/i18n'
 
   export let mode: EditorMode
 
   const dispatch = createEventDispatcher<{ change: EditorMode }>()
 
-  const modes: { key: EditorMode; label: string; title: string }[] = [
-    { key: 'plaintext', label: 'Plain', title: 'Plain text' },
-    { key: 'markdown', label: 'Markdown', title: 'Markdown, rendered to html on send' },
-    { key: 'wysiwyg', label: 'Rich', title: 'Rich text (basic editor for now)' },
-  ]
+  type ModeOption = { key: EditorMode; label: string; title: string }
+  $: modes = [
+    { key: 'plaintext', label: $t('compose.mode.plain'), title: $t('compose.mode.plainTitle') },
+    { key: 'markdown', label: $t('compose.mode.markdown'), title: $t('compose.mode.markdownTitle') },
+    { key: 'wysiwyg', label: $t('compose.mode.rich'), title: $t('compose.mode.richTitle') },
+  ] as ModeOption[]
 </script>
 
-<div class="switch" role="tablist" aria-label="Editor mode">
+<div class="switch" role="tablist" aria-label={$t('compose.mode.ariaLabel')}>
   {#each modes as m (m.key)}
     <button
       type="button"

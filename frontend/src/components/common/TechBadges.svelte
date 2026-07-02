@@ -6,6 +6,7 @@
   // Authentication-Results yet (documented follow-up); we never invent a result.
   import { IconMailbox, IconLock, IconShieldCheck, IconShieldQuestion } from '@tabler/icons-svelte'
   import { prefs } from '../../stores/prefs'
+  import { t } from '../../lib/i18n'
   import type { PGPStatus } from '../../lib/types'
 
   export let accountEmail: string = ''
@@ -14,9 +15,9 @@
   export let auth: string = 'unavailable'
 
   // pgp label and icon per status. "none" renders nothing.
-  function pgpLabel(status: string): string {
-    if (status === 'encrypted') return 'Encrypted'
-    if (status === 'signed') return 'Signed'
+  function pgpLabel(status: string, tFn: (key: string) => string): string {
+    if (status === 'encrypted') return tFn('common.techBadges.encrypted')
+    if (status === 'signed') return tFn('common.techBadges.signed')
     return ''
   }
 
@@ -26,7 +27,7 @@
   $: pgpStatus = pgp as PGPStatus
   // auth has only the "unavailable" state today; show n/a until the backend
   // parses Authentication-Results, otherwise echo whatever it reports.
-  $: authText = auth === 'unavailable' ? 'auth n/a' : auth
+  $: authText = auth === 'unavailable' ? $t('common.techBadges.authNA') : auth
 </script>
 
 {#if showBadge || showPgp || showAuth}
@@ -39,21 +40,21 @@
     {/if}
 
     {#if showPgp}
-      <span class="badge pgp" title={`PGP: ${pgpLabel(pgpStatus)}`} aria-label={`PGP ${pgpLabel(pgpStatus)}`}>
+      <span class="badge pgp" title={`PGP: ${pgpLabel(pgpStatus, $t)}`} aria-label={`PGP ${pgpLabel(pgpStatus, $t)}`}>
         {#if pgpStatus === 'encrypted'}
           <IconLock size={12} stroke={1.6} />
         {:else}
           <IconShieldCheck size={12} stroke={1.6} />
         {/if}
-        <span class="badge-text">{pgpLabel(pgpStatus)}</span>
+        <span class="badge-text">{pgpLabel(pgpStatus, $t)}</span>
       </span>
     {/if}
 
     {#if showAuth}
       <span
         class="badge auth"
-        title="SPF/DKIM/DMARC not available yet"
-        aria-label="Authentication results not available"
+        title={$t('common.techBadges.authTitle')}
+        aria-label={$t('common.techBadges.authAriaLabel')}
       >
         <IconShieldQuestion size={12} stroke={1.6} />
         <span class="badge-text">{authText}</span>

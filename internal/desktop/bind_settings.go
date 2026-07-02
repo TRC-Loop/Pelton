@@ -37,7 +37,25 @@ const (
 	settingUIScale       = "ui_scale"
 	settingMessageFont   = "message_font_size"
 	settingFlaggedCount  = "show_flagged_count"
+	// newer feature settings.
+	settingFlagColorSync       = "flag_color_sync"
+	settingShowOffline         = "show_offline_indicator"
+	settingSwipeEnabled        = "swipe_enabled"
+	settingSwipeLeft           = "swipe_left_action"
+	settingSwipeRight          = "swipe_right_action"
+	settingVimMode             = "compose_vim_mode"
+	settingDownloadAtts        = "download_include_attachments"
+	settingAppVimMode          = "app_vim_mode"
+	settingLanguage            = "language"
+	settingLowPower            = "low_power_mode"
+	settingAutoSync            = "auto_sync_interval_seconds"
+	settingDefaultEditor       = "default_editor_mode"
+	settingComposeAutocomplete = "compose_autocomplete"
+	settingComposeChips        = "compose_chips"
 )
+
+// settingUpdateCheckFreq, settingLastUpdateCheck and defaultUpdateCheckFrequency
+// are defined in bind_update.go, next to the rest of the update-check logic.
 
 // defaults for the ui preferences, applied server side so the frontend always
 // receives a complete object on startup.
@@ -124,6 +142,48 @@ type UIPrefsDTO struct {
 	// ShowFlaggedCount shows the count and bold styling on the sidebar Flagged
 	// view. Off keeps the entry but renders it plain.
 	ShowFlaggedCount bool `json:"showFlaggedCount"`
+	// FlagColorSync pushes color labels to the server as imap keywords so they
+	// show in other clients. Off keeps colors local only.
+	FlagColorSync bool `json:"flagColorSync"`
+	// ShowOfflineIndicator shows the little downloaded/offline badge on pinned
+	// messages. On by default; can be hidden.
+	ShowOfflineIndicator bool `json:"showOfflineIndicator"`
+	// Swipe gestures on message rows (trackpad only). SwipeEnabled turns them on;
+	// SwipeLeftAction/SwipeRightAction pick what each direction does
+	// (delete, unread, read, flag, archive, snooze, none).
+	SwipeEnabled     bool   `json:"swipeEnabled"`
+	SwipeLeftAction  string `json:"swipeLeftAction"`
+	SwipeRightAction string `json:"swipeRightAction"`
+	// ComposeVimMode enables vim keybindings in the compose editor.
+	ComposeVimMode bool `json:"composeVimMode"`
+	// DownloadIncludeAttachments is the remembered default for the bulk range
+	// download's per-run attachment choice.
+	DownloadIncludeAttachments bool `json:"downloadIncludeAttachments"`
+	// AppVimMode enables global vim-style navigation (h/j/k/l and friends) for
+	// moving around the app window itself, outside of compose.
+	AppVimMode bool `json:"appVimMode"`
+	// Language is the ui locale code (en, de, fr, nl, es). Defaults to English;
+	// the frontend only ever picks something else on an explicit user choice.
+	Language string `json:"language"`
+	// LowPowerMode pauses periodic auto-sync, blocks starting new bulk offline
+	// downloads, and skips the post-sync address-book rescan.
+	LowPowerMode bool `json:"lowPowerMode"`
+	// AutoSyncIntervalSeconds is how often every account gets a full sync pass,
+	// on top of the always-on imap idle push. 0 disables it.
+	AutoSyncIntervalSeconds int `json:"autoSyncIntervalSeconds"`
+	// DefaultEditorMode is the editor a new compose session starts in:
+	// plaintext, markdown, or wysiwyg.
+	DefaultEditorMode string `json:"defaultEditorMode"`
+	// ComposeAutocomplete offers address-book suggestions while typing a
+	// recipient. On by default.
+	ComposeAutocomplete bool `json:"composeAutocomplete"`
+	// ComposeChips renders recipients as removable chips. When off, the
+	// recipient fields fall back to a plain comma-separated text input.
+	ComposeChips bool `json:"composeChips"`
+	// UpdateCheckFrequency controls the automatic GitHub-releases update
+	// check: off (default), startup (every launch), weekly, or monthly. A
+	// manual check ("Check now" in settings) always runs regardless.
+	UpdateCheckFrequency string `json:"updateCheckFrequency"`
 }
 
 // GetUIPrefs returns all ui preferences with defaults filled in, so startup is a
@@ -161,6 +221,22 @@ func (a *App) GetUIPrefs() (UIPrefsDTO, error) {
 		UIScale:             a.stringSetting(settingUIScale, defaultUIScale),
 		MessageFontSize:     a.intSetting(settingMessageFont, defaultMessageFont),
 		ShowFlaggedCount:    a.boolSetting(settingFlaggedCount, true),
+
+		FlagColorSync:              a.boolSetting(settingFlagColorSync, false),
+		ShowOfflineIndicator:       a.boolSetting(settingShowOffline, true),
+		SwipeEnabled:               a.boolSetting(settingSwipeEnabled, true),
+		SwipeLeftAction:            a.stringSetting(settingSwipeLeft, "delete"),
+		SwipeRightAction:           a.stringSetting(settingSwipeRight, "unread"),
+		ComposeVimMode:             a.boolSetting(settingVimMode, false),
+		DownloadIncludeAttachments: a.boolSetting(settingDownloadAtts, true),
+		AppVimMode:                 a.boolSetting(settingAppVimMode, false),
+		Language:                   a.stringSetting(settingLanguage, "en"),
+		LowPowerMode:               a.boolSetting(settingLowPower, false),
+		AutoSyncIntervalSeconds:    a.intSetting(settingAutoSync, 900),
+		DefaultEditorMode:          a.stringSetting(settingDefaultEditor, "plaintext"),
+		ComposeAutocomplete:        a.boolSetting(settingComposeAutocomplete, true),
+		ComposeChips:               a.boolSetting(settingComposeChips, true),
+		UpdateCheckFrequency:       a.stringSetting(settingUpdateCheckFreq, defaultUpdateCheckFrequency),
 	}, nil
 }
 
@@ -227,4 +303,11 @@ func (a *App) intSetting(key string, def int) int {
 // treat an unset key as "use the default" rather than an error.
 func isSettingMissing(err error) bool {
 	return errors.Is(err, storage.ErrSettingNotFound)
+}
+
+// lowPowerMode reports the current low-power setting, read fresh each call
+// (a local sqlite read) so background loops always see live changes without
+// needing their own change-notification plumbing.
+func (a *App) lowPowerMode() bool {
+	return a.boolSetting(settingLowPower, false)
 }

@@ -26,15 +26,15 @@ type AccountDTO struct {
 // Role classifies known special folders so the ui can icon them and so unified
 // views can gather them. UnreadCount/TotalCount drive the badges.
 type FolderDTO struct {
-	ID          int64   `json:"id"`
-	AccountID   int64   `json:"accountId"`
-	Name        string  `json:"name"`
-	IMAPPath    string  `json:"imapPath"`
-	Delimiter   string  `json:"delimiter"`
-	ParentID    *int64  `json:"parentId"`
-	Role        string  `json:"role"`
-	UnreadCount int     `json:"unreadCount"`
-	TotalCount  int     `json:"totalCount"`
+	ID          int64    `json:"id"`
+	AccountID   int64    `json:"accountId"`
+	Name        string   `json:"name"`
+	IMAPPath    string   `json:"imapPath"`
+	Delimiter   string   `json:"delimiter"`
+	ParentID    *int64   `json:"parentId"`
+	Role        string   `json:"role"`
+	UnreadCount int      `json:"unreadCount"`
+	TotalCount  int      `json:"totalCount"`
 	Attributes  []string `json:"attributes"`
 }
 
@@ -67,6 +67,11 @@ type MessageSummaryDTO struct {
 	HasAttachments bool   `json:"hasAttachments"`
 	PGP            string `json:"pgp"`
 	Auth           string `json:"auth"`
+	// FlagColor is 0 (none) or 1..8. Offline marks a user-pinned message.
+	// SnoozeUntil is a stored timestamp (empty when not snoozed).
+	FlagColor   int    `json:"flagColor"`
+	Offline     bool   `json:"offline"`
+	SnoozeUntil string `json:"snoozeUntil"`
 }
 
 // MessageListDTO is a page of summaries plus the unfiltered total for paging.
@@ -91,12 +96,12 @@ type AttachmentDTO struct {
 // offer "load remote images".
 type MessageDetailDTO struct {
 	MessageSummaryDTO
-	ToAddresses      string          `json:"toAddresses"`
-	CcAddresses      string          `json:"ccAddresses"`
-	BodyPlain        string          `json:"bodyPlain"`
-	BodyHTMLSafe     string          `json:"bodyHtmlSafe"`
-	IsHTML           bool            `json:"isHtml"`
-	HasRemoteContent bool            `json:"hasRemoteContent"`
+	ToAddresses      string `json:"toAddresses"`
+	CcAddresses      string `json:"ccAddresses"`
+	BodyPlain        string `json:"bodyPlain"`
+	BodyHTMLSafe     string `json:"bodyHtmlSafe"`
+	IsHTML           bool   `json:"isHtml"`
+	HasRemoteContent bool   `json:"hasRemoteContent"`
 	// RemoteAllowed is true when this message's remote content was rendered
 	// because the sender or domain is trusted (or the global setting is on), so
 	// the ui shows no blocked-images banner.
@@ -204,6 +209,9 @@ func toSummaryDTO(m storage.Message, accountEmail, folderName string) MessageSum
 		HasAttachments: m.HasAttachments,
 		PGP:            string(mailview.DetectPGP(m.BodyPlain, m.BodyHTML)),
 		Auth:           authUnavailable,
+		FlagColor:      m.FlagColor,
+		Offline:        m.Offline,
+		SnoozeUntil:    m.SnoozeUntil,
 	}
 }
 

@@ -6,17 +6,20 @@
   // state when on.
   import { prefs, setToggle } from '../../stores/prefs'
   import ToggleSwitch from '../common/ToggleSwitch.svelte'
+  import { t } from '../../lib/i18n'
 
-  const items: { key: 'showMailboxBadge' | 'showDateTime' | 'showPgp' | 'showAuth'; label: string; note: string }[] = [
-    { key: 'showMailboxBadge', label: 'Mailbox badge', note: 'Account and folder on each message' },
-    { key: 'showDateTime', label: 'Date and time', note: 'Timestamp on rows and in the header' },
-    { key: 'showPgp', label: 'PGP status', note: 'Signed or encrypted indicator' },
-    { key: 'showAuth', label: 'Auth status', note: 'SPF/DKIM/DMARC (not available yet)' },
+  type ToggleKey = 'showMailboxBadge' | 'showDateTime' | 'showPgp' | 'showAuth'
+
+  $: items = [
+    { key: 'showMailboxBadge' as ToggleKey, label: $t('settingsPanel.mailboxBadge'), note: $t('settingsPanel.mailboxBadgeNote') },
+    { key: 'showDateTime' as ToggleKey, label: $t('settingsPanel.dateTime'), note: $t('settingsPanel.dateTimeNote') },
+    { key: 'showPgp' as ToggleKey, label: $t('settingsPanel.pgpStatus'), note: $t('settingsPanel.pgpStatusNote') },
+    { key: 'showAuth' as ToggleKey, label: $t('settingsPanel.authStatus'), note: $t('settingsPanel.authStatusNote') },
   ]
 </script>
 
 <div class="toggles">
-  <span class="group-label">Technical info</span>
+  <span class="group-label">{$t('settingsPanel.techInfo')}</span>
   {#each items as item (item.key)}
     <div class="toggle">
       <span class="text">
