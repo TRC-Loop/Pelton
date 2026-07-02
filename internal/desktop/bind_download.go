@@ -239,11 +239,13 @@ type DownloadEstimateDTO struct {
 	TotalBytes   int64 `json:"totalBytes"`
 }
 
-// EstimateDownloadRange reuses the same planning pass as DownloadRange (so the
-// count always matches what a real run would fetch) and additionally sums the
-// RFC822 size of each planned message. This is the actual number of bytes
-// that travel over IMAP either way; whether attachments are kept afterward
-// only affects what gets written to disk, not what gets fetched.
+// EstimateDownloadRange plans and sizes the range in a single connect pass per
+// account (search each folder, then immediately size whatever came back
+// uncached, all on the same imap session). Planning and sizing used to be two
+// separate full connect-login-select-search passes; since this fires on every
+// start-date change in the settings ui, that doubled the wait before the user
+// even presses "Download" - and DownloadRange then reran the same search a
+// third time as its own "Scanning" step.
 func (a *App) EstimateDownloadRange(startDateRFC3339 string) (DownloadEstimateDTO, error) {
 	if err := a.ready(); err != nil {
 		return DownloadEstimateDTO{}, err
@@ -255,86 +257,93 @@ func (a *App) EstimateDownloadRange(startDateRFC3339 string) (DownloadEstimateDT
 			return DownloadEstimateDTO{}, fmt.Errorf("pelton: invalid start date %q: %w", startDateRFC3339, err)
 		}
 	}
-	tasks, err := a.planDownload(since)
-	if err != nil {
-		return DownloadEstimateDTO{}, err
-	}
-	if len(tasks) == 0 {
-		return DownloadEstimateDTO{}, nil
-	}
-
-	// group planned uids by folder id (folders are not comparable, so the id
-	// keys the map) so each folder is fetched in one batch, then group folders
-	// by account so each account is connected to only once.
-	uidsByFolder := map[int64][]imap.UID{}
-	foldersByID := map[int64]storage.Folder{}
-	folderIDsByAccount := map[int64][]int64{}
-	for _, task := range tasks {
-		fid := task.folder.ID
-		if _, seen := foldersByID[fid]; !seen {
-			foldersByID[fid] = task.folder
-			folderIDsByAccount[task.folder.AccountID] = append(folderIDsByAccount[task.folder.AccountID], fid)
-		}
-		uidsByFolder[fid] = append(uidsByFolder[fid], imap.UID(task.uid))
-	}
 	accounts, err := a.store.ListAccounts(a.ctx)
 	if err != nil {
 		return DownloadEstimateDTO{}, err
 	}
 
-	var total int64
+	var messageCount int
+	var totalBytes int64
 	for _, account := range accounts {
-		folderIDs, ok := folderIDsByAccount[account.ID]
-		if !ok {
-			continue
+		if err := a.ctx.Err(); err != nil {
+			return DownloadEstimateDTO{}, err
 		}
-		size, err := a.estimateAccountSize(account, folderIDs, foldersByID, uidsByFolder)
+		count, size, err := a.planAndSizeAccount(account, since)
 		if err != nil {
-			a.log.Error("estimate download size", "account", account.Email, "err", err)
+			if errors.Is(err, errNoCredentials) {
+				continue
+			}
+			a.log.Error("estimate download", "account", account.Email, "err", err)
 			continue
 		}
-		total += size
+		messageCount += count
+		totalBytes += size
 	}
-	return DownloadEstimateDTO{MessageCount: len(tasks), TotalBytes: total}, nil
+	return DownloadEstimateDTO{MessageCount: messageCount, TotalBytes: totalBytes}, nil
 }
 
-// estimateAccountSize connects to one account and sums RFC822 sizes across
-// its planned folders.
-func (a *App) estimateAccountSize(account storage.Account, folderIDs []int64, foldersByID map[int64]storage.Folder, uidsByFolder map[int64][]imap.UID) (int64, error) {
+// planAndSizeAccount opens one connection to an account, and for each folder
+// searches since the cutoff, filters to uncached uids, and sizes exactly those
+// uids before moving to the next folder - so estimating never reconnects.
+func (a *App) planAndSizeAccount(account storage.Account, since time.Time) (int, int64, error) {
 	cfg, err := a.resolveIMAP(account)
 	if err != nil {
-		return 0, err
+		return 0, 0, err
 	}
 	syncMu.Lock()
 	defer syncMu.Unlock()
 
 	client, err := pimap.Connect(cfg)
 	if err != nil {
-		return 0, err
+		return 0, 0, err
 	}
 	defer client.Close()
 	if err := client.Login(); err != nil {
-		return 0, err
+		return 0, 0, err
 	}
 	defer client.Logout()
 
+	folders, err := a.store.ListFolders(a.ctx, account.ID)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	var count int
 	var total int64
-	for _, fid := range folderIDs {
-		folder := foldersByID[fid]
+	for _, folder := range folders {
 		if _, err := client.Select(folder.IMAPPath); err != nil {
 			a.log.Error("estimate select", "folder", folder.IMAPPath, "err", err)
 			continue
 		}
-		sizes, err := client.FetchSizes(uidsByFolder[fid])
+		uids, err := client.SearchSince(since)
+		if err != nil {
+			a.log.Error("estimate search", "folder", folder.IMAPPath, "err", err)
+			continue
+		}
+		have, err := a.cachedUIDs(folder.ID)
+		if err != nil {
+			return 0, 0, err
+		}
+		var uncached []imap.UID
+		for _, uid := range uids {
+			if _, ok := have[uint32(uid)]; !ok {
+				uncached = append(uncached, uid)
+			}
+		}
+		if len(uncached) == 0 {
+			continue
+		}
+		sizes, err := client.FetchSizes(uncached)
 		if err != nil {
 			a.log.Error("estimate fetch sizes", "folder", folder.IMAPPath, "err", err)
 			continue
 		}
+		count += len(uncached)
 		for _, size := range sizes {
 			total += size
 		}
 	}
-	return total, nil
+	return count, total, nil
 }
 
 // runRangeDownload performs the plan-and-fetch passes off the calling goroutine.
