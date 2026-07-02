@@ -34,8 +34,8 @@ export function ClearSentOutbox() {
   return window['go']['desktop']['App']['ClearSentOutbox']();
 }
 
-export function ConfigureConfigSync(arg1, arg2, arg3, arg4) {
-  return window['go']['desktop']['App']['ConfigureConfigSync'](arg1, arg2, arg3, arg4);
+export function ConfigureConfigSync(arg1, arg2, arg3, arg4, arg5) {
+  return window['go']['desktop']['App']['ConfigureConfigSync'](arg1, arg2, arg3, arg4, arg5);
 }
 
 export function DeleteAddress(arg1) {
@@ -146,6 +146,10 @@ export function MoveMessage(arg1, arg2) {
   return window['go']['desktop']['App']['MoveMessage'](arg1, arg2);
 }
 
+export function PeekConfigSyncFolder(arg1) {
+  return window['go']['desktop']['App']['PeekConfigSyncFolder'](arg1);
+}
+
 export function PickConfigSyncFolder() {
   return window['go']['desktop']['App']['PickConfigSyncFolder']();
 }
@@ -160,6 +164,10 @@ export function ReadAttachment(arg1, arg2) {
 
 export function RemoveOffline(arg1) {
   return window['go']['desktop']['App']['RemoveOffline'](arg1);
+}
+
+export function ResumePendingDownload() {
+  return window['go']['desktop']['App']['ResumePendingDownload']();
 }
 
 export function SaveAllAttachments(arg1) {

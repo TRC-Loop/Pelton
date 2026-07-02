@@ -18,7 +18,7 @@ export function CheckForUpdates():Promise<desktop.UpdateCheckResult>;
 
 export function ClearSentOutbox():Promise<void>;
 
-export function ConfigureConfigSync(arg1:string,arg2:string,arg3:boolean,arg4:string):Promise<desktop.ConfigSyncStatusDTO>;
+export function ConfigureConfigSync(arg1:string,arg2:string,arg3:boolean,arg4:string,arg5:boolean):Promise<desktop.ConfigSyncStatusDTO>;
 
 export function DeleteAddress(arg1:string):Promise<void>;
 
@@ -74,6 +74,8 @@ export function ListUnifiedViews():Promise<Array<desktop.UnifiedViewDTO>>;
 
 export function MoveMessage(arg1:number,arg2:number):Promise<desktop.ArchiveUndoDTO>;
 
+export function PeekConfigSyncFolder(arg1:string):Promise<desktop.ConfigSyncFolderPeekDTO>;
+
 export function PickConfigSyncFolder():Promise<string>;
 
 export function ProgramLicense():Promise<string>;
@@ -81,6 +83,8 @@ export function ProgramLicense():Promise<string>;
 export function ReadAttachment(arg1:number,arg2:number):Promise<desktop.AttachmentContentDTO>;
 
 export function RemoveOffline(arg1:number):Promise<void>;
+
+export function ResumePendingDownload():Promise<void>;
 
 export function SaveAllAttachments(arg1:number):Promise<string>;
 
