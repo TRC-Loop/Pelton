@@ -269,6 +269,11 @@
   }
 
   .sync :global(.spin) {
+    /* svg transform-origin defaults differ across the webviews wails embeds
+       per platform (webkit vs webview2); pin it explicitly so the icon spins
+       in place instead of wobbling around an off-center pivot on some os. */
+    transform-box: border-box;
+    transform-origin: 50% 50%;
     animation: statusspin 0.8s linear infinite;
   }
 
