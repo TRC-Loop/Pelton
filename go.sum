@@ -54,8 +54,8 @@ github.com/blevesearch/zapx/v16 v16.3.4 h1:hDAqA8qusZTNbPEL7//w5P65UZ2de6yhSeUaT
 github.com/blevesearch/zapx/v16 v16.3.4/go.mod h1:zqkPPqs9GS9FzVWzCO3Wf1X044yWAV17+4zb+FTiEHg=
 github.com/blevesearch/zapx/v17 v17.1.2 h1:avbOk2igaASNoiy0BE/jPgcxAnRI2PGeydeP4hg7Ikk=
 github.com/blevesearch/zapx/v17 v17.1.2/go.mod h1:WQObxKrqUX7cd0G1GMvDfc/bmZzQvoy7APOPimx7DiI=
-github.com/cloudflare/circl v1.6.2 h1:hL7VBpHHKzrV5WTfHCaBsgx/HGbBYlgrwvNXEVDYYsQ=
-github.com/cloudflare/circl v1.6.2/go.mod h1:2eXP6Qfat4O/Yhh8BznvKnJ+uzEoTQ6jVKJRn81BiS4=
+github.com/cloudflare/circl v1.6.3 h1:9GPOhQGF9MCYUeXyMYlqTR6a5gTrgR/fBLXvUgtVcg8=
+github.com/cloudflare/circl v1.6.3/go.mod h1:2eXP6Qfat4O/Yhh8BznvKnJ+uzEoTQ6jVKJRn81BiS4=
 github.com/danieljoos/wincred v1.2.3 h1:v7dZC2x32Ut3nEfRH+vhoZGvN72+dQ/snVXo/vMFLdQ=
 github.com/danieljoos/wincred v1.2.3/go.mod h1:6qqX0WNrS4RzPZ1tnroDzq9kY3fu1KwE7MRLQK4X0bs=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
