@@ -95,13 +95,12 @@ jobs:
       - name: Build .dmg
         run: |
           rm -f "build/bin/Pelton.dmg"
-          # pelton.icns only exists when the Liquid Glass step above actually
-          # ran (needs a recent-enough Xcode); iconfile.icns is Wails' own
-          # always-present default icon, so fall back to that.
-          icns="build/bin/Pelton.app/Contents/Resources/pelton.icns"
-          if [ ! -f "$icns" ]; then
-            icns="build/bin/Pelton.app/Contents/Resources/iconfile.icns"
-          fi
+          # a dmg's volume icon is always shown the traditional (pre-Liquid
+          # Glass) way regardless of which macOS mounts it, so always use the
+          # repo's normal, properly rounded-corner icns here - the Liquid
+          # Glass step's own pelton.icns fallback isn't pre-masked and showed
+          # up with a square outline around the icon.
+          icns="build/icons/pelton.icns"
           create-dmg \
             --volname "Pelton" \
             --volicon "$icns" \
