@@ -149,7 +149,13 @@ jobs:
         run: go install github.com/wailsapp/wails/v2/cmd/wails@${{ env.WAILS_VERSION }}
 
       - name: Install NSIS
-        run: choco install nsis -y
+        shell: pwsh
+        run: |
+          choco install nsis -y
+          # choco updates the machine PATH, but GitHub Actions snapshots PATH
+          # at job start and doesn't pick that up mid-job - add makensis's
+          # install dir to $GITHUB_PATH explicitly so later steps see it.
+          echo "C:\Program Files (x86)\NSIS" | Out-File -FilePath $env:GITHUB_PATH -Append
 
       - name: Install dependencies
         run: |
