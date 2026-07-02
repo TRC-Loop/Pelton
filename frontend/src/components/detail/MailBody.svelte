@@ -38,28 +38,34 @@
     return getComputedStyle(document.documentElement).getPropertyValue(name).trim()
   }
 
-  // buildSrcdoc wraps the already-sanitized body in a minimal themed document.
-  // the style tag name is concatenated so the literal token never appears in the
+  // buildSrcdoc wraps the already-sanitized body in a minimal document. the
+  // style tag name is concatenated so the literal token never appears in the
   // component source, where svelte's parser would mistake it for a real style
   // block and parse the css that follows as the component's styles.
+  //
+  // the background/text colors here are fixed light values, not theme
+  // tokens, and deliberately do not follow dark mode. html mail almost always
+  // assumes it is being rendered on a white page and sets its own colors (or
+  // none at all) on that assumption - senders that hardcode dark/black text
+  // with no background of their own used to inherit our dark-theme background,
+  // producing unreadable black-on-near-black text. every other mail client
+  // (Thunderbird, Apple Mail, Gmail) renders html mail on a fixed light
+  // background for the same reason; a message's own styles still override
+  // this when it sets them explicitly.
   //
   // a content-security-policy is set as defense in depth on top of the backend
   // sanitizer: when remote content is not allowed, img-src is limited to data:
   // (our inlined cid images) so nothing can phone home even if a remote url ever
   // slipped past the sanitizer. when the user opts in, http(s) image sources are
   // permitted. scripts are never allowed.
-  function buildSrcdoc(html: string, _theme: string, allowRemote: boolean, fontSize: number): string {
-    const fg = readVar('--text-primary')
-    const muted = readVar('--text-tertiary')
-    const link = readVar('--link')
-    const bg = readVar('--surface-raised')
+  function buildSrcdoc(html: string, allowRemote: boolean, fontSize: number): string {
     const font = readVar('--font-ui')
     const css = `
-  html,body{margin:0;background:${bg};color:${fg};font-family:${font};font-size:${fontSize}px;line-height:1.5;}
+  html,body{margin:0;background:#ffffff;color:#1a1a1a;font-family:${font};font-size:${fontSize}px;line-height:1.5;}
   body{padding:4px 2px;word-wrap:break-word;overflow-wrap:break-word;}
-  a{color:${link};}
+  a{color:#1a56db;}
   img{max-width:100%;height:auto;}
-  blockquote{margin:0 0 0 8px;padding-left:10px;border-left:2px solid ${muted};color:${muted};}
+  blockquote{margin:0 0 0 8px;padding-left:10px;border-left:2px solid #94a3b8;color:#55606c;}
   table{max-width:100%;}
   pre{white-space:pre-wrap;}`
     const imgSrc = allowRemote ? 'data: https: http:' : 'data:'
@@ -70,7 +76,7 @@
     return `<!doctype html><html><head><meta charset="utf-8">${cspMeta}${open}${css}${close}</head><body>${html}</body></html>`
   }
 
-  $: srcdoc = buildSrcdoc(detail.bodyHtmlSafe, $prefs.theme, remoteLoaded, $prefs.messageFontSize)
+  $: srcdoc = buildSrcdoc(detail.bodyHtmlSafe, remoteLoaded, $prefs.messageFontSize)
 
   // the iframe is sized to its content height so the reading pane has a single
   // scrollbar instead of a nested one (which the interface zoom made worse). the
@@ -262,7 +268,10 @@
     width: 100%;
     min-height: 120px;
     border: none;
-    background: var(--surface-raised);
+    /* fixed, not theme-derived: matches the fixed light background the
+       srcdoc itself renders on (see buildSrcdoc), so there is no dark flash
+       around/before the html mail content in dark mode. */
+    background: #ffffff;
     zoom: calc(1 / var(--ui-scale, 1));
   }
 
