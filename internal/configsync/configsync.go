@@ -5,13 +5,18 @@
 // files in that folder and lets whatever already syncs it do the transport.
 //
 // Two modes:
-//   - Copy: this device's local state is the source of truth. Every sync
+//   - Mirror: the device's own app-support directory stays put. Every sync
 //     pass pulls in anything newer from the folder (per key, last write
 //     wins by timestamp) and then pushes the resulting local state back out,
-//     so the folder always reflects the merge.
-//   - ReadOnly: this device only ever pulls from the folder. It never writes
-//     to it, so it cannot clobber what other, copy-mode devices have put
-//     there.
+//     so the folder always reflects the merge. Safe with several devices
+//     open at once; you pick what's included (settings, message metadata,
+//     or the full offline cache).
+//   - InPlace: the device's entire data directory (database, attachments,
+//     settings - everything) simply IS the chosen folder; see inplace.go.
+//     There is no scope and no periodic sync pass, since it is all just one
+//     set of files that your cloud tool already keeps in sync. Only one
+//     device may have Pelton open against the folder at a time - concurrent
+//     writers to one live sqlite file can corrupt it.
 //
 // Credentials never enter this package: they live in the OS keyring and are
 // not part of the settings table or the message extras this syncs.
@@ -36,8 +41,8 @@ import (
 type Mode string
 
 const (
-	ModeCopy     Mode = "copy"
-	ModeReadOnly Mode = "readonly"
+	ModeMirror  Mode = "mirror"
+	ModeInPlace Mode = "inplace"
 )
 
 // EmailScope selects how much local message state is included.
@@ -75,9 +80,10 @@ const (
 
 // Manager owns the persisted config, the folder watcher, and every sync pass.
 type Manager struct {
-	store    *storage.DB
-	log      *slog.Logger
-	stateDir string // directory holding the pending-full-restore marker
+	store      *storage.DB
+	log        *slog.Logger
+	stateDir   string // default app-support directory; holds the pending-full-restore and in-place markers
+	dbFileName string
 
 	mu      sync.Mutex
 	cfg     Config
@@ -89,10 +95,11 @@ type Manager struct {
 	onSync   func(Config)
 }
 
-// New creates a Manager. stateDir is where the pending-full-restore marker
-// lives across restarts (the same directory as the database file).
-func New(store *storage.DB, stateDir string, log *slog.Logger) *Manager {
-	return &Manager{store: store, stateDir: stateDir, log: log}
+// New creates a Manager. stateDir is the device's default (non-in-place)
+// app-support directory, where the pending-full-restore and in-place markers
+// live across restarts. dbFileName is the sqlite file name.
+func New(store *storage.DB, stateDir, dbFileName string, log *slog.Logger) *Manager {
+	return &Manager{store: store, stateDir: stateDir, dbFileName: dbFileName, log: log}
 }
 
 // OnSync registers a callback fired after every sync pass (success or
@@ -113,7 +120,7 @@ func (m *Manager) Start(ctx context.Context) error {
 	m.mu.Lock()
 	m.cfg = cfg
 	m.mu.Unlock()
-	if cfg.Enabled {
+	if cfg.Enabled && cfg.Mode != ModeInPlace {
 		return m.startWatching(ctx)
 	}
 	return nil
@@ -127,16 +134,41 @@ func (m *Manager) Status() Config {
 }
 
 // Configure validates and persists a new setup (or a change to path/mode/
-// scope on an existing one), then (re)starts the watcher and runs an initial
-// sync pass.
-func (m *Manager) Configure(ctx context.Context, cfg Config) error {
+// scope on an existing one). Switching into or out of InPlace mode only
+// takes effect on the next app start (see inplace.go); everything else
+// (re)starts the watcher and runs an initial sync pass immediately.
+//
+// mergeOnJoin only matters when cfg.Mode is InPlace and cfg.Path already
+// holds another device's data: true merges this device's accounts and
+// settings into it (see merge.go), false discards this device's local state
+// and simply adopts what's there.
+func (m *Manager) Configure(ctx context.Context, cfg Config, mergeOnJoin bool) error {
 	if cfg.Path == "" {
 		return fmt.Errorf("configsync: a folder is required")
 	}
-	if cfg.Mode != ModeCopy && cfg.Mode != ModeReadOnly {
+	if cfg.Mode != ModeMirror && cfg.Mode != ModeInPlace {
 		return fmt.Errorf("configsync: unknown mode %q", cfg.Mode)
 	}
-	if err := os.MkdirAll(cfg.Path, 0o755); err != nil {
+
+	previous := m.Status()
+	if previous.Enabled && previous.Mode == ModeInPlace && cfg.Mode != ModeInPlace {
+		if err := DisableInPlace(ctx, m.store, m.stateDir, m.dbFileName); err != nil {
+			return err
+		}
+	}
+	if cfg.Mode == ModeInPlace {
+		joining, err := PeekInPlaceFolder(cfg.Path, m.dbFileName)
+		if err != nil {
+			return err
+		}
+		if joining && mergeOnJoin {
+			if err := MergeIntoInPlaceFolder(ctx, m.store, m.stateDir, cfg.Path, m.dbFileName); err != nil {
+				return err
+			}
+		} else if err := EnableInPlace(ctx, m.store, m.stateDir, cfg.Path, m.dbFileName); err != nil {
+			return err
+		}
+	} else if err := os.MkdirAll(cfg.Path, 0o755); err != nil {
 		return fmt.Errorf("configsync: folder %q is not usable: %w", cfg.Path, err)
 	}
 	cfg.Enabled = true
@@ -148,10 +180,25 @@ func (m *Manager) Configure(ctx context.Context, cfg Config) error {
 	if err := m.persist(ctx, cfg); err != nil {
 		return err
 	}
+	if cfg.Mode == ModeInPlace {
+		return nil
+	}
 	if err := m.startWatching(ctx); err != nil {
 		return err
 	}
 	return m.TriggerSync(ctx)
+}
+
+// PeekFolder reports whether path already holds another device's in-place
+// data and, if so, a summary of what's there, for the setup ui to show
+// before the user commits to joining it.
+func (m *Manager) PeekFolder(ctx context.Context, path string) (bool, FolderSummary, error) {
+	exists, err := PeekInPlaceFolder(path, m.dbFileName)
+	if err != nil || !exists {
+		return exists, FolderSummary{}, err
+	}
+	summary, err := SummarizeInPlaceFolder(ctx, path, m.dbFileName)
+	return true, summary, err
 }
 
 // Close stops watching without changing the persisted config, so a normal
@@ -160,14 +207,25 @@ func (m *Manager) Close() {
 	m.stopWatchingLocked()
 }
 
-// Disable stops watching and turns sync off, leaving the folder's contents
-// untouched (the user may still want them, or another device may still be
-// using them).
+// Disable stops watching and turns sync off. In Mirror mode the folder's
+// contents are left untouched (another device may still be using them); in
+// InPlace mode the live data is first copied back to the default directory
+// so it is not stranded there, and the switch back takes effect next start.
 func (m *Manager) Disable(ctx context.Context) error {
 	m.stopWatchingLocked()
 	m.mu.Lock()
-	m.cfg.Enabled = false
 	cfg := m.cfg
+	m.mu.Unlock()
+
+	if cfg.Enabled && cfg.Mode == ModeInPlace {
+		if err := DisableInPlace(ctx, m.store, m.stateDir, m.dbFileName); err != nil {
+			return err
+		}
+	}
+
+	m.mu.Lock()
+	m.cfg.Enabled = false
+	cfg = m.cfg
 	m.mu.Unlock()
 	return m.persist(ctx, cfg)
 }
@@ -177,7 +235,7 @@ func (m *Manager) load(ctx context.Context) (Config, error) {
 	err := m.store.GetJSON(ctx, settingKey, &cfg)
 	if err != nil {
 		if err == storage.ErrSettingNotFound {
-			return Config{Mode: ModeCopy, EmailScope: EmailScopeOff}, nil
+			return Config{Mode: ModeMirror, EmailScope: EmailScopeOff}, nil
 		}
 		return Config{}, err
 	}
@@ -302,6 +360,9 @@ func (m *Manager) TriggerSync(ctx context.Context) error {
 }
 
 func (m *Manager) syncOnce(ctx context.Context, cfg Config) error {
+	if cfg.Mode == ModeInPlace {
+		return nil
+	}
 	if cfg.SyncSettings {
 		if err := m.pullSettings(ctx, cfg); err != nil {
 			return fmt.Errorf("pull settings: %w", err)
@@ -318,7 +379,7 @@ func (m *Manager) syncOnce(ctx context.Context, cfg Config) error {
 		}
 	}
 
-	if cfg.Mode != ModeCopy {
+	if cfg.Mode != ModeMirror {
 		return nil
 	}
 

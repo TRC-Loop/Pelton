@@ -85,23 +85,25 @@
       </div>
       <div class="row">
         <span class="row-label">{$t('configSync.mode')}</span>
-        <span class="row-value">{status.mode === 'copy' ? $t('configSync.modeCopyFull') : $t('configSync.modeReadonlyFull')}</span>
+        <span class="row-value">{status.mode === 'mirror' ? $t('configSync.modeMirrorFull') : $t('configSync.modeInPlaceFull')}</span>
       </div>
-      <div class="row">
-        <span class="row-label">{$t('configSync.scope')}</span>
-        <span class="row-value">
-          {[
-            status.syncSettings ? $t('configSync.scopeSettings') : null,
-            status.emailScope === 'metadata'
-              ? $t('configSync.scopeMetadata')
-              : status.emailScope === 'full'
-                ? $t('configSync.scopeFullCache')
-                : null,
-          ]
-            .filter(Boolean)
-            .join(', ') || $t('configSync.scopeNothing')}
-        </span>
-      </div>
+      {#if status.mode === 'mirror'}
+        <div class="row">
+          <span class="row-label">{$t('configSync.scope')}</span>
+          <span class="row-value">
+            {[
+              status.syncSettings ? $t('configSync.scopeSettings') : null,
+              status.emailScope === 'metadata'
+                ? $t('configSync.scopeMetadata')
+                : status.emailScope === 'full'
+                  ? $t('configSync.scopeFullCache')
+                  : null,
+            ]
+              .filter(Boolean)
+              .join(', ') || $t('configSync.scopeNothing')}
+          </span>
+        </div>
+      {/if}
       <div class="row">
         <span class="row-label">{$t('configSync.lastSynced')}</span>
         <span class="row-value">
@@ -117,10 +119,12 @@
     </div>
 
     <div class="actions">
-      <button type="button" class="action-btn" on:click={syncNow} disabled={syncing}>
-        <IconRefresh size={14} stroke={1.8} class={syncing ? 'spin' : ''} />
-        {$t('configSync.syncNow')}
-      </button>
+      {#if status.mode === 'mirror'}
+        <button type="button" class="action-btn" on:click={syncNow} disabled={syncing}>
+          <IconRefresh size={14} stroke={1.8} class={syncing ? 'spin' : ''} />
+          {$t('configSync.syncNow')}
+        </button>
+      {/if}
       <button type="button" class="action-btn" on:click={() => (setupOpen = true)}>{$t('configSync.changeSetup')}</button>
       <button type="button" class="action-btn danger" on:click={disable}>{$t('configSync.disable')}</button>
     </div>
@@ -240,6 +244,11 @@
   }
 
   :global(.spin) {
+    /* svg transform-origin defaults differ across the webviews wails embeds
+       per platform (webkit vs webview2); pin it explicitly so the icon spins
+       in place instead of wobbling around an off-center pivot on some os. */
+    transform-box: border-box;
+    transform-origin: 50% 50%;
     animation: spin 0.8s linear infinite;
   }
 

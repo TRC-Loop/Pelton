@@ -45,6 +45,7 @@ const (
 	settingSwipeRight          = "swipe_right_action"
 	settingVimMode             = "compose_vim_mode"
 	settingDownloadAtts        = "download_include_attachments"
+	settingDownloadPending     = "download_pending_since"
 	settingAppVimMode          = "app_vim_mode"
 	settingLanguage            = "language"
 	settingLowPower            = "low_power_mode"

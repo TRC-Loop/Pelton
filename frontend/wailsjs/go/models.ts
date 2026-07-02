@@ -220,6 +220,22 @@ export namespace desktop {
 		    return a;
 		}
 	}
+	export class ConfigSyncFolderPeekDTO {
+	    hasExistingData: boolean;
+	    accountEmails: string[];
+	    modifiedUnix: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new ConfigSyncFolderPeekDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.hasExistingData = source["hasExistingData"];
+	        this.accountEmails = source["accountEmails"];
+	        this.modifiedUnix = source["modifiedUnix"];
+	    }
+	}
 	export class ConfigSyncStatusDTO {
 	    enabled: boolean;
 	    mode: string;

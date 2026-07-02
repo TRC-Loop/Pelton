@@ -50,10 +50,15 @@ if [ -d "$app" ]; then
   res="$app/Contents/Resources"
   mkdir -p "$res"
   cp "$work/out/Assets.car" "$res/Assets.car"
-  # install the static icns too, matching CFBundleIconFile=iconfile so older
-  # systems still show an icon. keep the asset-catalog name available as well.
   cp "$work/out/$icon_name.icns" "$res/$icon_name.icns"
-  cp "$work/out/$icon_name.icns" "$res/iconfile.icns"
+  # CFBundleIconFile=iconfile is what pre-macOS-26 systems (everything today,
+  # including every CI runner) actually display - they don't understand
+  # Assets.car/CFBundleIconName at all. actool's own $icon_name.icns fallback
+  # is meant for that same Liquid Glass pipeline and isn't pre-masked with
+  # rounded corners the way a normal .icns is, so on those systems it showed
+  # up as a square with a visible outline. build/icons/pelton.icns is the
+  # repo's regular, properly masked icon; use that for the pre-26 fallback.
+  cp "$repo_root/build/icons/pelton.icns" "$res/iconfile.icns"
   echo "installed Assets.car + $icon_name.icns into $res"
 
   # ensure Info.plist references the asset-catalog icon, even if this .app was

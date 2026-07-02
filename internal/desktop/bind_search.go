@@ -22,13 +22,9 @@ const indexFileName = "search.bleve"
 const searchBatchSize = 500
 
 // openSearchIndex opens (creating it if needed) the Bleve index alongside the
-// database file.
-func openSearchIndex() (*search.Index, error) {
-	dbPath, err := storage.DefaultPath()
-	if err != nil {
-		return nil, err
-	}
-	return search.Open(filepath.Join(filepath.Dir(dbPath), indexFileName))
+// database, in dataDir (see openStore).
+func openSearchIndex(dataDir string) (*search.Index, error) {
+	return search.Open(filepath.Join(dataDir, indexFileName))
 }
 
 // backfillSearch brings the index up to date with the cached messages. It runs at

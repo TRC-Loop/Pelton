@@ -388,8 +388,9 @@ export function configureConfigSync(
   path: string,
   syncSettings: boolean,
   emailScope: string,
+  mergeOnJoin: boolean,
 ): Promise<ConfigSyncStatus> {
-  return App.ConfigureConfigSync(mode, path, syncSettings, emailScope)
+  return App.ConfigureConfigSync(mode, path, syncSettings, emailScope, mergeOnJoin)
 }
 
 export function disableConfigSync(): Promise<ConfigSyncStatus> {
@@ -402,6 +403,16 @@ export function triggerConfigSync(): Promise<ConfigSyncStatus> {
 
 export function pickConfigSyncFolder(): Promise<string> {
   return App.PickConfigSyncFolder()
+}
+
+export interface ConfigSyncFolderPeek {
+  hasExistingData: boolean
+  accountEmails: string[]
+  modifiedUnix: number
+}
+
+export function peekConfigSyncFolder(path: string): Promise<ConfigSyncFolderPeek> {
+  return App.PeekConfigSyncFolder(path)
 }
 
 // --- address book ---

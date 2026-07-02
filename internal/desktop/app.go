@@ -22,11 +22,17 @@ import (
 // App is the bound application object. Its exported methods form the api the
 // frontend calls.
 type App struct {
-	ctx   context.Context
-	log   *slog.Logger
+	ctx context.Context
+	log *slog.Logger
+
 	store *storage.DB
 	index *search.Index
 	sync  *configsync.Manager
+	// defaultStateDir is the device's normal per-OS app-support directory,
+	// independent of an active configsync in-place folder. It is where the
+	// configsync markers live so they are discoverable regardless of which
+	// directory storage actually opened from.
+	defaultStateDir string
 	// searchMu serializes index backfills so a startup pass and a post-sync pass
 	// do not advance the watermark concurrently.
 	searchMu sync.Mutex
@@ -54,7 +60,7 @@ func newApp(version string) *App {
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
 
-	store, err := openStore(ctx)
+	store, dataDir, err := openStore(ctx)
 	if err != nil {
 		a.log.Error("open store", "err", err)
 		return
@@ -62,8 +68,9 @@ func (a *App) startup(ctx context.Context) {
 	a.store = store
 	a.queue = outbox.NewQueue(store)
 
-	if dbPath, pathErr := storage.DefaultPath(); pathErr == nil {
-		a.sync = configsync.New(store, filepath.Dir(dbPath), a.log)
+	if defaultPath, pathErr := storage.DefaultPath(); pathErr == nil {
+		a.defaultStateDir = filepath.Dir(defaultPath)
+		a.sync = configsync.New(store, a.defaultStateDir, filepath.Base(defaultPath), a.log)
 		a.sync.OnSync(func(cfg configsync.Config) {
 			a.emit(EventConfigSync, cfg)
 		})
@@ -74,7 +81,7 @@ func (a *App) startup(ctx context.Context) {
 
 	// open the search index and bring it up to date in the background so startup
 	// is not blocked by a large backfill. a failure here only disables search.
-	if idx, err := openSearchIndex(); err != nil {
+	if idx, err := openSearchIndex(dataDir); err != nil {
 		a.log.Error("open search index", "err", err)
 	} else {
 		a.index = idx
@@ -87,6 +94,11 @@ func (a *App) startup(ctx context.Context) {
 	// frequency in settings. backgrounded so a slow/unreachable network never
 	// delays startup.
 	go a.maybeAutoCheckForUpdates(ctx)
+
+	// if a bulk offline download was still running when the app last closed,
+	// pick it back up; planDownload skips anything already cached so this is
+	// cheap when most of the range was already fetched.
+	a.ResumePendingDownload()
 }
 
 // shutdown is the wails OnShutdown hook. It closes the store so the sqlite wal
@@ -107,30 +119,41 @@ func (a *App) shutdown(ctx context.Context) {
 	}
 }
 
-// openStore opens the default database location and applies migrations. It is
-// the same path the cli tools use, so accounts they created are visible here.
-func openStore(ctx context.Context) (*storage.DB, error) {
-	path, err := storage.DefaultPath()
+// openStore opens the database and applies migrations, returning the
+// directory it opened from. That is normally the default per-OS app-support
+// directory (the same path the cli tools use, so accounts they created are
+// visible here), but configsync's in-place mode can redirect it to a folder
+// the user chose instead - see configsync.ActiveDataDir.
+func openStore(ctx context.Context) (*storage.DB, string, error) {
+	defaultPath, err := storage.DefaultPath()
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
+	defaultDir := filepath.Dir(defaultPath)
+	dbFileName := filepath.Base(defaultPath)
+
+	dataDir, err := configsync.ActiveDataDir(defaultDir, defaultDir)
+	if err != nil {
+		return nil, "", err
+	}
+	path := filepath.Join(dataDir, dbFileName)
+
 	// if a previous run's full-cache config sync armed a restore (the live db
 	// cannot be swapped out from under an open connection), apply it now,
 	// before anything opens the database.
-	stateDir := filepath.Dir(path)
-	attachmentsDir := filepath.Join(stateDir, "attachments")
-	if err := configsync.ApplyPendingFullRestore(stateDir, path, attachmentsDir); err != nil {
-		return nil, err
+	attachmentsDir := filepath.Join(dataDir, "attachments")
+	if err := configsync.ApplyPendingFullRestore(defaultDir, path, attachmentsDir); err != nil {
+		return nil, "", err
 	}
 	store, err := storage.Open(path)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 	if err := store.RunMigrations(ctx); err != nil {
 		store.Close()
-		return nil, err
+		return nil, "", err
 	}
-	return store, nil
+	return store, dataDir, nil
 }
 
 // AppVersion returns the build version string for the about section. It is set

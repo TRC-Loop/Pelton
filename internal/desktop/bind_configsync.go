@@ -42,11 +42,14 @@ func (a *App) GetConfigSyncStatus() (ConfigSyncStatusDTO, error) {
 }
 
 // ConfigureConfigSync sets up (or reconfigures) settings sync: the folder,
-// the mode (copy or readonly), whether settings are included, and the email
-// scope (off, metadata, or full). It runs an initial sync pass before
-// returning, so setup errors (an unwritable folder, for instance) surface
-// immediately in the setup modal.
-func (a *App) ConfigureConfigSync(mode string, path string, syncSettings bool, emailScope string) (ConfigSyncStatusDTO, error) {
+// the mode (mirror or inplace), whether settings are included, and the email
+// scope (off, metadata, or full; ignored for inplace). mergeOnJoin only
+// matters for inplace mode when path already holds another device's data:
+// true merges this device's accounts and settings into it, false discards
+// this device's local state and adopts what's there. It runs an initial sync
+// pass before returning, so setup errors (an unwritable folder, for
+// instance) surface immediately in the setup modal.
+func (a *App) ConfigureConfigSync(mode string, path string, syncSettings bool, emailScope string, mergeOnJoin bool) (ConfigSyncStatusDTO, error) {
 	if err := a.ready(); err != nil {
 		return ConfigSyncStatusDTO{}, err
 	}
@@ -59,10 +62,40 @@ func (a *App) ConfigureConfigSync(mode string, path string, syncSettings bool, e
 		SyncSettings: syncSettings,
 		EmailScope:   configsync.EmailScope(emailScope),
 	}
-	if err := a.sync.Configure(a.ctx, cfg); err != nil {
+	if err := a.sync.Configure(a.ctx, cfg, mergeOnJoin); err != nil {
 		return toConfigSyncDTO(a.sync.Status()), err
 	}
 	return toConfigSyncDTO(a.sync.Status()), nil
+}
+
+// ConfigSyncFolderPeekDTO describes what PeekConfigSyncFolder found at a
+// candidate in-place folder, so the setup ui can show "this folder already
+// has a Pelton setup with N accounts, last used on X" before the user picks
+// erase-or-merge and commits.
+type ConfigSyncFolderPeekDTO struct {
+	HasExistingData bool     `json:"hasExistingData"`
+	AccountEmails   []string `json:"accountEmails"`
+	ModifiedUnix    int64    `json:"modifiedUnix"`
+}
+
+// PeekConfigSyncFolder inspects a candidate in-place folder without changing
+// anything or committing to it.
+func (a *App) PeekConfigSyncFolder(path string) (ConfigSyncFolderPeekDTO, error) {
+	if err := a.ready(); err != nil {
+		return ConfigSyncFolderPeekDTO{}, err
+	}
+	if a.sync == nil {
+		return ConfigSyncFolderPeekDTO{}, errConfigSyncUnavailable
+	}
+	exists, summary, err := a.sync.PeekFolder(a.ctx, path)
+	if err != nil {
+		return ConfigSyncFolderPeekDTO{}, err
+	}
+	return ConfigSyncFolderPeekDTO{
+		HasExistingData: exists,
+		AccountEmails:   summary.AccountEmails,
+		ModifiedUnix:    summary.ModifiedUnix,
+	}, nil
 }
 
 // DisableConfigSync turns settings sync off without touching the folder's
