@@ -303,18 +303,33 @@ func (a *App) idleSession(account storage.Account) error {
 		return fmt.Errorf("select inbox for idle: %w", err)
 	}
 
+	// client.Updates() is never closed, so without this the listener goroutine
+	// below would leak on every reconnect (idleLoop calls idleSession again on
+	// error, each time with a fresh client and channel). sessionCtx ties the
+	// goroutine's lifetime to this call.
+	sessionCtx, cancel := context.WithCancel(a.ctx)
+	defer cancel()
+
 	go func() {
-		for range client.Updates() {
-			syncMu.Lock()
-			// idle only watches INBOX, so only resync INBOX here; a full
-			// resync of every folder would make each push wait on folders
-			// that did not change, delaying the new mail this update is
-			// actually about. other folders still get picked up by the
-			// periodic full sync (runAutoSyncLoop).
-			if err := a.syncOneFolder(client, *inbox); err != nil {
-				a.log.Error("idle resync", "err", err)
+		for {
+			select {
+			case <-sessionCtx.Done():
+				return
+			case _, ok := <-client.Updates():
+				if !ok {
+					return
+				}
+				syncMu.Lock()
+				// idle only watches INBOX, so only resync INBOX here; a full
+				// resync of every folder would make each push wait on folders
+				// that did not change, delaying the new mail this update is
+				// actually about. other folders still get picked up by the
+				// periodic full sync (runAutoSyncLoop).
+				if err := a.syncOneFolder(client, *inbox); err != nil {
+					a.log.Error("idle resync", "err", err)
+				}
+				syncMu.Unlock()
 			}
-			syncMu.Unlock()
 		}
 	}()
 
