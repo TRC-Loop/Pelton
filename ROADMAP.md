@@ -15,7 +15,7 @@ free to open an issue or PR to discuss or propose additions.
 
 ## Under consideration
 
-*empty*
+- Autoupdater (Sparke on mac)
 
 ## Done
 
