@@ -343,4 +343,4 @@ jobs:
         env:
           VERSION: ${{ steps.version.outputs.rpm_version }}
           COPR_USERNAME: ${{ secrets.COPR_USERNAME }}
-        run: copr-cli build "$COPR_USERNAME/pelton" "pelton-$VERSION.src.rpm" --nowait
+        run: copr-cli build "$COPR_USERNAME/Pelton" "pelton-$VERSION.src.rpm" --nowait

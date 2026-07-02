@@ -125,7 +125,7 @@ Two ways to install, pick one:
 **Via `dnf` (recommended - gets updates automatically once you upgrade):**
 
 ```sh
-sudo dnf copr enable arnek/pelton
+sudo dnf copr enable arnek/Pelton
 sudo dnf install pelton
 ```
 
