@@ -95,9 +95,16 @@ jobs:
       - name: Build .dmg
         run: |
           rm -f "build/bin/Pelton.dmg"
+          # pelton.icns only exists when the Liquid Glass step above actually
+          # ran (needs a recent-enough Xcode); iconfile.icns is Wails' own
+          # always-present default icon, so fall back to that.
+          icns="build/bin/Pelton.app/Contents/Resources/pelton.icns"
+          if [ ! -f "$icns" ]; then
+            icns="build/bin/Pelton.app/Contents/Resources/iconfile.icns"
+          fi
           create-dmg \
             --volname "Pelton" \
-            --volicon "build/bin/Pelton.app/Contents/Resources/pelton.icns" \
+            --volicon "$icns" \
             --window-size 540 380 \
             --icon-size 128 \
             --icon "Pelton.app" 130 170 \
@@ -140,6 +147,9 @@ jobs:
 
       - name: Install wails CLI
         run: go install github.com/wailsapp/wails/v2/cmd/wails@${{ env.WAILS_VERSION }}
+
+      - name: Install NSIS
+        run: choco install nsis -y
 
       - name: Install dependencies
         run: |
@@ -215,7 +225,7 @@ jobs:
           echo "rpm_version=${raw#v}" >> "$GITHUB_OUTPUT"
 
       - name: Build
-        run: wails build -platform linux/amd64 -ldflags "-X main.version=${{ steps.version.outputs.version }}"
+        run: wails build -platform linux/amd64 -tags webkit2_41 -ldflags "-X main.version=${{ steps.version.outputs.version }}"
 
       - name: Build .rpm
         env:
@@ -285,7 +295,7 @@ jobs:
           echo "rpm_version=${raw#v}" >> "$GITHUB_OUTPUT"
 
       - name: Build
-        run: wails build -platform linux/amd64 -ldflags "-X main.version=${{ steps.version.outputs.rpm_version }}"
+        run: wails build -platform linux/amd64 -tags webkit2_41 -ldflags "-X main.version=${{ steps.version.outputs.rpm_version }}"
 
       - name: Assemble source tarball
         env:
