@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -213,6 +214,43 @@ func (a *App) syncFolders(client *pimap.Client, accountID int64) error {
 	return nil
 }
 
+// findInboxFolder returns the account's INBOX folder row. IMAP's INBOX is a
+// case-insensitive special name, so the match ignores case.
+func (a *App) findInboxFolder(accountID int64) (*storage.Folder, error) {
+	folders, err := a.store.ListFolders(a.ctx, accountID)
+	if err != nil {
+		return nil, err
+	}
+	for i := range folders {
+		if strings.EqualFold(folders[i].IMAPPath, "INBOX") {
+			return &folders[i], nil
+		}
+	}
+	return nil, fmt.Errorf("no inbox folder for account %d", accountID)
+}
+
+// syncOneFolder runs the sync engine over a single folder, emitting the same
+// progress/new-mail events syncFolders would, without touching any other
+// folder on the account. Used by the idle push handler so a single INBOX
+// update does not pay for a full-account resync.
+func (a *App) syncOneFolder(client *pimap.Client, folder storage.Folder) error {
+	engine := psync.NewEngine(client, a.store, a.log)
+	engine.ColorSync = a.boolSetting(settingFlagColorSync, false)
+
+	res, err := engine.SyncFolder(a.ctx, folder)
+	if err != nil {
+		return err
+	}
+	if res.New > 0 {
+		a.emit(EventMailNew, MailNewEvent{AccountID: folder.AccountID, FolderID: folder.ID, Count: res.New})
+		go a.indexNewMessages()
+		if !a.lowPowerMode() {
+			go a.harvestAddressBook()
+		}
+	}
+	return nil
+}
+
 // idleLoop parks one account on imap idle and re-syncs when the server reports
 // activity, reconnecting with a short backoff and exiting on app shutdown.
 func (a *App) idleLoop(account storage.Account) {
@@ -257,14 +295,23 @@ func (a *App) idleSession(account storage.Account) error {
 	// IDLE requires a selected mailbox; the server reports unsolicited activity
 	// for whichever mailbox is selected, so we monitor INBOX (where new mail
 	// lands). without this SELECT the server rejects IDLE outright.
-	if _, err := client.Select("INBOX"); err != nil {
+	inbox, err := a.findInboxFolder(account.ID)
+	if err != nil {
+		return fmt.Errorf("look up inbox folder: %w", err)
+	}
+	if _, err := client.Select(inbox.IMAPPath); err != nil {
 		return fmt.Errorf("select inbox for idle: %w", err)
 	}
 
 	go func() {
 		for range client.Updates() {
 			syncMu.Lock()
-			if err := a.syncFolders(client, account.ID); err != nil {
+			// idle only watches INBOX, so only resync INBOX here; a full
+			// resync of every folder would make each push wait on folders
+			// that did not change, delaying the new mail this update is
+			// actually about. other folders still get picked up by the
+			// periodic full sync (runAutoSyncLoop).
+			if err := a.syncOneFolder(client, *inbox); err != nil {
 				a.log.Error("idle resync", "err", err)
 			}
 			syncMu.Unlock()
