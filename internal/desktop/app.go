@@ -87,6 +87,11 @@ func (a *App) startup(ctx context.Context) {
 	// frequency in settings. backgrounded so a slow/unreachable network never
 	// delays startup.
 	go a.maybeAutoCheckForUpdates(ctx)
+
+	// if a bulk offline download was still running when the app last closed,
+	// pick it back up; planDownload skips anything already cached so this is
+	// cheap when most of the range was already fetched.
+	a.ResumePendingDownload()
 }
 
 // shutdown is the wails OnShutdown hook. It closes the store so the sqlite wal

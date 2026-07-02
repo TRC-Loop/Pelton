@@ -196,12 +196,39 @@ func (a *App) DownloadRange(startDateRFC3339 string, includeAttachments bool) er
 
 	// remember the attachment choice as the default for next time.
 	_ = a.store.SetBool(a.ctx, settingDownloadAtts, includeAttachments)
+	// remember the range itself so a restart mid-download can pick back up
+	// instead of silently dropping the job (see ResumePendingDownload).
+	_ = a.store.Set(a.ctx, settingDownloadPending, since.Format(time.RFC3339))
 
 	// run the whole job on a background goroutine so the bound call returns
 	// immediately and neither the ui nor the go caller waits on imap. progress
 	// and completion are reported entirely through events.
 	go a.runRangeDownload(since, includeAttachments)
 	return nil
+}
+
+// ResumePendingDownload restarts a bulk download that was still running when
+// the app last closed. planDownload/planAccount already skip anything cached,
+// so replaying the same range only fetches whatever the previous run had not
+// gotten to yet. Called once from startup; a no-op if nothing was pending.
+func (a *App) ResumePendingDownload() {
+	raw, err := a.store.Get(a.ctx, settingDownloadPending)
+	if err != nil || raw == "" {
+		return
+	}
+	since, err := time.Parse(time.RFC3339, raw)
+	if err != nil {
+		_ = a.store.Set(a.ctx, settingDownloadPending, "")
+		return
+	}
+	if a.lowPowerMode() {
+		return
+	}
+	includeAttachments := a.boolSetting(settingDownloadAtts, true)
+	if !downloadActive.CompareAndSwap(false, true) {
+		return
+	}
+	go a.runRangeDownload(since, includeAttachments)
 }
 
 // DownloadEstimateDTO is the offline-download space estimate: how many
@@ -313,6 +340,9 @@ func (a *App) estimateAccountSize(account storage.Account, folderIDs []int64, fo
 // runRangeDownload performs the plan-and-fetch passes off the calling goroutine.
 func (a *App) runRangeDownload(since time.Time, includeAttachments bool) {
 	defer downloadActive.Store(false)
+	// the job is no longer resumable once it either finishes or gives up;
+	// clear the marker before returning on every exit path.
+	defer func() { _ = a.store.Set(a.ctx, settingDownloadPending, "") }()
 
 	a.emit(EventDownloadProgress, DownloadProgressEvent{Running: true, Label: "Scanning"})
 	tasks, err := a.planDownload(since)
