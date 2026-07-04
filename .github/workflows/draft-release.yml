@@ -64,15 +64,18 @@ jobs:
               const { data: cmp } = await github.rest.repos.compareCommitsWithBasehead({
                 owner, repo, basehead: `${PREVIOUS_TAG}...${CURRENT_TAG}`,
               });
+              console.log(`compare ${PREVIOUS_TAG}...${CURRENT_TAG}: ${cmp.commits.length} commits`);
               for (const commit of cmp.commits) {
                 const { data: associated } = await github.rest.repos.listPullRequestsAssociatedWithCommit({
                   owner, repo, commit_sha: commit.sha,
                 });
+                console.log(`  ${commit.sha}: ${associated.map((p) => `#${p.number}(merged_at=${p.merged_at})`).join(", ") || "none"}`);
                 for (const pr of associated) {
                   if (pr.merged_at) prNumbers.add(pr.number);
                 }
               }
             }
+            console.log(`prNumbers: ${[...prNumbers].join(", ")}`);
 
             const prs = [];
             for (const number of prNumbers) {
