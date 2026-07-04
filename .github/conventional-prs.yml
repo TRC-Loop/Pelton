@@ -15,3 +15,32 @@ jobs:
       - uses: amannn/action-semantic-pull-request@v6
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # labels the PR from its title's conventional-commit type (feat/fix/docs/...)
+      # so .github/release.yml can categorize and exclude release notes by label.
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const match = context.payload.pull_request.title.match(/^(\w+)(\(.+\))?!?:/);
+            if (!match) return;
+
+            const labelByType = {
+              feat: "feature",
+              fix: "fix",
+              docs: "documentation",
+              chore: "no-changelog",
+              ci: "no-changelog",
+              build: "no-changelog",
+              test: "no-changelog",
+              style: "no-changelog",
+              refactor: "no-changelog",
+            };
+            const label = labelByType[match[1]];
+            if (!label) return;
+
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+              labels: [label],
+            });

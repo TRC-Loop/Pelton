@@ -1,0 +1,116 @@
+name: Draft release changelog
+
+# Pushing a version tag (vX.Y.Z) builds a categorized changelog from merged
+# PRs since the previous tag and opens (or updates) a *draft* GitHub Release
+# with it. Nothing is published automatically - review the draft, edit if
+# needed, and hit "Publish release" yourself. Publishing is what fires
+# release.yml's build/upload jobs (it only reacts to `release: published`).
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  draft-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Determine previous tag
+        id: prev
+        run: |
+          CURRENT="${GITHUB_REF#refs/tags/}"
+          PREVIOUS=$(git tag --sort=-v:refname | grep -vF "$CURRENT" | head -n1)
+          echo "current=$CURRENT" >> "$GITHUB_OUTPUT"
+          echo "previous=$PREVIOUS" >> "$GITHUB_OUTPUT"
+
+      - name: Build changelog and draft release
+        uses: actions/github-script@v7
+        env:
+          CURRENT_TAG: ${{ steps.prev.outputs.current }}
+          PREVIOUS_TAG: ${{ steps.prev.outputs.previous }}
+        with:
+          script: |
+            const { CURRENT_TAG, PREVIOUS_TAG } = process.env;
+            const { owner, repo } = context.repo;
+
+            // Category label -> section title, in display order. Anything not
+            // matching one of these (and not excluded) lands in "Other Changes".
+            const CATEGORY_LABELS = [
+              ["feature", "Features"],
+              ["fix", "Bug Fixes"],
+            ];
+            const EXCLUDE_LABELS = new Set(["documentation", "no-changelog"]);
+
+            // Find every PR merged between the previous tag and this one, via
+            // the commit range's squash-merge messages ("... (#123)").
+            let prNumbers = new Set();
+            if (PREVIOUS_TAG) {
+              const { data: cmp } = await github.rest.repos.compareCommitsWithBasehead({
+                owner, repo, basehead: `${PREVIOUS_TAG}...${CURRENT_TAG}`,
+              });
+              for (const commit of cmp.commits) {
+                const match = commit.commit.message.match(/\(#(\d+)\)/);
+                if (match) prNumbers.add(Number(match[1]));
+              }
+            }
+
+            const prs = [];
+            for (const number of prNumbers) {
+              const { data: pr } = await github.rest.pulls.get({ owner, repo, pull_number: number });
+              if (!pr.merged_at) continue;
+              prs.push(pr);
+            }
+            prs.sort((a, b) => new Date(a.merged_at) - new Date(b.merged_at));
+
+            const sections = new Map(CATEGORY_LABELS.map(([, title]) => [title, []]));
+            sections.set("Other Changes", []);
+
+            for (const pr of prs) {
+              const labels = pr.labels.map((l) => l.name);
+              if (labels.some((l) => EXCLUDE_LABELS.has(l))) continue;
+
+              const match = CATEGORY_LABELS.find(([label]) => labels.includes(label));
+              const title = match ? match[1] : "Other Changes";
+
+              const avatar = `<img src="${pr.user.avatar_url}&s=32" width="16" height="16" valign="middle" style="border-radius:50%;">`;
+              const credit = `${avatar} [@${pr.user.login}](${pr.user.html_url}) in [#${pr.number}](${pr.html_url})`;
+              const body = (pr.body || "").trim();
+
+              const entry = body
+                ? `<details>\n<summary><strong>${pr.title}</strong> - ${credit}</summary>\n\n${body}\n\n</details>`
+                : `- **${pr.title}** - ${credit}`;
+
+              sections.get(title).push(entry);
+            }
+
+            const parts = [];
+            for (const [title, entries] of sections) {
+              if (entries.length === 0) continue;
+              parts.push(`## ${title}\n\n${entries.join("\n")}`);
+            }
+            if (PREVIOUS_TAG) {
+              parts.push(`**Full Changelog**: https://github.com/${owner}/${repo}/compare/${PREVIOUS_TAG}...${CURRENT_TAG}`);
+            }
+            const body = parts.join("\n\n");
+
+            let existing = null;
+            try {
+              const { data } = await github.rest.repos.getReleaseByTag({ owner, repo, tag: CURRENT_TAG });
+              existing = data;
+            } catch (err) {
+              if (err.status !== 404) throw err;
+            }
+
+            if (existing) {
+              await github.rest.repos.updateRelease({ owner, repo, release_id: existing.id, body });
+            } else {
+              await github.rest.repos.createRelease({
+                owner, repo, tag_name: CURRENT_TAG, name: CURRENT_TAG, body, draft: true,
+              });
+            }
