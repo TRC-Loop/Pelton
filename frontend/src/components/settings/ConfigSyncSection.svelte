@@ -23,6 +23,7 @@
   let status: ConfigSyncStatus | null = null
   let loading = true
   let setupOpen = false
+  let importOpen = false
   let syncing = false
 
   onMount(async () => {
@@ -68,6 +69,7 @@
   function onConfigured(next: ConfigSyncStatus): void {
     status = next
     setupOpen = false
+    importOpen = false
   }
 </script>
 
@@ -76,7 +78,10 @@
     <p class="hint">{$t('configSync.loading')}</p>
   {:else if !status?.enabled}
     <p class="hint">{$t('configSync.introHint')}</p>
-    <button type="button" class="primary" on:click={() => (setupOpen = true)}>{$t('configSync.setup')}</button>
+    <div class="actions">
+      <button type="button" class="primary" on:click={() => (setupOpen = true)}>{$t('configSync.setup')}</button>
+      <button type="button" class="action-btn" on:click={() => (importOpen = true)}>{$t('configSync.importExisting')}</button>
+    </div>
   {:else}
     <div class="status">
       <div class="row">
@@ -137,6 +142,18 @@
       this={m.default}
       current={status}
       on:close={() => (setupOpen = false)}
+      on:configured={(e) => onConfigured(e.detail)}
+    />
+  {/await}
+{/if}
+
+{#if importOpen}
+  {#await import('./ConfigSyncSetupModal.svelte') then m}
+    <svelte:component
+      this={m.default}
+      current={status}
+      importMode={true}
+      on:close={() => (importOpen = false)}
       on:configured={(e) => onConfigured(e.detail)}
     />
   {/await}
