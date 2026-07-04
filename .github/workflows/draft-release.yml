@@ -9,6 +9,11 @@ on:
   push:
     tags:
       - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to (re)generate a draft release for, e.g. v1.0.2"
+        required: true
 
 permissions:
   contents: write
@@ -23,8 +28,10 @@ jobs:
 
       - name: Determine previous tag
         id: prev
+        env:
+          DISPATCH_TAG: ${{ inputs.tag }}
         run: |
-          CURRENT="${GITHUB_REF#refs/tags/}"
+          CURRENT="${DISPATCH_TAG:-${GITHUB_REF#refs/tags/}}"
           PREVIOUS=$(git tag --sort=-v:refname | grep -vF "$CURRENT" | head -n1)
           echo "current=$CURRENT" >> "$GITHUB_OUTPUT"
           echo "previous=$PREVIOUS" >> "$GITHUB_OUTPUT"
@@ -47,16 +54,22 @@ jobs:
             ];
             const EXCLUDE_LABELS = new Set(["documentation", "no-changelog"]);
 
-            // Find every PR merged between the previous tag and this one, via
-            // the commit range's squash-merge messages ("... (#123)").
+            // Find every PR merged between the previous tag and this one. Look
+            // up each commit's associated PR via the API instead of parsing
+            // commit messages, so this works for merge commits, squash merges,
+            // and rebase merges alike.
             let prNumbers = new Set();
             if (PREVIOUS_TAG) {
               const { data: cmp } = await github.rest.repos.compareCommitsWithBasehead({
                 owner, repo, basehead: `${PREVIOUS_TAG}...${CURRENT_TAG}`,
               });
               for (const commit of cmp.commits) {
-                const match = commit.commit.message.match(/\(#(\d+)\)/);
-                if (match) prNumbers.add(Number(match[1]));
+                const { data: associated } = await github.rest.repos.listPullRequestsAssociatedWithCommit({
+                  owner, repo, commit_sha: commit.sha,
+                });
+                for (const pr of associated) {
+                  if (pr.merged_at) prNumbers.add(pr.number);
+                }
               }
             }
 
