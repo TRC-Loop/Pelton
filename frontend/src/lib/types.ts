@@ -110,6 +110,9 @@ export interface ComposeRequest {
   inReplyTo: string
   references: string[]
   attachments: ComposeAttachment[]
+  // optional RFC3339 timestamp for a scheduled ("send later") send. empty
+  // means send immediately, subject to the undo-send delay.
+  sendAt: string
 }
 
 export interface Draft {

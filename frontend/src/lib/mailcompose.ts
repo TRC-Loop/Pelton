@@ -71,6 +71,7 @@ export function buildRequest(session: ComposeSession): ComposeRequest {
     inReplyTo: session.inReplyTo,
     references: session.references,
     attachments: session.attachments,
+    sendAt: '',
   } as ComposeRequest
 }
 
