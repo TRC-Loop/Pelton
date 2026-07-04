@@ -24,6 +24,8 @@
   import EditorModeSwitch from './EditorModeSwitch.svelte'
   import EditorToolbar from './EditorToolbar.svelte'
   import AttachmentPicker from './AttachmentPicker.svelte'
+  import DateTimePicker from '../common/DateTimePicker.svelte'
+  import { currentUIScale } from '../../theme/theme'
   import { updateCompose, closeCompose, setComposeFullscreenDefault, type ComposeSession } from '../../stores/compose'
   import { signatures, signatureById, getAccountSignatures } from '../../stores/signatures'
   import type { Signature } from '../../lib/types'
@@ -51,6 +53,7 @@
   // the compose pane clips overflow.
   let sendMenuOpen = false
   let sendCaretEl: HTMLButtonElement
+  let sendMenuEl: HTMLDivElement
   let sendMenuLeft = 0
   let sendMenuTop = 0
   let customSendValue = ''
@@ -97,6 +100,9 @@
 
   // toggleSendMenu opens the menu anchored above the caret button (fixed
   // positioning, since the compose pane itself clips overflow) or closes it.
+  // position is computed after render, once the menu's own size is known, and
+  // clamped to the viewport so it never runs off-window regardless of where
+  // the compose pane (and its caret) happens to sit on screen.
   async function toggleSendMenu(): Promise<void> {
     if (sending) {
       return
@@ -107,10 +113,26 @@
     }
     sendMenuOpen = true
     await tick()
-    if (sendCaretEl) {
-      const rect = sendCaretEl.getBoundingClientRect()
-      sendMenuLeft = rect.right
-      sendMenuTop = rect.top - 8
+    if (sendCaretEl && sendMenuEl) {
+      // the app applies an interface zoom via css `zoom` on <html> (see
+      // ContextMenu.svelte): getBoundingClientRect position stays in unscaled
+      // screen pixels while a `position: fixed` element is placed in the
+      // zoomed layout space, so raw rect values must be divided by the scale
+      // (a no-op at 100%) before use as fixed left/top. offsetWidth/Height are
+      // already layout-space.
+      const scale = currentUIScale()
+      const margin = 8
+      const caretRect = sendCaretEl.getBoundingClientRect()
+      const caretRight = caretRect.right / scale
+      const caretTop = caretRect.top / scale
+      const menuW = sendMenuEl.offsetWidth
+      const menuH = sendMenuEl.offsetHeight
+      const vw = window.innerWidth / scale
+      const vh = window.innerHeight / scale
+      const maxLeft = vw - menuW - margin
+      const maxTop = vh - menuH - margin
+      sendMenuLeft = Math.min(Math.max(caretRight - menuW, margin), Math.max(margin, maxLeft))
+      sendMenuTop = Math.min(Math.max(caretTop - 8 - menuH, margin), Math.max(margin, maxTop))
     }
   }
 
@@ -505,6 +527,7 @@
     class="send-menu"
     role="menu"
     aria-label={$t('compose.sendLater.ariaLabel')}
+    bind:this={sendMenuEl}
     style={`left:${sendMenuLeft}px; top:${sendMenuTop}px`}
   >
     {#each formattedSendPresets as p}
@@ -517,7 +540,9 @@
     <div class="send-custom">
       <label for={`send-custom-${session.id}`}>{$t('compose.sendLater.customLabel')}</label>
       <div class="send-custom-row">
-        <input id={`send-custom-${session.id}`} type="datetime-local" bind:value={customSendValue} />
+        <div class="send-custom-picker">
+          <DateTimePicker id={`send-custom-${session.id}`} mode="datetime" bind:value={customSendValue} />
+        </div>
         <button type="button" class="send-custom-go" disabled={!customSendValue} on:click={confirmCustomSend}>
           {$t('compose.sendLater.schedule')}
         </button>
@@ -774,9 +799,11 @@
     cursor: default;
   }
 
-  /* the send-later menu is fixed-positioned (anchored to the caret button) and
-     rendered outside .compose so the pane's own overflow:hidden never clips
-     it. it opens upward, anchored by its bottom-right corner. */
+  /* the send-later menu is fixed-positioned and rendered outside .compose so
+     the pane's own overflow:hidden never clips it. left/top are computed in
+     toggleSendMenu from the menu's own measured size, clamped to the
+     viewport, so it stays fully on-screen regardless of where the compose
+     pane (and its caret) sits. */
   .send-menu-scrim {
     position: fixed;
     inset: 0;
@@ -786,7 +813,6 @@
   .send-menu {
     position: fixed;
     z-index: 141;
-    transform: translate(-100%, -100%);
     width: 260px;
     max-height: min(360px, calc(100vh - 2 * var(--space-5)));
     overflow-y: auto;
@@ -852,15 +878,9 @@
     gap: var(--space-2);
   }
 
-  .send-custom-row input {
+  .send-custom-picker {
     flex: 1;
     min-width: 0;
-    padding: var(--space-1) var(--space-2);
-    border: var(--hairline) solid var(--border-default);
-    border-radius: var(--radius-control);
-    background: var(--surface-raised);
-    color: var(--text-primary);
-    font: inherit;
   }
 
   .send-custom-go {

@@ -7,6 +7,7 @@
   import { IconX } from '@tabler/icons-svelte'
   import { contextMenu, closeContextMenu, type MenuItem } from '../../stores/contextmenu'
   import { flagColors } from '../../theme/flagcolors'
+  import { currentUIScale } from '../../theme/theme'
   import { t } from '../../lib/i18n'
 
   let menuEl: HTMLDivElement
@@ -23,14 +24,8 @@
   // positioned in the zoomed layout space, so the raw coordinates land the menu
   // in the wrong place. convert cursor and viewport into layout space by dividing
   // by the scale (a no-op at 100%). offsetWidth/Height are already layout-space.
-  function uiScale(): number {
-    const raw = getComputedStyle(document.documentElement).getPropertyValue('--ui-scale')
-    const n = parseFloat(raw)
-    return n > 0 ? n : 1
-  }
-
   async function place(x: number, y: number): Promise<void> {
-    const scale = uiScale()
+    const scale = currentUIScale()
     const mx = x / scale
     const my = y / scale
     left = mx

@@ -7,6 +7,7 @@
   // parsing/formatting untouched.
   import { tick } from 'svelte'
   import { IconCalendar, IconChevronLeft, IconChevronRight } from '@tabler/icons-svelte'
+  import { currentUIScale } from '../../theme/theme'
   import { t } from '../../lib/i18n'
 
   // the bound value: 'YYYY-MM-DD' in date mode, 'YYYY-MM-DDTHH:mm' in
@@ -20,6 +21,9 @@
 
   let open = false
   let triggerEl: HTMLButtonElement
+  let panelEl: HTMLDivElement
+  let panelLeft = 0
+  let panelTop = 0
   // 'days' is the normal month grid; 'years' is a scrollable year list opened
   // by clicking the month/year label, for jumping far without repeated
   // prev/next clicks (e.g. birthdays, old date ranges).
@@ -135,13 +139,48 @@
 
   async function openYearView(): Promise<void> {
     view = 'years'
-    await tick()
+    await positionPanel()
     yearListEl?.querySelector('.year.current')?.scrollIntoView({ block: 'center' })
   }
 
   function selectYear(y: number): void {
     viewYear = y
     view = 'days'
+    void positionPanel()
+  }
+
+  // positionPanel computes the panel's on-screen position from the trigger's
+  // and panel's own (already-rendered) rects, clamped to the viewport. the
+  // panel is `position: fixed` and placed by explicit coordinates rather than
+  // css anchoring so an ancestor with `overflow: hidden`/`auto` (settings
+  // pages, dropdown menus) never clips it - the same fix already used for the
+  // compose window's send-later menu.
+  //
+  // the app applies an interface zoom via css `zoom` on <html> (see
+  // ContextMenu.svelte). under zoom, getBoundingClientRect position (like
+  // pointer clientX/Y) stays in unscaled screen pixels while a `position:
+  // fixed` element is placed in the zoomed layout space, so raw rect values
+  // land the panel in the wrong place - dividing by the scale converts them
+  // (a no-op at 100%). offsetWidth/Height are already layout-space and must
+  // not be divided.
+  async function positionPanel(): Promise<void> {
+    await tick()
+    if (!triggerEl || !panelEl) {
+      return
+    }
+    const scale = currentUIScale()
+    const margin = 8
+    const triggerRect = triggerEl.getBoundingClientRect()
+    const triggerLeft = triggerRect.left / scale
+    const triggerBottom = triggerRect.bottom / scale
+    const panelW = panelEl.offsetWidth
+    const panelH = panelEl.offsetHeight
+    const vw = window.innerWidth / scale
+    const vh = window.innerHeight / scale
+    const maxLeft = vw - panelW - margin
+    const maxTop = vh - panelH - margin
+    panelLeft = Math.min(Math.max(triggerLeft, margin), Math.max(margin, maxLeft))
+    panelTop = Math.min(Math.max(triggerBottom + 4, margin), Math.max(margin, maxTop))
   }
 
   // weekday header letters, monday-first; the reference week (2023-01-02 was
@@ -266,6 +305,7 @@
     } else {
       open = true
       view = 'days'
+      void positionPanel()
     }
   }
 
@@ -294,7 +334,7 @@
   {#if open}
     <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
     <div class="scrim" on:click={close}></div>
-    <div class="panel">
+    <div class="panel" bind:this={panelEl} style={`left:${panelLeft}px; top:${panelTop}px`}>
       <div class="nav">
         <button
           type="button"
@@ -448,9 +488,7 @@
   }
 
   .panel {
-    position: absolute;
-    top: calc(100% + var(--space-1));
-    left: 0;
+    position: fixed;
     z-index: 301;
     width: 240px;
     padding: var(--space-3);
