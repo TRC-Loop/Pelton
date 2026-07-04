@@ -39,6 +39,7 @@
   import AboutSection from './AboutSection.svelte'
   import ToggleSwitch from '../common/ToggleSwitch.svelte'
   import LanguageSelect from '../common/LanguageSelect.svelte'
+  import DateTimePicker from '../common/DateTimePicker.svelte'
   import { pfpDataUri, type PfpStyle } from '../../lib/pfp'
   import { initials, formatBytes } from '../../lib/format'
   import {
@@ -684,7 +685,9 @@
               {/each}
             </div>
             <div class="download-row">
-              <input type="date" class="select" bind:value={downloadStart} />
+              <div class="download-date">
+                <DateTimePicker mode="date" bind:value={downloadStart} />
+              </div>
               <button
                 type="button"
                 class="action-btn"
@@ -1072,6 +1075,10 @@
     align-items: center;
     gap: var(--space-3);
     margin-top: var(--space-3);
+  }
+
+  .download-date {
+    width: 160px;
   }
 
   .download-presets {

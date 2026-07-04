@@ -17,6 +17,7 @@
   import { patchInList, removeFromList } from '../../stores/messages'
   import { toastError, toastInfo, errorMessage } from '../../stores/toast'
   import { t } from '../../lib/i18n'
+  import DateTimePicker from '../common/DateTimePicker.svelte'
 
   let hideNow = false
   let customValue = ''
@@ -156,7 +157,9 @@
     <div class="custom">
       <label for="snooze-custom">{$t('detail.snooze.pickDateTime')}</label>
       <div class="custom-row">
-        <input id="snooze-custom" type="datetime-local" bind:value={customValue} />
+        <div class="custom-picker">
+          <DateTimePicker id="snooze-custom" mode="datetime" bind:value={customValue} />
+        </div>
         <button type="button" class="go" disabled={!customValue || busy} on:click={confirmCustom}>
           {$t('detail.snooze.title')}
         </button>
@@ -288,14 +291,9 @@
     display: flex;
     gap: var(--space-2);
   }
-  .custom-row input {
+  .custom-picker {
     flex: 1;
-    padding: var(--space-2) var(--space-3);
-    border: var(--hairline) solid var(--border-default);
-    border-radius: var(--radius-control);
-    background: var(--surface-raised);
-    color: var(--text-primary);
-    font: inherit;
+    min-width: 0;
   }
   .go {
     padding: var(--space-2) var(--space-4);
