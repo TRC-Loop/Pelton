@@ -7,7 +7,24 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"time"
 )
+
+// openFileRetrying opens src for reading, retrying a few times with a short
+// backoff. See readFileRetrying in configsync.go.
+func openFileRetrying(src string) (*os.File, error) {
+	const attempts = 5
+	var f *os.File
+	var err error
+	for i := range attempts {
+		f, err = os.Open(src)
+		if err == nil || os.IsNotExist(err) {
+			return f, err
+		}
+		time.Sleep(time.Duration(200*(i+1)) * time.Millisecond)
+	}
+	return nil, fmt.Errorf("%w (if this folder is a cloud-sync placeholder, it may still be downloading)", err)
+}
 
 // pushFullSnapshot writes a consistent point-in-time copy of the local mail
 // database (via VACUUM INTO, safe against a live database) plus the
@@ -84,7 +101,7 @@ func ApplyPendingFullRestore(stateDir, dbPath, attachmentsDirPath string) error 
 }
 
 func copyFile(src, dst string) error {
-	in, err := os.Open(src)
+	in, err := openFileRetrying(src)
 	if err != nil {
 		return err
 	}

@@ -414,7 +414,7 @@ func writeJSONFile(path string, v any) error {
 }
 
 func readJSONFile(path string, v any) (bool, error) {
-	data, err := os.ReadFile(path)
+	data, err := readFileRetrying(path)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return false, nil
@@ -425,6 +425,23 @@ func readJSONFile(path string, v any) (bool, error) {
 		return false, err
 	}
 	return true, nil
+}
+
+// readFileRetrying reads path, retrying a few times with a short backoff
+// before giving up (cloud-sync placeholder files can transiently fail a read
+// while still hydrating).
+func readFileRetrying(path string) ([]byte, error) {
+	const attempts = 5
+	var data []byte
+	var err error
+	for i := range attempts {
+		data, err = os.ReadFile(path)
+		if err == nil || os.IsNotExist(err) {
+			return data, err
+		}
+		time.Sleep(time.Duration(200*(i+1)) * time.Millisecond)
+	}
+	return nil, fmt.Errorf("%w (if this folder is a cloud-sync placeholder, it may still be downloading)", err)
 }
 
 func joinPath(dir string, parts ...string) string {
