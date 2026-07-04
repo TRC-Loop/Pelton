@@ -293,9 +293,14 @@ type SettingResult struct {
 	Found bool   `json:"found"`
 }
 
-// stringSetting reads a string setting, returning def when unset or on error so
-// startup never fails on a missing preference.
+// stringSetting reads a string setting, returning def when unset, on error, or
+// if the store hasn't opened yet (domReady can fire before startup finishes
+// opening a large store, see app.go) so startup never fails on a missing
+// preference.
 func (a *App) stringSetting(key, def string) string {
+	if a.store == nil {
+		return def
+	}
 	value, err := a.store.Get(a.ctx, key)
 	if err != nil || value == "" {
 		return def
@@ -303,8 +308,12 @@ func (a *App) stringSetting(key, def string) string {
 	return value
 }
 
-// boolSetting reads a bool setting, returning def when unset or unparsable.
+// boolSetting reads a bool setting, returning def when unset, unparsable, or
+// if the store hasn't opened yet.
 func (a *App) boolSetting(key string, def bool) bool {
+	if a.store == nil {
+		return def
+	}
 	value, err := a.store.GetBool(a.ctx, key)
 	if err != nil {
 		return def
@@ -312,8 +321,12 @@ func (a *App) boolSetting(key string, def bool) bool {
 	return value
 }
 
-// intSetting reads an int setting, returning def when unset or unparsable.
+// intSetting reads an int setting, returning def when unset, unparsable, or if
+// the store hasn't opened yet.
 func (a *App) intSetting(key string, def int) int {
+	if a.store == nil {
+		return def
+	}
 	value, err := a.store.GetInt(a.ctx, key)
 	if err != nil {
 		return def
