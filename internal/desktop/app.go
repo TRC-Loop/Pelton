@@ -68,6 +68,8 @@ func (a *App) startup(ctx context.Context) {
 	a.store = store
 	a.queue = outbox.NewQueue(store)
 
+	a.applyNativeTheme(a.stringSetting(storage.SettingTheme, defaultTheme))
+
 	if defaultPath, pathErr := storage.DefaultPath(); pathErr == nil {
 		a.defaultStateDir = filepath.Dir(defaultPath)
 		a.sync = configsync.New(store, a.defaultStateDir, filepath.Base(defaultPath), a.log)

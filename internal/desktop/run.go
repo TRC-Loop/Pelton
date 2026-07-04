@@ -13,6 +13,7 @@ import (
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
 	"github.com/wailsapp/wails/v2/pkg/options/mac"
+	wailswindows "github.com/wailsapp/wails/v2/pkg/options/windows"
 )
 
 // Config carries what the root entrypoint owns: the embedded frontend assets,
@@ -54,6 +55,9 @@ func Run(cfg Config) error {
 				Title:   "Pelton",
 				Message: "An open-source desktop mail client.\nVersion " + cfg.Version,
 			},
+		},
+		Windows: &wailswindows.Options{
+			Theme: wailswindows.SystemDefault,
 		},
 		Bind: []interface{}{
 			app,
