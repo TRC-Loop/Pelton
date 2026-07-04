@@ -189,6 +189,7 @@ const fr: Record<string, string> = {
   'wizard.connectionWorks': 'La connexion fonctionne.',
   'wizard.testing': 'Test en cours…',
   'wizard.testConnection': 'Tester la connexion',
+  'wizard.testRequiredHint': 'Testez la connexion avant d\'ajouter cette boîte mail.',
   'wizard.step.oauth.title': 'Se connecter à',
   'wizard.step.oauth.note': 'OAuth utilise ton propre identifiant client enregistré (un client OAuth de bureau). Colle-le ci-dessous ; la connexion s\'ouvre dans ton navigateur et aucun secret client n\'est stocké.',
   'wizard.field.oauthClientId': 'Identifiant client OAuth',

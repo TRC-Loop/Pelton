@@ -189,6 +189,7 @@ const de: Record<string, string> = {
   'wizard.connectionWorks': 'Verbindung funktioniert.',
   'wizard.testing': 'Wird getestet…',
   'wizard.testConnection': 'Verbindung testen',
+  'wizard.testRequiredHint': 'Testen Sie die Verbindung, bevor Sie dieses Postfach hinzufügen.',
   'wizard.step.oauth.title': 'Anmelden bei',
   'wizard.step.oauth.note': 'OAuth verwendet deine eigene registrierte Client-ID (einen Desktop-OAuth-Client). Füge sie unten ein; die Anmeldung öffnet sich in deinem Browser, und es wird kein Client-Secret gespeichert.',
   'wizard.field.oauthClientId': 'OAuth-Client-ID',

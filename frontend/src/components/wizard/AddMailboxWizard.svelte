@@ -163,6 +163,21 @@
 
   $: canSubmitPassword = draft.email.includes('@') && draft.password !== '' && draft.imapHost !== ''
   $: canSignIn = draft.email.includes('@') && draft.clientId !== ''
+
+  // a passing "test connection" is required before the account can actually be
+  // added: nothing here validates that imapHost is a real, reachable server
+  // otherwise (createAccount deliberately keeps the account even if the later
+  // folder-discovery connection fails, so garbage like a random url would
+  // otherwise sail straight through). any edit to a tested field invalidates
+  // the prior result so a stale "ok" can't wave through a since-changed value.
+  $: {
+    draft.email
+    draft.imapHost
+    draft.imapPort
+    draft.password
+    testOk = null
+  }
+  $: canAddAccount = canSubmitPassword && testOk === true
 </script>
 
 <div class="screen" role="dialog" aria-modal="true" aria-label={$t('addMailbox.cta')}>
@@ -227,13 +242,14 @@
         {/if}
 
         {#if testOk === true}<p class="ok"><IconCheck size={14} stroke={2} /> {$t('wizard.connectionWorks')}</p>{/if}
+        {#if testOk === null && canSubmitPassword}<p class="note">{$t('wizard.testRequiredHint')}</p>{/if}
         {#if error}<p class="err">{error}</p>{/if}
 
         <div class="actions">
           <button type="button" class="ghost" on:click={test} disabled={testing || !canSubmitPassword}>
             {testing ? $t('wizard.testing') : $t('wizard.testConnection')}
           </button>
-          <button type="button" class="primary" on:click={addPassword} disabled={!canSubmitPassword}>
+          <button type="button" class="primary" on:click={addPassword} disabled={!canAddAccount}>
             {$t('addMailbox.cta')}
           </button>
         </div>

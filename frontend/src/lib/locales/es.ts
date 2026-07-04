@@ -189,6 +189,7 @@ const es: Record<string, string> = {
   'wizard.connectionWorks': 'La conexión funciona.',
   'wizard.testing': 'Probando…',
   'wizard.testConnection': 'Probar conexión',
+  'wizard.testRequiredHint': 'Prueba la conexión antes de añadir este buzón.',
   'wizard.step.oauth.title': 'Iniciar sesión en',
   'wizard.step.oauth.note': 'OAuth usa tu propio id de cliente registrado (un cliente OAuth de escritorio). Pégalo abajo; el inicio de sesión se abre en tu navegador y no se guarda ningún secreto de cliente.',
   'wizard.field.oauthClientId': 'Id de cliente OAuth',

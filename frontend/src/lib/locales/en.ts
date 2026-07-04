@@ -189,6 +189,7 @@ const en: Record<string, string> = {
   'wizard.connectionWorks': 'Connection works.',
   'wizard.testing': 'Testing…',
   'wizard.testConnection': 'Test connection',
+  'wizard.testRequiredHint': 'Test the connection before adding this mailbox.',
   'wizard.step.oauth.title': 'Sign in to',
   'wizard.step.oauth.note': 'OAuth uses your own registered client id (a desktop OAuth client). Paste it below; sign-in opens in your browser and no client secret is stored.',
   'wizard.field.oauthClientId': 'OAuth client id',
