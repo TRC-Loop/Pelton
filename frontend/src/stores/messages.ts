@@ -25,6 +25,9 @@ export const messageList = writable<AsyncState<ListData>>(idle())
 // page of the same thing.
 let currentSelection: Selection | null = null
 let currentOffset = 0
+// bumped on every loadList call so a response from a superseded selection
+// never overwrites a later one's result.
+let loadGeneration = 0
 
 // fetchPage reads one page for a selection at the given offset.
 async function fetchPage(sel: Selection, offset: number): Promise<{ items: MessageSummary[]; total: number }> {
@@ -40,11 +43,18 @@ async function fetchPage(sel: Selection, offset: number): Promise<{ items: Messa
 export async function loadList(sel: Selection): Promise<void> {
   currentSelection = sel
   currentOffset = 0
+  const generation = ++loadGeneration
   messageList.update((s) => loading(s))
   try {
     const { items, total } = await fetchPage(sel, 0)
+    if (generation !== loadGeneration) {
+      return
+    }
     messageList.set(ready({ items, total, searching: false }))
   } catch (err) {
+    if (generation !== loadGeneration) {
+      return
+    }
     messageList.set(failed(errorMessage(err)))
   }
 }
@@ -60,20 +70,28 @@ export async function loadMore(): Promise<void> {
     return
   }
   const nextOffset = currentOffset + PAGE_SIZE
+  const generation = loadGeneration
+  messageList.update((s) => loading(s))
   try {
     const { items, total } = await fetchPage(currentSelection, nextOffset)
+    if (generation !== loadGeneration) {
+      return
+    }
     currentOffset = nextOffset
     messageList.update((s) => {
-      if (s.status !== 'ready' || !s.data) {
+      if (!s.data) {
         return s
       }
       return ready({ items: [...s.data.items, ...items], total, searching: false })
     })
   } catch (err) {
+    if (generation !== loadGeneration) {
+      return
+    }
     // leave currentOffset unchanged so a retry re-requests this same page
     // instead of skipping it; keep the existing list and surface the error
     // without discarding loaded rows.
-    messageList.update((s) => (s.data ? s : failed(errorMessage(err))))
+    messageList.update((s) => (s.data ? ready(s.data) : failed(errorMessage(err))))
   }
 }
 
