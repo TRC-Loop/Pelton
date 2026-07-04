@@ -4,7 +4,7 @@
   // to its title bar or expanded to fill the window. markdown mode gets a
   // formatting toolbar and a github-style live preview. send enqueues to the
   // outbox (with the undo-send window when enabled); save stores a local draft.
-  import { onMount } from 'svelte'
+  import { onMount, tick } from 'svelte'
   import { marked } from 'marked'
   import {
     IconX,
@@ -14,6 +14,11 @@
     IconArrowsDiagonal,
     IconArrowsDiagonalMinimize2,
     IconTrash,
+    IconChevronDown,
+    IconClock,
+    IconSunset2,
+    IconSun,
+    IconCalendarWeek,
   } from '@tabler/icons-svelte'
   import AddressFields from './AddressFields.svelte'
   import EditorModeSwitch from './EditorModeSwitch.svelte'
@@ -28,6 +33,7 @@
   import { scheduleUndo } from '../../stores/undosend'
   import { prefs } from '../../stores/prefs'
   import { buildRequest, hasRecipients } from '../../lib/mailcompose'
+  import { atTime, addDays, nextWeekday } from '../../lib/datepresets'
   import { errorMessage, toastError, toastSuccess } from '../../stores/toast'
   import type CodeMirrorEditor from './CodeMirrorEditor.svelte'
   import type { EditorMode } from '../../lib/types'
@@ -38,6 +44,104 @@
   let sending = false
   let preview = false
   let confirmClose = false
+
+  // send-later dropdown state: caret toggles the menu, presets are built fresh
+  // each time it opens so "tomorrow" is always relative to now. the menu is
+  // fixed-positioned (anchored to the caret button) rather than absolute, since
+  // the compose pane clips overflow.
+  let sendMenuOpen = false
+  let sendCaretEl: HTMLButtonElement
+  let sendMenuLeft = 0
+  let sendMenuTop = 0
+  let customSendValue = ''
+
+  interface SendPreset {
+    label: string
+    when: Date
+    icon: typeof IconClock
+  }
+
+  // buildSendPresets mirrors SnoozeDialog's buildPresets: a short list of
+  // friendly relative times, filtering out ones already in the past and
+  // deduplicating "tomorrow" and "next Monday" when they land on the same day.
+  function buildSendPresets(now: Date, tr: (key: string) => string): SendPreset[] {
+    const out: SendPreset[] = []
+    const laterToday = new Date(now.getTime() + 3 * 60 * 60 * 1000)
+    out.push({ label: tr('compose.sendLater.laterToday'), when: laterToday, icon: IconClock })
+
+    const evening = atTime(now, 18, 0)
+    if (evening.getTime() > now.getTime() + 60 * 1000) {
+      out.push({ label: tr('compose.sendLater.thisEvening'), when: evening, icon: IconSunset2 })
+    }
+
+    const tomorrow = atTime(addDays(now, 1), 8, 0)
+    out.push({ label: tr('compose.sendLater.tomorrowMorning'), when: tomorrow, icon: IconSun })
+
+    const monday = atTime(nextWeekday(now, 1), 8, 0)
+    if (monday.toDateString() !== tomorrow.toDateString()) {
+      out.push({ label: tr('compose.sendLater.mondayMorning'), when: monday, icon: IconCalendarWeek })
+    }
+    return out
+  }
+
+  $: sendPresets = sendMenuOpen ? buildSendPresets(new Date(), $t) : []
+  $: formattedSendPresets = sendPresets.map((p) => ({ ...p, sub: formatSendWhen(p.when) }))
+
+  function formatSendWhen(d: Date): string {
+    return d.toLocaleString(undefined, {
+      weekday: 'short',
+      hour: 'numeric',
+      minute: '2-digit',
+    })
+  }
+
+  // toggleSendMenu opens the menu anchored above the caret button (fixed
+  // positioning, since the compose pane itself clips overflow) or closes it.
+  async function toggleSendMenu(): Promise<void> {
+    if (sending) {
+      return
+    }
+    if (sendMenuOpen) {
+      closeSendMenu()
+      return
+    }
+    sendMenuOpen = true
+    await tick()
+    if (sendCaretEl) {
+      const rect = sendCaretEl.getBoundingClientRect()
+      sendMenuLeft = rect.right
+      sendMenuTop = rect.top - 8
+    }
+  }
+
+  function closeSendMenu(): void {
+    sendMenuOpen = false
+    customSendValue = ''
+  }
+
+  function onSendMenuKeydown(event: KeyboardEvent): void {
+    if (event.key === 'Escape') {
+      closeSendMenu()
+    }
+  }
+
+  // sendScheduled validates the chosen time is still in the future (the menu
+  // may have been left open a while) and sends with it as the scheduled time.
+  async function sendScheduled(when: Date): Promise<void> {
+    if (when.getTime() <= Date.now()) {
+      toastError($t('compose.sendLater.pickFutureTime'))
+      return
+    }
+    closeSendMenu()
+    await send(when)
+  }
+
+  function confirmCustomSend(): void {
+    if (!customSendValue) {
+      return
+    }
+    void sendScheduled(new Date(customSendValue))
+  }
   // the CodeMirror editor instance, used by the markdown toolbar to format the
   // selection. one editor is mounted per non-wysiwyg mode.
   let editor: CodeMirrorEditor
@@ -154,7 +258,12 @@
     }
   }
 
-  async function send(): Promise<void> {
+  // send enqueues the message. with no scheduledAt it goes through the normal
+  // undo-send delay (if enabled); with scheduledAt it is held until that exact
+  // time instead, and skips the undo-send window entirely (see
+  // resolveNotBefore in internal/desktop/bind_compose.go for the backend side
+  // of this precedence).
+  async function send(scheduledAt?: Date): Promise<void> {
     if (!hasRecipients(session)) {
       toastError($t('compose.error.noRecipients'))
       return
@@ -162,18 +271,26 @@
     sending = true
     try {
       const snapshot: ComposeSession = { ...session }
-      const id = await sendMessage(buildRequest(session))
+      const req = buildRequest(session)
+      if (scheduledAt) {
+        req.sendAt = scheduledAt.toISOString()
+      }
+      const id = await sendMessage(req)
       if (session.draftId) {
         await deleteDraft(session.draftId)
       }
       await loadOutbox()
       closeCompose(session.id)
 
-      const delay = $prefs.sendDelaySeconds
-      if (delay > 0) {
-        scheduleUndo(id, snapshot, delay)
+      if (scheduledAt) {
+        toastSuccess($t('compose.sendLater.scheduledToast').replace('{when}', formatSendWhen(scheduledAt)))
       } else {
-        toastSuccess($t('compose.toast.queued'))
+        const delay = $prefs.sendDelaySeconds
+        if (delay > 0) {
+          scheduleUndo(id, snapshot, delay)
+        } else {
+          toastSuccess($t('compose.toast.queued'))
+        }
       }
     } catch (err) {
       toastError(errorMessage(err))
@@ -343,10 +460,24 @@
     </div>
 
     <footer class="foot">
-      <button type="button" class="send" disabled={sending} on:click={send}>
-        <IconSend size={15} stroke={1.7} />
-        {sending ? $t('compose.action.sending') : $t('action.send')}
-      </button>
+      <div class="send-split">
+        <button type="button" class="send" disabled={sending} on:click={() => send()}>
+          <IconSend size={15} stroke={1.7} />
+          {sending ? $t('compose.action.sending') : $t('action.send')}
+        </button>
+        <button
+          type="button"
+          class="send-caret"
+          bind:this={sendCaretEl}
+          disabled={sending}
+          aria-label={$t('compose.sendLater.ariaLabel')}
+          aria-haspopup="true"
+          aria-expanded={sendMenuOpen}
+          on:click={toggleSendMenu}
+        >
+          <IconChevronDown size={14} stroke={1.8} />
+        </button>
+      </div>
       <button type="button" class="save" on:click={save}>
         <IconDeviceFloppy size={15} stroke={1.6} />
         {$t('action.saveDraft')}
@@ -364,6 +495,36 @@
     </footer>
   {/if}
 </div>
+
+<svelte:window on:keydown={sendMenuOpen ? onSendMenuKeydown : undefined} />
+
+{#if sendMenuOpen}
+  <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
+  <div class="send-menu-scrim" on:click={closeSendMenu}></div>
+  <div
+    class="send-menu"
+    role="menu"
+    aria-label={$t('compose.sendLater.ariaLabel')}
+    style={`left:${sendMenuLeft}px; top:${sendMenuTop}px`}
+  >
+    {#each formattedSendPresets as p}
+      <button type="button" class="send-preset" role="menuitem" on:click={() => sendScheduled(p.when)}>
+        <span class="sp-icon"><svelte:component this={p.icon} size={16} stroke={1.6} /></span>
+        <span class="sp-label">{p.label}</span>
+        <span class="sp-sub">{p.sub}</span>
+      </button>
+    {/each}
+    <div class="send-custom">
+      <label for={`send-custom-${session.id}`}>{$t('compose.sendLater.customLabel')}</label>
+      <div class="send-custom-row">
+        <input id={`send-custom-${session.id}`} type="datetime-local" bind:value={customSendValue} />
+        <button type="button" class="send-custom-go" disabled={!customSendValue} on:click={confirmCustomSend}>
+          {$t('compose.sendLater.schedule')}
+        </button>
+      </div>
+    </div>
+  </div>
+{/if}
 
 <style>
   .compose {
@@ -577,6 +738,144 @@
 
   .send:disabled {
     opacity: 0.6;
+    cursor: default;
+  }
+
+  /* the send button and its caret read as one attached control. */
+  .send-split {
+    position: relative;
+    display: inline-flex;
+  }
+
+  .send-split .send {
+    border-radius: var(--radius-control) 0 0 var(--radius-control);
+    border-right: none;
+  }
+
+  .send-caret {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    border: var(--hairline) solid var(--border-default);
+    border-radius: 0 var(--radius-control) var(--radius-control) 0;
+    background: var(--surface-raised);
+    color: var(--text-secondary);
+    cursor: pointer;
+  }
+
+  .send-caret:hover:not(:disabled) {
+    background: var(--surface-hover);
+    color: var(--text-primary);
+  }
+
+  .send-caret:disabled {
+    opacity: 0.6;
+    cursor: default;
+  }
+
+  /* the send-later menu is fixed-positioned (anchored to the caret button) and
+     rendered outside .compose so the pane's own overflow:hidden never clips
+     it. it opens upward, anchored by its bottom-right corner. */
+  .send-menu-scrim {
+    position: fixed;
+    inset: 0;
+    z-index: 140;
+  }
+
+  .send-menu {
+    position: fixed;
+    z-index: 141;
+    transform: translate(-100%, -100%);
+    width: 260px;
+    max-height: min(360px, calc(100vh - 2 * var(--space-5)));
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    padding: var(--space-2);
+    border: var(--hairline) solid var(--border-default);
+    border-radius: var(--radius-card);
+    background: var(--surface-overlay);
+    box-shadow: var(--shadow-overlay);
+  }
+
+  .send-preset {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    border: none;
+    border-radius: var(--radius-control);
+    background: transparent;
+    color: var(--text-primary);
+    cursor: pointer;
+    text-align: left;
+    font-size: var(--fz-label);
+  }
+
+  .send-preset:hover {
+    background: var(--surface-hover);
+  }
+
+  .sp-icon {
+    display: inline-flex;
+    color: var(--accent);
+    flex-shrink: 0;
+  }
+
+  .sp-label {
+    flex: 1;
+  }
+
+  .sp-sub {
+    font-size: var(--fz-meta);
+    color: var(--text-tertiary);
+  }
+
+  .send-custom {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    margin-top: var(--space-1);
+    padding: var(--space-2) var(--space-3) var(--space-1);
+    border-top: var(--hairline) solid var(--border-subtle);
+  }
+
+  .send-custom label {
+    font-size: var(--fz-meta);
+    color: var(--text-secondary);
+  }
+
+  .send-custom-row {
+    display: flex;
+    gap: var(--space-2);
+  }
+
+  .send-custom-row input {
+    flex: 1;
+    min-width: 0;
+    padding: var(--space-1) var(--space-2);
+    border: var(--hairline) solid var(--border-default);
+    border-radius: var(--radius-control);
+    background: var(--surface-raised);
+    color: var(--text-primary);
+    font: inherit;
+  }
+
+  .send-custom-go {
+    padding: var(--space-1) var(--space-3);
+    border: none;
+    border-radius: var(--radius-control);
+    background: var(--accent);
+    color: var(--accent-fg);
+    cursor: pointer;
+    font-weight: var(--fw-medium);
+    font-size: var(--fz-label);
+  }
+
+  .send-custom-go:disabled {
+    opacity: 0.5;
     cursor: default;
   }
 

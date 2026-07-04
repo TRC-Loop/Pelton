@@ -9,6 +9,13 @@ import (
 	"github.com/TRC-Loop/Pelton/internal/smtp"
 )
 
+// ErrSendAtInvalid is returned when a ComposeRequest.SendAt string does not
+// parse as RFC3339.
+var ErrSendAtInvalid = fmt.Errorf("pelton: sendAt is not a valid RFC3339 timestamp")
+
+// ErrSendAtPast is returned when a ComposeRequest.SendAt is not in the future.
+var ErrSendAtPast = fmt.Errorf("pelton: sendAt must be in the future")
+
 // AddressDTO is one mail address with an optional display name.
 type AddressDTO struct {
 	Name  string `json:"name"`
@@ -41,6 +48,10 @@ type ComposeRequest struct {
 	InReplyTo   string              `json:"inReplyTo"`
 	References  []string            `json:"references"`
 	Attachments []ComposeAttachment `json:"attachments"`
+	// SendAt is an optional RFC3339 timestamp for a user-scheduled send ("send
+	// later"). Empty means send immediately, subject to the undo-send delay
+	// below. When set it must be in the future.
+	SendAt string `json:"sendAt"`
 }
 
 // SendMessage builds the mime message and enqueues it in the durable outbox. The
@@ -58,11 +69,9 @@ func (a *App) SendMessage(req ComposeRequest) (int64, error) {
 		return 0, err
 	}
 
-	// apply the configured send delay so the worker holds the message and the user
-	// can undo within the window. zero (or negative) sends as soon as possible.
-	var notBefore time.Time
-	if delay := a.intSetting(settingSendDelay, 0); delay > 0 {
-		notBefore = time.Now().UTC().Add(time.Duration(delay) * time.Second)
+	notBefore, err := resolveNotBefore(req.SendAt, a.intSetting(settingSendDelay, 0), time.Now().UTC())
+	if err != nil {
+		return 0, err
 	}
 
 	id, err := smtp.Enqueue(a.ctx, a.queue, req.AccountID, msg, nil, crypto.ModeNone, crypto.Options{}, notBefore)
@@ -115,6 +124,29 @@ func (a *App) ClearSentOutbox() error {
 		a.emit(EventOutboxChanged, nil)
 	}
 	return nil
+}
+
+// resolveNotBefore decides when an outbox message becomes eligible to send. An
+// explicit sendAt (RFC3339) takes precedence over the undo-send delay: a
+// message the user deliberately scheduled shouldn't also sit through the short
+// undo window on top of its scheduled time. sendAt must parse and be strictly
+// after now, or an error is returned. With sendAt empty, the undo-send delay
+// (delaySeconds, 0 meaning none) is applied as before.
+func resolveNotBefore(sendAt string, delaySeconds int, now time.Time) (time.Time, error) {
+	if sendAt == "" {
+		if delaySeconds > 0 {
+			return now.Add(time.Duration(delaySeconds) * time.Second), nil
+		}
+		return time.Time{}, nil
+	}
+	when, err := time.Parse(time.RFC3339, sendAt)
+	if err != nil {
+		return time.Time{}, ErrSendAtInvalid
+	}
+	if !when.After(now) {
+		return time.Time{}, ErrSendAtPast
+	}
+	return when.UTC(), nil
 }
 
 // buildMessage assembles an smtp.Message from a compose request, resolving the

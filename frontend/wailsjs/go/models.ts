@@ -183,6 +183,7 @@ export namespace desktop {
 	    inReplyTo: string;
 	    references: string[];
 	    attachments: ComposeAttachment[];
+	    sendAt: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new ComposeRequest(source);
@@ -200,6 +201,7 @@ export namespace desktop {
 	        this.inReplyTo = source["inReplyTo"];
 	        this.references = source["references"];
 	        this.attachments = this.convertValues(source["attachments"], ComposeAttachment);
+	        this.sendAt = source["sendAt"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
