@@ -131,6 +131,7 @@ const nl: Record<string, string> = {
   'common.datePicker.selectDate': 'Datum selecteren',
   'common.datePicker.prevMonth': 'Vorige maand',
   'common.datePicker.nextMonth': 'Volgende maand',
+  'common.datePicker.selectYear': 'Jaar kiezen',
   'common.datePicker.today': 'Vandaag',
   'common.datePicker.clear': 'Wissen',
   'common.datePicker.hour': 'Uur',

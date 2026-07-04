@@ -20,8 +20,17 @@
 
   let open = false
   let triggerEl: HTMLButtonElement
+  // 'days' is the normal month grid; 'years' is a scrollable year list opened
+  // by clicking the month/year label, for jumping far without repeated
+  // prev/next clicks (e.g. birthdays, old date ranges).
+  let view: 'days' | 'years' = 'days'
+  let yearListEl: HTMLDivElement
 
   const today = new Date()
+  // bounds for the scrollable year list: a century back, a couple decades
+  // forward. generous enough for any real date without scrolling forever.
+  const YEAR_MIN = today.getFullYear() - 100
+  const YEAR_MAX = today.getFullYear() + 20
 
   type YMD = { y: number; m: number; d: number }
 
@@ -122,6 +131,19 @@
     new Date(viewYear, viewMonth, 1),
   )
 
+  const years = Array.from({ length: YEAR_MAX - YEAR_MIN + 1 }, (_, i) => YEAR_MIN + i)
+
+  async function openYearView(): Promise<void> {
+    view = 'years'
+    await tick()
+    yearListEl?.querySelector('.year.current')?.scrollIntoView({ block: 'center' })
+  }
+
+  function selectYear(y: number): void {
+    viewYear = y
+    view = 'days'
+  }
+
   // weekday header letters, monday-first; the reference week (2023-01-02 was
   // a monday) is arbitrary, only its weekdays matter.
   const weekdayLabels = (() => {
@@ -154,6 +176,7 @@
     focused = { ...ymd }
     viewYear = ymd.y
     viewMonth = ymd.m
+    view = 'days'
     commit()
     if (mode === 'date') {
       open = false
@@ -242,6 +265,7 @@
       close()
     } else {
       open = true
+      view = 'days'
     }
   }
 
@@ -272,42 +296,77 @@
     <div class="scrim" on:click={close}></div>
     <div class="panel">
       <div class="nav">
-        <button type="button" class="nav-btn" aria-label={$t('common.datePicker.prevMonth')} on:click={prevMonth}>
+        <button
+          type="button"
+          class="nav-btn"
+          aria-label={$t('common.datePicker.prevMonth')}
+          disabled={view === 'years'}
+          on:click={prevMonth}
+        >
           <IconChevronLeft size={15} stroke={1.8} />
         </button>
-        <span class="month-label">{monthLabel}</span>
-        <button type="button" class="nav-btn" aria-label={$t('common.datePicker.nextMonth')} on:click={nextMonth}>
+        <button
+          type="button"
+          class="month-label"
+          aria-label={$t('common.datePicker.selectYear')}
+          on:click={openYearView}
+        >
+          {monthLabel}
+        </button>
+        <button
+          type="button"
+          class="nav-btn"
+          aria-label={$t('common.datePicker.nextMonth')}
+          disabled={view === 'years'}
+          on:click={nextMonth}
+        >
           <IconChevronRight size={15} stroke={1.8} />
         </button>
       </div>
 
-      <div class="weekdays">
-        {#each weekdayLabels as w, i (i)}
-          <span>{w}</span>
-        {/each}
-      </div>
-
-      <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
-      <div class="grid" role="group" tabindex="-1" on:keydown={onGridKeydown}>
-        {#each cells as cell (cellKey(cell))}
-          {#if cell.inMonth}
+      {#if view === 'years'}
+        <div class="year-list" bind:this={yearListEl}>
+          {#each years as y (y)}
             <button
               type="button"
-              class="day"
-              class:selected={selected && sameDay(selected, cell)}
-              class:today={isToday(cell)}
-              tabindex={sameDay(focused, cell) ? 0 : -1}
-              bind:this={dayButtons[cellKey(cell)]}
-              on:click={() => selectDay(cell)}
-              on:focus={() => (focused = cell)}
+              class="year"
+              class:current={y === viewYear}
+              class:today={y === today.getFullYear()}
+              on:click={() => selectYear(y)}
             >
-              {cell.d}
+              {y}
             </button>
-          {:else}
-            <span class="day pad">{cell.d}</span>
-          {/if}
-        {/each}
-      </div>
+          {/each}
+        </div>
+      {:else}
+        <div class="weekdays">
+          {#each weekdayLabels as w, i (i)}
+            <span>{w}</span>
+          {/each}
+        </div>
+
+        <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
+        <div class="grid" role="group" tabindex="-1" on:keydown={onGridKeydown}>
+          {#each cells as cell (cellKey(cell))}
+            {#if cell.inMonth}
+              <button
+                type="button"
+                class="day"
+                class:selected={selected && sameDay(selected, cell)}
+                class:today={isToday(cell)}
+                tabindex={sameDay(focused, cell) ? 0 : -1}
+                bind:this={dayButtons[cellKey(cell)]}
+                on:click={() => selectDay(cell)}
+                on:focus={() => (focused = cell)}
+              >
+                {cell.d}
+              </button>
+            {:else}
+              <span class="day pad">{cell.d}</span>
+            {/if}
+          {/each}
+        </div>
+      {/if}
 
       {#if mode === 'datetime'}
         <div class="time">
@@ -428,10 +487,59 @@
     color: var(--text-primary);
   }
 
+  .nav-btn:disabled {
+    opacity: 0.4;
+    cursor: default;
+  }
+
   .month-label {
+    border: none;
+    background: transparent;
     font-size: var(--fz-label);
     font-weight: var(--fw-medium);
     color: var(--text-primary);
+    cursor: pointer;
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-control);
+  }
+
+  .month-label:hover {
+    background: var(--surface-hover);
+  }
+
+  .year-list {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-1);
+    max-height: 200px;
+    overflow-y: auto;
+  }
+
+  .year {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-2) 0;
+    border: none;
+    background: transparent;
+    color: var(--text-primary);
+    font-size: var(--fz-label);
+    cursor: pointer;
+    border-radius: var(--radius-control);
+  }
+
+  .year:hover {
+    background: var(--surface-hover);
+  }
+
+  .year.today {
+    color: var(--accent);
+    font-weight: var(--fw-semibold);
+  }
+
+  .year.current {
+    background: var(--accent);
+    color: var(--accent-fg);
   }
 
   .weekdays,

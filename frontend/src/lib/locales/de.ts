@@ -131,6 +131,7 @@ const de: Record<string, string> = {
   'common.datePicker.selectDate': 'Datum auswählen',
   'common.datePicker.prevMonth': 'Vorheriger Monat',
   'common.datePicker.nextMonth': 'Nächster Monat',
+  'common.datePicker.selectYear': 'Jahr wählen',
   'common.datePicker.today': 'Heute',
   'common.datePicker.clear': 'Löschen',
   'common.datePicker.hour': 'Stunde',
