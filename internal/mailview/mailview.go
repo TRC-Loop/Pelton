@@ -12,6 +12,7 @@ package mailview
 import (
 	"regexp"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/microcosm-cc/bluemonday"
 )
@@ -187,7 +188,11 @@ func Snippet(plain, html string) string {
 	}
 	text = strings.Join(strings.Fields(text), " ")
 	if len(text) > snippetLen {
-		return strings.TrimSpace(text[:snippetLen]) + "…"
+		cut := snippetLen
+		for cut > 0 && !utf8.RuneStart(text[cut]) {
+			cut--
+		}
+		return strings.TrimSpace(text[:cut]) + "…"
 	}
 	return text
 }
