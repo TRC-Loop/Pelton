@@ -64,18 +64,15 @@ jobs:
               const { data: cmp } = await github.rest.repos.compareCommitsWithBasehead({
                 owner, repo, basehead: `${PREVIOUS_TAG}...${CURRENT_TAG}`,
               });
-              console.log(`compare ${PREVIOUS_TAG}...${CURRENT_TAG}: ${cmp.commits.length} commits`);
               for (const commit of cmp.commits) {
                 const { data: associated } = await github.rest.repos.listPullRequestsAssociatedWithCommit({
                   owner, repo, commit_sha: commit.sha,
                 });
-                console.log(`  ${commit.sha}: ${associated.map((p) => `#${p.number}(merged_at=${p.merged_at})`).join(", ") || "none"}`);
                 for (const pr of associated) {
                   if (pr.merged_at) prNumbers.add(pr.number);
                 }
               }
             }
-            console.log(`prNumbers: ${[...prNumbers].join(", ")}`);
 
             const prs = [];
             for (const number of prNumbers) {
@@ -95,8 +92,12 @@ jobs:
               const match = CATEGORY_LABELS.find(([label]) => labels.includes(label));
               const title = match ? match[1] : "Other Changes";
 
+              // plain "@user" and "#123" so GitHub's own autolinking resolves
+              // them, rather than wrapping them in an explicit markdown link
+              // (GitHub's autolinker fights explicit links on this exact text
+              // and mangles the href).
               const avatar = `<img src="${pr.user.avatar_url}&s=32" width="16" height="16" valign="middle" style="border-radius:50%;">`;
-              const credit = `${avatar} [@${pr.user.login}](${pr.user.html_url}) in [#${pr.number}](${pr.html_url})`;
+              const credit = `${avatar} @${pr.user.login} in #${pr.number}`;
               const body = (pr.body || "").trim();
 
               const entry = body
@@ -116,13 +117,12 @@ jobs:
             }
             const body = parts.join("\n\n");
 
-            let existing = null;
-            try {
-              const { data } = await github.rest.repos.getReleaseByTag({ owner, repo, tag: CURRENT_TAG });
-              existing = data;
-            } catch (err) {
-              if (err.status !== 404) throw err;
-            }
+            // getReleaseByTag only ever finds published releases, never
+            // drafts, so a re-run would create a new duplicate draft each
+            // time instead of updating the one from the last run. List and
+            // match by tag_name instead, which sees drafts too.
+            const releases = await github.paginate(github.rest.repos.listReleases, { owner, repo });
+            const existing = releases.find((r) => r.tag_name === CURRENT_TAG) || null;
 
             if (existing) {
               await github.rest.repos.updateRelease({ owner, repo, release_id: existing.id, body });
