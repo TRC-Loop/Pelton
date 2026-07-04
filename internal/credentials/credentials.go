@@ -55,18 +55,22 @@ type Secret struct {
 	Expiry       time.Time `json:"expiry,omitempty"`
 }
 
-// Store writes the secret for an account, replacing any existing one.
+// Store writes the secret for an account, replacing any existing one. The new
+// value (and, if chunked, every new chunk) is written before any stale chunk
+// from a previous, larger secret is removed, so a failed write never leaves
+// the account's secret unreadable.
 func Store(accountID int64, s Secret) error {
 	encoded, err := json.Marshal(s)
 	if err != nil {
 		return fmt.Errorf("credentials: encode secret: %w", err)
 	}
-	deleteChunks(accountID)
+	oldChunks := existingChunkCount(accountID)
 
 	if len(encoded) <= maxEntrySize {
 		if err := keyring.Set(service, key(accountID), string(encoded)); err != nil {
 			return fmt.Errorf("credentials: store for account %d: %w", accountID, err)
 		}
+		deleteChunkRange(accountID, 0, oldChunks)
 		return nil
 	}
 
@@ -79,6 +83,7 @@ func Store(accountID int64, s Secret) error {
 	if err := keyring.Set(service, key(accountID), chunkMarker+strconv.Itoa(len(chunks))); err != nil {
 		return fmt.Errorf("credentials: store for account %d: %w", accountID, err)
 	}
+	deleteChunkRange(accountID, len(chunks), oldChunks)
 	return nil
 }
 
@@ -112,7 +117,7 @@ func Load(accountID int64) (Secret, error) {
 // Delete removes the secret for an account. A missing entry is not an error so
 // account deletion is idempotent.
 func Delete(accountID int64) error {
-	deleteChunks(accountID)
+	deleteChunkRange(accountID, 0, existingChunkCount(accountID))
 	err := keyring.Delete(service, key(accountID))
 	if err != nil && !errors.Is(err, keyring.ErrNotFound) {
 		return fmt.Errorf("credentials: delete for account %d: %w", accountID, err)
@@ -153,18 +158,23 @@ func chunkBytes(data []byte, size int) [][]byte {
 	return append(out, data)
 }
 
-// deleteChunks removes any chunk entries left by a previous, larger secret
-// for accountID. A missing or non-chunked entry is a no-op.
-func deleteChunks(accountID int64) {
+// existingChunkCount returns how many chunk entries accountID's current
+// secret is split across, or 0 if it isn't chunked (or doesn't exist).
+func existingChunkCount(accountID int64) int {
 	raw, err := keyring.Get(service, key(accountID))
 	if err != nil {
-		return
+		return 0
 	}
 	n, ok := chunkCount(raw)
 	if !ok {
-		return
+		return 0
 	}
-	for i := range n {
+	return n
+}
+
+// deleteChunkRange removes chunk entries [from, to) for accountID.
+func deleteChunkRange(accountID int64, from, to int) {
+	for i := from; i < to; i++ {
 		_ = keyring.Delete(service, chunkKey(accountID, i))
 	}
 }

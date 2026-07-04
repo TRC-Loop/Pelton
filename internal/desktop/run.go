@@ -48,6 +48,7 @@ func Run(cfg Config) error {
 		// and Quit (Cmd+Q) in the menu actually exits.
 		HideWindowOnClose: true,
 		OnStartup:         app.startup,
+		OnDomReady:        app.domReady,
 		OnShutdown:        app.shutdown,
 		Menu:              app.buildMenu(),
 		Mac: &mac.Options{

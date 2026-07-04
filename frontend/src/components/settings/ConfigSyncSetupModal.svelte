@@ -19,7 +19,7 @@
   type JoinChoice = 'merge' | 'erase'
 
   let mode: ModeChoice = importMode ? 'inplace' : (current?.mode as ModeChoice) || 'mirror'
-  let path = current?.path || ''
+  let path = importMode ? '' : current?.path || ''
   let syncSettings = current ? current.syncSettings : true
   let emailScope: EmailChoice = (current?.emailScope as EmailChoice) || 'off'
   let joinChoice: JoinChoice = 'merge'

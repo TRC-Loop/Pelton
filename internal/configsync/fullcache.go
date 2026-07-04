@@ -21,7 +21,9 @@ func openFileRetrying(src string) (*os.File, error) {
 		if err == nil || os.IsNotExist(err) {
 			return f, err
 		}
-		time.Sleep(time.Duration(200*(i+1)) * time.Millisecond)
+		if i < attempts-1 {
+			time.Sleep(time.Duration(200*(i+1)) * time.Millisecond)
+		}
 	}
 	return nil, fmt.Errorf("%w (if this folder is a cloud-sync placeholder, it may still be downloading)", err)
 }

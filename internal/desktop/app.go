@@ -68,8 +68,6 @@ func (a *App) startup(ctx context.Context) {
 	a.store = store
 	a.queue = outbox.NewQueue(store)
 
-	a.applyNativeTheme(a.stringSetting(storage.SettingTheme, defaultTheme))
-
 	if defaultPath, pathErr := storage.DefaultPath(); pathErr == nil {
 		a.defaultStateDir = filepath.Dir(defaultPath)
 		a.sync = configsync.New(store, a.defaultStateDir, filepath.Base(defaultPath), a.log)
@@ -101,6 +99,13 @@ func (a *App) startup(ctx context.Context) {
 	// pick it back up; planDownload skips anything already cached so this is
 	// cheap when most of the range was already fetched.
 	a.ResumePendingDownload()
+}
+
+// domReady is the wails OnDomReady hook. Native window calls (like the theme
+// setter) need the webview up first, so the initial theme is applied here
+// rather than in startup.
+func (a *App) domReady(ctx context.Context) {
+	a.applyNativeTheme(a.stringSetting(storage.SettingTheme, defaultTheme))
 }
 
 // shutdown is the wails OnShutdown hook. It closes the store so the sqlite wal
