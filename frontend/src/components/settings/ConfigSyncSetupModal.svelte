@@ -2,7 +2,7 @@
   // the settings-sync setup modal: pick a mode, a folder, and a scope, then
   // confirm. reopening it with an existing setup pre-fills the current values
   // so it doubles as the "change setup" flow.
-  import { createEventDispatcher } from 'svelte'
+  import { createEventDispatcher, onMount } from 'svelte'
   import { IconX, IconFolder, IconCheck, IconUsers } from '@tabler/icons-svelte'
   import { configureConfigSync, pickConfigSyncFolder, peekConfigSyncFolder, type ConfigSyncStatus, type ConfigSyncFolderPeek } from '../../lib/api'
   import { toastError, errorMessage } from '../../stores/toast'
@@ -10,6 +10,7 @@
   import { t } from '../../lib/i18n'
 
   export let current: ConfigSyncStatus | null
+  export let importMode = false
 
   const dispatch = createEventDispatcher<{ close: void; configured: ConfigSyncStatus }>()
 
@@ -17,8 +18,8 @@
   type EmailChoice = 'off' | 'metadata' | 'full'
   type JoinChoice = 'merge' | 'erase'
 
-  let mode: ModeChoice = (current?.mode as ModeChoice) || 'mirror'
-  let path = current?.path || ''
+  let mode: ModeChoice = importMode ? 'inplace' : (current?.mode as ModeChoice) || 'mirror'
+  let path = importMode ? '' : current?.path || ''
   let syncSettings = current ? current.syncSettings : true
   let emailScope: EmailChoice = (current?.emailScope as EmailChoice) || 'off'
   let joinChoice: JoinChoice = 'merge'
@@ -33,6 +34,12 @@
   } else {
     peek = null
   }
+
+  onMount(() => {
+    if (importMode && !path) {
+      browse()
+    }
+  })
 
   function schedulePeek(target: string): void {
     clearTimeout(peekTimer)
@@ -96,27 +103,29 @@
   <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions a11y-no-noninteractive-element-interactions -->
   <div class="modal" role="dialog" aria-modal="true" aria-label={current?.enabled ? $t('configSync.changeTitle') : $t('configSync.setup')} tabindex="-1" on:click|stopPropagation>
     <header>
-      <span class="title">{current?.enabled ? $t('configSync.changeTitle') : $t('configSync.setup')}</span>
+      <span class="title">{importMode ? $t('configSync.importTitle') : current?.enabled ? $t('configSync.changeTitle') : $t('configSync.setup')}</span>
       <button type="button" class="close" aria-label={$t('configSync.close')} on:click={() => dispatch('close')}>
         <IconX size={18} stroke={1.8} />
       </button>
     </header>
 
     <div class="body">
-      <section>
-        <span class="label">{$t('configSync.mode')}</span>
-        <div class="options">
-          <button type="button" class="option" class:active={mode === 'mirror'} on:click={() => (mode = 'mirror')}>
-            <span class="opt-title">{$t('configSync.modeMirror')} {#if mode === 'mirror'}<IconCheck size={14} stroke={2.4} />{/if}</span>
-            <span class="opt-sub">{$t('configSync.modeMirrorDesc')}</span>
-          </button>
-          <button type="button" class="option" class:active={mode === 'inplace'} on:click={() => (mode = 'inplace')}>
-            <span class="opt-title">{$t('configSync.modeInPlace')} {#if mode === 'inplace'}<IconCheck size={14} stroke={2.4} />{/if}</span>
-            <span class="opt-sub">{$t('configSync.modeInPlaceDesc')}</span>
-          </button>
-        </div>
-        <p class="sub-hint">{$t('configSync.modeHint')}</p>
-      </section>
+      {#if !importMode}
+        <section>
+          <span class="label">{$t('configSync.mode')}</span>
+          <div class="options">
+            <button type="button" class="option" class:active={mode === 'mirror'} on:click={() => (mode = 'mirror')}>
+              <span class="opt-title">{$t('configSync.modeMirror')} {#if mode === 'mirror'}<IconCheck size={14} stroke={2.4} />{/if}</span>
+              <span class="opt-sub">{$t('configSync.modeMirrorDesc')}</span>
+            </button>
+            <button type="button" class="option" class:active={mode === 'inplace'} on:click={() => (mode = 'inplace')}>
+              <span class="opt-title">{$t('configSync.modeInPlace')} {#if mode === 'inplace'}<IconCheck size={14} stroke={2.4} />{/if}</span>
+              <span class="opt-sub">{$t('configSync.modeInPlaceDesc')}</span>
+            </button>
+          </div>
+          <p class="sub-hint">{$t('configSync.modeHint')}</p>
+        </section>
+      {/if}
 
       <section>
         <span class="label">{$t('configSync.folder')}</span>
@@ -127,7 +136,7 @@
             {$t('configSync.browse')}
           </button>
         </div>
-        <p class="sub-hint">{mode === 'inplace' ? $t('configSync.folderHintInPlace') : $t('configSync.folderHint')}</p>
+        <p class="sub-hint">{importMode ? $t('configSync.folderHintImport') : mode === 'inplace' ? $t('configSync.folderHintInPlace') : $t('configSync.folderHint')}</p>
       </section>
 
       {#if mode === 'mirror'}
@@ -186,14 +195,21 @@
               </button>
             </div>
           </section>
+        {:else if importMode && path}
+          <p class="sub-hint">{$t('configSync.importNothingFound')}</p>
         {/if}
       {/if}
     </div>
 
     <footer>
       <button type="button" class="ghost" on:click={() => dispatch('close')}>{$t('configSync.cancel')}</button>
-      <button type="button" class="primary" on:click={save} disabled={saving}>
-        {saving ? $t('configSync.saving') : current?.enabled ? $t('configSync.save') : $t('configSync.setupButton')}
+      <button
+        type="button"
+        class="primary"
+        on:click={save}
+        disabled={saving || (importMode && !peek?.hasExistingData)}
+      >
+        {saving ? $t('configSync.saving') : importMode ? $t('configSync.importDone') : current?.enabled ? $t('configSync.save') : $t('configSync.setupButton')}
       </button>
     </footer>
   </div>

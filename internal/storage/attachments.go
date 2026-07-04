@@ -162,7 +162,10 @@ func messageSegment(messageID int64) string {
 }
 
 // sanitizeFilename strips any directory components and path traversal so a
-// malicious filename like "../../etc/passwd" cannot escape the message dir.
+// malicious filename like "../../etc/passwd" cannot escape the message dir,
+// and any characters or reserved names a Windows filesystem would reject, so
+// the same attachment store works regardless of host OS (and stays usable if
+// synced onto a Windows machine later).
 func sanitizeFilename(name string) string {
 	// drop everything up to the last path separator from either os convention.
 	name = strings.ReplaceAll(name, "\\", "/")
@@ -170,10 +173,32 @@ func sanitizeFilename(name string) string {
 		name = name[i+1:]
 	}
 	name = strings.TrimSpace(name)
-	if name == "" || name == "." || name == ".." {
+	name = strings.Map(func(r rune) rune {
+		switch r {
+		case ':', '*', '?', '"', '<', '>', '|':
+			return '_'
+		}
+		if r < 0x20 {
+			return '_'
+		}
+		return r
+	}, name)
+	name = strings.TrimRight(name, ". ")
+	if name == "" || name == "." || name == ".." || isWindowsReservedName(name) {
 		return fallbackFilename
 	}
 	return name
+}
+
+func isWindowsReservedName(name string) bool {
+	stem, _ := splitExt(name)
+	switch strings.ToUpper(stem) {
+	case "CON", "PRN", "AUX", "NUL",
+		"COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9",
+		"LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9":
+		return true
+	}
+	return false
 }
 
 // uniqueFilename appends " (n)" before the extension until the name is free in

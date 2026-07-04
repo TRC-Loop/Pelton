@@ -152,25 +152,34 @@ func callbackHandler(state string, codeCh chan<- string, errCh chan<- error) htt
 	mux.HandleFunc("/callback", func(w http.ResponseWriter, r *http.Request) {
 		q := r.URL.Query()
 		if e := q.Get("error"); e != "" {
-			errCh <- fmt.Errorf("oauth: provider error: %s", e)
+			trySend(errCh, fmt.Errorf("oauth: provider error: %s", e))
 			writeClosePage(w, "Authorization failed. You can close this window.")
 			return
 		}
 		if q.Get("state") != state {
-			errCh <- fmt.Errorf("oauth: state mismatch")
+			trySend(errCh, fmt.Errorf("oauth: state mismatch"))
 			writeClosePage(w, "Authorization failed. You can close this window.")
 			return
 		}
 		code := q.Get("code")
 		if code == "" {
-			errCh <- fmt.Errorf("oauth: no code in callback")
+			trySend(errCh, fmt.Errorf("oauth: no code in callback"))
 			writeClosePage(w, "Authorization failed. You can close this window.")
 			return
 		}
 		writeClosePage(w, "Signed in. You can close this window and return to Pelton.")
-		codeCh <- code
+		trySend(codeCh, code)
 	})
 	return mux
+}
+
+// trySend delivers v on ch without blocking, so a second callback request
+// (browser prefetch, reload, antivirus scan) never wedges the handler.
+func trySend[T any](ch chan<- T, v T) {
+	select {
+	case ch <- v:
+	default:
+	}
 }
 
 // writeClosePage renders a minimal confirmation page in the user's browser.
