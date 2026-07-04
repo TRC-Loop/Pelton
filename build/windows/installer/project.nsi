@@ -73,7 +73,8 @@ ManifestDPIAware true
 !define MULTIUSER_MUI
 !define MULTIUSER_INSTALLMODE_COMMANDLINE
 !define MULTIUSER_INSTALLMODE_DEFAULT_REGISTRY_KEY "Software\${INFO_COMPANYNAME}\${INFO_PRODUCTNAME}"
-!define MULTIUSER_INSTALLMODE_INSTDIR "${INFO_COMPANYNAME}\${INFO_PRODUCTNAME}"
+!define MULTIUSER_INSTALLMODE_INSTDIR "${INFO_PRODUCTNAME}"
+!define MULTIUSER_USE_PROGRAMFILES64
 !include "MultiUser.nsh"
 
 !insertmacro MUI_PAGE_WELCOME # Welcome to the installer page.
@@ -106,7 +107,7 @@ ManifestDPIAware true
 
 Name "${INFO_PRODUCTNAME}"
 OutFile "..\..\bin\${INFO_PROJECTNAME}-${ARCH}-installer.exe" # Name of the installer's file.
-InstallDir "$PROGRAMFILES64\${INFO_COMPANYNAME}\${INFO_PRODUCTNAME}" # Fallback default; MULTIUSER_INIT overrides this based on the page above.
+InstallDir "$PROGRAMFILES64\${INFO_PRODUCTNAME}" # Fallback default; MULTIUSER_INIT overrides this based on the page above.
 ShowInstDetails show # This will always show the installation details.
 
 # wails.setShellContext (from wails_tools.nsh) picks the shell context from the
@@ -121,8 +122,22 @@ ShowInstDetails show # This will always show the installation details.
     ${EndIf}
 !macroend
 
+!macro pelton.stopRunningApp
+    nsExec::ExecToLog 'taskkill /IM "${PRODUCT_EXECUTABLE}" /F'
+    Pop $0
+    Sleep 500
+!macroend
+
 Function .onInit
    !insertmacro MULTIUSER_INIT # reads/handles the all-users vs per-user choice first; may relaunch elevated.
+   ${If} $MultiUser.InstallMode == "AllUsers"
+       UserInfo::GetAccountType
+       Pop $0
+       ${If} $0 != "Admin"
+           MessageBox MB_OK|MB_ICONEXCLAMATION "Installing ${INFO_PRODUCTNAME} for all users requires administrator rights.$\r$\n$\r$\nRe-run this installer as an administrator, or choose $\"Install just for me$\" instead."
+           Quit
+       ${EndIf}
+   ${EndIf}
    !insertmacro MUI_LANGDLL_DISPLAY # ask which of the installer languages above to use
    !insertmacro wails.checkArchitecture
 FunctionEnd
@@ -130,6 +145,9 @@ FunctionEnd
 Function un.onInit
    !insertmacro MULTIUSER_UNINIT # recovers the install mode this copy was installed with.
    !insertmacro MUI_UNGETLANGUAGE
+   MessageBox MB_YESNO|MB_ICONQUESTION "Are you sure you want to completely remove ${INFO_PRODUCTNAME} and all of its components?" IDYES un_confirmed
+       Quit
+   un_confirmed:
 FunctionEnd
 
 Section "-Core" SecCore
@@ -138,11 +156,19 @@ Section "-Core" SecCore
     ; always install regardless of what's checked below.
     !insertmacro pelton.setShellContext
 
+    !insertmacro pelton.stopRunningApp
+
     !insertmacro wails.webview2runtime
 
     SetOutPath $INSTDIR
 
     !insertmacro wails.files
+
+    File "..\..\..\LICENSE"
+    File "..\..\..\README.md"
+    SetOutPath "$INSTDIR\licenses"
+    File /r "..\..\..\licenses\*.*"
+    SetOutPath $INSTDIR
 
     CreateShortcut "$SMPROGRAMS\${INFO_PRODUCTNAME}.lnk" "$INSTDIR\${PRODUCT_EXECUTABLE}"
 
@@ -160,8 +186,14 @@ SectionEnd
 Section "uninstall"
     !insertmacro pelton.setShellContext
 
+    !insertmacro pelton.stopRunningApp
+
     RMDir /r "$AppData\${PRODUCT_EXECUTABLE}" # Remove the WebView2 DataPath
 
+    Delete "$INSTDIR\${PRODUCT_EXECUTABLE}"
+    Delete "$INSTDIR\LICENSE"
+    Delete "$INSTDIR\README.md"
+    RMDir /r "$INSTDIR\licenses"
     RMDir /r $INSTDIR
 
     Delete "$SMPROGRAMS\${INFO_PRODUCTNAME}.lnk"
