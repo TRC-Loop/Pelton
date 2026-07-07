@@ -108,6 +108,8 @@ export function SetFlagColor(arg1:number,arg2:number):Promise<void>;
 
 export function SetFlagged(arg1:number,arg2:boolean):Promise<void>;
 
+export function SetMailActionsEnabled(arg1:boolean):Promise<void>;
+
 export function SetSeen(arg1:number,arg2:boolean):Promise<void>;
 
 export function SetSetting(arg1:string,arg2:string):Promise<void>;

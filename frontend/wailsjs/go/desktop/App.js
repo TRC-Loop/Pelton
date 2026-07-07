@@ -214,6 +214,10 @@ export function SetFlagged(arg1, arg2) {
   return window['go']['desktop']['App']['SetFlagged'](arg1, arg2);
 }
 
+export function SetMailActionsEnabled(arg1) {
+  return window['go']['desktop']['App']['SetMailActionsEnabled'](arg1);
+}
+
 export function SetSeen(arg1, arg2) {
   return window['go']['desktop']['App']['SetSeen'](arg1, arg2);
 }

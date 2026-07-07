@@ -43,6 +43,7 @@
     getMessage,
     downloadMessageOffline,
     archiveMessage,
+    setMailActionsEnabled,
   } from './lib/api'
   import { recordArchived } from './stores/undoarchive'
   import { onMailNew, onSyncState, onOutboxChanged, onMenu, type Unsubscribe } from './lib/events'
@@ -73,6 +74,10 @@
     listW = $prefs.listWidth
   }
   $: locked = $prefs.paneLocked
+
+  // the native Mail menu's message actions are only usable while a message is
+  // open; keep them greyed in step with the open message.
+  $: setMailActionsEnabled($openMessageId != null)
 
   // keep the native window title in sync with context: the open message's subject
   // when reading, otherwise the current folder/view name.

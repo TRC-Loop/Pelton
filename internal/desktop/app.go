@@ -17,6 +17,7 @@ import (
 	"github.com/TRC-Loop/Pelton/internal/outbox"
 	"github.com/TRC-Loop/Pelton/internal/search"
 	"github.com/TRC-Loop/Pelton/internal/storage"
+	"github.com/wailsapp/wails/v2/pkg/menu"
 )
 
 // App is the bound application object. Its exported methods form the api the
@@ -46,6 +47,10 @@ type App struct {
 	// embedded license data served to the about section on demand.
 	licenseManifest string
 	programLicense  string
+	// mailMenuItems are the native Mail-menu items that act on the open message;
+	// they start disabled and SetMailActionsEnabled toggles them as the frontend's
+	// open message changes.
+	mailMenuItems []*menu.MenuItem
 }
 
 // newApp creates the App with the build version. The heavy initialization
