@@ -5,19 +5,45 @@ export namespace desktop {
 	    email: string;
 	    displayName: string;
 	    imapHost: string;
+	    imapPort: number;
 	    smtpHost: string;
-	
+	    smtpPort: number;
+
 	    static createFrom(source: any = {}) {
 	        return new AccountDTO(source);
 	    }
-	
+
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.id = source["id"];
 	        this.email = source["email"];
 	        this.displayName = source["displayName"];
 	        this.imapHost = source["imapHost"];
+	        this.imapPort = source["imapPort"];
 	        this.smtpHost = source["smtpHost"];
+	        this.smtpPort = source["smtpPort"];
+	    }
+	}
+	export class UpdateAccountRequest {
+	    id: number;
+	    displayName: string;
+	    imapHost: string;
+	    imapPort: number;
+	    smtpHost: string;
+	    smtpPort: number;
+
+	    static createFrom(source: any = {}) {
+	        return new UpdateAccountRequest(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.displayName = source["displayName"];
+	        this.imapHost = source["imapHost"];
+	        this.imapPort = source["imapPort"];
+	        this.smtpHost = source["smtpHost"];
+	        this.smtpPort = source["smtpPort"];
 	    }
 	}
 	export class AccountSignaturesDTO {

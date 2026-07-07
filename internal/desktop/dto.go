@@ -19,7 +19,9 @@ type AccountDTO struct {
 	Email       string `json:"email"`
 	DisplayName string `json:"displayName"`
 	IMAPHost    string `json:"imapHost"`
+	IMAPPort    int    `json:"imapPort"`
 	SMTPHost    string `json:"smtpHost"`
+	SMTPPort    int    `json:"smtpPort"`
 }
 
 // FolderDTO is one mailbox in an account's tree. ParentID is null at the root.
@@ -137,7 +139,9 @@ func toAccountDTO(a storage.Account) AccountDTO {
 		Email:       a.Email,
 		DisplayName: a.DisplayName,
 		IMAPHost:    a.IMAPHost,
+		IMAPPort:    a.IMAPPort,
 		SMTPHost:    a.SMTPHost,
+		SMTPPort:    a.SMTPPort,
 	}
 }
 

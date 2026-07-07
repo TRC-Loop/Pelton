@@ -10,7 +10,9 @@ export interface Account {
   email: string
   displayName: string
   imapHost: string
+  imapPort: number
   smtpHost: string
+  smtpPort: number
 }
 
 export interface Folder {
