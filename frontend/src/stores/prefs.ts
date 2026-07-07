@@ -6,8 +6,8 @@
 
 import { writable } from 'svelte/store'
 import type { UIPrefs, ThemePref, DensityPref, EditorMode } from '../lib/types'
-import { getUIPrefs, setSetting, SettingKeys, systemColorScheme } from '../lib/api'
-import { applyTheme, applyDensity, applyAccent, applyScale, watchSystemTheme, setSystemSchemeOverride } from '../theme/theme'
+import { getUIPrefs, setSetting, SettingKeys, systemColorScheme, setWindowTheme } from '../lib/api'
+import { applyTheme, applyDensity, applyAccent, applyScale, watchSystemTheme, setSystemSchemeOverride, resolveTheme } from '../theme/theme'
 import { setLocale, type Locale } from '../lib/i18n'
 
 // defaults match the backend defaults so the ui renders sanely even before the
@@ -60,9 +60,16 @@ const defaults: UIPrefs = {
 
 export const prefs = writable<UIPrefs>(defaults)
 
+// syncWindowChrome matches the native window chrome (the Windows caption bar) to
+// the resolved theme so it does not stay light under a dark ui.
+function syncWindowChrome(pref: ThemePref): void {
+  setWindowTheme(resolveTheme(pref) === 'dark')
+}
+
 // applyAll pushes the current preferences onto the document.
 function applyAll(p: UIPrefs): void {
   applyTheme(p.theme as ThemePref)
+  syncWindowChrome(p.theme as ThemePref)
   applyDensity(p.density as DensityPref)
   applyAccent(p.accent)
   applyScale(p.uiScale)
@@ -94,6 +101,7 @@ export async function initPrefs(): Promise<void> {
     prefs.subscribe((p) => (current = p))()
     if (current.theme === 'system') {
       applyTheme('system')
+      syncWindowChrome('system')
     }
   })
 }
@@ -105,6 +113,7 @@ export async function initPrefs(): Promise<void> {
 export function setTheme(theme: ThemePref): void {
   prefs.update((p) => ({ ...p, theme }))
   applyTheme(theme)
+  syncWindowChrome(theme)
   void setSetting(SettingKeys.theme, theme)
 }
 

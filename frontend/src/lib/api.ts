@@ -443,6 +443,12 @@ export function setWindowTitle(title: string): void {
   void App.SetWindowTitle(title)
 }
 
+// setWindowTheme matches the native window chrome (the Windows caption bar) to
+// the resolved ui theme. No-op on macOS/Linux.
+export function setWindowTheme(dark: boolean): void {
+  void App.SetWindowTheme(dark)
+}
+
 // getUIPrefs returns all ui preferences with defaults applied server-side.
 export function getUIPrefs(): Promise<UIPrefs> {
   return App.GetUIPrefs()

@@ -222,6 +222,10 @@ export function SetSetting(arg1, arg2) {
   return window['go']['desktop']['App']['SetSetting'](arg1, arg2);
 }
 
+export function SetWindowTheme(arg1) {
+  return window['go']['desktop']['App']['SetWindowTheme'](arg1);
+}
+
 export function SetWindowTitle(arg1) {
   return window['go']['desktop']['App']['SetWindowTitle'](arg1);
 }
