@@ -449,6 +449,13 @@ export function setWindowTheme(dark: boolean): void {
   void App.SetWindowTheme(dark)
 }
 
+// setMailActionsEnabled greys out or restores the native Mail menu's message
+// actions; the app calls it as the open message changes so those items are only
+// selectable while a message is open.
+export function setMailActionsEnabled(enabled: boolean): void {
+  void App.SetMailActionsEnabled(enabled)
+}
+
 // getUIPrefs returns all ui preferences with defaults applied server-side.
 export function getUIPrefs(): Promise<UIPrefs> {
   return App.GetUIPrefs()
