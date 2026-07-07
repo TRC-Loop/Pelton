@@ -48,6 +48,7 @@ func (a *App) buildMenu() *menu.Menu {
 	mailMenu.AddText("Sync Now", keys.CmdOrCtrl("r"), a.menuAction("sync"))
 	mailMenu.AddSeparator()
 	mailMenu.AddText("Add Mailbox…", keys.CmdOrCtrl("m"), a.menuAction("add-mailbox"))
+	mailMenu.AddText("Manage Mailboxes…", nil, a.menuAction("open-mailboxes"))
 	mailMenu.AddSeparator()
 	mailMenu.AddText("Undo", nil, a.menuAction("undo"))
 	mailMenu.AddSeparator()

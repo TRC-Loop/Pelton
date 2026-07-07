@@ -59,6 +59,9 @@
   import type { EditorMode } from './lib/types'
 
   let settingsOpen = false
+  // the settings category to open on; set by menu actions that deep-link into a
+  // specific section (e.g. Manage Mailboxes), null opens the default section.
+  let settingsCategory: string | null = null
   let wizardOpen = false
   let onboardingOpen = false
   const unsubscribers: Unsubscribe[] = []
@@ -292,7 +295,7 @@
   }
 
   // dispatch maps an action (from a shortcut or a menu item) to its handler.
-  function dispatchAction(action: ShortcutAction | 'about' | 'export-pdf' | 'undo' | 'toggle-low-power'): void {
+  function dispatchAction(action: ShortcutAction | 'about' | 'export-pdf' | 'undo' | 'toggle-low-power' | 'open-mailboxes'): void {
     switch (action) {
       case 'compose':
         startCompose()
@@ -301,6 +304,11 @@
         exportPdf()
         break
       case 'preferences':
+        settingsCategory = null
+        settingsOpen = true
+        break
+      case 'open-mailboxes':
+        settingsCategory = 'mailboxes'
         settingsOpen = true
         break
       case 'sync':
@@ -339,7 +347,7 @@
   }
 
   function handleMenu(action: string): void {
-    dispatchAction(action as ShortcutAction | 'about' | 'export-pdf' | 'undo' | 'toggle-low-power')
+    dispatchAction(action as ShortcutAction | 'about' | 'export-pdf' | 'undo' | 'toggle-low-power' | 'open-mailboxes')
   }
 
   // suppress the webview's default context menu (inspect/reload) everywhere. the
@@ -551,6 +559,7 @@
   {#await import('./components/settings/SettingsPanel.svelte') then m}
     <svelte:component
       this={m.default}
+      initialCategory={settingsCategory}
       on:close={() => (settingsOpen = false)}
       on:rerunOnboarding={rerunOnboarding}
     />

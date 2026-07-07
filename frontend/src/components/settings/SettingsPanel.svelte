@@ -235,7 +235,10 @@
   function onSwipeRight(event: Event): void {
     setSwipeRightAction((event.currentTarget as HTMLSelectElement).value)
   }
-  let active = 'appearance'
+  // initialCategory deep-links the panel to a section (e.g. opened from the
+  // "Manage Mailboxes" menu item); null opens the default section.
+  export let initialCategory: string | null = null
+  let active = initialCategory ?? 'appearance'
 
   $: themeOptions = [
     { key: 'system', label: $t('onboarding.theme.system') },
