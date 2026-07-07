@@ -9,6 +9,7 @@
   import { IconX, IconArrowLeft, IconCheck } from '@tabler/icons-svelte'
   import WizardProviders from './WizardProviders.svelte'
   import Spinner from '../common/Spinner.svelte'
+  import { BrowserOpenURL } from '../../../wailsjs/runtime/runtime'
   import { discoverConfig, testConnection, addPasswordAccount, addOAuthAccount } from '../../lib/api'
   import { errorMessage } from '../../stores/toast'
   import { providerPresets, type ProviderPreset } from '../../lib/providers'
@@ -198,8 +199,20 @@
         </label>
         <label class="field">
           <span>{$t('wizard.field.password')}</span>
-          <input type="password" bind:value={draft.password} placeholder={$t('wizard.field.passwordPlaceholder')} />
+          <input
+            type="password"
+            bind:value={draft.password}
+            placeholder={preset?.appPasswordUrl ? $t('wizard.field.appPasswordPlaceholder') : $t('wizard.field.passwordPlaceholder')}
+          />
         </label>
+        {#if preset?.appPasswordUrl}
+          <div class="app-password-warning">
+            <span>{$t('wizard.appPassword.warning')}</span>
+            <button type="button" class="app-password-link" on:click={() => BrowserOpenURL(preset?.appPasswordUrl ?? '')}>
+              {$t('wizard.appPassword.link')}
+            </button>
+          </div>
+        {/if}
 
         <div class="servers">
           <label class="field"><span>{$t('wizard.field.imapHost')}</span><input type="text" bind:value={draft.imapHost} /></label>
@@ -379,6 +392,31 @@
     color: var(--text-secondary);
     font-size: var(--fz-label);
     line-height: 1.5;
+  }
+
+  .app-password-warning {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-1);
+    margin: 0 0 var(--space-4);
+    padding: var(--space-3);
+    border-radius: var(--radius-control);
+    background: var(--warning-bg);
+    color: var(--text-primary);
+    font-size: var(--fz-label);
+    line-height: 1.5;
+  }
+
+  .app-password-link {
+    border: none;
+    background: transparent;
+    padding: 0;
+    color: var(--warning);
+    font-size: var(--fz-label);
+    font-weight: var(--fw-medium);
+    text-decoration: underline;
+    cursor: pointer;
   }
 
   .field {
