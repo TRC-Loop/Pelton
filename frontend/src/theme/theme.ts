@@ -8,8 +8,22 @@ import { applyAccent } from './accent'
 
 export { applyAccent }
 
+// systemSchemeOverride is set from a native probe at startup for platforms where
+// the css media query is unreliable (WebKitGTK on Linux never reports the
+// desktop dark preference). null means "trust the media query".
+let systemSchemeOverride: 'light' | 'dark' | null = null
+
+// setSystemSchemeOverride records the os color scheme resolved natively, so
+// resolveTheme('system') uses it instead of the (Linux-unreliable) media query.
+export function setSystemSchemeOverride(scheme: 'light' | 'dark' | null): void {
+  systemSchemeOverride = scheme
+}
+
 // prefersDark reports the current os color-scheme preference.
 function prefersDark(): boolean {
+  if (systemSchemeOverride) {
+    return systemSchemeOverride === 'dark'
+  }
   return window.matchMedia('(prefers-color-scheme: dark)').matches
 }
 

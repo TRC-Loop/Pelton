@@ -222,12 +222,20 @@ export function SetSetting(arg1, arg2) {
   return window['go']['desktop']['App']['SetSetting'](arg1, arg2);
 }
 
+export function SetWindowTheme(arg1) {
+  return window['go']['desktop']['App']['SetWindowTheme'](arg1);
+}
+
 export function SetWindowTitle(arg1) {
   return window['go']['desktop']['App']['SetWindowTitle'](arg1);
 }
 
 export function SnoozeMessage(arg1, arg2, arg3) {
   return window['go']['desktop']['App']['SnoozeMessage'](arg1, arg2, arg3);
+}
+
+export function SystemColorScheme() {
+  return window['go']['desktop']['App']['SystemColorScheme']();
 }
 
 export function TestConnection(arg1) {

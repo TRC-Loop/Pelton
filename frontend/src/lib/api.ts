@@ -405,6 +405,13 @@ export function pickConfigSyncFolder(): Promise<string> {
   return App.PickConfigSyncFolder()
 }
 
+// systemColorScheme returns the OS dark/light preference ("dark" | "light"), or
+// "" when it cannot be determined. Only meaningful on Linux, where WebKitGTK
+// does not expose it to CSS prefers-color-scheme; elsewhere it returns "".
+export function systemColorScheme(): Promise<string> {
+  return App.SystemColorScheme()
+}
+
 export interface ConfigSyncFolderPeek {
   hasExistingData: boolean
   accountEmails: string[]
@@ -434,6 +441,12 @@ export function deleteAddress(email: string): Promise<void> {
 // setWindowTitle updates the native window title to reflect context.
 export function setWindowTitle(title: string): void {
   void App.SetWindowTitle(title)
+}
+
+// setWindowTheme matches the native window chrome (the Windows caption bar) to
+// the resolved ui theme. No-op on macOS/Linux.
+export function setWindowTheme(dark: boolean): void {
+  void App.SetWindowTheme(dark)
 }
 
 // getUIPrefs returns all ui preferences with defaults applied server-side.
