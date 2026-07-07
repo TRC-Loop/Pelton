@@ -5,7 +5,9 @@ export namespace desktop {
 	    email: string;
 	    displayName: string;
 	    imapHost: string;
+	    imapPort: number;
 	    smtpHost: string;
+	    smtpPort: number;
 	
 	    static createFrom(source: any = {}) {
 	        return new AccountDTO(source);
@@ -17,7 +19,9 @@ export namespace desktop {
 	        this.email = source["email"];
 	        this.displayName = source["displayName"];
 	        this.imapHost = source["imapHost"];
+	        this.imapPort = source["imapPort"];
 	        this.smtpHost = source["smtpHost"];
+	        this.smtpPort = source["smtpPort"];
 	    }
 	}
 	export class AccountSignaturesDTO {
@@ -183,6 +187,7 @@ export namespace desktop {
 	    inReplyTo: string;
 	    references: string[];
 	    attachments: ComposeAttachment[];
+	    sendAt: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new ComposeRequest(source);
@@ -200,6 +205,7 @@ export namespace desktop {
 	        this.inReplyTo = source["inReplyTo"];
 	        this.references = source["references"];
 	        this.attachments = this.convertValues(source["attachments"], ComposeAttachment);
+	        this.sendAt = source["sendAt"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
@@ -749,6 +755,28 @@ export namespace desktop {
 	        this.label = source["label"];
 	        this.unreadCount = source["unreadCount"];
 	        this.totalCount = source["totalCount"];
+	    }
+	}
+	export class UpdateAccountRequest {
+	    id: number;
+	    displayName: string;
+	    imapHost: string;
+	    imapPort: number;
+	    smtpHost: string;
+	    smtpPort: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new UpdateAccountRequest(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.displayName = source["displayName"];
+	        this.imapHost = source["imapHost"];
+	        this.imapPort = source["imapPort"];
+	        this.smtpHost = source["smtpHost"];
+	        this.smtpPort = source["smtpPort"];
 	    }
 	}
 	export class UpdateCheckResult {

@@ -8,6 +8,7 @@
   import { prefs } from '../../stores/prefs'
   import { shortcutLabel, t } from '../../lib/i18n'
   import { emptyFilter, type SearchFilter } from '../../stores/messages'
+  import DateTimePicker from '../common/DateTimePicker.svelte'
 
   export let value: string = ''
 
@@ -130,14 +131,18 @@
 
         <div class="custom">
           <span class="custom-label">{$t('messageList.search.customRange')}</span>
-          <label class="date">
+          <div class="date">
             <span>{$t('messageList.search.from')}</span>
-            <input type="date" bind:value={customFrom} />
-          </label>
-          <label class="date">
+            <div class="date-picker">
+              <DateTimePicker mode="date" bind:value={customFrom} />
+            </div>
+          </div>
+          <div class="date">
             <span>{$t('messageList.search.to')}</span>
-            <input type="date" bind:value={customTo} />
-          </label>
+            <div class="date-picker">
+              <DateTimePicker mode="date" bind:value={customTo} />
+            </div>
+          </div>
           <div class="custom-actions">
             <button type="button" class="ghost" on:click={clearFilter}>{$t('messageList.search.clear')}</button>
             <button type="button" class="primary" on:click={applyCustom}>{$t('messageList.search.apply')}</button>
@@ -311,13 +316,8 @@
     color: var(--text-secondary);
   }
 
-  .date input {
-    border: var(--hairline) solid var(--border-default);
-    border-radius: var(--radius-control);
-    background: var(--surface-sunken);
-    padding: var(--space-1) var(--space-2);
-    font-size: var(--fz-label);
-    color: var(--text-primary);
+  .date-picker {
+    width: 132px;
   }
 
   .custom-actions {

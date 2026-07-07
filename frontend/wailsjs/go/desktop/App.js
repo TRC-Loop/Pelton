@@ -38,6 +38,10 @@ export function ConfigureConfigSync(arg1, arg2, arg3, arg4, arg5) {
   return window['go']['desktop']['App']['ConfigureConfigSync'](arg1, arg2, arg3, arg4, arg5);
 }
 
+export function DeleteAccount(arg1) {
+  return window['go']['desktop']['App']['DeleteAccount'](arg1);
+}
+
 export function DeleteAddress(arg1) {
   return window['go']['desktop']['App']['DeleteAddress'](arg1);
 }
@@ -214,6 +218,10 @@ export function SetFlagged(arg1, arg2) {
   return window['go']['desktop']['App']['SetFlagged'](arg1, arg2);
 }
 
+export function SetMailActionsEnabled(arg1) {
+  return window['go']['desktop']['App']['SetMailActionsEnabled'](arg1);
+}
+
 export function SetSeen(arg1, arg2) {
   return window['go']['desktop']['App']['SetSeen'](arg1, arg2);
 }
@@ -222,12 +230,20 @@ export function SetSetting(arg1, arg2) {
   return window['go']['desktop']['App']['SetSetting'](arg1, arg2);
 }
 
+export function SetWindowTheme(arg1) {
+  return window['go']['desktop']['App']['SetWindowTheme'](arg1);
+}
+
 export function SetWindowTitle(arg1) {
   return window['go']['desktop']['App']['SetWindowTitle'](arg1);
 }
 
 export function SnoozeMessage(arg1, arg2, arg3) {
   return window['go']['desktop']['App']['SnoozeMessage'](arg1, arg2, arg3);
+}
+
+export function SystemColorScheme() {
+  return window['go']['desktop']['App']['SystemColorScheme']();
 }
 
 export function TestConnection(arg1) {
@@ -256,4 +272,8 @@ export function UndoDelete(arg1) {
 
 export function UnsnoozeMessage(arg1) {
   return window['go']['desktop']['App']['UnsnoozeMessage'](arg1);
+}
+
+export function UpdateAccount(arg1) {
+  return window['go']['desktop']['App']['UpdateAccount'](arg1);
 }

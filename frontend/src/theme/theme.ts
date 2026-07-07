@@ -8,8 +8,22 @@ import { applyAccent } from './accent'
 
 export { applyAccent }
 
+// systemSchemeOverride is set from a native probe at startup for platforms where
+// the css media query is unreliable (WebKitGTK on Linux never reports the
+// desktop dark preference). null means "trust the media query".
+let systemSchemeOverride: 'light' | 'dark' | null = null
+
+// setSystemSchemeOverride records the os color scheme resolved natively, so
+// resolveTheme('system') uses it instead of the (Linux-unreliable) media query.
+export function setSystemSchemeOverride(scheme: 'light' | 'dark' | null): void {
+  systemSchemeOverride = scheme
+}
+
 // prefersDark reports the current os color-scheme preference.
 function prefersDark(): boolean {
+  if (systemSchemeOverride) {
+    return systemSchemeOverride === 'dark'
+  }
   return window.matchMedia('(prefers-color-scheme: dark)').matches
 }
 
@@ -46,6 +60,18 @@ export function applyScale(scale: string): void {
   // their vh/vw by it: zoom does not shrink vh, so a 100vh shell would otherwise
   // render factor*100vh tall and clip its bottom row (status bar) off-screen.
   root.style.setProperty('--ui-scale', String(factor))
+}
+
+// currentUIScale reads back the factor applyScale last set, for any fixed-
+// positioned overlay that must convert screen/pointer coordinates into the
+// zoomed layout space (see ContextMenu.svelte's comment for why: css `zoom`
+// leaves clientX/Y and getBoundingClientRect position in unscaled screen
+// pixels while a `position: fixed` element is placed in zoomed layout space).
+// a no-op divisor at the default 100%.
+export function currentUIScale(): number {
+  const raw = getComputedStyle(document.documentElement).getPropertyValue('--ui-scale')
+  const n = parseFloat(raw)
+  return n > 0 ? n : 1
 }
 
 // watchSystemTheme calls back whenever the os color scheme changes. the caller

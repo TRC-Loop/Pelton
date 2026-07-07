@@ -10,7 +10,9 @@ export interface Account {
   email: string
   displayName: string
   imapHost: string
+  imapPort: number
   smtpHost: string
+  smtpPort: number
 }
 
 export interface Folder {
@@ -110,6 +112,9 @@ export interface ComposeRequest {
   inReplyTo: string
   references: string[]
   attachments: ComposeAttachment[]
+  // optional RFC3339 timestamp for a scheduled ("send later") send. empty
+  // means send immediately, subject to the undo-send delay.
+  sendAt: string
 }
 
 export interface Draft {

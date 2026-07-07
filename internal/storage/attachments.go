@@ -86,6 +86,16 @@ func (d *DB) DeleteAttachmentFilesForMessage(accountID, messageID int64) error {
 	return nil
 }
 
+// DeleteAttachmentFilesForAccount removes the on disk attachment directory for a
+// whole account. Call it after DeleteAccount, whose cascade only clears the rows.
+func (d *DB) DeleteAttachmentFilesForAccount(accountID int64) error {
+	dir := filepath.Join(d.attachmentsDir, accountSegment(accountID))
+	if err := os.RemoveAll(dir); err != nil {
+		return fmt.Errorf("storage: remove attachment dir for account %d: %w", accountID, err)
+	}
+	return nil
+}
+
 // writeAttachmentFile writes content under
 // attachmentsDir/{account_id}/{message_id}/{filename}, creating directories as
 // needed, sanitizing the filename and resolving duplicates. It returns an

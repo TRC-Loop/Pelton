@@ -17,6 +17,7 @@ import (
 	"github.com/TRC-Loop/Pelton/internal/outbox"
 	"github.com/TRC-Loop/Pelton/internal/search"
 	"github.com/TRC-Loop/Pelton/internal/storage"
+	"github.com/wailsapp/wails/v2/pkg/menu"
 )
 
 // App is the bound application object. Its exported methods form the api the
@@ -26,8 +27,13 @@ type App struct {
 	log *slog.Logger
 
 	store *storage.DB
-	index *search.Index
-	sync  *configsync.Manager
+	// storeReady closes once startup has finished assigning (or failing to
+	// assign) store, giving domReady a happens-before edge before it reads
+	// store on its own goroutine - without it, the read is a data race even
+	// though a nil check keeps it from crashing.
+	storeReady chan struct{}
+	index      *search.Index
+	sync       *configsync.Manager
 	// defaultStateDir is the device's normal per-OS app-support directory,
 	// independent of an active configsync in-place folder. It is where the
 	// configsync markers live so they are discoverable regardless of which
@@ -41,6 +47,10 @@ type App struct {
 	// embedded license data served to the about section on demand.
 	licenseManifest string
 	programLicense  string
+	// mailMenuItems are the native Mail-menu items that act on the open message;
+	// they start disabled and SetMailActionsEnabled toggles them as the frontend's
+	// open message changes.
+	mailMenuItems []*menu.MenuItem
 }
 
 // newApp creates the App with the build version. The heavy initialization
@@ -48,8 +58,9 @@ type App struct {
 // events on.
 func newApp(version string) *App {
 	return &App{
-		log:     slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelInfo})),
-		version: version,
+		log:        slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelInfo})),
+		version:    version,
+		storeReady: make(chan struct{}),
 	}
 }
 
@@ -63,10 +74,12 @@ func (a *App) startup(ctx context.Context) {
 	store, dataDir, err := openStore(ctx)
 	if err != nil {
 		a.log.Error("open store", "err", err)
+		close(a.storeReady)
 		return
 	}
 	a.store = store
 	a.queue = outbox.NewQueue(store)
+	close(a.storeReady)
 
 	if defaultPath, pathErr := storage.DefaultPath(); pathErr == nil {
 		a.defaultStateDir = filepath.Dir(defaultPath)
@@ -103,8 +116,11 @@ func (a *App) startup(ctx context.Context) {
 
 // domReady is the wails OnDomReady hook. Native window calls (like the theme
 // setter) need the webview up first, so the initial theme is applied here
-// rather than in startup.
+// rather than in startup. It can run concurrently with startup (a large
+// mailbox can still be opening when the webview signals dom-ready), so it
+// waits for storeReady first to avoid racing on store.
 func (a *App) domReady(ctx context.Context) {
+	<-a.storeReady
 	a.applyNativeTheme(a.stringSetting(storage.SettingTheme, defaultTheme))
 }
 

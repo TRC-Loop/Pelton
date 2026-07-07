@@ -31,6 +31,23 @@ export function listAccounts(): Promise<Account[]> {
   return App.ListAccounts()
 }
 
+// updateAccount persists edits to an account's display name and server settings.
+export function updateAccount(req: {
+  id: number
+  displayName: string
+  imapHost: string
+  imapPort: number
+  smtpHost: string
+  smtpPort: number
+}): Promise<Account> {
+  return App.UpdateAccount(new desktop.UpdateAccountRequest(req))
+}
+
+// deleteAccount removes an account, its cached mail and its keyring secret.
+export function deleteAccount(id: number): Promise<void> {
+  return App.DeleteAccount(id)
+}
+
 // listFolders returns one account's full mailbox tree with counts.
 export function listFolders(accountId: number): Promise<Folder[]> {
   return App.ListFolders(accountId)
@@ -405,6 +422,13 @@ export function pickConfigSyncFolder(): Promise<string> {
   return App.PickConfigSyncFolder()
 }
 
+// systemColorScheme returns the OS dark/light preference ("dark" | "light"), or
+// "" when it cannot be determined. Only meaningful on Linux, where WebKitGTK
+// does not expose it to CSS prefers-color-scheme; elsewhere it returns "".
+export function systemColorScheme(): Promise<string> {
+  return App.SystemColorScheme()
+}
+
 export interface ConfigSyncFolderPeek {
   hasExistingData: boolean
   accountEmails: string[]
@@ -434,6 +458,19 @@ export function deleteAddress(email: string): Promise<void> {
 // setWindowTitle updates the native window title to reflect context.
 export function setWindowTitle(title: string): void {
   void App.SetWindowTitle(title)
+}
+
+// setWindowTheme matches the native window chrome (the Windows caption bar) to
+// the resolved ui theme. No-op on macOS/Linux.
+export function setWindowTheme(dark: boolean): void {
+  void App.SetWindowTheme(dark)
+}
+
+// setMailActionsEnabled greys out or restores the native Mail menu's message
+// actions; the app calls it as the open message changes so those items are only
+// selectable while a message is open.
+export function setMailActionsEnabled(enabled: boolean): void {
+  void App.SetMailActionsEnabled(enabled)
 }
 
 // getUIPrefs returns all ui preferences with defaults applied server-side.

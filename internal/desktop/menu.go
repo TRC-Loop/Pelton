@@ -39,28 +39,35 @@ func (a *App) buildMenu() *menu.Menu {
 	fileMenu.AddSeparator()
 	fileMenu.AddText("Export Message as PDF…", keys.CmdOrCtrl("p"), a.menuAction("export-pdf"))
 
-	// mailbox menu: sync, account management, and the message-level actions
-	// that make sense to reach without the mouse (or a memorized shortcut).
-	// Undo has no accelerator here since Cmd/Ctrl+Z is already handled by the
-	// app's own keydown handler (the undo-send/delete/archive chain); binding
-	// it again here would double-fire.
-	mailMenu := root.AddSubmenu("Mailbox")
-	mailMenu.AddText("Sync Now", keys.CmdOrCtrl("r"), a.menuAction("sync"))
-	mailMenu.AddSeparator()
-	mailMenu.AddText("Add Mailbox…", keys.CmdOrCtrl("m"), a.menuAction("add-mailbox"))
-	mailMenu.AddSeparator()
+	// mailbox menu: mailbox-level operations - syncing and managing accounts.
+	mailboxMenu := root.AddSubmenu("Mailbox")
+	mailboxMenu.AddText("Sync Now", keys.CmdOrCtrl("r"), a.menuAction("sync"))
+	mailboxMenu.AddSeparator()
+	mailboxMenu.AddText("Add Mailbox…", keys.CmdOrCtrl("m"), a.menuAction("add-mailbox"))
+	mailboxMenu.AddText("Manage Mailboxes…", nil, a.menuAction("open-mailboxes"))
+
+	// mail menu: actions on the open message. Undo stays enabled (it undoes the
+	// last send/delete/archive, which needs no open message), but the message-
+	// level items below start disabled and are only enabled while a message is
+	// open (SetMailActionsEnabled, driven by the frontend's selection). Undo has
+	// no accelerator here since Cmd/Ctrl+Z is already handled by the app's own
+	// keydown handler; binding it again would double-fire.
+	mailMenu := root.AddSubmenu("Mail")
 	mailMenu.AddText("Undo", nil, a.menuAction("undo"))
 	mailMenu.AddSeparator()
-	mailMenu.AddText("Mark as Read", nil, a.menuAction("mark-read"))
-	mailMenu.AddText("Mark as Unread", nil, a.menuAction("mark-unread"))
-	mailMenu.AddText("Flag / Unflag", nil, a.menuAction("flag"))
-	mailMenu.AddText("Archive", nil, a.menuAction("archive"))
-	mailMenu.AddText("Delete Message", nil, a.menuAction("delete-message"))
-	mailMenu.AddSeparator()
-	mailMenu.AddText("Low Power Mode", nil, a.menuAction("toggle-low-power"))
+	a.mailMenuItems = []*menu.MenuItem{
+		mailMenu.AddText("Mark as Read", nil, a.menuAction("mark-read")),
+		mailMenu.AddText("Mark as Unread", nil, a.menuAction("mark-unread")),
+		mailMenu.AddText("Flag / Unflag", nil, a.menuAction("flag")),
+		mailMenu.AddText("Archive", nil, a.menuAction("archive")),
+		mailMenu.AddText("Delete Message", nil, a.menuAction("delete-message")),
+	}
+	for _, item := range a.mailMenuItems {
+		item.Disabled = true
+	}
 
-	// view menu: a reliable fullscreen toggle. the native green button can be
-	// inconsistent in some setups, so this guarantees the app can go fullscreen.
+	// view menu: a reliable fullscreen toggle (the native green button can be
+	// inconsistent in some setups) plus the low-power mode toggle.
 	viewMenu := root.AddSubmenu("View")
 	viewMenu.AddText("Toggle Fullscreen", keys.Combo("f", keys.CmdOrCtrlKey, keys.ControlKey), func(_ *menu.CallbackData) {
 		if wailsruntime.WindowIsFullscreen(a.ctx) {
@@ -69,6 +76,8 @@ func (a *App) buildMenu() *menu.Menu {
 			wailsruntime.WindowFullscreen(a.ctx)
 		}
 	})
+	viewMenu.AddSeparator()
+	viewMenu.AddText("Low Power Mode", nil, a.menuAction("toggle-low-power"))
 
 	// the standard edit menu gives copy/paste/select-all their native bindings,
 	// which the webview needs on macos to work in inputs and the mail body.
@@ -77,6 +86,18 @@ func (a *App) buildMenu() *menu.Menu {
 	}
 
 	return root
+}
+
+// SetMailActionsEnabled greys out or restores the Mail menu's message-level
+// items. The frontend calls it as its open message changes, so those actions are
+// only selectable while a message is actually open.
+func (a *App) SetMailActionsEnabled(enabled bool) {
+	for _, item := range a.mailMenuItems {
+		item.Disabled = !enabled
+	}
+	if a.ctx != nil {
+		wailsruntime.MenuUpdateApplicationMenu(a.ctx)
+	}
 }
 
 // menuAction returns a menu callback that emits the menu event with the given

@@ -1,15 +1,24 @@
 <script lang="ts">
   // the popover that opens from the status bar's outbox indicator. it lists every
   // queued, sending and failed message with its recipients and state, an
-  // indeterminate progress bar while sending, and the error for failed ones. it
-  // is read-only; the worker drives the actual state.
+  // indeterminate progress bar while sending, and the error for failed ones. a
+  // queued row whose nextAttemptAt is meaningfully in the future (a scheduled
+  // "send later", not just the short undo-send delay) shows its scheduled time
+  // and a cancel button instead of the generic "queued" label; cancelling pulls
+  // it back to a draft the same way undo-send does.
   import { IconSend, IconClock, IconAlertTriangle, IconX } from '@tabler/icons-svelte'
   import { createEventDispatcher } from 'svelte'
-  import { outbox } from '../../stores/outbox'
+  import { outbox, loadOutbox } from '../../stores/outbox'
+  import { cancelSend } from '../../lib/api'
+  import { errorMessage, toastError, toastInfo } from '../../stores/toast'
   import type { OutboxRow } from '../../lib/types'
   import { t } from '../../lib/i18n'
 
   const dispatch = createEventDispatcher<{ close: void }>()
+
+  // rows queued for longer than this out from now count as an explicitly
+  // scheduled send rather than sitting in the short undo-send window.
+  const SCHEDULED_THRESHOLD_MS = 60 * 1000
 
   function recipientLabel(row: OutboxRow, tFn: (key: string) => string): string {
     if (row.recipients.length === 0) {
@@ -19,6 +28,42 @@
       return row.recipients[0]
     }
     return `${row.recipients[0]} +${row.recipients.length - 1}`
+  }
+
+  // isScheduled reports whether a queued row is a future "send later" send.
+  function isScheduled(row: OutboxRow): boolean {
+    if (row.state !== 'queued' || !row.nextAttemptAt) {
+      return false
+    }
+    return new Date(row.nextAttemptAt).getTime() - Date.now() > SCHEDULED_THRESHOLD_MS
+  }
+
+  function formatScheduled(iso: string): string {
+    return new Date(iso).toLocaleString(undefined, {
+      weekday: 'short',
+      hour: 'numeric',
+      minute: '2-digit',
+    })
+  }
+
+  let cancelling: number | null = null
+
+  // cancelScheduled pulls a still-queued scheduled send back out of the outbox.
+  async function cancelScheduled(id: number): Promise<void> {
+    cancelling = id
+    try {
+      const cancelled = await cancelSend(id)
+      if (cancelled) {
+        toastInfo($t('common.outboxPanel.scheduledCancelled'))
+      } else {
+        toastError($t('common.outboxPanel.scheduledCancelTooLate'))
+      }
+    } catch (err) {
+      toastError(errorMessage(err))
+    } finally {
+      cancelling = null
+      await loadOutbox()
+    }
   }
 </script>
 
@@ -51,10 +96,26 @@
               <span class="bar"><span class="fill"></span></span>
             {:else if row.state === 'failed'}
               <span class="err">{row.lastError || $t('common.outboxPanel.sendFailed')}</span>
+            {:else if isScheduled(row)}
+              <span class="muted">
+                {$t('common.outboxPanel.scheduledFor').replace('{when}', formatScheduled(row.nextAttemptAt))}
+              </span>
             {:else}
               <span class="muted">{$t('common.outboxPanel.queued')}</span>
             {/if}
           </span>
+          {#if isScheduled(row)}
+            <button
+              type="button"
+              class="cancel"
+              disabled={cancelling === row.id}
+              aria-label={$t('common.outboxPanel.cancelScheduled')}
+              title={$t('common.outboxPanel.cancelScheduled')}
+              on:click={() => cancelScheduled(row.id)}
+            >
+              <IconX size={13} stroke={1.8} />
+            </button>
+          {/if}
         </li>
       {/each}
     </ul>
@@ -164,6 +225,28 @@
     font-size: var(--fz-meta);
     color: var(--danger);
     word-break: break-word;
+  }
+
+  .cancel {
+    display: inline-flex;
+    align-self: flex-start;
+    flex-shrink: 0;
+    border: none;
+    background: transparent;
+    color: var(--text-tertiary);
+    cursor: pointer;
+    padding: var(--space-1);
+    border-radius: var(--radius-control);
+  }
+
+  .cancel:hover:not(:disabled) {
+    background: var(--surface-hover);
+    color: var(--text-primary);
+  }
+
+  .cancel:disabled {
+    opacity: 0.5;
+    cursor: default;
   }
 
   /* indeterminate progress while sending. */

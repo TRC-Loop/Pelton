@@ -16,6 +16,10 @@ export interface ProviderPreset {
   smtpPort?: number
   // note is shown under the form (e.g. app-specific password guidance).
   note?: string
+  // appPasswordUrl, when set, replaces the plain note with a warning box that
+  // spells out that the provider's regular password will not work and links to
+  // where an app-specific password is generated.
+  appPasswordUrl?: string
   // custom means "use autodiscovery and let the user edit servers".
   custom?: boolean
   // allowClientSecret reveals an optional oauth client-secret field, for
@@ -53,7 +57,7 @@ export const providerPresets: ProviderPreset[] = [
     imapPort: 993,
     smtpHost: 'smtp.mail.me.com',
     smtpPort: 587,
-    note: 'iCloud requires an app-specific password (appleid.apple.com).',
+    appPasswordUrl: 'https://appleid.apple.com',
   },
   {
     id: 'yahoo',

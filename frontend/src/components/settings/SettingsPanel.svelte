@@ -22,6 +22,7 @@
     IconCloudDownload,
     IconCloudCog,
     IconAddressBook,
+    IconMailbox,
     IconWriting,
     IconLanguage,
     IconBatteryEco,
@@ -34,11 +35,13 @@
   import ShortcutSettings from './ShortcutSettings.svelte'
   import SignaturesSection from './SignaturesSection.svelte'
   import AddressBookSection from './AddressBookSection.svelte'
+  import MailboxesSection from './MailboxesSection.svelte'
   import ConfigSyncSection from './ConfigSyncSection.svelte'
   import RowLayoutPreview from './RowLayoutPreview.svelte'
   import AboutSection from './AboutSection.svelte'
   import ToggleSwitch from '../common/ToggleSwitch.svelte'
   import LanguageSelect from '../common/LanguageSelect.svelte'
+  import DateTimePicker from '../common/DateTimePicker.svelte'
   import { pfpDataUri, type PfpStyle } from '../../lib/pfp'
   import { initials, formatBytes } from '../../lib/format'
   import {
@@ -112,6 +115,7 @@
     { key: 'gestures', label: $t('settingsPanel.category.gestures'), icon: IconHandMove },
     { key: 'offline', label: $t('settingsPanel.category.offline'), icon: IconCloudDownload },
     { key: 'power', label: $t('settingsPanel.category.power'), icon: IconBatteryEco },
+    { key: 'mailboxes', label: $t('settingsPanel.category.mailboxes'), icon: IconMailbox },
     { key: 'contacts', label: $t('settingsPanel.category.contacts'), icon: IconAddressBook },
     { key: 'sync', label: $t('settingsPanel.category.sync'), icon: IconCloudCog },
     { key: 'composing', label: $t('settingsPanel.category.composing'), icon: IconWriting },
@@ -231,7 +235,10 @@
   function onSwipeRight(event: Event): void {
     setSwipeRightAction((event.currentTarget as HTMLSelectElement).value)
   }
-  let active = 'appearance'
+  // initialCategory deep-links the panel to a section (e.g. opened from the
+  // "Manage Mailboxes" menu item); null opens the default section.
+  export let initialCategory: string | null = null
+  let active = initialCategory ?? 'appearance'
 
   $: themeOptions = [
     { key: 'system', label: $t('onboarding.theme.system') },
@@ -684,7 +691,9 @@
               {/each}
             </div>
             <div class="download-row">
-              <input type="date" class="select" bind:value={downloadStart} />
+              <div class="download-date">
+                <DateTimePicker mode="date" bind:value={downloadStart} />
+              </div>
               <button
                 type="button"
                 class="action-btn"
@@ -716,6 +725,10 @@
               {/if}
             </p>
           </div>
+        </section>
+      {:else if active === 'mailboxes'}
+        <section>
+          <MailboxesSection />
         </section>
       {:else if active === 'contacts'}
         <section>
@@ -1072,6 +1085,10 @@
     align-items: center;
     gap: var(--space-3);
     margin-top: var(--space-3);
+  }
+
+  .download-date {
+    width: 160px;
   }
 
   .download-presets {
