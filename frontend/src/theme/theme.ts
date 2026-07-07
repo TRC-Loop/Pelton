@@ -48,6 +48,18 @@ export function applyScale(scale: string): void {
   root.style.setProperty('--ui-scale', String(factor))
 }
 
+// currentUIScale reads back the factor applyScale last set, for any fixed-
+// positioned overlay that must convert screen/pointer coordinates into the
+// zoomed layout space (see ContextMenu.svelte's comment for why: css `zoom`
+// leaves clientX/Y and getBoundingClientRect position in unscaled screen
+// pixels while a `position: fixed` element is placed in zoomed layout space).
+// a no-op divisor at the default 100%.
+export function currentUIScale(): number {
+  const raw = getComputedStyle(document.documentElement).getPropertyValue('--ui-scale')
+  const n = parseFloat(raw)
+  return n > 0 ? n : 1
+}
+
 // watchSystemTheme calls back whenever the os color scheme changes. the caller
 // should re-apply the theme only while the preference is "system". returns an
 // unsubscribe function.
