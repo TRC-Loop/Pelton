@@ -31,6 +31,23 @@ export function listAccounts(): Promise<Account[]> {
   return App.ListAccounts()
 }
 
+// updateAccount persists edits to an account's display name and server settings.
+export function updateAccount(req: {
+  id: number
+  displayName: string
+  imapHost: string
+  imapPort: number
+  smtpHost: string
+  smtpPort: number
+}): Promise<Account> {
+  return App.UpdateAccount(new desktop.UpdateAccountRequest(req))
+}
+
+// deleteAccount removes an account, its cached mail and its keyring secret.
+export function deleteAccount(id: number): Promise<void> {
+  return App.DeleteAccount(id)
+}
+
 // listFolders returns one account's full mailbox tree with counts.
 export function listFolders(accountId: number): Promise<Folder[]> {
   return App.ListFolders(accountId)

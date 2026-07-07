@@ -39,11 +39,12 @@ func (a *App) buildMenu() *menu.Menu {
 	fileMenu.AddSeparator()
 	fileMenu.AddText("Export Message as PDF…", keys.CmdOrCtrl("p"), a.menuAction("export-pdf"))
 
-	// mailbox menu: mailbox-level operations - syncing and adding accounts.
+	// mailbox menu: mailbox-level operations - syncing and managing accounts.
 	mailboxMenu := root.AddSubmenu("Mailbox")
 	mailboxMenu.AddText("Sync Now", keys.CmdOrCtrl("r"), a.menuAction("sync"))
 	mailboxMenu.AddSeparator()
 	mailboxMenu.AddText("Add Mailbox…", keys.CmdOrCtrl("m"), a.menuAction("add-mailbox"))
+	mailboxMenu.AddText("Manage Mailboxes…", nil, a.menuAction("open-mailboxes"))
 
 	// mail menu: actions on the open message. Undo stays enabled (it undoes the
 	// last send/delete/archive, which needs no open message), but the message-

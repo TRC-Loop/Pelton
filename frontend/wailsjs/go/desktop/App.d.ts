@@ -20,6 +20,8 @@ export function ClearSentOutbox():Promise<void>;
 
 export function ConfigureConfigSync(arg1:string,arg2:string,arg3:boolean,arg4:string,arg5:boolean):Promise<desktop.ConfigSyncStatusDTO>;
 
+export function DeleteAccount(arg1:number):Promise<void>;
+
 export function DeleteAddress(arg1:string):Promise<void>;
 
 export function DeleteDraft(arg1:number):Promise<void>;
@@ -135,3 +137,5 @@ export function UnarchiveMessage(arg1:string,arg2:number):Promise<void>;
 export function UndoDelete(arg1:number):Promise<void>;
 
 export function UnsnoozeMessage(arg1:number):Promise<void>;
+
+export function UpdateAccount(arg1:desktop.UpdateAccountRequest):Promise<desktop.AccountDTO>;

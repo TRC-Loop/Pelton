@@ -38,6 +38,10 @@ export function ConfigureConfigSync(arg1, arg2, arg3, arg4, arg5) {
   return window['go']['desktop']['App']['ConfigureConfigSync'](arg1, arg2, arg3, arg4, arg5);
 }
 
+export function DeleteAccount(arg1) {
+  return window['go']['desktop']['App']['DeleteAccount'](arg1);
+}
+
 export function DeleteAddress(arg1) {
   return window['go']['desktop']['App']['DeleteAddress'](arg1);
 }
@@ -268,4 +272,8 @@ export function UndoDelete(arg1) {
 
 export function UnsnoozeMessage(arg1) {
   return window['go']['desktop']['App']['UnsnoozeMessage'](arg1);
+}
+
+export function UpdateAccount(arg1) {
+  return window['go']['desktop']['App']['UpdateAccount'](arg1);
 }
