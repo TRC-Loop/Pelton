@@ -405,6 +405,13 @@ export function pickConfigSyncFolder(): Promise<string> {
   return App.PickConfigSyncFolder()
 }
 
+// systemColorScheme returns the OS dark/light preference ("dark" | "light"), or
+// "" when it cannot be determined. Only meaningful on Linux, where WebKitGTK
+// does not expose it to CSS prefers-color-scheme; elsewhere it returns "".
+export function systemColorScheme(): Promise<string> {
+  return App.SystemColorScheme()
+}
+
 export interface ConfigSyncFolderPeek {
   hasExistingData: boolean
   accountEmails: string[]

@@ -230,6 +230,10 @@ export function SnoozeMessage(arg1, arg2, arg3) {
   return window['go']['desktop']['App']['SnoozeMessage'](arg1, arg2, arg3);
 }
 
+export function SystemColorScheme() {
+  return window['go']['desktop']['App']['SystemColorScheme']();
+}
+
 export function TestConnection(arg1) {
   return window['go']['desktop']['App']['TestConnection'](arg1);
 }

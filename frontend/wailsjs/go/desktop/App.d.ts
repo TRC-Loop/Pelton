@@ -116,6 +116,8 @@ export function SetWindowTitle(arg1:string):Promise<void>;
 
 export function SnoozeMessage(arg1:number,arg2:string,arg3:boolean):Promise<void>;
 
+export function SystemColorScheme():Promise<string>;
+
 export function TestConnection(arg1:desktop.TestConnectionRequest):Promise<void>;
 
 export function TriggerConfigSync():Promise<desktop.ConfigSyncStatusDTO>;

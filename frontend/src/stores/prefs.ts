@@ -6,8 +6,8 @@
 
 import { writable } from 'svelte/store'
 import type { UIPrefs, ThemePref, DensityPref, EditorMode } from '../lib/types'
-import { getUIPrefs, setSetting, SettingKeys } from '../lib/api'
-import { applyTheme, applyDensity, applyAccent, applyScale, watchSystemTheme } from '../theme/theme'
+import { getUIPrefs, setSetting, SettingKeys, systemColorScheme } from '../lib/api'
+import { applyTheme, applyDensity, applyAccent, applyScale, watchSystemTheme, setSystemSchemeOverride } from '../theme/theme'
 import { setLocale, type Locale } from '../lib/i18n'
 
 // defaults match the backend defaults so the ui renders sanely even before the
@@ -74,6 +74,19 @@ function applyAll(p: UIPrefs): void {
 export async function initPrefs(): Promise<void> {
   const loaded = await getUIPrefs()
   prefs.set(loaded)
+
+  // on Linux the css prefers-color-scheme query never reports the desktop dark
+  // preference, so resolve it natively first; elsewhere this returns "" and the
+  // media query is used. done before applyAll so the first paint is correct.
+  try {
+    const scheme = await systemColorScheme()
+    if (scheme === 'dark' || scheme === 'light') {
+      setSystemSchemeOverride(scheme)
+    }
+  } catch {
+    // fall back to the media query
+  }
+
   applyAll(loaded)
 
   watchSystemTheme(() => {
