@@ -539,14 +539,13 @@
     {/each}
     <div class="send-custom">
       <label for={`send-custom-${session.id}`}>{$t('compose.sendLater.customLabel')}</label>
-      <div class="send-custom-row">
-        <div class="send-custom-picker">
-          <DateTimePicker id={`send-custom-${session.id}`} mode="datetime" bind:value={customSendValue} />
-        </div>
-        <button type="button" class="send-custom-go" disabled={!customSendValue} on:click={confirmCustomSend}>
-          {$t('compose.sendLater.schedule')}
-        </button>
-      </div>
+      <DateTimePicker
+        id={`send-custom-${session.id}`}
+        mode="datetime"
+        bind:value={customSendValue}
+        confirmLabel={$t('compose.sendLater.schedule')}
+        on:confirm={confirmCustomSend}
+      />
     </div>
   </div>
 {/if}
@@ -808,11 +807,16 @@
     position: fixed;
     inset: 0;
     z-index: 140;
+    /* the enclosing .compose-layer sets pointer-events: none and only restores
+       it on .compose; these siblings must opt back in or clicks fall through to
+       the compose controls behind them. */
+    pointer-events: auto;
   }
 
   .send-menu {
     position: fixed;
     z-index: 141;
+    pointer-events: auto;
     width: 260px;
     max-height: min(360px, calc(100vh - 2 * var(--space-5)));
     overflow-y: auto;
@@ -871,32 +875,6 @@
   .send-custom label {
     font-size: var(--fz-meta);
     color: var(--text-secondary);
-  }
-
-  .send-custom-row {
-    display: flex;
-    gap: var(--space-2);
-  }
-
-  .send-custom-picker {
-    flex: 1;
-    min-width: 0;
-  }
-
-  .send-custom-go {
-    padding: var(--space-1) var(--space-3);
-    border: none;
-    border-radius: var(--radius-control);
-    background: var(--accent);
-    color: var(--accent-fg);
-    cursor: pointer;
-    font-weight: var(--fw-medium);
-    font-size: var(--fz-label);
-  }
-
-  .send-custom-go:disabled {
-    opacity: 0.5;
-    cursor: default;
   }
 
   .confirm-backdrop {

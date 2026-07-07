@@ -5,10 +5,12 @@
   // datetime mode). all date math here is local wall-clock time, matching
   // what the native inputs produced, so callers keep their existing
   // parsing/formatting untouched.
-  import { tick } from 'svelte'
+  import { tick, createEventDispatcher } from 'svelte'
   import { IconCalendar, IconChevronLeft, IconChevronRight } from '@tabler/icons-svelte'
   import { currentUIScale } from '../../theme/theme'
   import { t } from '../../lib/i18n'
+
+  const dispatch = createEventDispatcher<{ confirm: void }>()
 
   // the bound value: 'YYYY-MM-DD' in date mode, 'YYYY-MM-DDTHH:mm' in
   // datetime mode (empty string means unset), same shape the native inputs
@@ -18,6 +20,11 @@
   export let mode: 'date' | 'datetime' = 'date'
   // forwarded to the trigger button so an external <label for=...> still works.
   export let id: string | undefined = undefined
+  // when set, a primary confirm button (e.g. "Schedule") is shown inside the
+  // panel; clicking it commits the value, closes the panel and dispatches
+  // `confirm`. only the compose send-later menu passes this, so the plain
+  // date/settings pickers keep their simple footer.
+  export let confirmLabel: string | undefined = undefined
 
   let open = false
   let triggerEl: HTMLButtonElement
@@ -313,6 +320,12 @@
     open = false
     triggerEl?.focus()
   }
+
+  function confirm(): void {
+    commit()
+    open = false
+    dispatch('confirm')
+  }
 </script>
 
 <div class="picker">
@@ -436,6 +449,12 @@
         <button type="button" class="link-btn" on:click={clear}>{$t('common.datePicker.clear')}</button>
         <button type="button" class="link-btn" on:click={pickToday}>{$t('common.datePicker.today')}</button>
       </div>
+
+      {#if confirmLabel}
+        <button type="button" class="confirm-btn" disabled={!selected} on:click={confirm}>
+          {confirmLabel}
+        </button>
+      {/if}
     </div>
   {/if}
 </div>
@@ -676,5 +695,22 @@
 
   .link-btn:hover {
     background: var(--surface-hover);
+  }
+
+  .confirm-btn {
+    width: 100%;
+    padding: var(--space-2);
+    border: none;
+    border-radius: var(--radius-control);
+    background: var(--accent);
+    color: var(--accent-fg);
+    font-size: var(--fz-label);
+    font-weight: var(--fw-medium);
+    cursor: pointer;
+  }
+
+  .confirm-btn:disabled {
+    opacity: 0.5;
+    cursor: default;
   }
 </style>
