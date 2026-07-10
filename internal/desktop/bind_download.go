@@ -2,6 +2,7 @@ package desktop
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -202,9 +203,46 @@ func (a *App) DownloadRange(startDateRFC3339 string, includeAttachments bool) er
 
 	// run the whole job on a background goroutine so the bound call returns
 	// immediately and neither the ui nor the go caller waits on imap. progress
-	// and completion are reported entirely through events.
-	go a.runRangeDownload(since, includeAttachments)
+	// and completion are reported entirely through events. the job gets its own
+	// cancellable context so CancelDownload can stop it without shutting the app.
+	ctx := a.beginDownload()
+	go a.runRangeDownload(ctx, since, includeAttachments)
 	return nil
+}
+
+// beginDownload derives a cancellable context from the app context for a bulk
+// download and stores its cancel func so CancelDownload can reach it.
+func (a *App) beginDownload() context.Context {
+	ctx, cancel := context.WithCancel(a.ctx)
+	a.dlMu.Lock()
+	a.dlCancel = cancel
+	a.dlMu.Unlock()
+	return ctx
+}
+
+// endDownload releases the stored cancel func once a job returns.
+func (a *App) endDownload() {
+	a.dlMu.Lock()
+	if a.dlCancel != nil {
+		a.dlCancel()
+		a.dlCancel = nil
+	}
+	a.dlMu.Unlock()
+}
+
+// CancelDownload stops a running bulk offline download and clears its resume
+// marker so it does not restart on the next launch. A no-op if none is running.
+func (a *App) CancelDownload() {
+	a.dlMu.Lock()
+	cancel := a.dlCancel
+	a.dlMu.Unlock()
+	if cancel == nil {
+		return
+	}
+	// clear the marker first so the shutdown-vs-cancel check in runRangeDownload
+	// cannot race a resume back in.
+	_ = a.store.Set(a.ctx, settingDownloadPending, "")
+	cancel()
 }
 
 // ResumePendingDownload restarts a bulk download that was still running when
@@ -228,148 +266,48 @@ func (a *App) ResumePendingDownload() {
 	if !downloadActive.CompareAndSwap(false, true) {
 		return
 	}
-	go a.runRangeDownload(since, includeAttachments)
-}
-
-// DownloadEstimateDTO is the offline-download space estimate: how many
-// messages are planned and their combined raw size, so the settings ui can
-// show "~4.7 GB" before the user commits to a potentially large download.
-type DownloadEstimateDTO struct {
-	MessageCount int   `json:"messageCount"`
-	TotalBytes   int64 `json:"totalBytes"`
-}
-
-// EstimateDownloadRange plans and sizes the range in a single connect pass per
-// account (search each folder, then immediately size whatever came back
-// uncached, all on the same imap session). Planning and sizing used to be two
-// separate full connect-login-select-search passes; since this fires on every
-// start-date change in the settings ui, that doubled the wait before the user
-// even presses "Download" - and DownloadRange then reran the same search a
-// third time as its own "Scanning" step.
-func (a *App) EstimateDownloadRange(startDateRFC3339 string) (DownloadEstimateDTO, error) {
-	if err := a.ready(); err != nil {
-		return DownloadEstimateDTO{}, err
-	}
-	since, err := time.Parse(time.RFC3339, startDateRFC3339)
-	if err != nil {
-		since, err = time.Parse("2006-01-02", startDateRFC3339)
-		if err != nil {
-			return DownloadEstimateDTO{}, fmt.Errorf("pelton: invalid start date %q: %w", startDateRFC3339, err)
-		}
-	}
-	accounts, err := a.store.ListAccounts(a.ctx)
-	if err != nil {
-		return DownloadEstimateDTO{}, err
-	}
-
-	var messageCount int
-	var totalBytes int64
-	for _, account := range accounts {
-		if err := a.ctx.Err(); err != nil {
-			return DownloadEstimateDTO{}, err
-		}
-		count, size, err := a.planAndSizeAccount(account, since)
-		if err != nil {
-			if errors.Is(err, errNoCredentials) {
-				continue
-			}
-			a.log.Error("estimate download", "account", account.Email, "err", err)
-			continue
-		}
-		messageCount += count
-		totalBytes += size
-	}
-	return DownloadEstimateDTO{MessageCount: messageCount, TotalBytes: totalBytes}, nil
-}
-
-// planAndSizeAccount opens one connection to an account, and for each folder
-// searches since the cutoff, filters to uncached uids, and sizes exactly those
-// uids before moving to the next folder - so estimating never reconnects.
-func (a *App) planAndSizeAccount(account storage.Account, since time.Time) (int, int64, error) {
-	cfg, err := a.resolveIMAP(account)
-	if err != nil {
-		return 0, 0, err
-	}
-	syncMu.Lock()
-	defer syncMu.Unlock()
-
-	client, err := pimap.Connect(cfg)
-	if err != nil {
-		return 0, 0, err
-	}
-	defer client.Close()
-	if err := client.Login(); err != nil {
-		return 0, 0, err
-	}
-	defer client.Logout()
-
-	folders, err := a.store.ListFolders(a.ctx, account.ID)
-	if err != nil {
-		return 0, 0, err
-	}
-
-	var count int
-	var total int64
-	for _, folder := range folders {
-		if _, err := client.Select(folder.IMAPPath); err != nil {
-			a.log.Error("estimate select", "folder", folder.IMAPPath, "err", err)
-			continue
-		}
-		uids, err := client.SearchSince(since)
-		if err != nil {
-			a.log.Error("estimate search", "folder", folder.IMAPPath, "err", err)
-			continue
-		}
-		have, err := a.cachedUIDs(folder.ID)
-		if err != nil {
-			return 0, 0, err
-		}
-		var uncached []imap.UID
-		for _, uid := range uids {
-			if _, ok := have[uint32(uid)]; !ok {
-				uncached = append(uncached, uid)
-			}
-		}
-		if len(uncached) == 0 {
-			continue
-		}
-		sizes, err := client.FetchSizes(uncached)
-		if err != nil {
-			a.log.Error("estimate fetch sizes", "folder", folder.IMAPPath, "err", err)
-			continue
-		}
-		count += len(uncached)
-		for _, size := range sizes {
-			total += size
-		}
-	}
-	return count, total, nil
+	ctx := a.beginDownload()
+	go a.runRangeDownload(ctx, since, includeAttachments)
 }
 
 // runRangeDownload performs the plan-and-fetch passes off the calling goroutine.
-func (a *App) runRangeDownload(since time.Time, includeAttachments bool) {
+// The resume marker is only cleared when the job actually finishes or is stopped
+// by the user (CancelDownload). If it stops because the app is shutting down
+// (a.ctx cancelled) the marker is left in place so ResumePendingDownload picks
+// it up next launch, which is what makes an interrupted download continue.
+func (a *App) runRangeDownload(ctx context.Context, since time.Time, includeAttachments bool) {
 	defer downloadActive.Store(false)
-	// the job is no longer resumable once it either finishes or gives up;
-	// clear the marker before returning on every exit path.
-	defer func() { _ = a.store.Set(a.ctx, settingDownloadPending, "") }()
+	defer a.endDownload()
+
+	// clearIfNotShutdown drops the resume marker unless the app is shutting down;
+	// on shutdown we keep it so the job resumes on the next launch.
+	clearIfNotShutdown := func() {
+		if a.ctx.Err() == nil {
+			_ = a.store.Set(a.ctx, settingDownloadPending, "")
+		}
+	}
 
 	a.emit(EventDownloadProgress, DownloadProgressEvent{Running: true, Label: "Scanning"})
-	tasks, err := a.planDownload(since)
+	tasks, err := a.planDownload(ctx, since)
 	if err != nil {
+		clearIfNotShutdown()
 		a.emit(EventDownloadProgress, DownloadProgressEvent{Running: false, Error: err.Error()})
 		return
 	}
 	total := len(tasks)
 	if total == 0 {
+		clearIfNotShutdown()
 		a.emit(EventDownloadProgress, DownloadProgressEvent{Running: false, Label: "Nothing to download"})
 		return
 	}
 
 	a.emit(EventDownloadProgress, DownloadProgressEvent{Running: true, Total: total, Label: "Starting"})
-	if err := a.runDownload(tasks, includeAttachments, total); err != nil {
+	if err := a.runDownload(ctx, tasks, includeAttachments, total); err != nil {
+		clearIfNotShutdown()
 		a.emit(EventDownloadProgress, DownloadProgressEvent{Running: false, Error: err.Error()})
 		return
 	}
+	clearIfNotShutdown()
 	a.emit(EventDownloadProgress, DownloadProgressEvent{Running: false, Done: total, Total: total, Percent: 100, Label: "Done"})
 }
 
@@ -382,17 +320,17 @@ type dlTask struct {
 // planDownload connects to each account, searches every folder for messages
 // since the cutoff, and returns the ones not yet cached. It is the cheap counting
 // pass that lets the fetch pass report an accurate percentage and eta.
-func (a *App) planDownload(since time.Time) ([]dlTask, error) {
+func (a *App) planDownload(ctx context.Context, since time.Time) ([]dlTask, error) {
 	accounts, err := a.store.ListAccounts(a.ctx)
 	if err != nil {
 		return nil, err
 	}
 	var tasks []dlTask
 	for _, account := range accounts {
-		if err := a.ctx.Err(); err != nil {
+		if err := ctx.Err(); err != nil {
 			return nil, err
 		}
-		accTasks, err := a.planAccount(account, since)
+		accTasks, err := a.planAccount(ctx, account, since)
 		if err != nil {
 			if errors.Is(err, errNoCredentials) {
 				continue
@@ -407,7 +345,7 @@ func (a *App) planDownload(since time.Time) ([]dlTask, error) {
 
 // planAccount opens one account and lists the uncached message uids since the
 // cutoff across its folders.
-func (a *App) planAccount(account storage.Account, since time.Time) ([]dlTask, error) {
+func (a *App) planAccount(ctx context.Context, account storage.Account, since time.Time) ([]dlTask, error) {
 	cfg, err := a.resolveIMAP(account)
 	if err != nil {
 		return nil, err
@@ -431,6 +369,9 @@ func (a *App) planAccount(account storage.Account, since time.Time) ([]dlTask, e
 	}
 	var tasks []dlTask
 	for _, folder := range folders {
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
 		if _, err := client.Select(folder.IMAPPath); err != nil {
 			a.log.Error("plan select", "folder", folder.IMAPPath, "err", err)
 			continue
@@ -468,13 +409,13 @@ func (a *App) cachedUIDs(folderID int64) (map[uint32]struct{}, error) {
 
 // runDownload fetches the planned messages account by account, storing each and
 // pinning it offline, and emits progress with percent and a running eta.
-func (a *App) runDownload(tasks []dlTask, includeAttachments bool, total int) error {
+func (a *App) runDownload(ctx context.Context, tasks []dlTask, includeAttachments bool, total int) error {
 	byAccount := groupByAccount(tasks)
 	start := time.Now()
 	done := 0
 
 	for accountID, accTasks := range byAccount {
-		if err := a.ctx.Err(); err != nil {
+		if err := ctx.Err(); err != nil {
 			return err
 		}
 		account, err := a.store.GetAccount(a.ctx, accountID)
@@ -483,7 +424,7 @@ func (a *App) runDownload(tasks []dlTask, includeAttachments bool, total int) er
 			done += len(accTasks)
 			continue
 		}
-		if err := a.downloadAccount(*account, accTasks, includeAttachments, &done, total, start); err != nil {
+		if err := a.downloadAccount(ctx, *account, accTasks, includeAttachments, &done, total, start); err != nil {
 			if errors.Is(err, errNoCredentials) {
 				done += len(accTasks)
 				continue
@@ -495,7 +436,7 @@ func (a *App) runDownload(tasks []dlTask, includeAttachments bool, total int) er
 }
 
 // downloadAccount fetches every task for one account over a single connection.
-func (a *App) downloadAccount(account storage.Account, tasks []dlTask, includeAttachments bool, done *int, total int, start time.Time) error {
+func (a *App) downloadAccount(ctx context.Context, account storage.Account, tasks []dlTask, includeAttachments bool, done *int, total int, start time.Time) error {
 	cfg, err := a.resolveIMAP(account)
 	if err != nil {
 		return err
@@ -515,7 +456,7 @@ func (a *App) downloadAccount(account storage.Account, tasks []dlTask, includeAt
 
 	selected := ""
 	for _, task := range tasks {
-		if err := a.ctx.Err(); err != nil {
+		if err := ctx.Err(); err != nil {
 			return err
 		}
 		if selected != task.folder.IMAPPath {

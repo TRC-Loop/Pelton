@@ -20,6 +20,20 @@ function hash(seed: string): number {
   return h
 }
 
+// rng returns a deterministic pseudo-random stream (mulberry32) from a seed, so
+// the generative geometric avatar can pull many varied values while staying
+// identical for the same sender everywhere.
+function rng(seed: number): () => number {
+  let s = seed >>> 0
+  return () => {
+    s = (s + 0x6d2b79f5) >>> 0
+    let t = s
+    t = Math.imul(t ^ (t >>> 15), t | 1)
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61)
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+  }
+}
+
 // svgToDataUri url-encodes an svg string into an <img>-ready data uri.
 function svgToDataUri(svg: string): string {
   return `data:image/svg+xml,${encodeURIComponent(svg)}`
@@ -79,24 +93,50 @@ ${rects}
 </svg>`
 }
 
-// geometricSvg renders a few overlapping translucent polygons in two analogous
-// hues for a softer, "nice" abstract mark.
+// geometricSvg renders a generative Bauhaus-style mark on a 2x2 grid: each cell
+// gets one of several shape primitives (disc, half-disc, quarter-disc, triangle,
+// ring, dot) at a hash-driven rotation and color, with occasional empty cells for
+// negative space. driving the layout, shapes and rotations from a seeded prng
+// (not just the hue) makes every sender's mark structurally distinct.
 function geometricSvg(seed: string): string {
-  const h = hash(seed)
-  const hue = h % 360
-  const bg = `hsl(${hue} 60% 42%)`
-  const c2 = `hsl(${(hue + 40) % 360} 70% 60%)`
-  const c3 = `hsl(${(hue + 320) % 360} 65% 55%)`
-  // a couple of hash-driven coordinates so the composition varies per sender.
-  const a = h % 50
-  const b = (h >> 8) % 50
-  const c = (h >> 16) % 50
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-<rect width="100" height="100" fill="${bg}"/>
-<polygon points="0,${50 + a} ${50 + b},0 100,${30 + c} 100,100 0,100" fill="${c2}" opacity="0.85"/>
-<polygon points="${20 + a},100 100,${20 + c} 100,100" fill="${c3}" opacity="0.9"/>
-<circle cx="${30 + b}" cy="${30 + a}" r="14" fill="#fff" opacity="0.18"/>
-</svg>`
+  const rand = rng(hash(seed))
+  const irand = (n: number): number => Math.floor(rand() * n)
+  const baseHue = irand(360)
+  const palette = [
+    `hsl(${baseHue} 65% 55%)`,
+    `hsl(${(baseHue + 35) % 360} 68% 45%)`,
+    `hsl(${(baseHue + 190 + irand(60)) % 360} 72% 62%)`,
+    `hsl(${(baseHue + 15) % 360} 34% 93%)`,
+    `hsl(${(baseHue + 20) % 360} 42% 17%)`,
+  ]
+  const bg = palette[irand(2)]
+  const others = palette.filter((c) => c !== bg)
+  const s = 50
+  const rot = (): number => 90 * irand(4)
+  const col = (): string => others[irand(others.length)]
+
+  // each entry draws one cell-sized primitive in local (0,0)-(s,s) coordinates.
+  const shapes: Array<() => string> = [
+    () => `<circle cx="${s / 2}" cy="${s / 2}" r="${s / 2}" fill="${col()}"/>`,
+    () =>
+      `<path d="M0 ${s / 2} A ${s / 2} ${s / 2} 0 0 1 ${s} ${s / 2} Z" fill="${col()}" transform="rotate(${rot()} ${s / 2} ${s / 2})"/>`,
+    () =>
+      `<path d="M0 0 L${s} 0 A ${s} ${s} 0 0 1 0 ${s} Z" fill="${col()}" transform="rotate(${rot()} ${s / 2} ${s / 2})"/>`,
+    () => `<polygon points="0,0 ${s},0 0,${s}" fill="${col()}" transform="rotate(${rot()} ${s / 2} ${s / 2})"/>`,
+    () => `<circle cx="${s / 2}" cy="${s / 2}" r="${s / 2}" fill="${col()}"/><circle cx="${s / 2}" cy="${s / 2}" r="${s / 4}" fill="${bg}"/>`,
+    () => `<circle cx="${s / 2}" cy="${s / 2}" r="${s / 3.2}" fill="${col()}"/>`,
+  ]
+
+  let body = `<rect width="100" height="100" fill="${bg}"/>`
+  for (let gx = 0; gx < 2; gx++) {
+    for (let gy = 0; gy < 2; gy++) {
+      if (rand() < 0.12) {
+        continue
+      }
+      body += `<g transform="translate(${gx * s} ${gy * s})">${shapes[irand(shapes.length)]()}</g>`
+    }
+  }
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">${body}</svg>`
 }
 
 // pfpDataUri returns the avatar for a style as an <img> data uri. label is only

@@ -45,9 +45,17 @@ type Doc struct {
 	Date      time.Time
 }
 
-// Query is a search request: free text plus an optional date window.
+// Query is a search request: free text plus optional field constraints and a
+// date window. The field constraints (From/To/Subject) come from typed search
+// chips (from:, to:, subject:) and each narrows the results to that field; they
+// are conjoined with the free text and each other.
 type Query struct {
 	Text string
+	// From/To/Subject scope the match to a single field when non-empty. To also
+	// matches the cc field.
+	From    string
+	To      string
+	Subject string
 	// After/Before bound the message date. A zero time means the side is open.
 	After  time.Time
 	Before time.Time
@@ -153,6 +161,16 @@ func (i *Index) build(q Query) query.Query {
 	if q.Text != "" {
 		parts = append(parts, textQuery(q.Text))
 	}
+	if q.From != "" {
+		parts = append(parts, fieldQuery(q.From, "from"))
+	}
+	if q.To != "" {
+		// a "to:" chip should match either recipient header.
+		parts = append(parts, bleve.NewDisjunctionQuery(fieldQuery(q.To, "to"), fieldQuery(q.To, "cc")))
+	}
+	if q.Subject != "" {
+		parts = append(parts, fieldQuery(q.Subject, "subject"))
+	}
 	if !q.After.IsZero() || !q.Before.IsZero() {
 		parts = append(parts, dateQuery(q.After, q.Before))
 	}
@@ -191,6 +209,16 @@ func textQuery(text string) query.Query {
 		alts = append(alts, mq)
 	}
 	return bleve.NewDisjunctionQuery(alts...)
+}
+
+// fieldQuery matches value against a single field, requiring every token to be
+// present (AND) so a "from:jane@x.com" chip stays precise instead of matching
+// any of its tokenized parts. No fuzziness here: field chips are deliberate.
+func fieldQuery(value, field string) query.Query {
+	mq := bleve.NewMatchQuery(value)
+	mq.SetField(field)
+	mq.SetOperator(query.MatchQueryOperatorAnd)
+	return mq
 }
 
 // dateQuery bounds the message date. Bleve treats a zero time as an open side

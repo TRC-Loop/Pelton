@@ -29,6 +29,7 @@
   } from '@tabler/icons-svelte'
   import { createEventDispatcher } from 'svelte'
   import SegmentedSetting from './SegmentedSetting.svelte'
+  import StepSlider from './StepSlider.svelte'
   import AccentPicker from './AccentPicker.svelte'
   import TechToggles from './TechToggles.svelte'
   import ToastPositionPicker from './ToastPositionPicker.svelte'
@@ -43,7 +44,7 @@
   import LanguageSelect from '../common/LanguageSelect.svelte'
   import DateTimePicker from '../common/DateTimePicker.svelte'
   import { pfpDataUri, type PfpStyle } from '../../lib/pfp'
-  import { initials, formatBytes } from '../../lib/format'
+  import { initials } from '../../lib/format'
   import {
     prefs,
     setTheme,
@@ -85,7 +86,7 @@
   } from '../../stores/prefs'
   import peltonLogo from '../../assets/images/icons/pelton-logo.png'
   import type { Locale } from '../../lib/i18n'
-  import { downloadRange, estimateDownloadRange } from '../../lib/api'
+  import { downloadRange, cancelDownload } from '../../lib/api'
   import { downloadProgress } from '../../stores/progress'
   import { toastError, errorMessage } from '../../stores/toast'
   import { t } from '../../lib/i18n'
@@ -191,45 +192,6 @@
     }
   }
 
-  // the size estimate re-fetches whenever the start date changes (debounced,
-  // since it walks every account over imap). the attachment toggle does not
-  // change what is fetched (the raw message is the same either way; only what
-  // gets kept on disk differs), so it does not need to trigger a re-estimate.
-  let estimate: { messageCount: number; totalBytes: number } | null = null
-  let estimating = false
-  let estimateError = ''
-  let estimateTimer: ReturnType<typeof setTimeout>
-  $: void downloadStart, scheduleEstimate()
-
-  function scheduleEstimate(): void {
-    clearTimeout(estimateTimer)
-    estimate = null
-    estimateError = ''
-    if (!downloadStart) {
-      return
-    }
-    estimateTimer = setTimeout(runEstimate, 500)
-  }
-
-  async function runEstimate(): Promise<void> {
-    const start = downloadStart
-    estimating = true
-    try {
-      const result = await estimateDownloadRange(start)
-      if (start === downloadStart) {
-        estimate = result
-      }
-    } catch (err) {
-      if (start === downloadStart) {
-        estimateError = errorMessage(err)
-      }
-    } finally {
-      if (start === downloadStart) {
-        estimating = false
-      }
-    }
-  }
-
   // select handlers (the cast lives in script; inline ts casts break the parser).
   function onSwipeLeft(event: Event): void {
     setSwipeLeftAction((event.currentTarget as HTMLSelectElement).value)
@@ -298,6 +260,9 @@
     setAlwaysLoadImages(true)
     confirmImages = false
   }
+
+  // the remote-image allowlist manager (trusted senders/domains) opens in a modal.
+  let allowlistOpen = false
 
   // the reading-pane empty-state image is picked from a local file and stored as
   // a data uri. anything past the hard cap is refused; between the soft and hard
@@ -642,6 +607,14 @@
               </div>
             </div>
           {/if}
+
+          <div class="field">
+            <span class="row-label">{$t('settingsPanel.label.manageWhitelist')}</span>
+            <p class="hint">{$t('settingsPanel.hint.manageWhitelist')}</p>
+            <button type="button" class="action-btn" on:click={() => (allowlistOpen = true)}>
+              {$t('settingsPanel.button.manageWhitelist')}
+            </button>
+          </div>
         </section>
       {:else if active === 'notifications'}
         <section>
@@ -731,7 +704,7 @@
           <p class="hint">
             {$t('settingsPanel.hint.lowPowerDetail')}
           </p>
-          <SegmentedSetting
+          <StepSlider
             label={$t('settingsPanel.label.autoSyncInterval')}
             value={String($prefs.autoSyncIntervalSeconds)}
             options={autoSyncOptions}
@@ -775,14 +748,15 @@
               <div class="download-date">
                 <DateTimePicker mode="date" bind:value={downloadStart} />
               </div>
-              <button
-                type="button"
-                class="action-btn"
-                disabled={!!$downloadProgress && $downloadProgress.running}
-                on:click={startDownload}
-              >
-                {$downloadProgress && $downloadProgress.running ? $t('settingsPanel.button.downloading') : $t('settingsPanel.button.download')}
-              </button>
+              {#if $downloadProgress && $downloadProgress.running}
+                <button type="button" class="action-btn" on:click={() => cancelDownload()}>
+                  {$t('settingsPanel.button.cancelDownload')}
+                </button>
+              {:else}
+                <button type="button" class="action-btn" on:click={startDownload}>
+                  {$t('settingsPanel.button.download')}
+                </button>
+              {/if}
             </div>
             <div class="toggle" title={$t('settingsPanel.hint.includeAttachments')}>
               <span class="row-label">{$t('settingsPanel.toggle.includeAttachments')}</span>
@@ -792,19 +766,6 @@
                 on:change={(e) => setDownloadIncludeAttachments(e.detail)}
               />
             </div>
-            <p class="hint estimate">
-              {#if estimating}
-                {$t('settingsPanel.estimate.estimating')}
-              {:else if estimateError}
-                {$t('settingsPanel.estimate.errorPrefix')} {estimateError}
-              {:else if estimate}
-                {#if estimate.messageCount === 0}
-                  {$t('settingsPanel.estimate.empty')}
-                {:else}
-                  ~{formatBytes(estimate.totalBytes)} {$t('settingsPanel.estimate.across')} {estimate.messageCount.toLocaleString()} {$t('settingsPanel.estimate.messages')}
-                {/if}
-              {/if}
-            </p>
           </div>
         </section>
       {:else if active === 'mailboxes'}
@@ -890,6 +851,20 @@
     </div>
   </div>
 </div>
+
+<!-- the allowlist modal is code-split so its list logic loads only on demand. -->
+{#if allowlistOpen}
+  {#await import('./ImageAllowlistModal.svelte') then m}
+    <svelte:component
+      this={m.default}
+      on:close={() => (allowlistOpen = false)}
+      on:openMessage={() => {
+        allowlistOpen = false
+        dispatch('close')
+      }}
+    />
+  {/await}
+{/if}
 
 <style>
   .screen {
@@ -1234,9 +1209,5 @@
   .preset-btn:hover {
     background: var(--surface-hover);
     color: var(--text-primary);
-  }
-
-  .estimate {
-    min-height: 1.4em;
   }
 </style>

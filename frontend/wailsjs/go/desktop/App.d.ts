@@ -12,6 +12,8 @@ export function AppVersion():Promise<string>;
 
 export function ArchiveMessage(arg1:number):Promise<desktop.ArchiveUndoDTO>;
 
+export function CancelDownload():Promise<void>;
+
 export function CancelSend(arg1:number):Promise<boolean>;
 
 export function CheckForUpdates():Promise<desktop.UpdateCheckResult>;
@@ -38,8 +40,6 @@ export function DownloadMessageOffline(arg1:number):Promise<void>;
 
 export function DownloadRange(arg1:string,arg2:boolean):Promise<void>;
 
-export function EstimateDownloadRange(arg1:string):Promise<desktop.DownloadEstimateDTO>;
-
 export function ExportMessagePrintView(arg1:number):Promise<void>;
 
 export function GetAccountSignatures(arg1:number):Promise<desktop.AccountSignaturesDTO>;
@@ -64,6 +64,8 @@ export function ListDrafts():Promise<Array<desktop.DraftDTO>>;
 
 export function ListFolders(arg1:number):Promise<Array<desktop.FolderDTO>>;
 
+export function ListImageAllowlist():Promise<Array<desktop.ImageAllowEntryDTO>>;
+
 export function ListMessages(arg1:desktop.ListMessagesRequest):Promise<desktop.MessageListDTO>;
 
 export function ListOAuthProviders():Promise<Record<string, string>>;
@@ -83,6 +85,8 @@ export function PickConfigSyncFolder():Promise<string>;
 export function ProgramLicense():Promise<string>;
 
 export function ReadAttachment(arg1:number,arg2:number):Promise<desktop.AttachmentContentDTO>;
+
+export function RemoveImageAllow(arg1:string,arg2:string):Promise<void>;
 
 export function RemoveOffline(arg1:number):Promise<void>;
 

@@ -22,6 +22,10 @@ export function ArchiveMessage(arg1) {
   return window['go']['desktop']['App']['ArchiveMessage'](arg1);
 }
 
+export function CancelDownload() {
+  return window['go']['desktop']['App']['CancelDownload']();
+}
+
 export function CancelSend(arg1) {
   return window['go']['desktop']['App']['CancelSend'](arg1);
 }
@@ -74,10 +78,6 @@ export function DownloadRange(arg1, arg2) {
   return window['go']['desktop']['App']['DownloadRange'](arg1, arg2);
 }
 
-export function EstimateDownloadRange(arg1) {
-  return window['go']['desktop']['App']['EstimateDownloadRange'](arg1);
-}
-
 export function ExportMessagePrintView(arg1) {
   return window['go']['desktop']['App']['ExportMessagePrintView'](arg1);
 }
@@ -126,6 +126,10 @@ export function ListFolders(arg1) {
   return window['go']['desktop']['App']['ListFolders'](arg1);
 }
 
+export function ListImageAllowlist() {
+  return window['go']['desktop']['App']['ListImageAllowlist']();
+}
+
 export function ListMessages(arg1) {
   return window['go']['desktop']['App']['ListMessages'](arg1);
 }
@@ -164,6 +168,10 @@ export function ProgramLicense() {
 
 export function ReadAttachment(arg1, arg2) {
   return window['go']['desktop']['App']['ReadAttachment'](arg1, arg2);
+}
+
+export function RemoveImageAllow(arg1, arg2) {
+  return window['go']['desktop']['App']['RemoveImageAllow'](arg1, arg2);
 }
 
 export function RemoveOffline(arg1) {

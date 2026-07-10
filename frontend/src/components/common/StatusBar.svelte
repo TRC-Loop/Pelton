@@ -4,10 +4,11 @@
   // right side shows live sync state and the last-synced relative time. it is the
   // honest, always-visible window into background activity.
   import { onDestroy } from 'svelte'
-  import { IconSend, IconAlertTriangle, IconRefresh, IconCheck, IconDownload, IconBatteryEco } from '@tabler/icons-svelte'
+  import { IconSend, IconAlertTriangle, IconRefresh, IconCheck, IconDownload, IconBatteryEco, IconX } from '@tabler/icons-svelte'
   import { outbox, syncing, lastSynced } from '../../stores/outbox'
   import { downloadProgress, attachmentProgress } from '../../stores/progress'
   import { formatRelative } from '../../lib/format'
+  import { cancelDownload } from '../../lib/api'
   import { prefs, setLowPowerMode } from '../../stores/prefs'
   import OutboxPanel from './OutboxPanel.svelte'
   import { t } from '../../lib/i18n'
@@ -88,6 +89,17 @@
           {#if $downloadProgress.etaSeconds > 0}
             <span class="p-eta">~{formatEta($downloadProgress.etaSeconds)}</span>
           {/if}
+        {/if}
+        {#if $downloadProgress.running}
+          <button
+            type="button"
+            class="cancel-dl"
+            aria-label={$t('common.statusBar.cancelDownload')}
+            title={$t('common.statusBar.cancelDownload')}
+            on:click={() => cancelDownload()}
+          >
+            <IconX size={12} stroke={2} />
+          </button>
         {/if}
       </div>
     {:else if $attachmentProgress}
@@ -200,6 +212,22 @@
   .p-eta {
     color: var(--text-tertiary);
     font-variant-numeric: tabular-nums;
+  }
+
+  .cancel-dl {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    background: transparent;
+    color: var(--text-tertiary);
+    cursor: pointer;
+    padding: 1px;
+    border-radius: var(--radius-control);
+  }
+  .cancel-dl:hover {
+    background: var(--surface-hover);
+    color: var(--danger);
   }
 
   .outbox-btn {

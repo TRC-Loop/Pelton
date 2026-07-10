@@ -288,20 +288,6 @@ export namespace desktop {
 	        this.source = source["source"];
 	    }
 	}
-	export class DownloadEstimateDTO {
-	    messageCount: number;
-	    totalBytes: number;
-	
-	    static createFrom(source: any = {}) {
-	        return new DownloadEstimateDTO(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.messageCount = source["messageCount"];
-	        this.totalBytes = source["totalBytes"];
-	    }
-	}
 	export class DraftDTO {
 	    id: number;
 	    savedAt: string;
@@ -364,6 +350,26 @@ export namespace desktop {
 	        this.unreadCount = source["unreadCount"];
 	        this.totalCount = source["totalCount"];
 	        this.attributes = source["attributes"];
+	    }
+	}
+	export class ImageAllowEntryDTO {
+	    value: string;
+	    kind: string;
+	    exampleMessageId: number;
+	    exampleSubject: string;
+	    exampleFrom: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new ImageAllowEntryDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.value = source["value"];
+	        this.kind = source["kind"];
+	        this.exampleMessageId = source["exampleMessageId"];
+	        this.exampleSubject = source["exampleSubject"];
+	        this.exampleFrom = source["exampleFrom"];
 	    }
 	}
 	export class ListMessagesRequest {
@@ -578,6 +584,10 @@ export namespace desktop {
 	    afterUnix: number;
 	    beforeUnix: number;
 	    limit: number;
+	    from: string;
+	    to: string;
+	    subject: string;
+	    hasAttachment: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new SearchRequestDTO(source);
@@ -589,6 +599,10 @@ export namespace desktop {
 	        this.afterUnix = source["afterUnix"];
 	        this.beforeUnix = source["beforeUnix"];
 	        this.limit = source["limit"];
+	        this.from = source["from"];
+	        this.to = source["to"];
+	        this.subject = source["subject"];
+	        this.hasAttachment = source["hasAttachment"];
 	    }
 	}
 	export class SettingResult {
