@@ -126,6 +126,10 @@ export function ListFolders(arg1) {
   return window['go']['desktop']['App']['ListFolders'](arg1);
 }
 
+export function ListImageAllowlist() {
+  return window['go']['desktop']['App']['ListImageAllowlist']();
+}
+
 export function ListMessages(arg1) {
   return window['go']['desktop']['App']['ListMessages'](arg1);
 }
@@ -164,6 +168,10 @@ export function ProgramLicense() {
 
 export function ReadAttachment(arg1, arg2) {
   return window['go']['desktop']['App']['ReadAttachment'](arg1, arg2);
+}
+
+export function RemoveImageAllow(arg1, arg2) {
+  return window['go']['desktop']['App']['RemoveImageAllow'](arg1, arg2);
 }
 
 export function RemoveOffline(arg1) {

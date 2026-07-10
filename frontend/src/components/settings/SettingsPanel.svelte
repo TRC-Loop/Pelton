@@ -297,6 +297,9 @@
     confirmImages = false
   }
 
+  // the remote-image allowlist manager (trusted senders/domains) opens in a modal.
+  let allowlistOpen = false
+
   // sender-photo fallback chain. "Generated" never touches the network.
   $: avatarSourceOptions = [
     { key: 'bimi_gravatar', label: $t('settingsPanel.avatarSource.bimiGravatar') },
@@ -561,6 +564,14 @@
               </div>
             </div>
           {/if}
+
+          <div class="field">
+            <span class="row-label">{$t('settingsPanel.label.manageWhitelist')}</span>
+            <p class="hint">{$t('settingsPanel.hint.manageWhitelist')}</p>
+            <button type="button" class="action-btn" on:click={() => (allowlistOpen = true)}>
+              {$t('settingsPanel.button.manageWhitelist')}
+            </button>
+          </div>
         </section>
       {:else if active === 'notifications'}
         <section>
@@ -809,6 +820,20 @@
     </div>
   </div>
 </div>
+
+<!-- the allowlist modal is code-split so its list logic loads only on demand. -->
+{#if allowlistOpen}
+  {#await import('./ImageAllowlistModal.svelte') then m}
+    <svelte:component
+      this={m.default}
+      on:close={() => (allowlistOpen = false)}
+      on:openMessage={() => {
+        allowlistOpen = false
+        dispatch('close')
+      }}
+    />
+  {/await}
+{/if}
 
 <style>
   .screen {
