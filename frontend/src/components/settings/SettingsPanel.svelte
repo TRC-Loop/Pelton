@@ -29,6 +29,7 @@
   } from '@tabler/icons-svelte'
   import { createEventDispatcher } from 'svelte'
   import SegmentedSetting from './SegmentedSetting.svelte'
+  import StepSlider from './StepSlider.svelte'
   import AccentPicker from './AccentPicker.svelte'
   import TechToggles from './TechToggles.svelte'
   import ToastPositionPicker from './ToastPositionPicker.svelte'
@@ -650,7 +651,7 @@
           <p class="hint">
             {$t('settingsPanel.hint.lowPowerDetail')}
           </p>
-          <SegmentedSetting
+          <StepSlider
             label={$t('settingsPanel.label.autoSyncInterval')}
             value={String($prefs.autoSyncIntervalSeconds)}
             options={autoSyncOptions}
