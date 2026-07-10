@@ -44,7 +44,9 @@
     downloadMessageOffline,
     archiveMessage,
     setMailActionsEnabled,
+    isDemoMode,
   } from './lib/api'
+  import { setDemoActive } from './lib/demo'
   import { recordArchived } from './stores/undoarchive'
   import { onMailNew, onSyncState, onOutboxChanged, onMenu, type Unsubscribe } from './lib/events'
   import { matchShortcut, comboHasModifier, type ShortcutAction } from './lib/shortcuts'
@@ -110,6 +112,11 @@
   }
 
   onMount(async () => {
+    // cosmetic demo mode (--potatoes-are-nice): flip the data layer to sample
+    // data before anything loads, so the whole ui fills with the potato inbox.
+    const demo = await isDemoMode().catch(() => false)
+    setDemoActive(demo)
+
     await initPrefs()
     await initSidebarState()
     await initComposePrefs()
@@ -119,13 +126,19 @@
     await loadSidebar()
     await loadOutbox()
 
-    // show the first-run onboarding until it has been completed once.
-    try {
-      const r = await getSetting(SettingKeys.onboarded)
-      onboardingOpen = !(r.found && r.value === 'true')
-    } catch {
-      // if the lookup fails, do not block the app with onboarding.
+    // in demo mode, skip onboarding and show a sync in progress for the screenshot.
+    if (demo) {
       onboardingOpen = false
+      syncing.set(true)
+    } else {
+      // show the first-run onboarding until it has been completed once.
+      try {
+        const r = await getSetting(SettingKeys.onboarded)
+        onboardingOpen = !(r.found && r.value === 'true')
+      } catch {
+        // if the lookup fails, do not block the app with onboarding.
+        onboardingOpen = false
+      }
     }
 
     unsubscribers.push(

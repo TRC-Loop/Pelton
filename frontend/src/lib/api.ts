@@ -5,6 +5,15 @@
 
 import * as App from '../../wailsjs/go/desktop/App'
 import { desktop } from '../../wailsjs/go/models'
+import {
+  isDemoActive,
+  demoAccounts,
+  demoFolders,
+  demoViews,
+  demoList,
+  demoMessage,
+  demoOutbox,
+} from './demo'
 import type {
   Account,
   Folder,
@@ -26,8 +35,17 @@ import type {
   AttachmentContent,
 } from './types'
 
+// isDemoMode reports whether the app launched in the cosmetic --potatoes-are-nice
+// screenshot mode; the frontend reads it once to switch the data layer to samples.
+export function isDemoMode(): Promise<boolean> {
+  return App.IsDemoMode()
+}
+
 // listAccounts returns every configured account.
 export function listAccounts(): Promise<Account[]> {
+  if (isDemoActive()) {
+    return Promise.resolve(demoAccounts())
+  }
   return App.ListAccounts()
 }
 
@@ -50,11 +68,17 @@ export function deleteAccount(id: number): Promise<void> {
 
 // listFolders returns one account's full mailbox tree with counts.
 export function listFolders(accountId: number): Promise<Folder[]> {
+  if (isDemoActive()) {
+    return Promise.resolve(demoFolders(accountId))
+  }
   return App.ListFolders(accountId)
 }
 
 // listUnifiedViews returns the cross-account views with aggregate counts.
 export function listUnifiedViews(): Promise<UnifiedView[]> {
+  if (isDemoActive()) {
+    return Promise.resolve(demoViews())
+  }
   return App.ListUnifiedViews()
 }
 
@@ -64,6 +88,9 @@ export function listFolderMessages(
   limit: number,
   offset: number,
 ): Promise<MessageList> {
+  if (isDemoActive()) {
+    return Promise.resolve(demoList())
+  }
   return App.ListMessages(
     new desktop.ListMessagesRequest({ kind: 'folder', folderId, view: '', limit, offset }),
   )
@@ -75,6 +102,9 @@ export function listViewMessages(
   limit: number,
   offset: number,
 ): Promise<MessageList> {
+  if (isDemoActive()) {
+    return Promise.resolve(demoList())
+  }
   return App.ListMessages(
     new desktop.ListMessagesRequest({ kind: 'view', folderId: 0, view, limit, offset }),
   )
@@ -82,6 +112,9 @@ export function listViewMessages(
 
 // getMessage returns the full message with sanitized body and attachments.
 export function getMessage(id: number): Promise<MessageDetail> {
+  if (isDemoActive()) {
+    return Promise.resolve(demoMessage(id))
+  }
   return App.GetMessage(id)
 }
 
@@ -181,6 +214,9 @@ export function deleteDraft(id: number): Promise<void> {
 
 // listOutbox returns the current outbox contents.
 export function listOutbox(): Promise<OutboxRow[]> {
+  if (isDemoActive()) {
+    return Promise.resolve(demoOutbox())
+  }
   return App.ListOutbox()
 }
 
@@ -252,6 +288,10 @@ export function removeImageAllow(kind: 'sender' | 'domain', value: string): Prom
 // under the configured fallback chain. empty means "no network source"; the ui
 // then draws a generated placeholder.
 export function senderPhotos(email: string): Promise<string[]> {
+  if (isDemoActive()) {
+    // demo mode stays offline: fall back to the generated avatars, no network.
+    return Promise.resolve([])
+  }
   return App.SenderPhotos(email)
 }
 

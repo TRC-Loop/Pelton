@@ -6,6 +6,8 @@ package main
 
 import (
 	"embed"
+	"os"
+	"slices"
 
 	"github.com/TRC-Loop/Pelton/internal/desktop"
 )
@@ -29,11 +31,17 @@ var programLicense string
 var version = "dev"
 
 func main() {
+	// --potatoes-are-nice launches a purely-cosmetic demo mode used for website
+	// screenshots: the ui shows fixed potato-themed sample data instead of real
+	// accounts and mail. Nothing else changes.
+	demoMode := slices.Contains(os.Args[1:], "--potatoes-are-nice")
+
 	if err := desktop.Run(desktop.Config{
 		Assets:          assets,
 		Version:         version,
 		LicenseManifest: licenseManifest,
 		ProgramLicense:  programLicense,
+		DemoMode:        demoMode,
 	}); err != nil {
 		println("Error:", err.Error())
 	}
