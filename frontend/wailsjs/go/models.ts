@@ -687,6 +687,7 @@ export namespace desktop {
 	    composeAutocomplete: boolean;
 	    composeChips: boolean;
 	    updateCheckFrequency: string;
+	    emptyStateImage: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new UIPrefsDTO(source);
@@ -737,6 +738,7 @@ export namespace desktop {
 	        this.composeAutocomplete = source["composeAutocomplete"];
 	        this.composeChips = source["composeChips"];
 	        this.updateCheckFrequency = source["updateCheckFrequency"];
+	        this.emptyStateImage = source["emptyStateImage"];
 	    }
 	}
 	export class UnifiedViewDTO {

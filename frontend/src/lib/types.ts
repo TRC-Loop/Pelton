@@ -214,6 +214,9 @@ export interface UIPrefs {
   // updateCheckFrequency controls the automatic GitHub-releases update check:
   // 'off' (default), 'startup', 'weekly', or 'monthly'.
   updateCheckFrequency: string
+  // emptyStateImage is a data-uri image shown in the reading pane when no
+  // message is open; empty means the bundled Pelton logo.
+  emptyStateImage: string
 }
 
 // a harvested contact for compose autocomplete and the settings manager.

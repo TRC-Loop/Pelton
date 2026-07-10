@@ -55,6 +55,7 @@ const (
 	settingDefaultEditor       = "default_editor_mode"
 	settingComposeAutocomplete = "compose_autocomplete"
 	settingComposeChips        = "compose_chips"
+	settingEmptyStateImage     = "empty_state_image"
 )
 
 // settingUpdateCheckFreq, settingLastUpdateCheck and defaultUpdateCheckFrequency
@@ -187,6 +188,9 @@ type UIPrefsDTO struct {
 	// check: off (default), startup (every launch), weekly, or monthly. A
 	// manual check ("Check now" in settings) always runs regardless.
 	UpdateCheckFrequency string `json:"updateCheckFrequency"`
+	// EmptyStateImage is a data-uri image shown in the reading pane when no
+	// message is open. Empty means the bundled Pelton logo.
+	EmptyStateImage string `json:"emptyStateImage"`
 }
 
 // GetUIPrefs returns all ui preferences with defaults filled in, so startup is a
@@ -240,6 +244,7 @@ func (a *App) GetUIPrefs() (UIPrefsDTO, error) {
 		ComposeAutocomplete:        a.boolSetting(settingComposeAutocomplete, true),
 		ComposeChips:               a.boolSetting(settingComposeChips, true),
 		UpdateCheckFrequency:       a.stringSetting(settingUpdateCheckFreq, defaultUpdateCheckFrequency),
+		EmptyStateImage:            a.stringSetting(settingEmptyStateImage, ""),
 	}, nil
 }
 
