@@ -13,7 +13,6 @@ export const EventNames = {
   menu: 'menu:action',
   downloadProgress: 'download:progress',
   attachmentProgress: 'attachment:progress',
-  configSyncStatus: 'configsync:status',
   updateAvailable: 'update:available',
 } as const
 
@@ -56,15 +55,6 @@ export interface AttachmentProgressEvent {
   error: string
 }
 
-export interface ConfigSyncStatusEvent {
-  enabled: boolean
-  mode: string
-  path: string
-  syncSettings: boolean
-  emailScope: string
-  lastSyncUnix: number
-  lastError: string
-}
 
 // UpdateAvailableEvent mirrors go's UpdateCheckResult, fired after an
 // automatic (frequency-driven) update check completes.
@@ -115,12 +105,6 @@ export function onDownloadProgress(cb: (e: DownloadProgressEvent) => void): Unsu
 // onAttachmentProgress fires while saving one or more attachments.
 export function onAttachmentProgress(cb: (e: AttachmentProgressEvent) => void): Unsubscribe {
   return EventsOn(EventNames.attachmentProgress, (e: AttachmentProgressEvent) => cb(e))
-}
-
-// onConfigSyncStatus fires after every settings-sync pass (success or
-// failure), so the settings ui can reflect status live without polling.
-export function onConfigSyncStatus(cb: (e: ConfigSyncStatusEvent) => void): Unsubscribe {
-  return EventsOn(EventNames.configSyncStatus, (e: ConfigSyncStatusEvent) => cb(e))
 }
 
 // onUpdateAvailable fires after an automatic update check completes (never

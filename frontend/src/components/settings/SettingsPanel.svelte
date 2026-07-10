@@ -20,7 +20,7 @@
     IconInfoCircle,
     IconHandMove,
     IconCloudDownload,
-    IconCloudCog,
+    IconFileImport,
     IconAddressBook,
     IconMailbox,
     IconWriting,
@@ -37,7 +37,7 @@
   import SignaturesSection from './SignaturesSection.svelte'
   import AddressBookSection from './AddressBookSection.svelte'
   import MailboxesSection from './MailboxesSection.svelte'
-  import ConfigSyncSection from './ConfigSyncSection.svelte'
+  import ImportExportSection from './ImportExportSection.svelte'
   import RowLayoutPreview from './RowLayoutPreview.svelte'
   import AboutSection from './AboutSection.svelte'
   import ToggleSwitch from '../common/ToggleSwitch.svelte'
@@ -120,7 +120,7 @@
     { key: 'power', label: $t('settingsPanel.category.power'), icon: IconBatteryEco },
     { key: 'mailboxes', label: $t('settingsPanel.category.mailboxes'), icon: IconMailbox },
     { key: 'contacts', label: $t('settingsPanel.category.contacts'), icon: IconAddressBook },
-    { key: 'sync', label: $t('settingsPanel.category.sync'), icon: IconCloudCog },
+    { key: 'sync', label: $t('settingsPanel.category.importExport'), icon: IconFileImport },
     { key: 'composing', label: $t('settingsPanel.category.composing'), icon: IconWriting },
     { key: 'shortcuts', label: $t('settingsPanel.category.shortcuts'), icon: IconKeyboard },
     { key: 'about', label: $t('settingsPanel.category.about'), icon: IconInfoCircle },
@@ -778,8 +778,8 @@
         </section>
       {:else if active === 'sync'}
         <section>
-          <h3>{$t('settingsPanel.category.sync')}</h3>
-          <ConfigSyncSection />
+          <h3>{$t('settingsPanel.category.importExport')}</h3>
+          <ImportExportSection />
         </section>
       {:else if active === 'composing'}
         <section>

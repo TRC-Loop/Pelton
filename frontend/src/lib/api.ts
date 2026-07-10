@@ -399,42 +399,26 @@ export function cancelDownload(): Promise<void> {
   return App.CancelDownload()
 }
 
-// --- settings sync ---
+// --- import / export ---
 
-export interface ConfigSyncStatus {
-  enabled: boolean
-  mode: string
-  path: string
-  syncSettings: boolean
-  emailScope: string
-  lastSyncUnix: number
-  lastError: string
+// BackupInfo describes a picked backup file before importing it.
+export type BackupInfo = desktop.BackupInfoDTO
+
+// exportData writes the selected categories to a user-chosen json file,
+// returning its path (empty if the save dialog was cancelled).
+export function exportData(categories: string[]): Promise<string> {
+  return App.ExportData(categories)
 }
 
-export function getConfigSyncStatus(): Promise<ConfigSyncStatus> {
-  return App.GetConfigSyncStatus()
+// inspectBackupFile opens a file picker and returns what the chosen backup
+// holds. An empty path means the dialog was cancelled.
+export function inspectBackupFile(): Promise<BackupInfo> {
+  return App.InspectBackupFile()
 }
 
-export function configureConfigSync(
-  mode: string,
-  path: string,
-  syncSettings: boolean,
-  emailScope: string,
-  mergeOnJoin: boolean,
-): Promise<ConfigSyncStatus> {
-  return App.ConfigureConfigSync(mode, path, syncSettings, emailScope, mergeOnJoin)
-}
-
-export function disableConfigSync(): Promise<ConfigSyncStatus> {
-  return App.DisableConfigSync()
-}
-
-export function triggerConfigSync(): Promise<ConfigSyncStatus> {
-  return App.TriggerConfigSync()
-}
-
-export function pickConfigSyncFolder(): Promise<string> {
-  return App.PickConfigSyncFolder()
+// importData applies the selected categories from the backup file at path.
+export function importData(path: string, categories: string[]): Promise<void> {
+  return App.ImportData(path, categories)
 }
 
 // systemColorScheme returns the OS dark/light preference ("dark" | "light"), or
@@ -442,16 +426,6 @@ export function pickConfigSyncFolder(): Promise<string> {
 // does not expose it to CSS prefers-color-scheme; elsewhere it returns "".
 export function systemColorScheme(): Promise<string> {
   return App.SystemColorScheme()
-}
-
-export interface ConfigSyncFolderPeek {
-  hasExistingData: boolean
-  accountEmails: string[]
-  modifiedUnix: number
-}
-
-export function peekConfigSyncFolder(path: string): Promise<ConfigSyncFolderPeek> {
-  return App.PeekConfigSyncFolder(path)
 }
 
 // --- address book ---

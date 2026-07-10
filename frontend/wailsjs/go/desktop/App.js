@@ -38,10 +38,6 @@ export function ClearSentOutbox() {
   return window['go']['desktop']['App']['ClearSentOutbox']();
 }
 
-export function ConfigureConfigSync(arg1, arg2, arg3, arg4, arg5) {
-  return window['go']['desktop']['App']['ConfigureConfigSync'](arg1, arg2, arg3, arg4, arg5);
-}
-
 export function DeleteAccount(arg1) {
   return window['go']['desktop']['App']['DeleteAccount'](arg1);
 }
@@ -62,10 +58,6 @@ export function DeleteSignature(arg1) {
   return window['go']['desktop']['App']['DeleteSignature'](arg1);
 }
 
-export function DisableConfigSync() {
-  return window['go']['desktop']['App']['DisableConfigSync']();
-}
-
 export function DiscoverConfig(arg1) {
   return window['go']['desktop']['App']['DiscoverConfig'](arg1);
 }
@@ -78,16 +70,16 @@ export function DownloadRange(arg1, arg2) {
   return window['go']['desktop']['App']['DownloadRange'](arg1, arg2);
 }
 
+export function ExportData(arg1) {
+  return window['go']['desktop']['App']['ExportData'](arg1);
+}
+
 export function ExportMessagePrintView(arg1) {
   return window['go']['desktop']['App']['ExportMessagePrintView'](arg1);
 }
 
 export function GetAccountSignatures(arg1) {
   return window['go']['desktop']['App']['GetAccountSignatures'](arg1);
-}
-
-export function GetConfigSyncStatus() {
-  return window['go']['desktop']['App']['GetConfigSyncStatus']();
 }
 
 export function GetMessage(arg1) {
@@ -104,6 +96,14 @@ export function GetSetting(arg1) {
 
 export function GetUIPrefs() {
   return window['go']['desktop']['App']['GetUIPrefs']();
+}
+
+export function ImportData(arg1, arg2) {
+  return window['go']['desktop']['App']['ImportData'](arg1, arg2);
+}
+
+export function InspectBackupFile() {
+  return window['go']['desktop']['App']['InspectBackupFile']();
 }
 
 export function Licenses() {
@@ -152,14 +152,6 @@ export function ListUnifiedViews() {
 
 export function MoveMessage(arg1, arg2) {
   return window['go']['desktop']['App']['MoveMessage'](arg1, arg2);
-}
-
-export function PeekConfigSyncFolder(arg1) {
-  return window['go']['desktop']['App']['PeekConfigSyncFolder'](arg1);
-}
-
-export function PickConfigSyncFolder() {
-  return window['go']['desktop']['App']['PickConfigSyncFolder']();
 }
 
 export function ProgramLicense() {
@@ -256,10 +248,6 @@ export function SystemColorScheme() {
 
 export function TestConnection(arg1) {
   return window['go']['desktop']['App']['TestConnection'](arg1);
-}
-
-export function TriggerConfigSync() {
-  return window['go']['desktop']['App']['TriggerConfigSync']();
 }
 
 export function TriggerSync() {
