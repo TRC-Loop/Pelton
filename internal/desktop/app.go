@@ -33,12 +33,6 @@ type App struct {
 	// though a nil check keeps it from crashing.
 	storeReady chan struct{}
 	index      *search.Index
-	sync       *configsync.Manager
-	// defaultStateDir is the device's normal per-OS app-support directory,
-	// independent of an active configsync in-place folder. It is where the
-	// configsync markers live so they are discoverable regardless of which
-	// directory storage actually opened from.
-	defaultStateDir string
 	// searchMu serializes index backfills so a startup pass and a post-sync pass
 	// do not advance the watermark concurrently.
 	searchMu sync.Mutex
@@ -81,14 +75,16 @@ func (a *App) startup(ctx context.Context) {
 	a.queue = outbox.NewQueue(store)
 	close(a.storeReady)
 
+	// the old config-sync feature could redirect the data directory into a synced
+	// folder ("in-place" mode). that feature is gone; if a device still has that
+	// marker, migrate its data back to the normal app-support dir now, so the next
+	// launch opens from the standard location again.
 	if defaultPath, pathErr := storage.DefaultPath(); pathErr == nil {
-		a.defaultStateDir = filepath.Dir(defaultPath)
-		a.sync = configsync.New(store, a.defaultStateDir, filepath.Base(defaultPath), a.log)
-		a.sync.OnSync(func(cfg configsync.Config) {
-			a.emit(EventConfigSync, cfg)
-		})
-		if err := a.sync.Start(ctx); err != nil {
-			a.log.Warn("start config sync", "err", err)
+		stateDir := filepath.Dir(defaultPath)
+		if migrated, mErr := configsync.MigrateInPlaceBack(ctx, store, stateDir, filepath.Base(defaultPath)); mErr != nil {
+			a.log.Error("migrate config-sync data back", "err", mErr)
+		} else if migrated {
+			a.log.Info("migrated config-sync in-place data back to the default folder")
 		}
 	}
 
@@ -127,9 +123,6 @@ func (a *App) domReady(ctx context.Context) {
 // shutdown is the wails OnShutdown hook. It closes the store so the sqlite wal
 // is checkpointed cleanly.
 func (a *App) shutdown(ctx context.Context) {
-	if a.sync != nil {
-		a.sync.Close()
-	}
 	if a.index != nil {
 		if err := a.index.Close(); err != nil {
 			a.log.Error("close search index", "err", err)
@@ -160,14 +153,6 @@ func openStore(ctx context.Context) (*storage.DB, string, error) {
 		return nil, "", err
 	}
 	path := filepath.Join(dataDir, dbFileName)
-
-	// if a previous run's full-cache config sync armed a restore (the live db
-	// cannot be swapped out from under an open connection), apply it now,
-	// before anything opens the database.
-	attachmentsDir := filepath.Join(dataDir, "attachments")
-	if err := configsync.ApplyPendingFullRestore(defaultDir, path, attachmentsDir); err != nil {
-		return nil, "", err
-	}
 	store, err := storage.Open(path)
 	if err != nil {
 		return nil, "", err

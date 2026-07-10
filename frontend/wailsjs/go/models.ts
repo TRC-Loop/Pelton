@@ -156,6 +156,28 @@ export namespace desktop {
 	        this.inline = source["inline"];
 	    }
 	}
+	export class BackupInfoDTO {
+	    path: string;
+	    createdAt: string;
+	    appVersion: string;
+	    hasSettings: boolean;
+	    hasWhitelist: boolean;
+	    settingCount: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new BackupInfoDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.path = source["path"];
+	        this.createdAt = source["createdAt"];
+	        this.appVersion = source["appVersion"];
+	        this.hasSettings = source["hasSettings"];
+	        this.hasWhitelist = source["hasWhitelist"];
+	        this.settingCount = source["settingCount"];
+	    }
+	}
 	export class ComposeAttachment {
 	    filename: string;
 	    contentType: string;
@@ -225,46 +247,6 @@ export namespace desktop {
 		    }
 		    return a;
 		}
-	}
-	export class ConfigSyncFolderPeekDTO {
-	    hasExistingData: boolean;
-	    accountEmails: string[];
-	    modifiedUnix: number;
-	
-	    static createFrom(source: any = {}) {
-	        return new ConfigSyncFolderPeekDTO(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.hasExistingData = source["hasExistingData"];
-	        this.accountEmails = source["accountEmails"];
-	        this.modifiedUnix = source["modifiedUnix"];
-	    }
-	}
-	export class ConfigSyncStatusDTO {
-	    enabled: boolean;
-	    mode: string;
-	    path: string;
-	    syncSettings: boolean;
-	    emailScope: string;
-	    lastSyncUnix: number;
-	    lastError: string;
-	
-	    static createFrom(source: any = {}) {
-	        return new ConfigSyncStatusDTO(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.enabled = source["enabled"];
-	        this.mode = source["mode"];
-	        this.path = source["path"];
-	        this.syncSettings = source["syncSettings"];
-	        this.emailScope = source["emailScope"];
-	        this.lastSyncUnix = source["lastSyncUnix"];
-	        this.lastError = source["lastError"];
-	    }
 	}
 	export class DiscoveredDTO {
 	    imapHost: string;
