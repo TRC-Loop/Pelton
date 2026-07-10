@@ -44,7 +44,7 @@
   import LanguageSelect from '../common/LanguageSelect.svelte'
   import DateTimePicker from '../common/DateTimePicker.svelte'
   import { pfpDataUri, type PfpStyle } from '../../lib/pfp'
-  import { initials, formatBytes } from '../../lib/format'
+  import { initials } from '../../lib/format'
   import {
     prefs,
     setTheme,
@@ -84,7 +84,7 @@
     setComposeChips,
   } from '../../stores/prefs'
   import type { Locale } from '../../lib/i18n'
-  import { downloadRange, estimateDownloadRange } from '../../lib/api'
+  import { downloadRange, cancelDownload } from '../../lib/api'
   import { downloadProgress } from '../../stores/progress'
   import { toastError, errorMessage } from '../../stores/toast'
   import { t } from '../../lib/i18n'
@@ -187,45 +187,6 @@
       await downloadRange(downloadStart, $prefs.downloadIncludeAttachments)
     } catch (err) {
       toastError(errorMessage(err))
-    }
-  }
-
-  // the size estimate re-fetches whenever the start date changes (debounced,
-  // since it walks every account over imap). the attachment toggle does not
-  // change what is fetched (the raw message is the same either way; only what
-  // gets kept on disk differs), so it does not need to trigger a re-estimate.
-  let estimate: { messageCount: number; totalBytes: number } | null = null
-  let estimating = false
-  let estimateError = ''
-  let estimateTimer: ReturnType<typeof setTimeout>
-  $: void downloadStart, scheduleEstimate()
-
-  function scheduleEstimate(): void {
-    clearTimeout(estimateTimer)
-    estimate = null
-    estimateError = ''
-    if (!downloadStart) {
-      return
-    }
-    estimateTimer = setTimeout(runEstimate, 500)
-  }
-
-  async function runEstimate(): Promise<void> {
-    const start = downloadStart
-    estimating = true
-    try {
-      const result = await estimateDownloadRange(start)
-      if (start === downloadStart) {
-        estimate = result
-      }
-    } catch (err) {
-      if (start === downloadStart) {
-        estimateError = errorMessage(err)
-      }
-    } finally {
-      if (start === downloadStart) {
-        estimating = false
-      }
     }
   }
 
@@ -706,14 +667,15 @@
               <div class="download-date">
                 <DateTimePicker mode="date" bind:value={downloadStart} />
               </div>
-              <button
-                type="button"
-                class="action-btn"
-                disabled={!!$downloadProgress && $downloadProgress.running}
-                on:click={startDownload}
-              >
-                {$downloadProgress && $downloadProgress.running ? $t('settingsPanel.button.downloading') : $t('settingsPanel.button.download')}
-              </button>
+              {#if $downloadProgress && $downloadProgress.running}
+                <button type="button" class="action-btn" on:click={() => cancelDownload()}>
+                  {$t('settingsPanel.button.cancelDownload')}
+                </button>
+              {:else}
+                <button type="button" class="action-btn" on:click={startDownload}>
+                  {$t('settingsPanel.button.download')}
+                </button>
+              {/if}
             </div>
             <div class="toggle" title={$t('settingsPanel.hint.includeAttachments')}>
               <span class="row-label">{$t('settingsPanel.toggle.includeAttachments')}</span>
@@ -723,19 +685,6 @@
                 on:change={(e) => setDownloadIncludeAttachments(e.detail)}
               />
             </div>
-            <p class="hint estimate">
-              {#if estimating}
-                {$t('settingsPanel.estimate.estimating')}
-              {:else if estimateError}
-                {$t('settingsPanel.estimate.errorPrefix')} {estimateError}
-              {:else if estimate}
-                {#if estimate.messageCount === 0}
-                  {$t('settingsPanel.estimate.empty')}
-                {:else}
-                  ~{formatBytes(estimate.totalBytes)} {$t('settingsPanel.estimate.across')} {estimate.messageCount.toLocaleString()} {$t('settingsPanel.estimate.messages')}
-                {/if}
-              {/if}
-            </p>
           </div>
         </section>
       {:else if active === 'mailboxes'}
@@ -1137,9 +1086,5 @@
   .preset-btn:hover {
     background: var(--surface-hover);
     color: var(--text-primary);
-  }
-
-  .estimate {
-    min-height: 1.4em;
   }
 </style>

@@ -42,28 +42,3 @@ func (c *Client) SearchSince(since time.Time) ([]imap.UID, error) {
 	}
 	return data.AllUIDs(), nil
 }
-
-// FetchSizes returns the RFC822 byte size of each given uid, without fetching
-// any body content. It backs the offline-download size estimate: the raw
-// message size is what travels over the wire either way, whether or not
-// attachments are kept afterward.
-func (c *Client) FetchSizes(uids []imap.UID) (map[imap.UID]int64, error) {
-	if c.raw.Mailbox() == nil {
-		return nil, fmt.Errorf("imap: no mailbox selected for fetch")
-	}
-	if len(uids) == 0 {
-		return map[imap.UID]int64{}, nil
-	}
-	var set imap.UIDSet
-	set.AddNum(uids...)
-	options := &imap.FetchOptions{UID: true, RFC822Size: true}
-	buffers, err := c.raw.Fetch(set, options).Collect()
-	if err != nil {
-		return nil, fmt.Errorf("imap: fetch sizes: %w", err)
-	}
-	sizes := make(map[imap.UID]int64, len(buffers))
-	for _, b := range buffers {
-		sizes[b.UID] = b.RFC822Size
-	}
-	return sizes, nil
-}

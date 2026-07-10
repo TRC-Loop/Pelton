@@ -12,6 +12,8 @@ export function AppVersion():Promise<string>;
 
 export function ArchiveMessage(arg1:number):Promise<desktop.ArchiveUndoDTO>;
 
+export function CancelDownload():Promise<void>;
+
 export function CancelSend(arg1:number):Promise<boolean>;
 
 export function CheckForUpdates():Promise<desktop.UpdateCheckResult>;
@@ -37,8 +39,6 @@ export function DiscoverConfig(arg1:string):Promise<desktop.DiscoveredDTO>;
 export function DownloadMessageOffline(arg1:number):Promise<void>;
 
 export function DownloadRange(arg1:string,arg2:boolean):Promise<void>;
-
-export function EstimateDownloadRange(arg1:string):Promise<desktop.DownloadEstimateDTO>;
 
 export function ExportMessagePrintView(arg1:number):Promise<void>;
 

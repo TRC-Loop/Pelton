@@ -388,15 +388,10 @@ export function downloadRange(startDate: string, includeAttachments: boolean): P
   return App.DownloadRange(startDate, includeAttachments)
 }
 
-// estimateDownloadRange reports how many messages and roughly how many bytes
-// a downloadRange call with the same start date would fetch, so the settings
-// ui can show a size estimate before the user commits to it.
-export interface DownloadEstimate {
-  messageCount: number
-  totalBytes: number
-}
-export function estimateDownloadRange(startDate: string): Promise<DownloadEstimate> {
-  return App.EstimateDownloadRange(startDate)
+// cancelDownload stops a running bulk offline download and clears its resume
+// marker so it does not restart on the next launch.
+export function cancelDownload(): Promise<void> {
+  return App.CancelDownload()
 }
 
 // --- settings sync ---
