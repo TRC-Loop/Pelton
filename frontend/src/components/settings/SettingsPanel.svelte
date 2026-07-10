@@ -29,6 +29,7 @@
   } from '@tabler/icons-svelte'
   import { createEventDispatcher } from 'svelte'
   import SegmentedSetting from './SegmentedSetting.svelte'
+  import StepSlider from './StepSlider.svelte'
   import AccentPicker from './AccentPicker.svelte'
   import TechToggles from './TechToggles.svelte'
   import ToastPositionPicker from './ToastPositionPicker.svelte'
@@ -43,7 +44,7 @@
   import LanguageSelect from '../common/LanguageSelect.svelte'
   import DateTimePicker from '../common/DateTimePicker.svelte'
   import { pfpDataUri, type PfpStyle } from '../../lib/pfp'
-  import { initials, formatBytes } from '../../lib/format'
+  import { initials } from '../../lib/format'
   import {
     prefs,
     setTheme,
@@ -81,9 +82,11 @@
     setDefaultEditorMode,
     setComposeAutocomplete,
     setComposeChips,
+    setEmptyStateImage,
   } from '../../stores/prefs'
+  import peltonLogo from '../../assets/images/icons/pelton-logo.png'
   import type { Locale } from '../../lib/i18n'
-  import { downloadRange, estimateDownloadRange } from '../../lib/api'
+  import { downloadRange, cancelDownload } from '../../lib/api'
   import { downloadProgress } from '../../stores/progress'
   import { toastError, errorMessage } from '../../stores/toast'
   import { t } from '../../lib/i18n'
@@ -189,45 +192,6 @@
     }
   }
 
-  // the size estimate re-fetches whenever the start date changes (debounced,
-  // since it walks every account over imap). the attachment toggle does not
-  // change what is fetched (the raw message is the same either way; only what
-  // gets kept on disk differs), so it does not need to trigger a re-estimate.
-  let estimate: { messageCount: number; totalBytes: number } | null = null
-  let estimating = false
-  let estimateError = ''
-  let estimateTimer: ReturnType<typeof setTimeout>
-  $: void downloadStart, scheduleEstimate()
-
-  function scheduleEstimate(): void {
-    clearTimeout(estimateTimer)
-    estimate = null
-    estimateError = ''
-    if (!downloadStart) {
-      return
-    }
-    estimateTimer = setTimeout(runEstimate, 500)
-  }
-
-  async function runEstimate(): Promise<void> {
-    const start = downloadStart
-    estimating = true
-    try {
-      const result = await estimateDownloadRange(start)
-      if (start === downloadStart) {
-        estimate = result
-      }
-    } catch (err) {
-      if (start === downloadStart) {
-        estimateError = errorMessage(err)
-      }
-    } finally {
-      if (start === downloadStart) {
-        estimating = false
-      }
-    }
-  }
-
   // select handlers (the cast lives in script; inline ts casts break the parser).
   function onSwipeLeft(event: Event): void {
     setSwipeLeftAction((event.currentTarget as HTMLSelectElement).value)
@@ -295,6 +259,49 @@
   function confirmEnableImages(): void {
     setAlwaysLoadImages(true)
     confirmImages = false
+  }
+
+  // the remote-image allowlist manager (trusted senders/domains) opens in a modal.
+  let allowlistOpen = false
+
+  // the reading-pane empty-state image is picked from a local file and stored as
+  // a data uri. anything past the hard cap is refused; between the soft and hard
+  // caps we warn ("here be dragons") but let the user proceed, since a large data
+  // uri in settings can slow the ui down.
+  let emptyImageInput: HTMLInputElement
+  const maxEmptyImageBytes = 50_000_000
+  const warnEmptyImageBytes = 3_000_000
+  // a data uri awaiting confirmation because the chosen file is large.
+  let dragonsPending: string | null = null
+  function onPickEmptyImage(event: Event): void {
+    const input = event.currentTarget as HTMLInputElement
+    const file = input.files?.[0]
+    input.value = ''
+    if (!file) {
+      return
+    }
+    if (file.size > maxEmptyImageBytes) {
+      toastError($t('settingsPanel.error.imageTooLarge'))
+      return
+    }
+    const large = file.size > warnEmptyImageBytes
+    const reader = new FileReader()
+    reader.onload = () => {
+      const uri = String(reader.result)
+      if (large) {
+        dragonsPending = uri
+      } else {
+        setEmptyStateImage(uri)
+      }
+    }
+    reader.onerror = () => toastError($t('settingsPanel.error.imageRead'))
+    reader.readAsDataURL(file)
+  }
+  function confirmDragons(): void {
+    if (dragonsPending) {
+      setEmptyStateImage(dragonsPending)
+    }
+    dragonsPending = null
   }
 
   // sender-photo fallback chain. "Generated" never touches the network.
@@ -402,6 +409,45 @@
             on:change={(e) => setUIScale(e.detail)}
           />
           <p class="hint">{$t('settingsPanel.hint.interfaceScale')}</p>
+
+          <div class="field">
+            <span class="row-label">{$t('settingsPanel.label.emptyStateImage')}</span>
+            <p class="hint">{$t('settingsPanel.hint.emptyStateImage')}</p>
+            <div class="empty-image-row">
+              <div class="empty-image-preview">
+                <img src={$prefs.emptyStateImage || peltonLogo} alt="" draggable="false" />
+              </div>
+              <div class="empty-image-actions">
+                <button type="button" class="action-btn" on:click={() => emptyImageInput?.click()}>
+                  {$t('settingsPanel.button.selectImage')}
+                </button>
+                <button
+                  type="button"
+                  class="action-btn"
+                  disabled={!$prefs.emptyStateImage}
+                  on:click={() => setEmptyStateImage('')}
+                >
+                  {$t('settingsPanel.button.resetImage')}
+                </button>
+              </div>
+            </div>
+            <input
+              class="hidden-file"
+              type="file"
+              accept="image/*"
+              bind:this={emptyImageInput}
+              on:change={onPickEmptyImage}
+            />
+            {#if dragonsPending}
+              <div class="warn">
+                <p>{$t('settingsPanel.warn.imageLarge')}</p>
+                <div class="warn-actions">
+                  <button type="button" class="ghost-btn" on:click={() => (dragonsPending = null)}>{$t('settingsPanel.button.cancel')}</button>
+                  <button type="button" class="danger-btn" on:click={confirmDragons}>{$t('settingsPanel.button.useAnyway')}</button>
+                </div>
+              </div>
+            {/if}
+          </div>
         </section>
       {:else if active === 'list'}
         <section>
@@ -561,6 +607,14 @@
               </div>
             </div>
           {/if}
+
+          <div class="field">
+            <span class="row-label">{$t('settingsPanel.label.manageWhitelist')}</span>
+            <p class="hint">{$t('settingsPanel.hint.manageWhitelist')}</p>
+            <button type="button" class="action-btn" on:click={() => (allowlistOpen = true)}>
+              {$t('settingsPanel.button.manageWhitelist')}
+            </button>
+          </div>
         </section>
       {:else if active === 'notifications'}
         <section>
@@ -650,7 +704,7 @@
           <p class="hint">
             {$t('settingsPanel.hint.lowPowerDetail')}
           </p>
-          <SegmentedSetting
+          <StepSlider
             label={$t('settingsPanel.label.autoSyncInterval')}
             value={String($prefs.autoSyncIntervalSeconds)}
             options={autoSyncOptions}
@@ -694,14 +748,15 @@
               <div class="download-date">
                 <DateTimePicker mode="date" bind:value={downloadStart} />
               </div>
-              <button
-                type="button"
-                class="action-btn"
-                disabled={!!$downloadProgress && $downloadProgress.running}
-                on:click={startDownload}
-              >
-                {$downloadProgress && $downloadProgress.running ? $t('settingsPanel.button.downloading') : $t('settingsPanel.button.download')}
-              </button>
+              {#if $downloadProgress && $downloadProgress.running}
+                <button type="button" class="action-btn" on:click={() => cancelDownload()}>
+                  {$t('settingsPanel.button.cancelDownload')}
+                </button>
+              {:else}
+                <button type="button" class="action-btn" on:click={startDownload}>
+                  {$t('settingsPanel.button.download')}
+                </button>
+              {/if}
             </div>
             <div class="toggle" title={$t('settingsPanel.hint.includeAttachments')}>
               <span class="row-label">{$t('settingsPanel.toggle.includeAttachments')}</span>
@@ -711,19 +766,6 @@
                 on:change={(e) => setDownloadIncludeAttachments(e.detail)}
               />
             </div>
-            <p class="hint estimate">
-              {#if estimating}
-                {$t('settingsPanel.estimate.estimating')}
-              {:else if estimateError}
-                {$t('settingsPanel.estimate.errorPrefix')} {estimateError}
-              {:else if estimate}
-                {#if estimate.messageCount === 0}
-                  {$t('settingsPanel.estimate.empty')}
-                {:else}
-                  ~{formatBytes(estimate.totalBytes)} {$t('settingsPanel.estimate.across')} {estimate.messageCount.toLocaleString()} {$t('settingsPanel.estimate.messages')}
-                {/if}
-              {/if}
-            </p>
           </div>
         </section>
       {:else if active === 'mailboxes'}
@@ -809,6 +851,20 @@
     </div>
   </div>
 </div>
+
+<!-- the allowlist modal is code-split so its list logic loads only on demand. -->
+{#if allowlistOpen}
+  {#await import('./ImageAllowlistModal.svelte') then m}
+    <svelte:component
+      this={m.default}
+      on:close={() => (allowlistOpen = false)}
+      on:openMessage={() => {
+        allowlistOpen = false
+        dispatch('close')
+      }}
+    />
+  {/await}
+{/if}
 
 <style>
   .screen {
@@ -1011,6 +1067,48 @@
     background: var(--surface-hover);
   }
 
+  .action-btn:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+
+  .empty-image-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    margin-top: var(--space-2);
+  }
+
+  .empty-image-preview {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 72px;
+    height: 72px;
+    flex-shrink: 0;
+    border: var(--hairline) solid var(--border-default);
+    border-radius: var(--radius-card);
+    background: var(--surface-sunken);
+    overflow: hidden;
+  }
+
+  .empty-image-preview img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+  }
+
+  .empty-image-actions {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    align-items: flex-start;
+  }
+
+  .hidden-file {
+    display: none;
+  }
+
   .warn {
     margin-top: var(--space-3);
     padding: var(--space-3) var(--space-4);
@@ -1111,9 +1209,5 @@
   .preset-btn:hover {
     background: var(--surface-hover);
     color: var(--text-primary);
-  }
-
-  .estimate {
-    min-height: 1.4em;
   }
 </style>

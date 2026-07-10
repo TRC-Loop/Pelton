@@ -141,6 +141,11 @@ export interface SearchRequest {
   afterUnix: number
   beforeUnix: number
   limit: number
+  // field-scoped constraints from typed search chips (from:/to:/subject:).
+  from: string
+  to: string
+  subject: string
+  hasAttachment: boolean
 }
 
 // search runs a ranked, typo-tolerant search and returns matching summaries in
@@ -226,6 +231,21 @@ export function trustSenderImages(messageId: number): Promise<void> {
 // allowDomainImages permanently allows remote content from a sender's domain.
 export function allowDomainImages(messageId: number): Promise<void> {
   return App.AllowDomainImages(messageId)
+}
+
+// ImageAllowEntry is one trusted sender or domain in the remote-image
+// allowlist, with an example cached message when one exists.
+export type ImageAllowEntry = desktop.ImageAllowEntryDTO
+
+// listImageAllowlist returns every trusted sender and domain the user has
+// allowed remote content for.
+export function listImageAllowlist(): Promise<ImageAllowEntry[]> {
+  return App.ListImageAllowlist()
+}
+
+// removeImageAllow removes a trusted sender or domain from the allowlist.
+export function removeImageAllow(kind: 'sender' | 'domain', value: string): Promise<void> {
+  return App.RemoveImageAllow(kind, value)
 }
 
 // senderPhotos resolves the ordered list of remote photo candidates for a sender
@@ -373,15 +393,10 @@ export function downloadRange(startDate: string, includeAttachments: boolean): P
   return App.DownloadRange(startDate, includeAttachments)
 }
 
-// estimateDownloadRange reports how many messages and roughly how many bytes
-// a downloadRange call with the same start date would fetch, so the settings
-// ui can show a size estimate before the user commits to it.
-export interface DownloadEstimate {
-  messageCount: number
-  totalBytes: number
-}
-export function estimateDownloadRange(startDate: string): Promise<DownloadEstimate> {
-  return App.EstimateDownloadRange(startDate)
+// cancelDownload stops a running bulk offline download and clears its resume
+// marker so it does not restart on the next launch.
+export function cancelDownload(): Promise<void> {
+  return App.CancelDownload()
 }
 
 // --- import / export ---
@@ -511,4 +526,5 @@ export const SettingKeys = {
   composeAutocomplete: 'compose_autocomplete',
   composeChips: 'compose_chips',
   updateCheckFrequency: 'update_check_frequency',
+  emptyStateImage: 'empty_state_image',
 } as const

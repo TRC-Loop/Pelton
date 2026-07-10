@@ -18,3 +18,8 @@ updates:
       frontend-dependencies:
         patterns:
           - "*"
+    ignore:
+      # typescript 7 (the native port) breaks svelte-check; hold at 6.x until the
+      # svelte language tools support it.
+      - dependency-name: "typescript"
+        versions: [">=7.0.0"]

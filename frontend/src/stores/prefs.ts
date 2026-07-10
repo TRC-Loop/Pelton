@@ -56,6 +56,7 @@ const defaults: UIPrefs = {
   composeAutocomplete: true,
   composeChips: true,
   updateCheckFrequency: 'off',
+  emptyStateImage: '',
 }
 
 export const prefs = writable<UIPrefs>(defaults)
@@ -229,6 +230,13 @@ export function setComposeChips(value: boolean): void {
 export function setUpdateCheckFrequency(value: string): void {
   prefs.update((p) => ({ ...p, updateCheckFrequency: value }))
   void setSetting(SettingKeys.updateCheckFrequency, value)
+}
+
+// setEmptyStateImage persists the reading-pane empty-state image as a data uri;
+// an empty string restores the bundled Pelton logo.
+export function setEmptyStateImage(value: string): void {
+  prefs.update((p) => ({ ...p, emptyStateImage: value }))
+  void setSetting(SettingKeys.emptyStateImage, value)
 }
 
 // setAutoSyncInterval persists how often a full sync pass runs, in seconds (0

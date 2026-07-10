@@ -45,6 +45,12 @@ type App struct {
 	// they start disabled and SetMailActionsEnabled toggles them as the frontend's
 	// open message changes.
 	mailMenuItems []*menu.MenuItem
+
+	// dlMu guards dlCancel, the cancel function of the running bulk offline
+	// download (nil when none is running). CancelDownload calls it to stop the
+	// job without tearing down the whole app context.
+	dlMu     sync.Mutex
+	dlCancel context.CancelFunc
 }
 
 // newApp creates the App with the build version. The heavy initialization

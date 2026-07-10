@@ -82,16 +82,22 @@
   // open; keep them greyed in step with the open message.
   $: setMailActionsEnabled($openMessageId != null)
 
-  // keep the native window title in sync with context: the open message's subject
-  // when reading, otherwise the current folder/view name.
-  $: updateWindowTitle($openMessageId, $selection, $messageList, $t)
+  // keep the native window title in sync with context: "Settings" while the
+  // settings screen is open, the open message's subject when reading, otherwise
+  // the current folder/view name.
+  $: updateWindowTitle(settingsOpen, $openMessageId, $selection, $messageList, $t)
   function updateWindowTitle(
+    inSettings: boolean,
     id: number | null,
     sel: typeof $selection,
     list: typeof $messageList,
     tFn: (key: string) => string,
   ): void {
     let title = 'Pelton'
+    if (inSettings) {
+      setWindowTitle(`${tFn('settings.title')} - Pelton`)
+      return
+    }
     if (id !== null) {
       const item = list.data?.items?.find((m) => m.id === id)
       if (item) {

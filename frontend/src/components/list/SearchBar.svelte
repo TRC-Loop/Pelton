@@ -1,107 +1,260 @@
 <script lang="ts">
-  // the search field at the top of the message list. it debounces input and emits
-  // the query; an empty query (and no date filter) means "show the normal list".
-  // a date-filter dropdown narrows results to a preset window or a custom range,
-  // emitted alongside the query so the list re-runs the ranked search.
-  import { createEventDispatcher } from 'svelte'
-  import { IconSearch, IconX, IconCalendar, IconCheck } from '@tabler/icons-svelte'
+  // the search field at the top of the message list. besides free text it accepts
+  // typed keyword chips (from:/sender:, to:, subject:, has:attachment) and date
+  // chips (before:/after:). a keyword token is committed to a chip on space or
+  // enter; an autocomplete dropdown suggests keywords as you type; the calendar
+  // button inserts before/after date chips. everything is emitted as free text
+  // plus a structured SearchFilter so the list re-runs the ranked search.
+  import { createEventDispatcher, tick } from 'svelte'
+  import { IconSearch, IconX, IconCalendar } from '@tabler/icons-svelte'
   import { prefs } from '../../stores/prefs'
   import { shortcutLabel, t } from '../../lib/i18n'
   import { emptyFilter, type SearchFilter } from '../../stores/messages'
+  import { selection } from '../../stores/selection'
   import DateTimePicker from '../common/DateTimePicker.svelte'
 
   export let value: string = ''
 
-  // the search shortcut, shown as a hint chip when the user enabled hints and the
-  // field is empty (so it never overlaps the clear button or typed text).
+  // switching folder/view clears the query upstream (searchQuery), so drop any
+  // typed text and chips here to match, keyed off the selection changing.
+  let lastSelection = $selection
+  $: if ($selection !== lastSelection) {
+    lastSelection = $selection
+    text = ''
+    chips = []
+  }
+
   const searchHint = shortcutLabel('mod+f')
-
   const dispatch = createEventDispatcher<{ search: string; filter: SearchFilter }>()
+
+  // chip fields and the aliases that produce them ("sender:" -> from).
+  type ChipField = 'from' | 'to' | 'subject' | 'has' | 'before' | 'after'
+  const alias: Record<string, ChipField> = {
+    from: 'from',
+    sender: 'from',
+    to: 'to',
+    subject: 'subject',
+    has: 'has',
+    before: 'before',
+    after: 'after',
+  }
+  const keywordList = ['from', 'sender', 'to', 'subject', 'has', 'before', 'after']
+
+  interface Chip {
+    field: ChipField
+    value: string
+  }
+
+  let chips: Chip[] = []
+  // free text (and the keyword currently being typed) live in the input.
+  let text = value
+  let inputEl: HTMLInputElement
   let timer: ReturnType<typeof setTimeout> | undefined
-
-  // the active date filter and which preset produced it (for the dropdown ui).
-  let filter: SearchFilter = emptyFilter
-  let activePreset = 'any'
-  let showFilter = false
-  // custom range bound to the two date inputs (yyyy-mm-dd strings).
-  let customFrom = ''
-  let customTo = ''
-
-  $: filterActive = filter.afterUnix > 0 || filter.beforeUnix > 0
+  let showDate = false
+  let afterDate = ''
+  let beforeDate = ''
 
   const day = 86400
 
-  // presets are computed relative to now so "last 7 days" always means the most
-  // recent week.
-  $: presets = [
-    { key: 'any', label: $t('messageList.search.anyTime'), days: 0 },
-    { key: '7', label: $t('messageList.search.last7Days'), days: 7 },
-    { key: '30', label: $t('messageList.search.last30Days'), days: 30 },
-    { key: '365', label: $t('messageList.search.last12Months'), days: 365 },
-  ]
+  // fieldLabel is the human label shown on a chip.
+  function fieldLabel(field: ChipField): string {
+    return $t(`messageList.search.chip.${field}`)
+  }
+
+  // chipText renders a chip's value; has:attachment has no free value.
+  function chipText(chip: Chip): string {
+    if (chip.field === 'has') {
+      return $t('messageList.search.chip.hasAttachment')
+    }
+    return `${fieldLabel(chip.field)}: ${chip.value}`
+  }
+
+  // parseToken turns a "keyword:value" token into a chip, or null if it is not a
+  // recognized, valid keyword token.
+  function parseToken(token: string): Chip | null {
+    const at = token.indexOf(':')
+    if (at <= 0) {
+      return null
+    }
+    const field = alias[token.slice(0, at).toLowerCase()]
+    const raw = token.slice(at + 1).trim()
+    if (!field || raw === '') {
+      return null
+    }
+    if (field === 'has') {
+      return raw.toLowerCase().startsWith('attach') ? { field, value: 'attachment' } : null
+    }
+    if ((field === 'before' || field === 'after') && Number.isNaN(Date.parse(raw))) {
+      return null
+    }
+    return { field, value: raw }
+  }
+
+  // addChip stores a chip, replacing any existing chip of the same field so each
+  // constraint appears once.
+  function addChip(chip: Chip): void {
+    chips = [...chips.filter((c) => c.field !== chip.field), chip]
+    emit()
+  }
+
+  function removeChip(index: number): void {
+    chips = chips.filter((_, i) => i !== index)
+    emit()
+  }
+
+  // buildFilter maps the chips onto the structured SearchFilter.
+  function buildFilter(): SearchFilter {
+    const f: SearchFilter = { ...emptyFilter }
+    for (const c of chips) {
+      if (c.field === 'from') {
+        f.from = c.value
+      } else if (c.field === 'to') {
+        f.to = c.value
+      } else if (c.field === 'subject') {
+        f.subject = c.value
+      } else if (c.field === 'has') {
+        f.hasAttachment = true
+      } else if (c.field === 'after') {
+        f.afterUnix = Math.floor(Date.parse(c.value) / 1000) || 0
+      } else if (c.field === 'before') {
+        // include the whole "before" day.
+        f.beforeUnix = Math.floor(Date.parse(c.value) / 1000) + day - 1 || 0
+      }
+    }
+    return f
+  }
+
+  // emit debounces and dispatches the current free text and chip filter.
+  function emit(): void {
+    clearTimeout(timer)
+    timer = setTimeout(() => {
+      dispatch('search', text.trim())
+      dispatch('filter', buildFilter())
+    }, 180)
+  }
+
+  // the token currently being typed (after the last space), used for autocomplete.
+  $: partial = text.slice(text.lastIndexOf(' ') + 1)
+  $: suggestions =
+    partial.length > 0 && !partial.includes(':')
+      ? keywordList.filter((k) => k.startsWith(partial.toLowerCase()) && k !== partial.toLowerCase())
+      : []
 
   function onInput(event: Event): void {
-    const next = (event.currentTarget as HTMLInputElement).value
-    clearTimeout(timer)
-    timer = setTimeout(() => dispatch('search', next), 220)
-  }
-
-  function clear(): void {
-    clearTimeout(timer)
-    dispatch('search', '')
-  }
-
-  function applyFilter(next: SearchFilter, preset: string): void {
-    filter = next
-    activePreset = preset
-    dispatch('filter', next)
-  }
-
-  function pickPreset(key: string, days: number): void {
-    if (days === 0) {
-      applyFilter(emptyFilter, 'any')
-    } else {
-      const now = Math.floor(Date.now() / 1000)
-      applyFilter({ afterUnix: now - days * day, beforeUnix: 0 }, key)
+    text = (event.currentTarget as HTMLInputElement).value
+    // a trailing space commits a completed keyword token immediately.
+    if (text.endsWith(' ')) {
+      commitTrailingToken()
     }
-    showFilter = false
+    emit()
   }
 
-  function applyCustom(): void {
-    const after = customFrom ? Math.floor(Date.parse(customFrom) / 1000) : 0
-    // include the whole "to" day by adding a day minus a second.
-    const to = customTo ? Math.floor(Date.parse(customTo) / 1000) + day - 1 : 0
-    if (!after && !to) {
+  // commitTrailingToken pulls a finished "keyword:value" token out of the input
+  // into a chip, leaving the remaining free text behind.
+  function commitTrailingToken(): void {
+    const parts = text.split(/\s+/).filter(Boolean)
+    if (parts.length === 0) {
       return
     }
-    applyFilter({ afterUnix: after || 0, beforeUnix: to || 0 }, 'custom')
-    showFilter = false
+    const last = parts[parts.length - 1]
+    const chip = parseToken(last)
+    if (chip) {
+      addChip(chip)
+      text = parts.slice(0, -1).join(' ')
+      text = text ? `${text} ` : ''
+    }
   }
 
-  function clearFilter(): void {
-    customFrom = ''
-    customTo = ''
-    applyFilter(emptyFilter, 'any')
-    showFilter = false
+  function onKeydown(event: KeyboardEvent): void {
+    if (event.key === 'Enter') {
+      const chip = parseToken(partial)
+      if (chip) {
+        event.preventDefault()
+        addChip(chip)
+        text = text.slice(0, text.lastIndexOf(' ') + 1).replace(/\s*$/, '')
+        text = text ? `${text} ` : ''
+        emit()
+      }
+      return
+    }
+    if (event.key === 'Tab' && suggestions.length > 0) {
+      event.preventDefault()
+      applySuggestion(suggestions[0])
+      return
+    }
+    if (event.key === 'Backspace' && text === '' && chips.length > 0) {
+      removeChip(chips.length - 1)
+    }
   }
+
+  // applySuggestion replaces the partial keyword with "keyword:" and refocuses.
+  async function applySuggestion(keyword: string): Promise<void> {
+    text = `${text.slice(0, text.lastIndexOf(' ') + 1)}${keyword}:`
+    await tick()
+    inputEl?.focus()
+  }
+
+  function clearAll(): void {
+    clearTimeout(timer)
+    text = ''
+    chips = []
+    dispatch('search', '')
+    dispatch('filter', { ...emptyFilter })
+  }
+
+  // applyDates turns the popover's picked dates into before/after chips.
+  function applyDates(): void {
+    if (afterDate) {
+      addChip({ field: 'after', value: afterDate })
+    }
+    if (beforeDate) {
+      addChip({ field: 'before', value: beforeDate })
+    }
+    showDate = false
+  }
+
+  $: hasContent = text !== '' || chips.length > 0
 </script>
 
 <div class="bar">
   <div class="search">
     <IconSearch size={15} stroke={1.6} class="search-icon" />
-    <input
-      type="search"
-      placeholder={$t('messageList.search.placeholder')}
-      aria-label={$t('messageList.search.placeholder')}
-      {value}
-      on:input={onInput}
-    />
-    {#if value}
-      <button type="button" class="clear" aria-label={$t('messageList.search.clearSearch')} on:click={clear}>
+    <div class="field">
+      {#each chips as chip, i (chip.field + chip.value)}
+        <span class="chip">
+          <span class="chip-text">{chipText(chip)}</span>
+          <button type="button" class="chip-x" aria-label={$t('messageList.search.removeChip')} on:click={() => removeChip(i)}>
+            <IconX size={11} stroke={2} />
+          </button>
+        </span>
+      {/each}
+      <input
+        type="text"
+        bind:this={inputEl}
+        placeholder={chips.length === 0 ? $t('messageList.search.placeholder') : ''}
+        aria-label={$t('messageList.search.placeholder')}
+        value={text}
+        on:input={onInput}
+        on:keydown={onKeydown}
+      />
+    </div>
+    {#if hasContent}
+      <button type="button" class="clear" aria-label={$t('messageList.search.clearSearch')} on:click={clearAll}>
         <IconX size={14} stroke={1.8} />
       </button>
     {:else if $prefs.showShortcutHints}
       <kbd class="hint">{searchHint}</kbd>
+    {/if}
+
+    {#if suggestions.length > 0}
+      <div class="autocomplete" role="listbox">
+        {#each suggestions as s (s)}
+          <button type="button" class="ac-opt" role="option" aria-selected="false" on:click={() => applySuggestion(s)}>
+            <span class="ac-key">{s}:</span>
+            <span class="ac-desc">{$t(`messageList.search.suggest.${s}`)}</span>
+          </button>
+        {/each}
+      </div>
     {/if}
   </div>
 
@@ -109,44 +262,33 @@
     <button
       type="button"
       class="filter-btn"
-      class:active={filterActive}
       aria-label={$t('messageList.search.filterByDate')}
-      aria-expanded={showFilter}
+      aria-expanded={showDate}
       title={$t('messageList.search.filterByDate')}
-      on:click={() => (showFilter = !showFilter)}
+      on:click={() => (showDate = !showDate)}
     >
       <IconCalendar size={16} stroke={1.7} />
     </button>
 
-    {#if showFilter}
+    {#if showDate}
       <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
-      <div class="scrim" on:click={() => (showFilter = false)}></div>
+      <div class="scrim" on:click={() => (showDate = false)}></div>
       <div class="menu" role="menu">
-        {#each presets as p (p.key)}
-          <button type="button" class="opt" role="menuitemradio" aria-checked={activePreset === p.key} on:click={() => pickPreset(p.key, p.days)}>
-            <span class="tick">{#if activePreset === p.key}<IconCheck size={13} stroke={2.2} />{/if}</span>
-            {p.label}
-          </button>
-        {/each}
-
-        <div class="custom">
-          <span class="custom-label">{$t('messageList.search.customRange')}</span>
-          <div class="date">
-            <span>{$t('messageList.search.from')}</span>
-            <div class="date-picker">
-              <DateTimePicker mode="date" bind:value={customFrom} />
-            </div>
+        <span class="menu-label">{$t('messageList.search.dateRange')}</span>
+        <div class="date">
+          <span>{$t('messageList.search.chip.after')}</span>
+          <div class="date-picker">
+            <DateTimePicker mode="date" bind:value={afterDate} />
           </div>
-          <div class="date">
-            <span>{$t('messageList.search.to')}</span>
-            <div class="date-picker">
-              <DateTimePicker mode="date" bind:value={customTo} />
-            </div>
+        </div>
+        <div class="date">
+          <span>{$t('messageList.search.chip.before')}</span>
+          <div class="date-picker">
+            <DateTimePicker mode="date" bind:value={beforeDate} />
           </div>
-          <div class="custom-actions">
-            <button type="button" class="ghost" on:click={clearFilter}>{$t('messageList.search.clear')}</button>
-            <button type="button" class="primary" on:click={applyCustom}>{$t('messageList.search.apply')}</button>
-          </div>
+        </div>
+        <div class="menu-actions">
+          <button type="button" class="primary" on:click={applyDates}>{$t('messageList.search.apply')}</button>
         </div>
       </div>
     {/if}
@@ -161,12 +303,13 @@
   }
 
   .search {
+    position: relative;
     flex: 1;
     display: flex;
     align-items: center;
     gap: var(--space-2);
     padding: 0 var(--space-3);
-    height: var(--control-height);
+    min-height: var(--control-height);
     border: var(--hairline) solid var(--border-default);
     border-radius: var(--radius-control);
     background: var(--surface-sunken);
@@ -177,18 +320,49 @@
     border-color: var(--accent);
   }
 
-  input[type='search'] {
+  .field {
     flex: 1;
     min-width: 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-1);
+    padding: 3px 0;
+  }
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    padding: 1px var(--space-1) 1px var(--space-2);
+    border-radius: var(--radius-control);
+    background: var(--selection-bg);
+    color: var(--text-primary);
+    font-size: var(--fz-meta);
+    white-space: nowrap;
+  }
+
+  .chip-x {
+    display: inline-flex;
+    border: none;
+    background: transparent;
+    color: var(--text-tertiary);
+    cursor: pointer;
+    padding: 1px;
+    border-radius: var(--radius-control);
+  }
+  .chip-x:hover {
+    color: var(--text-primary);
+  }
+
+  input[type='text'] {
+    flex: 1;
+    min-width: 80px;
     border: none;
     background: transparent;
     outline: none;
     font-size: var(--fz-list);
-  }
-
-  /* hide the native search clear so we control the affordance. */
-  input::-webkit-search-cancel-button {
-    display: none;
+    color: var(--text-primary);
   }
 
   .clear {
@@ -200,7 +374,6 @@
     padding: 2px;
     border-radius: var(--radius-control);
   }
-
   .clear:hover {
     color: var(--text-primary);
   }
@@ -215,6 +388,44 @@
     font-family: var(--font-mono);
     font-size: var(--fz-meta);
     line-height: 1.4;
+  }
+
+  .autocomplete {
+    position: absolute;
+    top: calc(100% + var(--space-1));
+    left: 0;
+    right: 0;
+    z-index: 41;
+    padding: var(--space-1);
+    border: var(--hairline) solid var(--border-default);
+    border-radius: var(--radius-card);
+    background: var(--surface-overlay);
+    box-shadow: var(--shadow-overlay);
+  }
+
+  .ac-opt {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-2);
+    width: 100%;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    text-align: left;
+    padding: var(--space-2);
+    border-radius: var(--radius-control);
+  }
+  .ac-opt:hover {
+    background: var(--surface-hover);
+  }
+  .ac-key {
+    font-family: var(--font-mono);
+    font-size: var(--fz-label);
+    color: var(--accent);
+  }
+  .ac-desc {
+    font-size: var(--fz-meta);
+    color: var(--text-tertiary);
   }
 
   .filter-wrap {
@@ -234,16 +445,9 @@
     color: var(--text-secondary);
     cursor: pointer;
   }
-
   .filter-btn:hover {
     background: var(--surface-hover);
     color: var(--text-primary);
-  }
-
-  /* an active filter is shown by the accent so it is obvious results are scoped. */
-  .filter-btn.active {
-    border-color: var(--accent);
-    color: var(--accent);
   }
 
   .scrim {
@@ -258,49 +462,18 @@
     right: 0;
     z-index: 41;
     width: 232px;
-    padding: var(--space-2);
+    padding: var(--space-3);
     border: var(--hairline) solid var(--border-default);
     border-radius: var(--radius-card);
     background: var(--surface-overlay);
     box-shadow: var(--shadow-overlay);
   }
 
-  .opt {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    width: 100%;
-    border: none;
-    background: transparent;
-    color: var(--text-primary);
-    cursor: pointer;
-    text-align: left;
-    padding: var(--space-2);
-    border-radius: var(--radius-control);
-    font-size: var(--fz-label);
-  }
-
-  .opt:hover {
-    background: var(--surface-hover);
-  }
-
-  .tick {
-    display: inline-flex;
-    width: 14px;
-    color: var(--accent);
-  }
-
-  .custom {
-    margin-top: var(--space-2);
-    padding-top: var(--space-2);
-    border-top: var(--hairline) solid var(--border-subtle);
-  }
-
-  .custom-label {
+  .menu-label {
     display: block;
     font-size: var(--fz-meta);
     color: var(--text-tertiary);
-    margin: 0 var(--space-2) var(--space-2);
+    margin: 0 0 var(--space-2);
   }
 
   .date {
@@ -308,42 +481,29 @@
     align-items: center;
     justify-content: space-between;
     gap: var(--space-2);
-    padding: 0 var(--space-2) var(--space-2);
+    padding-bottom: var(--space-2);
   }
-
   .date span {
     font-size: var(--fz-label);
     color: var(--text-secondary);
   }
-
   .date-picker {
     width: 132px;
   }
 
-  .custom-actions {
+  .menu-actions {
     display: flex;
     justify-content: flex-end;
-    gap: var(--space-2);
-    padding: var(--space-1) var(--space-2) 0;
+    padding-top: var(--space-1);
   }
 
-  .ghost,
   .primary {
     padding: var(--space-1) var(--space-3);
     border-radius: var(--radius-control);
-    border: var(--hairline) solid var(--border-default);
-    cursor: pointer;
-    font-size: var(--fz-label);
-  }
-
-  .ghost {
-    background: var(--surface-raised);
-    color: var(--text-primary);
-  }
-
-  .primary {
+    border: none;
     background: var(--accent);
     color: var(--accent-fg);
-    border-color: transparent;
+    font-size: var(--fz-label);
+    cursor: pointer;
   }
 </style>

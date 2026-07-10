@@ -108,6 +108,12 @@ type SearchRequestDTO struct {
 	AfterUnix  int64  `json:"afterUnix"`
 	BeforeUnix int64  `json:"beforeUnix"`
 	Limit      int    `json:"limit"`
+	// From/To/Subject scope the match to a field, from typed search chips.
+	From    string `json:"from"`
+	To      string `json:"to"`
+	Subject string `json:"subject"`
+	// HasAttachment filters to messages that carry at least one attachment.
+	HasAttachment bool `json:"hasAttachment"`
 }
 
 // Search runs a ranked, typo-tolerant search over cached messages and returns the
@@ -120,19 +126,24 @@ func (a *App) Search(req SearchRequestDTO) ([]MessageSummaryDTO, error) {
 	if a.index == nil {
 		return nil, errSearchUnavailable
 	}
-	if strings.TrimSpace(req.Query) == "" && req.AfterUnix == 0 && req.BeforeUnix == 0 {
-		return []MessageSummaryDTO{}, nil
-	}
-
 	q := search.Query{
-		Text:  strings.TrimSpace(req.Query),
-		Limit: req.Limit,
+		Text:    strings.TrimSpace(req.Query),
+		From:    strings.TrimSpace(req.From),
+		To:      strings.TrimSpace(req.To),
+		Subject: strings.TrimSpace(req.Subject),
+		Limit:   req.Limit,
 	}
 	if req.AfterUnix > 0 {
 		q.After = time.Unix(req.AfterUnix, 0)
 	}
 	if req.BeforeUnix > 0 {
 		q.Before = time.Unix(req.BeforeUnix, 0)
+	}
+	// an empty request (no text, no field chip, no date, no attachment filter)
+	// means "show the normal list", so return nothing here.
+	if q.Text == "" && q.From == "" && q.To == "" && q.Subject == "" &&
+		q.After.IsZero() && q.Before.IsZero() && !req.HasAttachment {
+		return []MessageSummaryDTO{}, nil
 	}
 
 	hits, err := a.index.Search(q)
@@ -142,11 +153,16 @@ func (a *App) Search(req SearchRequestDTO) ([]MessageSummaryDTO, error) {
 
 	// hits are ranked; fetch each full message so rows render like the normal
 	// list. a missing message (deleted since indexing) is simply skipped, which
-	// also covers stale index entries without a separate cleanup pass.
+	// also covers stale index entries without a separate cleanup pass. the
+	// has:attachment chip is applied here since attachment presence is a stored
+	// message field, not an indexed one.
 	out := make([]MessageSummaryDTO, 0, len(hits))
 	for _, h := range hits {
 		m, err := a.store.GetMessage(a.ctx, h.ID)
 		if err != nil {
+			continue
+		}
+		if req.HasAttachment && !m.HasAttachments {
 			continue
 		}
 		email, folderName := a.lookupContext(a.ctx, m.AccountID, m.FolderID)
