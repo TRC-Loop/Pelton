@@ -288,20 +288,6 @@ export namespace desktop {
 	        this.source = source["source"];
 	    }
 	}
-	export class DownloadEstimateDTO {
-	    messageCount: number;
-	    totalBytes: number;
-	
-	    static createFrom(source: any = {}) {
-	        return new DownloadEstimateDTO(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.messageCount = source["messageCount"];
-	        this.totalBytes = source["totalBytes"];
-	    }
-	}
 	export class DraftDTO {
 	    id: number;
 	    savedAt: string;

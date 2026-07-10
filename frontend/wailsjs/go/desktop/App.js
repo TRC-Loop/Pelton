@@ -22,6 +22,10 @@ export function ArchiveMessage(arg1) {
   return window['go']['desktop']['App']['ArchiveMessage'](arg1);
 }
 
+export function CancelDownload() {
+  return window['go']['desktop']['App']['CancelDownload']();
+}
+
 export function CancelSend(arg1) {
   return window['go']['desktop']['App']['CancelSend'](arg1);
 }
@@ -72,10 +76,6 @@ export function DownloadMessageOffline(arg1) {
 
 export function DownloadRange(arg1, arg2) {
   return window['go']['desktop']['App']['DownloadRange'](arg1, arg2);
-}
-
-export function EstimateDownloadRange(arg1) {
-  return window['go']['desktop']['App']['EstimateDownloadRange'](arg1);
 }
 
 export function ExportMessagePrintView(arg1) {
