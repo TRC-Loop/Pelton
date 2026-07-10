@@ -228,6 +228,21 @@ export function allowDomainImages(messageId: number): Promise<void> {
   return App.AllowDomainImages(messageId)
 }
 
+// ImageAllowEntry is one trusted sender or domain in the remote-image
+// allowlist, with an example cached message when one exists.
+export type ImageAllowEntry = desktop.ImageAllowEntryDTO
+
+// listImageAllowlist returns every trusted sender and domain the user has
+// allowed remote content for.
+export function listImageAllowlist(): Promise<ImageAllowEntry[]> {
+  return App.ListImageAllowlist()
+}
+
+// removeImageAllow removes a trusted sender or domain from the allowlist.
+export function removeImageAllow(kind: 'sender' | 'domain', value: string): Promise<void> {
+  return App.RemoveImageAllow(kind, value)
+}
+
 // senderPhotos resolves the ordered list of remote photo candidates for a sender
 // under the configured fallback chain. empty means "no network source"; the ui
 // then draws a generated placeholder.

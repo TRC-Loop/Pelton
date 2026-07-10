@@ -2,6 +2,8 @@ package storage
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
 	"strings"
 )
@@ -95,6 +97,32 @@ func (d *DB) UnreadCount(ctx context.Context, folderIDs []int64) (int, error) {
 		return 0, fmt.Errorf("storage: unread count: %w", err)
 	}
 	return n, nil
+}
+
+// LatestMessageFrom returns the most recent cached message whose sender matches
+// value: an exact from-address when matchDomain is false, or any sender in the
+// domain when it is true. Returns nil (no error) when nothing matches, so the
+// image allowlist ui can show an example message for a trusted sender/domain.
+func (d *DB) LatestMessageFrom(ctx context.Context, value string, matchDomain bool) (*Message, error) {
+	cond := "LOWER(from_address) = ?"
+	arg := strings.ToLower(value)
+	if matchDomain {
+		cond = "LOWER(from_address) LIKE ?"
+		arg = "%@" + strings.ToLower(value)
+	}
+	query := selectMessageColumns + `
+FROM messages
+WHERE ` + cond + `
+ORDER BY date DESC, uid DESC
+LIMIT 1`
+	m, err := scanMessage(d.sql.QueryRowContext(ctx, query, arg))
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("storage: latest message from %q: %w", value, err)
+	}
+	return m, nil
 }
 
 // messageWhere builds the shared WHERE clause and its args for QueryMessages and

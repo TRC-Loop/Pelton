@@ -1,6 +1,7 @@
 package desktop
 
 import (
+	"fmt"
 	"strings"
 )
 
@@ -90,6 +91,77 @@ func (a *App) AllowDomainImages(messageID int64) error {
 	}
 	domains := appendUnique(a.remoteDomains(), domain)
 	return a.store.SetJSON(a.ctx, settingRemoteDomains, domains)
+}
+
+// ImageAllowEntryDTO is one entry in the remote-image allowlist: a trusted
+// sender address or sender domain, with an example cached message (if any) so
+// the ui can show the user which mail the entry came from.
+type ImageAllowEntryDTO struct {
+	Value            string `json:"value"`
+	Kind             string `json:"kind"` // "sender" or "domain"
+	ExampleMessageID int64  `json:"exampleMessageId"`
+	ExampleSubject   string `json:"exampleSubject"`
+	ExampleFrom      string `json:"exampleFrom"`
+}
+
+// ListImageAllowlist returns every trusted sender and domain the user has
+// allowed remote content for, each paired with an example cached message.
+func (a *App) ListImageAllowlist() ([]ImageAllowEntryDTO, error) {
+	if err := a.ready(); err != nil {
+		return nil, err
+	}
+	out := []ImageAllowEntryDTO{}
+	for _, s := range a.remoteSenders() {
+		out = append(out, a.allowEntry(s, false))
+	}
+	for _, d := range a.remoteDomains() {
+		out = append(out, a.allowEntry(d, true))
+	}
+	return out, nil
+}
+
+// allowEntry builds one allowlist entry, resolving an example message for the
+// sender or domain when one is cached locally.
+func (a *App) allowEntry(value string, isDomain bool) ImageAllowEntryDTO {
+	kind := "sender"
+	if isDomain {
+		kind = "domain"
+	}
+	entry := ImageAllowEntryDTO{Value: value, Kind: kind}
+	if m, err := a.store.LatestMessageFrom(a.ctx, value, isDomain); err == nil && m != nil {
+		entry.ExampleMessageID = m.ID
+		entry.ExampleSubject = m.Subject
+		entry.ExampleFrom = m.FromAddress
+	}
+	return entry
+}
+
+// RemoveImageAllow drops a trusted sender ("sender") or domain ("domain") from
+// the remote-image allowlist, so its future mail is blocked again by default.
+func (a *App) RemoveImageAllow(kind, value string) error {
+	if err := a.ready(); err != nil {
+		return err
+	}
+	value = strings.ToLower(strings.TrimSpace(value))
+	switch kind {
+	case "sender":
+		return a.store.SetJSON(a.ctx, settingRemoteSenders, removeValue(a.remoteSenders(), value))
+	case "domain":
+		return a.store.SetJSON(a.ctx, settingRemoteDomains, removeValue(a.remoteDomains(), value))
+	default:
+		return fmt.Errorf("pelton: unknown allowlist kind %q", kind)
+	}
+}
+
+// removeValue returns list without value, preserving order.
+func removeValue(list []string, value string) []string {
+	out := make([]string, 0, len(list))
+	for _, v := range list {
+		if v != value {
+			out = append(out, v)
+		}
+	}
+	return out
 }
 
 // emailDomain returns the domain part of an address, or empty if malformed.

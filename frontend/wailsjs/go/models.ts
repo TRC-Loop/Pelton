@@ -366,6 +366,26 @@ export namespace desktop {
 	        this.attributes = source["attributes"];
 	    }
 	}
+	export class ImageAllowEntryDTO {
+	    value: string;
+	    kind: string;
+	    exampleMessageId: number;
+	    exampleSubject: string;
+	    exampleFrom: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new ImageAllowEntryDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.value = source["value"];
+	        this.kind = source["kind"];
+	        this.exampleMessageId = source["exampleMessageId"];
+	        this.exampleSubject = source["exampleSubject"];
+	        this.exampleFrom = source["exampleFrom"];
+	    }
+	}
 	export class ListMessagesRequest {
 	    kind: string;
 	    folderId: number;
