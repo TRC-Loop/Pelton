@@ -552,4 +552,5 @@ export const SettingKeys = {
   composeAutocomplete: 'compose_autocomplete',
   composeChips: 'compose_chips',
   updateCheckFrequency: 'update_check_frequency',
+  emptyStateImage: 'empty_state_image',
 } as const

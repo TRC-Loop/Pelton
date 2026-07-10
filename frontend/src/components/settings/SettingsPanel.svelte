@@ -82,7 +82,9 @@
     setDefaultEditorMode,
     setComposeAutocomplete,
     setComposeChips,
+    setEmptyStateImage,
   } from '../../stores/prefs'
+  import peltonLogo from '../../assets/images/icons/pelton-logo.png'
   import type { Locale } from '../../lib/i18n'
   import { downloadRange, cancelDownload } from '../../lib/api'
   import { downloadProgress } from '../../stores/progress'
@@ -262,6 +264,46 @@
   // the remote-image allowlist manager (trusted senders/domains) opens in a modal.
   let allowlistOpen = false
 
+  // the reading-pane empty-state image is picked from a local file and stored as
+  // a data uri. anything past the hard cap is refused; between the soft and hard
+  // caps we warn ("here be dragons") but let the user proceed, since a large data
+  // uri in settings can slow the ui down.
+  let emptyImageInput: HTMLInputElement
+  const maxEmptyImageBytes = 50_000_000
+  const warnEmptyImageBytes = 3_000_000
+  // a data uri awaiting confirmation because the chosen file is large.
+  let dragonsPending: string | null = null
+  function onPickEmptyImage(event: Event): void {
+    const input = event.currentTarget as HTMLInputElement
+    const file = input.files?.[0]
+    input.value = ''
+    if (!file) {
+      return
+    }
+    if (file.size > maxEmptyImageBytes) {
+      toastError($t('settingsPanel.error.imageTooLarge'))
+      return
+    }
+    const large = file.size > warnEmptyImageBytes
+    const reader = new FileReader()
+    reader.onload = () => {
+      const uri = String(reader.result)
+      if (large) {
+        dragonsPending = uri
+      } else {
+        setEmptyStateImage(uri)
+      }
+    }
+    reader.onerror = () => toastError($t('settingsPanel.error.imageRead'))
+    reader.readAsDataURL(file)
+  }
+  function confirmDragons(): void {
+    if (dragonsPending) {
+      setEmptyStateImage(dragonsPending)
+    }
+    dragonsPending = null
+  }
+
   // sender-photo fallback chain. "Generated" never touches the network.
   $: avatarSourceOptions = [
     { key: 'bimi_gravatar', label: $t('settingsPanel.avatarSource.bimiGravatar') },
@@ -367,6 +409,45 @@
             on:change={(e) => setUIScale(e.detail)}
           />
           <p class="hint">{$t('settingsPanel.hint.interfaceScale')}</p>
+
+          <div class="field">
+            <span class="row-label">{$t('settingsPanel.label.emptyStateImage')}</span>
+            <p class="hint">{$t('settingsPanel.hint.emptyStateImage')}</p>
+            <div class="empty-image-row">
+              <div class="empty-image-preview">
+                <img src={$prefs.emptyStateImage || peltonLogo} alt="" draggable="false" />
+              </div>
+              <div class="empty-image-actions">
+                <button type="button" class="action-btn" on:click={() => emptyImageInput?.click()}>
+                  {$t('settingsPanel.button.selectImage')}
+                </button>
+                <button
+                  type="button"
+                  class="action-btn"
+                  disabled={!$prefs.emptyStateImage}
+                  on:click={() => setEmptyStateImage('')}
+                >
+                  {$t('settingsPanel.button.resetImage')}
+                </button>
+              </div>
+            </div>
+            <input
+              class="hidden-file"
+              type="file"
+              accept="image/*"
+              bind:this={emptyImageInput}
+              on:change={onPickEmptyImage}
+            />
+            {#if dragonsPending}
+              <div class="warn">
+                <p>{$t('settingsPanel.warn.imageLarge')}</p>
+                <div class="warn-actions">
+                  <button type="button" class="ghost-btn" on:click={() => (dragonsPending = null)}>{$t('settingsPanel.button.cancel')}</button>
+                  <button type="button" class="danger-btn" on:click={confirmDragons}>{$t('settingsPanel.button.useAnyway')}</button>
+                </div>
+              </div>
+            {/if}
+          </div>
         </section>
       {:else if active === 'list'}
         <section>
@@ -984,6 +1065,48 @@
 
   .action-btn:hover {
     background: var(--surface-hover);
+  }
+
+  .action-btn:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+
+  .empty-image-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    margin-top: var(--space-2);
+  }
+
+  .empty-image-preview {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 72px;
+    height: 72px;
+    flex-shrink: 0;
+    border: var(--hairline) solid var(--border-default);
+    border-radius: var(--radius-card);
+    background: var(--surface-sunken);
+    overflow: hidden;
+  }
+
+  .empty-image-preview img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+  }
+
+  .empty-image-actions {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    align-items: flex-start;
+  }
+
+  .hidden-file {
+    display: none;
   }
 
   .warn {
