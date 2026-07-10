@@ -36,6 +36,7 @@
     removeFromList,
     restoreToList,
     emptyFilter,
+    filterActive,
     type SearchFilter,
   } from '../../stores/messages'
   import {
@@ -163,8 +164,7 @@
   function applySearch(query: string, filter: SearchFilter): void {
     activeIndex = -1
     clearSelection()
-    const filterActive = filter.afterUnix > 0 || filter.beforeUnix > 0
-    if (query === '' && !filterActive) {
+    if (query === '' && !filterActive(filter)) {
       void loadList($selection)
     } else {
       void runSearch(query, filter)

@@ -141,6 +141,11 @@ export interface SearchRequest {
   afterUnix: number
   beforeUnix: number
   limit: number
+  // field-scoped constraints from typed search chips (from:/to:/subject:).
+  from: string
+  to: string
+  subject: string
+  hasAttachment: boolean
 }
 
 // search runs a ranked, typo-tolerant search and returns matching summaries in
