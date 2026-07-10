@@ -584,6 +584,10 @@ export namespace desktop {
 	    afterUnix: number;
 	    beforeUnix: number;
 	    limit: number;
+	    from: string;
+	    to: string;
+	    subject: string;
+	    hasAttachment: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new SearchRequestDTO(source);
@@ -595,6 +599,10 @@ export namespace desktop {
 	        this.afterUnix = source["afterUnix"];
 	        this.beforeUnix = source["beforeUnix"];
 	        this.limit = source["limit"];
+	        this.from = source["from"];
+	        this.to = source["to"];
+	        this.subject = source["subject"];
+	        this.hasAttachment = source["hasAttachment"];
 	    }
 	}
 	export class SettingResult {
