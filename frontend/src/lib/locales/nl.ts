@@ -192,6 +192,7 @@ const nl: Record<string, string> = {
   'wizard.connectionWorks': 'Verbinding werkt.',
   'wizard.testing': 'Testen…',
   'wizard.testConnection': 'Verbinding testen',
+  'wizard.testRequiredHint': 'Test de verbinding voordat je deze mailbox toevoegt.',
   'wizard.step.oauth.title': 'Inloggen bij',
   'wizard.step.oauth.note': 'OAuth gebruikt je eigen geregistreerde client-id (een desktop-OAuth-client). Plak deze hieronder; het inloggen opent in je browser en er wordt geen clientgeheim opgeslagen.',
   'wizard.field.oauthClientId': 'OAuth-client-id',
