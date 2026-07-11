@@ -21,6 +21,11 @@
   let importSignatures = true
   let importing = false
 
+  // credential password: only relevant when the picked file actually carries
+  // encrypted mailbox credentials and the user wants them restored too.
+  let importPasswords = false
+  let credentialPassword = ''
+
   async function chooseFile(): Promise<void> {
     try {
       const info = await inspectBackupFile()
@@ -32,6 +37,8 @@
       importWhitelist = info.hasWhitelist
       importMailboxes = false
       importSignatures = info.hasSignatures
+      importPasswords = false
+      credentialPassword = ''
     } catch (err) {
       toastError(errorMessage(err))
     }
@@ -51,13 +58,18 @@
       toastError(get(t)('importExport.nothingSelected'))
       return
     }
+    if (importPasswords && credentialPassword.length === 0) {
+      toastError(get(t)('importExport.passwordInvalid'))
+      return
+    }
     importing = true
     try {
-      await importData(file.path, categories)
+      await importData(file.path, categories, importPasswords ? credentialPassword : '')
       // settings we just wrote drive the ui; reload them so it updates live.
       await initPrefs()
       toastSuccess(get(t)('importExport.imported'))
       file = null
+      credentialPassword = ''
     } catch (err) {
       toastError(errorMessage(err))
     } finally {
@@ -115,13 +127,33 @@
       </label>
       {#if importMailboxes && file.hasMailboxes}
         <p class="sub-hint">{$t('importExport.mailboxesHint')}</p>
+        {#if file.hasEncryptedCredentials}
+          <label class="check sub">
+            <input type="checkbox" bind:checked={importPasswords} />
+            <span>{$t('importExport.restorePasswords')}</span>
+          </label>
+          {#if importPasswords}
+            <input
+              type="password"
+              class="pw-input"
+              placeholder={$t('importExport.passwordPlaceholder')}
+              autocomplete="current-password"
+              bind:value={credentialPassword}
+            />
+          {/if}
+        {/if}
       {/if}
       <label class="check" class:disabled={!file.hasSignatures}>
         <input type="checkbox" bind:checked={importSignatures} disabled={!file.hasSignatures} />
         <span>{$t('importExport.category.signatures')}{#if file.hasSignatures}&nbsp;({file.signatureCount}){/if}</span>
       </label>
 
-      <button type="button" class="action-btn primary" disabled={importing} on:click={runImport}>
+      <button
+        type="button"
+        class="action-btn primary"
+        disabled={importing || (importPasswords && credentialPassword.length === 0)}
+        on:click={runImport}
+      >
         {$t('importExport.importButton')}
       </button>
     {/if}
@@ -216,6 +248,25 @@
     font-size: var(--fz-meta);
     color: var(--text-tertiary);
     line-height: 1.4;
+  }
+
+  .check.sub {
+    margin-left: calc(var(--space-2) + 14px);
+  }
+
+  .pw-input {
+    margin-left: calc(var(--space-2) + 14px);
+    height: var(--control-height);
+    padding: 0 var(--space-3);
+    border: var(--hairline) solid var(--border-default);
+    border-radius: var(--radius-control);
+    background: var(--surface-sunken);
+    color: var(--text-primary);
+    font-size: var(--fz-list);
+  }
+  .pw-input:focus {
+    border-color: var(--accent);
+    outline: none;
   }
 
   .file-info {

@@ -2,11 +2,13 @@ package desktop
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"time"
 
+	"github.com/TRC-Loop/Pelton/internal/credentials"
 	"github.com/TRC-Loop/Pelton/internal/storage"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
@@ -46,16 +48,21 @@ type whitelistBackup struct {
 }
 
 // mailboxBackup is one account's server configuration as exported. Passwords
-// and tokens never appear here: they live in the os keyring, keyed by an
-// account id that a fresh install doesn't have yet, so an imported mailbox
-// needs its credentials re-entered once before it can sync.
+// and tokens live in the os keyring, keyed by an account id that a fresh
+// install doesn't have yet; by default they never appear here at all, so an
+// imported mailbox needs its credentials re-entered once before it can sync.
+// If the user opted in and gave an export password, Secret carries the
+// account's credential (from the keyring) encrypted under that password -
+// never in plain text, and never using the same password as anything else in
+// Pelton (there's no vault-unlock password to reuse).
 type mailboxBackup struct {
-	Email       string `json:"email"`
-	DisplayName string `json:"displayName"`
-	IMAPHost    string `json:"imapHost"`
-	IMAPPort    int    `json:"imapPort"`
-	SMTPHost    string `json:"smtpHost"`
-	SMTPPort    int    `json:"smtpPort"`
+	Email       string         `json:"email"`
+	DisplayName string         `json:"displayName"`
+	IMAPHost    string         `json:"imapHost"`
+	IMAPPort    int            `json:"imapPort"`
+	SMTPHost    string         `json:"smtpHost"`
+	SMTPPort    int            `json:"smtpPort"`
+	Secret      *encryptedBlob `json:"secret,omitempty"`
 }
 
 // signatureBackup is one reusable header/footer block as exported.
@@ -80,7 +87,9 @@ type BackupFileDTO struct {
 
 // ExportData writes the selected categories to a user-chosen json file and
 // returns its path, or an empty string if the dialog was cancelled.
-func (a *App) ExportData(categories []string) (string, error) {
+// credentialPassword, when non-empty, additionally encrypts and includes each
+// exported mailbox's stored credential; it is otherwise ignored.
+func (a *App) ExportData(categories []string, credentialPassword string) (string, error) {
 	if err := a.ready(); err != nil {
 		return "", err
 	}
@@ -103,7 +112,7 @@ func (a *App) ExportData(categories []string) (string, error) {
 		doc.Whitelist = &whitelistBackup{Senders: a.remoteSenders(), Domains: a.remoteDomains()}
 	}
 	if want[backupCategoryMailboxes] {
-		mailboxes, err := a.exportMailboxes()
+		mailboxes, err := a.exportMailboxes(credentialPassword)
 		if err != nil {
 			return "", err
 		}
@@ -154,23 +163,44 @@ func (a *App) exportSettings() (map[string]string, error) {
 	return out, nil
 }
 
-// exportMailboxes returns every account's server configuration, without
-// credentials, for the mailboxes backup category.
-func (a *App) exportMailboxes() ([]mailboxBackup, error) {
+// exportMailboxes returns every account's server configuration for the
+// mailboxes backup category. When credentialPassword is non-empty, each
+// account's stored credential (if it has one) is also encrypted under that
+// password and attached; accounts with no stored credential (e.g. never
+// finished setup) are simply exported without one.
+func (a *App) exportMailboxes(credentialPassword string) ([]mailboxBackup, error) {
 	accounts, err := a.store.ListAccounts(a.ctx)
 	if err != nil {
 		return nil, err
 	}
 	out := make([]mailboxBackup, 0, len(accounts))
 	for _, acc := range accounts {
-		out = append(out, mailboxBackup{
+		m := mailboxBackup{
 			Email:       acc.Email,
 			DisplayName: acc.DisplayName,
 			IMAPHost:    acc.IMAPHost,
 			IMAPPort:    acc.IMAPPort,
 			SMTPHost:    acc.SMTPHost,
 			SMTPPort:    acc.SMTPPort,
-		})
+		}
+		if credentialPassword != "" {
+			secret, err := credentials.Load(acc.ID)
+			if err != nil && !errors.Is(err, credentials.ErrNotFound) {
+				return nil, err
+			}
+			if err == nil {
+				encoded, err := json.Marshal(secret)
+				if err != nil {
+					return nil, err
+				}
+				blob, err := encryptWithPassword(credentialPassword, encoded)
+				if err != nil {
+					return nil, err
+				}
+				m.Secret = blob
+			}
+		}
+		out = append(out, m)
 	}
 	return out, nil
 }
@@ -192,16 +222,17 @@ func (a *App) exportSignatures() ([]signatureBackup, error) {
 // BackupInfoDTO describes a picked backup file so the import ui can show what it
 // holds (and when it was made) before the user commits to importing.
 type BackupInfoDTO struct {
-	Path           string `json:"path"`
-	CreatedAt      string `json:"createdAt"`
-	AppVersion     string `json:"appVersion"`
-	HasSettings    bool   `json:"hasSettings"`
-	HasWhitelist   bool   `json:"hasWhitelist"`
-	HasMailboxes   bool   `json:"hasMailboxes"`
-	HasSignatures  bool   `json:"hasSignatures"`
-	SettingCount   int    `json:"settingCount"`
-	MailboxCount   int    `json:"mailboxCount"`
-	SignatureCount int    `json:"signatureCount"`
+	Path                    string `json:"path"`
+	CreatedAt               string `json:"createdAt"`
+	AppVersion              string `json:"appVersion"`
+	HasSettings             bool   `json:"hasSettings"`
+	HasWhitelist            bool   `json:"hasWhitelist"`
+	HasMailboxes            bool   `json:"hasMailboxes"`
+	HasSignatures           bool   `json:"hasSignatures"`
+	HasEncryptedCredentials bool   `json:"hasEncryptedCredentials"`
+	SettingCount            int    `json:"settingCount"`
+	MailboxCount            int    `json:"mailboxCount"`
+	SignatureCount          int    `json:"signatureCount"`
 }
 
 // InspectBackupFile opens a file picker and parses the chosen backup, returning
@@ -225,21 +256,38 @@ func (a *App) InspectBackupFile() (BackupInfoDTO, error) {
 		return BackupInfoDTO{}, err
 	}
 	return BackupInfoDTO{
-		Path:           path,
-		CreatedAt:      doc.CreatedAt,
-		AppVersion:     doc.AppVersion,
-		HasSettings:    len(doc.Settings) > 0,
-		HasWhitelist:   doc.Whitelist != nil,
-		HasMailboxes:   len(doc.Mailboxes) > 0,
-		HasSignatures:  len(doc.Signatures) > 0,
-		SettingCount:   len(doc.Settings),
-		MailboxCount:   len(doc.Mailboxes),
-		SignatureCount: len(doc.Signatures),
+		Path:                    path,
+		CreatedAt:               doc.CreatedAt,
+		AppVersion:              doc.AppVersion,
+		HasSettings:             len(doc.Settings) > 0,
+		HasWhitelist:            doc.Whitelist != nil,
+		HasMailboxes:            len(doc.Mailboxes) > 0,
+		HasSignatures:           len(doc.Signatures) > 0,
+		HasEncryptedCredentials: anyMailboxHasSecret(doc.Mailboxes),
+		SettingCount:            len(doc.Settings),
+		MailboxCount:            len(doc.Mailboxes),
+		SignatureCount:          len(doc.Signatures),
 	}, nil
 }
 
+// anyMailboxHasSecret reports whether at least one exported mailbox carries
+// an encrypted credential, so the import ui only asks for a password when
+// there's actually something to decrypt.
+func anyMailboxHasSecret(mailboxes []mailboxBackup) bool {
+	for _, m := range mailboxes {
+		if m.Secret != nil {
+			return true
+		}
+	}
+	return false
+}
+
 // ImportData applies the selected categories from the backup file at path.
-func (a *App) ImportData(path string, categories []string) error {
+// credentialPassword, when non-empty, additionally decrypts and restores any
+// mailbox credentials the file carries; it is otherwise ignored. A wrong
+// password surfaces as an error (GCM's auth tag check fails on any key
+// mismatch) rather than silently skipping the credentials.
+func (a *App) ImportData(path string, categories []string, credentialPassword string) error {
 	if err := a.ready(); err != nil {
 		return err
 	}
@@ -267,7 +315,7 @@ func (a *App) ImportData(path string, categories []string) error {
 		}
 	}
 	if want[backupCategoryMailboxes] {
-		if err := a.importMailboxes(doc.Mailboxes); err != nil {
+		if err := a.importMailboxes(doc.Mailboxes, credentialPassword); err != nil {
 			return err
 		}
 	}
@@ -281,9 +329,12 @@ func (a *App) ImportData(path string, categories []string) error {
 
 // importMailboxes recreates accounts from their backed-up server config,
 // skipping any email already present locally so a re-import never duplicates
-// a mailbox. Credentials are never part of the backup, so an imported mailbox
-// still needs its password (or oauth re-consent) entered once before it syncs.
-func (a *App) importMailboxes(mailboxes []mailboxBackup) error {
+// a mailbox. When credentialPassword is non-empty and an entry carries an
+// encrypted credential, it's decrypted and stored in the keyring for the
+// newly created account; otherwise (no password given, or the entry has no
+// credential) the mailbox still needs its password re-entered once before it
+// can sync, same as before this existed.
+func (a *App) importMailboxes(mailboxes []mailboxBackup, credentialPassword string) error {
 	if len(mailboxes) == 0 {
 		return nil
 	}
@@ -299,7 +350,7 @@ func (a *App) importMailboxes(mailboxes []mailboxBackup) error {
 		if have[m.Email] {
 			continue
 		}
-		_, err := a.store.CreateAccount(a.ctx, &storage.Account{
+		id, err := a.store.CreateAccount(a.ctx, &storage.Account{
 			Email:       m.Email,
 			DisplayName: m.DisplayName,
 			IMAPHost:    m.IMAPHost,
@@ -311,6 +362,19 @@ func (a *App) importMailboxes(mailboxes []mailboxBackup) error {
 			return err
 		}
 		have[m.Email] = true
+		if credentialPassword != "" && m.Secret != nil {
+			plaintext, err := decryptWithPassword(credentialPassword, m.Secret)
+			if err != nil {
+				return err
+			}
+			var secret credentials.Secret
+			if err := json.Unmarshal(plaintext, &secret); err != nil {
+				return err
+			}
+			if err := credentials.Store(id, secret); err != nil {
+				return err
+			}
+		}
 	}
 	return nil
 }
