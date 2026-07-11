@@ -5,7 +5,7 @@
   // through an inline confirm. Email is not editable here, it identifies the
   // account; changing it is a re-add.
   import { onMount } from 'svelte'
-  import { IconPencil, IconTrash, IconCheck, IconX } from '@tabler/icons-svelte'
+  import { IconPencil, IconTrash, IconCheck, IconX, IconPlus } from '@tabler/icons-svelte'
   import { listAccounts, updateAccount, deleteAccount } from '../../lib/api'
   import { refreshSidebar } from '../../stores/accounts'
   import { errorMessage, toastError } from '../../stores/toast'
@@ -19,8 +19,17 @@
   let saving = false
   // the working copy of the account being edited, so cancelling discards edits.
   let draft: Account | null = null
+  // the add-mailbox wizard is code-split like the other settings modals, so
+  // it only loads once the user actually asks to add a mailbox.
+  let wizardOpen = false
 
   onMount(load)
+
+  function onMailboxAdded(): void {
+    wizardOpen = false
+    void load()
+    void refreshSidebar()
+  }
 
   async function load(): Promise<void> {
     loading = true
@@ -80,8 +89,16 @@
   }
 </script>
 
-<h3>{$t('settingsPanel.category.mailboxes')}</h3>
-<p class="hint">{$t('mailboxes.hint')}</p>
+<div class="head">
+  <div>
+    <h3>{$t('settingsPanel.category.mailboxes')}</h3>
+    <p class="hint">{$t('mailboxes.hint')}</p>
+  </div>
+  <button type="button" class="add-btn" on:click={() => (wizardOpen = true)}>
+    <IconPlus size={14} stroke={2} />
+    {$t('mailboxes.add')}
+  </button>
+</div>
 
 {#if loading}
   <p class="empty">{$t('mailboxes.loading')}</p>
@@ -140,7 +157,38 @@
   </ul>
 {/if}
 
+{#if wizardOpen}
+  {#await import('../wizard/AddMailboxWizard.svelte') then m}
+    <svelte:component this={m.default} on:close={() => (wizardOpen = false)} on:added={onMailboxAdded} />
+  {/await}
+{/if}
+
 <style>
+  .head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--space-3);
+  }
+
+  .add-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    flex-shrink: 0;
+    padding: var(--space-2) var(--space-4);
+    border: none;
+    border-radius: var(--radius-control);
+    background: var(--accent);
+    color: var(--accent-fg);
+    font-size: var(--fz-label);
+    font-weight: var(--fw-medium);
+    cursor: pointer;
+  }
+  .add-btn:hover {
+    filter: brightness(1.05);
+  }
+
   h3 {
     margin: 0 0 var(--space-3);
     font-size: var(--fz-heading);
