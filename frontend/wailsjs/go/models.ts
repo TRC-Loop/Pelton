@@ -164,6 +164,7 @@ export namespace desktop {
 	    hasWhitelist: boolean;
 	    hasMailboxes: boolean;
 	    hasSignatures: boolean;
+	    hasEncryptedCredentials: boolean;
 	    settingCount: number;
 	    mailboxCount: number;
 	    signatureCount: number;
@@ -181,6 +182,7 @@ export namespace desktop {
 	        this.hasWhitelist = source["hasWhitelist"];
 	        this.hasMailboxes = source["hasMailboxes"];
 	        this.hasSignatures = source["hasSignatures"];
+	        this.hasEncryptedCredentials = source["hasEncryptedCredentials"];
 	        this.settingCount = source["settingCount"];
 	        this.mailboxCount = source["mailboxCount"];
 	        this.signatureCount = source["signatureCount"];
