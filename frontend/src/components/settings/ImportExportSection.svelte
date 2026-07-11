@@ -4,46 +4,22 @@
   // chooses what to bring in. Pelton only reads and writes the file the user
   // chooses; nothing leaves the machine on its own.
   import { IconDownload, IconUpload, IconFileImport } from '@tabler/icons-svelte'
-  import { exportData, inspectBackupFile, importData, type BackupInfo } from '../../lib/api'
+  import { inspectBackupFile, importData, type BackupInfo } from '../../lib/api'
   import { initPrefs } from '../../stores/prefs'
   import { toastError, toastSuccess, errorMessage } from '../../stores/toast'
   import { formatFullDate } from '../../lib/format'
   import { get } from 'svelte/store'
   import { t } from '../../lib/i18n'
 
-  // export selection.
-  let exportSettings = true
-  let exportWhitelist = true
-  let exporting = false
+  let exportOpen = false
 
   // import state: the inspected file and which of its categories to apply.
   let file: BackupInfo | null = null
   let importSettings = true
   let importWhitelist = true
+  let importMailboxes = false
+  let importSignatures = true
   let importing = false
-
-  $: exportCategories = [
-    ...(exportSettings ? ['settings'] : []),
-    ...(exportWhitelist ? ['whitelist'] : []),
-  ]
-
-  async function runExport(): Promise<void> {
-    if (exportCategories.length === 0) {
-      toastError(get(t)('importExport.nothingSelected'))
-      return
-    }
-    exporting = true
-    try {
-      const path = await exportData(exportCategories)
-      if (path) {
-        toastSuccess(get(t)('importExport.exported'))
-      }
-    } catch (err) {
-      toastError(errorMessage(err))
-    } finally {
-      exporting = false
-    }
-  }
 
   async function chooseFile(): Promise<void> {
     try {
@@ -54,6 +30,8 @@
       file = info
       importSettings = info.hasSettings
       importWhitelist = info.hasWhitelist
+      importMailboxes = false
+      importSignatures = info.hasSignatures
     } catch (err) {
       toastError(errorMessage(err))
     }
@@ -66,6 +44,8 @@
     const categories = [
       ...(importSettings && file.hasSettings ? ['settings'] : []),
       ...(importWhitelist && file.hasWhitelist ? ['whitelist'] : []),
+      ...(importMailboxes && file.hasMailboxes ? ['mailboxes'] : []),
+      ...(importSignatures && file.hasSignatures ? ['signatures'] : []),
     ]
     if (categories.length === 0) {
       toastError(get(t)('importExport.nothingSelected'))
@@ -93,15 +73,7 @@
       <h4>{$t('importExport.exportTitle')}</h4>
     </div>
     <p class="hint">{$t('importExport.exportHint')}</p>
-    <label class="check">
-      <input type="checkbox" bind:checked={exportSettings} />
-      <span>{$t('importExport.category.settings')}</span>
-    </label>
-    <label class="check">
-      <input type="checkbox" bind:checked={exportWhitelist} />
-      <span>{$t('importExport.category.whitelist')}</span>
-    </label>
-    <button type="button" class="action-btn primary" disabled={exporting} on:click={runExport}>
+    <button type="button" class="action-btn primary" on:click={() => (exportOpen = true)}>
       <IconDownload size={14} stroke={1.8} />
       {$t('importExport.exportButton')}
     </button>
@@ -137,6 +109,17 @@
         <input type="checkbox" bind:checked={importWhitelist} disabled={!file.hasWhitelist} />
         <span>{$t('importExport.category.whitelist')}</span>
       </label>
+      <label class="check" class:disabled={!file.hasMailboxes}>
+        <input type="checkbox" bind:checked={importMailboxes} disabled={!file.hasMailboxes} />
+        <span>{$t('importExport.category.mailboxes')}{#if file.hasMailboxes}&nbsp;({file.mailboxCount}){/if}</span>
+      </label>
+      {#if importMailboxes && file.hasMailboxes}
+        <p class="sub-hint">{$t('importExport.mailboxesHint')}</p>
+      {/if}
+      <label class="check" class:disabled={!file.hasSignatures}>
+        <input type="checkbox" bind:checked={importSignatures} disabled={!file.hasSignatures} />
+        <span>{$t('importExport.category.signatures')}{#if file.hasSignatures}&nbsp;({file.signatureCount}){/if}</span>
+      </label>
 
       <button type="button" class="action-btn primary" disabled={importing} on:click={runImport}>
         {$t('importExport.importButton')}
@@ -144,6 +127,13 @@
     {/if}
   </div>
 </div>
+
+<!-- the export modal is code-split so its logic loads only on demand. -->
+{#if exportOpen}
+  {#await import('./ExportModal.svelte') then m}
+    <svelte:component this={m.default} on:close={() => (exportOpen = false)} />
+  {/await}
+{/if}
 
 <style>
   .section {
@@ -219,6 +209,13 @@
     background: var(--accent);
     color: var(--accent-fg);
     border-color: transparent;
+  }
+
+  .sub-hint {
+    margin: 0 0 0 calc(var(--space-2) + 14px);
+    font-size: var(--fz-meta);
+    color: var(--text-tertiary);
+    line-height: 1.4;
   }
 
   .file-info {
