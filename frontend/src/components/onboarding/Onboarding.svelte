@@ -26,6 +26,7 @@
     IconServer,
     IconDots,
     IconPalette,
+    IconWorld,
   } from '@tabler/icons-svelte'
   import Confetti from '../common/Confetti.svelte'
   import AppSkeleton from './AppSkeleton.svelte'
@@ -46,6 +47,8 @@
     setComposeVimMode,
     setAppVimMode,
     setAvatarStyle,
+    setAvatarSource,
+    setAlwaysLoadImages,
     setMessageFontSize,
     setFlagHighlight,
     setLanguage,
@@ -105,6 +108,38 @@
     { icon: IconPackageExport, title: $t('onboarding.feature.portable.title'), body: $t('onboarding.feature.portable.body') },
     { icon: IconBrandOpenSource, title: $t('onboarding.feature.foss.title'), body: $t('onboarding.feature.foss.body') },
   ]
+  // privacyMode is derived straight from the two settings it controls, not a
+  // separate stored field, so it always reflects what's actually active (and
+  // so re-running onboarding shows the real current choice, not a guess).
+  $: privacyMode = $prefs.avatarSource === 'pfp' && !$prefs.alwaysLoadImages ? 'private' : 'normal'
+
+  function selectPrivacy(mode: 'private' | 'normal'): void {
+    if (mode === 'private') {
+      setAvatarSource('pfp')
+      setAlwaysLoadImages(false)
+    } else {
+      setAvatarSource('bimi_gravatar')
+      setAlwaysLoadImages(true)
+    }
+  }
+
+  $: privacyChoices = [
+    {
+      key: 'private' as const,
+      icon: IconShieldLock,
+      label: $t('onboarding.privacy.private.label'),
+      recommended: true,
+      body: $t('onboarding.privacy.private.body'),
+    },
+    {
+      key: 'normal' as const,
+      icon: IconWorld,
+      label: $t('onboarding.privacy.normal.label'),
+      recommended: false,
+      body: $t('onboarding.privacy.normal.body'),
+    },
+  ]
+
   $: quickProviders = [
     { id: 'gmail', label: 'Gmail', icon: IconBrandGoogle, sub: $t('onboarding.provider.gmailSub') },
     { id: 'icloud', label: 'iCloud', icon: IconBrandApple, sub: $t('onboarding.provider.icloudSub') },
@@ -116,6 +151,7 @@
     | 'welcome'
     | 'language'
     | 'features'
+    | 'privacy'
     | 'theme'
     | 'accent'
     | 'density'
@@ -128,6 +164,7 @@
     'welcome',
     'language',
     'features',
+    'privacy',
     'theme',
     'accent',
     'density',
@@ -261,6 +298,28 @@
                 </li>
               {/each}
             </ul>
+            <div class="nav">
+              <button class="ghost" on:click={back}><IconArrowLeft size={16} stroke={1.8} /> {$t('onboarding.back')}</button>
+              <button class="primary" on:click={next}>{$t('onboarding.continue')} <IconArrowRight size={16} stroke={1.8} /></button>
+            </div>
+          </div>
+        {:else if step === 'privacy'}
+          <div class="choose">
+            <h2>{$t('onboarding.privacyTitle')}</h2>
+            <p class="sub">{$t('onboarding.privacySub')}</p>
+            <div class="privacy-cards">
+              {#each privacyChoices as c}
+                <button class="privacy-card" class:active={privacyMode === c.key} on:click={() => selectPrivacy(c.key)}>
+                  <span class="pc-head">
+                    <span class="pc-icon"><svelte:component this={c.icon} size={22} stroke={1.6} /></span>
+                    <span class="pc-label">{c.label}</span>
+                    {#if c.recommended}<span class="pc-recommended">{$t('onboarding.privacy.recommended')}</span>{/if}
+                  </span>
+                  <span class="pc-body">{c.body}</span>
+                  {#if privacyMode === c.key}<span class="tick"><IconCheck size={14} stroke={2.4} /></span>{/if}
+                </button>
+              {/each}
+            </div>
             <div class="nav">
               <button class="ghost" on:click={back}><IconArrowLeft size={16} stroke={1.8} /> {$t('onboarding.back')}</button>
               <button class="primary" on:click={next}>{$t('onboarding.continue')} <IconArrowRight size={16} stroke={1.8} /></button>
@@ -971,6 +1030,74 @@
     border-radius: 999px;
     background: var(--accent);
     color: var(--accent-fg);
+  }
+
+  /* privacy-mode choice (two cards, each with a description of what it turns on/off). */
+  .privacy-cards {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-3);
+  }
+
+  .privacy-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-2);
+    padding: var(--space-4);
+    border: var(--hairline) solid var(--border-default);
+    border-radius: var(--radius-card);
+    background: var(--surface-raised);
+    color: var(--text-primary);
+    text-align: left;
+    cursor: pointer;
+    transition: border-color 0.15s ease, transform 0.15s ease;
+  }
+
+  .privacy-card:hover {
+    transform: translateY(-2px);
+  }
+
+  .privacy-card.active {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent) inset;
+  }
+
+  .pc-head {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+
+  .pc-icon {
+    color: var(--text-secondary);
+  }
+
+  .privacy-card.active .pc-icon {
+    color: var(--accent);
+  }
+
+  .pc-label {
+    font-size: var(--fz-label);
+    font-weight: var(--fw-medium);
+  }
+
+  .pc-recommended {
+    padding: 1px 6px;
+    border-radius: var(--radius-control);
+    background: var(--accent);
+    color: var(--accent-fg);
+    font-size: var(--fz-meta);
+    font-weight: var(--fw-semibold);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+
+  .pc-body {
+    font-size: var(--fz-meta);
+    color: var(--text-secondary);
+    line-height: 1.5;
   }
 
   /* density illustration bars. */
