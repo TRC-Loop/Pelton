@@ -56,9 +56,9 @@ export function applyScale(scale: string): void {
   const root = document.documentElement
   // the typings don't include zoom, so assign through a loose style record.
   ;(root.style as unknown as Record<string, string>).zoom = String(factor)
-  // expose the factor so full-viewport flow containers (the shell) can divide
-  // their vh/vw by it: zoom does not shrink vh, so a 100vh shell would otherwise
-  // render factor*100vh tall and clip its bottom row (status bar) off-screen.
+  // expose the factor for currentUIScale below: fixed-positioned overlays need
+  // it to convert unscaled pointer coordinates into the zoomed layout space.
+  // the shell itself is sized with percentages, which follow zoom on their own.
   root.style.setProperty('--ui-scale', String(factor))
 }
 
