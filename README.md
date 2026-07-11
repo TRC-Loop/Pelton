@@ -95,11 +95,11 @@ Pelton is a modern, Free and Open-Source Software (FOSS) email client written in
 
 ## <img src="https://api.iconify.design/tabler/download.svg?color=white" width="26" style="vertical-align: -4px;"> Installation
 
-Every [GitHub release](https://github.com/TRC-Loop/Pelton/releases) ships installers for macOS (Intel and Apple Silicon), Windows, and Fedora Linux. All builds are unsigned (no Apple notarization, no Windows code signing), so first launch needs one extra step on macOS and Windows - see below.
+Every [GitHub release](https://github.com/TRC-Loop/Pelton/releases) ships installers for macOS (Apple Silicon), Windows, and Fedora Linux. All builds are unsigned (no Apple notarization, no Windows code signing), so first launch needs one extra step on macOS and Windows - see below.
 
 ### macOS
 
-1. Download `Pelton-<version>-macos-intel.dmg` (Intel Macs) or `Pelton-<version>-macos-applesilicon.dmg` (Apple Silicon / M-series Macs).
+1. Download `Pelton-<version>-macos-applesilicon.dmg` (Apple Silicon / M-series Macs).
 2. Open the `.dmg` and drag `Pelton.app` into `Applications`.
 3. Since the build is unsigned, macOS Gatekeeper blocks the first launch with an "unidentified developer" warning. Right-click (or Control-click) `Pelton.app` in Applications and choose **Open**, then confirm in the dialog that appears. You only need to do this once; after that it opens normally, including from Spotlight or the Dock.
 
