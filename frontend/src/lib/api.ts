@@ -5,6 +5,15 @@
 
 import * as App from '../../wailsjs/go/desktop/App'
 import { desktop } from '../../wailsjs/go/models'
+import {
+  isDemoActive,
+  demoAccounts,
+  demoFolders,
+  demoViews,
+  demoList,
+  demoMessage,
+  demoOutbox,
+} from './demo'
 import type {
   Account,
   Folder,
@@ -26,8 +35,17 @@ import type {
   AttachmentContent,
 } from './types'
 
+// isDemoMode reports whether the app launched in the cosmetic --potatoes-are-nice
+// screenshot mode; the frontend reads it once to switch the data layer to samples.
+export function isDemoMode(): Promise<boolean> {
+  return App.IsDemoMode()
+}
+
 // listAccounts returns every configured account.
 export function listAccounts(): Promise<Account[]> {
+  if (isDemoActive()) {
+    return Promise.resolve(demoAccounts())
+  }
   return App.ListAccounts()
 }
 
@@ -50,11 +68,17 @@ export function deleteAccount(id: number): Promise<void> {
 
 // listFolders returns one account's full mailbox tree with counts.
 export function listFolders(accountId: number): Promise<Folder[]> {
+  if (isDemoActive()) {
+    return Promise.resolve(demoFolders(accountId))
+  }
   return App.ListFolders(accountId)
 }
 
 // listUnifiedViews returns the cross-account views with aggregate counts.
 export function listUnifiedViews(): Promise<UnifiedView[]> {
+  if (isDemoActive()) {
+    return Promise.resolve(demoViews())
+  }
   return App.ListUnifiedViews()
 }
 
@@ -64,6 +88,9 @@ export function listFolderMessages(
   limit: number,
   offset: number,
 ): Promise<MessageList> {
+  if (isDemoActive()) {
+    return Promise.resolve(demoList())
+  }
   return App.ListMessages(
     new desktop.ListMessagesRequest({ kind: 'folder', folderId, view: '', limit, offset }),
   )
@@ -75,6 +102,9 @@ export function listViewMessages(
   limit: number,
   offset: number,
 ): Promise<MessageList> {
+  if (isDemoActive()) {
+    return Promise.resolve(demoList())
+  }
   return App.ListMessages(
     new desktop.ListMessagesRequest({ kind: 'view', folderId: 0, view, limit, offset }),
   )
@@ -82,6 +112,9 @@ export function listViewMessages(
 
 // getMessage returns the full message with sanitized body and attachments.
 export function getMessage(id: number): Promise<MessageDetail> {
+  if (isDemoActive()) {
+    return Promise.resolve(demoMessage(id))
+  }
   return App.GetMessage(id)
 }
 
@@ -141,6 +174,11 @@ export interface SearchRequest {
   afterUnix: number
   beforeUnix: number
   limit: number
+  // field-scoped constraints from typed search chips (from:/to:/subject:).
+  from: string
+  to: string
+  subject: string
+  hasAttachment: boolean
 }
 
 // search runs a ranked, typo-tolerant search and returns matching summaries in
@@ -176,6 +214,9 @@ export function deleteDraft(id: number): Promise<void> {
 
 // listOutbox returns the current outbox contents.
 export function listOutbox(): Promise<OutboxRow[]> {
+  if (isDemoActive()) {
+    return Promise.resolve(demoOutbox())
+  }
   return App.ListOutbox()
 }
 
@@ -228,10 +269,29 @@ export function allowDomainImages(messageId: number): Promise<void> {
   return App.AllowDomainImages(messageId)
 }
 
+// ImageAllowEntry is one trusted sender or domain in the remote-image
+// allowlist, with an example cached message when one exists.
+export type ImageAllowEntry = desktop.ImageAllowEntryDTO
+
+// listImageAllowlist returns every trusted sender and domain the user has
+// allowed remote content for.
+export function listImageAllowlist(): Promise<ImageAllowEntry[]> {
+  return App.ListImageAllowlist()
+}
+
+// removeImageAllow removes a trusted sender or domain from the allowlist.
+export function removeImageAllow(kind: 'sender' | 'domain', value: string): Promise<void> {
+  return App.RemoveImageAllow(kind, value)
+}
+
 // senderPhotos resolves the ordered list of remote photo candidates for a sender
 // under the configured fallback chain. empty means "no network source"; the ui
 // then draws a generated placeholder.
 export function senderPhotos(email: string): Promise<string[]> {
+  if (isDemoActive()) {
+    // demo mode stays offline: fall back to the generated avatars, no network.
+    return Promise.resolve([])
+  }
   return App.SenderPhotos(email)
 }
 
@@ -373,53 +433,32 @@ export function downloadRange(startDate: string, includeAttachments: boolean): P
   return App.DownloadRange(startDate, includeAttachments)
 }
 
-// estimateDownloadRange reports how many messages and roughly how many bytes
-// a downloadRange call with the same start date would fetch, so the settings
-// ui can show a size estimate before the user commits to it.
-export interface DownloadEstimate {
-  messageCount: number
-  totalBytes: number
-}
-export function estimateDownloadRange(startDate: string): Promise<DownloadEstimate> {
-  return App.EstimateDownloadRange(startDate)
+// cancelDownload stops a running bulk offline download and clears its resume
+// marker so it does not restart on the next launch.
+export function cancelDownload(): Promise<void> {
+  return App.CancelDownload()
 }
 
-// --- settings sync ---
+// --- import / export ---
 
-export interface ConfigSyncStatus {
-  enabled: boolean
-  mode: string
-  path: string
-  syncSettings: boolean
-  emailScope: string
-  lastSyncUnix: number
-  lastError: string
+// BackupInfo describes a picked backup file before importing it.
+export type BackupInfo = desktop.BackupInfoDTO
+
+// exportData writes the selected categories to a user-chosen json file,
+// returning its path (empty if the save dialog was cancelled).
+export function exportData(categories: string[]): Promise<string> {
+  return App.ExportData(categories)
 }
 
-export function getConfigSyncStatus(): Promise<ConfigSyncStatus> {
-  return App.GetConfigSyncStatus()
+// inspectBackupFile opens a file picker and returns what the chosen backup
+// holds. An empty path means the dialog was cancelled.
+export function inspectBackupFile(): Promise<BackupInfo> {
+  return App.InspectBackupFile()
 }
 
-export function configureConfigSync(
-  mode: string,
-  path: string,
-  syncSettings: boolean,
-  emailScope: string,
-  mergeOnJoin: boolean,
-): Promise<ConfigSyncStatus> {
-  return App.ConfigureConfigSync(mode, path, syncSettings, emailScope, mergeOnJoin)
-}
-
-export function disableConfigSync(): Promise<ConfigSyncStatus> {
-  return App.DisableConfigSync()
-}
-
-export function triggerConfigSync(): Promise<ConfigSyncStatus> {
-  return App.TriggerConfigSync()
-}
-
-export function pickConfigSyncFolder(): Promise<string> {
-  return App.PickConfigSyncFolder()
+// importData applies the selected categories from the backup file at path.
+export function importData(path: string, categories: string[]): Promise<void> {
+  return App.ImportData(path, categories)
 }
 
 // systemColorScheme returns the OS dark/light preference ("dark" | "light"), or
@@ -427,16 +466,6 @@ export function pickConfigSyncFolder(): Promise<string> {
 // does not expose it to CSS prefers-color-scheme; elsewhere it returns "".
 export function systemColorScheme(): Promise<string> {
   return App.SystemColorScheme()
-}
-
-export interface ConfigSyncFolderPeek {
-  hasExistingData: boolean
-  accountEmails: string[]
-  modifiedUnix: number
-}
-
-export function peekConfigSyncFolder(path: string): Promise<ConfigSyncFolderPeek> {
-  return App.PeekConfigSyncFolder(path)
 }
 
 // --- address book ---
@@ -537,4 +566,5 @@ export const SettingKeys = {
   composeAutocomplete: 'compose_autocomplete',
   composeChips: 'compose_chips',
   updateCheckFrequency: 'update_check_frequency',
+  emptyStateImage: 'empty_state_image',
 } as const

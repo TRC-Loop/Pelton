@@ -142,7 +142,7 @@ ${bodyHtml}
 <section class="detail">
   {#if $openMessageId === null}
     <div class="placeholder">
-      <img class="placeholder-logo" src={peltonLogo} alt="Pelton" draggable="false" />
+      <img class="placeholder-logo" src={$prefs.emptyStateImage || peltonLogo} alt="Pelton" draggable="false" />
     </div>
   {:else if $messageDetail.status === 'loading' && !$messageDetail.data}
     <Spinner label={$t('detail.loadingMessage')} />

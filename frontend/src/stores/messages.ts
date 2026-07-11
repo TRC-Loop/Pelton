@@ -95,17 +95,42 @@ export async function loadMore(): Promise<void> {
   }
 }
 
-// SearchFilter is the optional date window applied to a search. 0 on a side
-// leaves it open.
+// SearchFilter carries the structured constraints from the search chips: an
+// optional date window (0 on a side leaves it open), field-scoped terms, and
+// the attachment toggle. Free text is passed separately to runSearch.
 export interface SearchFilter {
   afterUnix: number
   beforeUnix: number
+  from: string
+  to: string
+  subject: string
+  hasAttachment: boolean
 }
 
-export const emptyFilter: SearchFilter = { afterUnix: 0, beforeUnix: 0 }
+export const emptyFilter: SearchFilter = {
+  afterUnix: 0,
+  beforeUnix: 0,
+  from: '',
+  to: '',
+  subject: '',
+  hasAttachment: false,
+}
 
-// runSearch replaces the list with ranked search results for a query and an
-// optional date window.
+// filterActive reports whether any chip constraint is set (used to decide
+// between the ranked search and the plain folder list).
+export function filterActive(f: SearchFilter): boolean {
+  return (
+    f.afterUnix > 0 ||
+    f.beforeUnix > 0 ||
+    f.from !== '' ||
+    f.to !== '' ||
+    f.subject !== '' ||
+    f.hasAttachment
+  )
+}
+
+// runSearch replaces the list with ranked search results for a query and the
+// structured chip constraints.
 export async function runSearch(query: string, filter: SearchFilter = emptyFilter): Promise<void> {
   messageList.update((s) => loading(s))
   try {
@@ -113,6 +138,10 @@ export async function runSearch(query: string, filter: SearchFilter = emptyFilte
       query,
       afterUnix: filter.afterUnix,
       beforeUnix: filter.beforeUnix,
+      from: filter.from,
+      to: filter.to,
+      subject: filter.subject,
+      hasAttachment: filter.hasAttachment,
       limit: 200,
     })
     messageList.set(ready({ items, total: items.length, searching: true }))

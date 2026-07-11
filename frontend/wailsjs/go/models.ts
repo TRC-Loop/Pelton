@@ -156,6 +156,28 @@ export namespace desktop {
 	        this.inline = source["inline"];
 	    }
 	}
+	export class BackupInfoDTO {
+	    path: string;
+	    createdAt: string;
+	    appVersion: string;
+	    hasSettings: boolean;
+	    hasWhitelist: boolean;
+	    settingCount: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new BackupInfoDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.path = source["path"];
+	        this.createdAt = source["createdAt"];
+	        this.appVersion = source["appVersion"];
+	        this.hasSettings = source["hasSettings"];
+	        this.hasWhitelist = source["hasWhitelist"];
+	        this.settingCount = source["settingCount"];
+	    }
+	}
 	export class ComposeAttachment {
 	    filename: string;
 	    contentType: string;
@@ -226,46 +248,6 @@ export namespace desktop {
 		    return a;
 		}
 	}
-	export class ConfigSyncFolderPeekDTO {
-	    hasExistingData: boolean;
-	    accountEmails: string[];
-	    modifiedUnix: number;
-	
-	    static createFrom(source: any = {}) {
-	        return new ConfigSyncFolderPeekDTO(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.hasExistingData = source["hasExistingData"];
-	        this.accountEmails = source["accountEmails"];
-	        this.modifiedUnix = source["modifiedUnix"];
-	    }
-	}
-	export class ConfigSyncStatusDTO {
-	    enabled: boolean;
-	    mode: string;
-	    path: string;
-	    syncSettings: boolean;
-	    emailScope: string;
-	    lastSyncUnix: number;
-	    lastError: string;
-	
-	    static createFrom(source: any = {}) {
-	        return new ConfigSyncStatusDTO(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.enabled = source["enabled"];
-	        this.mode = source["mode"];
-	        this.path = source["path"];
-	        this.syncSettings = source["syncSettings"];
-	        this.emailScope = source["emailScope"];
-	        this.lastSyncUnix = source["lastSyncUnix"];
-	        this.lastError = source["lastError"];
-	    }
-	}
 	export class DiscoveredDTO {
 	    imapHost: string;
 	    imapPort: number;
@@ -286,20 +268,6 @@ export namespace desktop {
 	        this.smtpPort = source["smtpPort"];
 	        this.oauth = source["oauth"];
 	        this.source = source["source"];
-	    }
-	}
-	export class DownloadEstimateDTO {
-	    messageCount: number;
-	    totalBytes: number;
-	
-	    static createFrom(source: any = {}) {
-	        return new DownloadEstimateDTO(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.messageCount = source["messageCount"];
-	        this.totalBytes = source["totalBytes"];
 	    }
 	}
 	export class DraftDTO {
@@ -364,6 +332,26 @@ export namespace desktop {
 	        this.unreadCount = source["unreadCount"];
 	        this.totalCount = source["totalCount"];
 	        this.attributes = source["attributes"];
+	    }
+	}
+	export class ImageAllowEntryDTO {
+	    value: string;
+	    kind: string;
+	    exampleMessageId: number;
+	    exampleSubject: string;
+	    exampleFrom: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new ImageAllowEntryDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.value = source["value"];
+	        this.kind = source["kind"];
+	        this.exampleMessageId = source["exampleMessageId"];
+	        this.exampleSubject = source["exampleSubject"];
+	        this.exampleFrom = source["exampleFrom"];
 	    }
 	}
 	export class ListMessagesRequest {
@@ -578,6 +566,10 @@ export namespace desktop {
 	    afterUnix: number;
 	    beforeUnix: number;
 	    limit: number;
+	    from: string;
+	    to: string;
+	    subject: string;
+	    hasAttachment: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new SearchRequestDTO(source);
@@ -589,6 +581,10 @@ export namespace desktop {
 	        this.afterUnix = source["afterUnix"];
 	        this.beforeUnix = source["beforeUnix"];
 	        this.limit = source["limit"];
+	        this.from = source["from"];
+	        this.to = source["to"];
+	        this.subject = source["subject"];
+	        this.hasAttachment = source["hasAttachment"];
 	    }
 	}
 	export class SettingResult {
@@ -687,6 +683,7 @@ export namespace desktop {
 	    composeAutocomplete: boolean;
 	    composeChips: boolean;
 	    updateCheckFrequency: string;
+	    emptyStateImage: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new UIPrefsDTO(source);
@@ -737,6 +734,7 @@ export namespace desktop {
 	        this.composeAutocomplete = source["composeAutocomplete"];
 	        this.composeChips = source["composeChips"];
 	        this.updateCheckFrequency = source["updateCheckFrequency"];
+	        this.emptyStateImage = source["emptyStateImage"];
 	    }
 	}
 	export class UnifiedViewDTO {

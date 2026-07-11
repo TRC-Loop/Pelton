@@ -35,9 +35,6 @@ const (
 	EventDownloadProgress = "download:progress"
 	// EventAttachmentProgress fires while saving one or more attachments.
 	EventAttachmentProgress = "attachment:progress"
-	// EventConfigSync fires after every config sync pass (success or failure)
-	// with the current configsync.Config, so the settings ui stays live.
-	EventConfigSync = "configsync:status"
 	// EventUpdateAvailable fires after an automatic (frequency-driven) update
 	// check completes, so the about section can show a notice without polling.
 	// It is not fired for a manual "check now" call, which returns its result

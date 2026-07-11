@@ -5,6 +5,7 @@
   // blocked by the backend by default; a per-message affordance asks the backend
   // to re-render with remote content allowed.
   import { onDestroy } from 'svelte'
+  import { BrowserOpenURL } from '../../../wailsjs/runtime/runtime'
   import { IconPhoto, IconUserCheck, IconWorldCheck } from '@tabler/icons-svelte'
   import { prefs } from '../../stores/prefs'
   import { getMessageHtml, trustSenderImages, allowDomainImages } from '../../lib/api'
@@ -115,6 +116,25 @@
     measure()
     resizeObserver = new ResizeObserver(() => measure())
     resizeObserver.observe(body)
+    // the sandbox has no allow-popups/allow-top-navigation, so links in the mail
+    // can't navigate on their own. intercept clicks and hand the url to the OS
+    // default browser, the way desktop mail clients do.
+    doc.addEventListener('click', onBodyClick)
+  }
+
+  // onBodyClick opens a clicked link in the external browser instead of trying to
+  // navigate the sandboxed iframe (which silently does nothing).
+  function onBodyClick(event: MouseEvent): void {
+    const anchor = (event.target as Element | null)?.closest?.('a')
+    const href = anchor?.getAttribute('href')?.trim()
+    if (!href) {
+      return
+    }
+    event.preventDefault()
+    // only hand off real external schemes; ignore in-page (#anchor) links.
+    if (/^(https?:|mailto:)/i.test(href)) {
+      BrowserOpenURL(href)
+    }
   }
 
   onDestroy(() => resizeObserver?.disconnect())

@@ -54,8 +54,15 @@ export function formatFullDate(iso: string): string {
 // initials derives one or two uppercase letters for an avatar from a display
 // name, falling back to the email local part, then to a neutral dot.
 export function initials(name: string, email: string): string {
-  const source = name.trim() || email.split('@')[0] || ''
-  const parts = source.split(/[\s._-]+/).filter(Boolean)
+  // a display name often still carries the address ("Foo <foo@x.com>"); strip
+  // the bracketed part so its "<" never leaks into the initials (e.g. "F<"),
+  // and only keep tokens that start with a letter or digit.
+  const cleaned = name
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/["']/g, '')
+    .trim()
+  const source = cleaned || email.split('@')[0] || ''
+  const parts = source.split(/[\s._-]+/).filter((p) => /^[\p{L}\p{N}]/u.test(p))
   if (parts.length === 0) {
     return '•'
   }

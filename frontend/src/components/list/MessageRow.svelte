@@ -57,9 +57,12 @@
 
   // swipe gesture state. horizontal wheel deltas (trackpad) accumulate into a
   // translation that reveals the action behind the row, apple-mail style: the
-  // reveal grows as you swipe and the action only fires once you have dragged
-  // most of the way across. a short idle timer ends the gesture. requiring a
-  // large, clearly-horizontal drag also stops a vertical scroll from triggering.
+  // reveal follows the swipe, resists past the row width, and the action only
+  // fires once you have deliberately dragged past the commit line and let go.
+  // "letting go" on a trackpad is inferred from wheel events stopping, so the
+  // idle window is generous enough that a natural mid-swipe pause never counts
+  // as a release. requiring a coherent horizontal burst to engage stops a
+  // vertical scroll from ever being hijacked into a swipe.
   let wrapWidth = 320
   let offset = 0
   let settling = false
@@ -70,8 +73,12 @@
   let preDX = 0
   let idleTimer: ReturnType<typeof setTimeout> | undefined
 
-  // commit once dragged past ~55% of the row; the reveal can grow to the full row.
-  $: commitDistance = wrapWidth * 0.55
+  // must engage with ~28px of coherent horizontal movement, and commit only past
+  // 60% of the row so a half-hearted nudge never fires. the reveal resists
+  // (rubber-bands) past the full row width so the swipe feels anchored rather
+  // than flinging off-screen.
+  const engageThreshold = 28
+  $: commitDistance = wrapWidth * 0.6
   $: maxReveal = wrapWidth
 
   $: leftAction = $prefs.swipeLeftAction as SwipeAction
@@ -94,7 +101,7 @@
   $: revealMeta = actionMeta[revealAction] ?? actionMeta.none
 
   function onWheel(event: WheelEvent): void {
-    if (!$prefs.swipeEnabled || (leftAction === 'none' && rightAction === 'none')) {
+    if (!$prefs.swipeEnabled || (leftAction === 'none' && rightAction === 'none') || committed) {
       return
     }
     const dx = event.deltaX
@@ -102,55 +109,72 @@
     if (!engaged) {
       // a clearly vertical event: let it scroll and reset any partial buffer, so
       // stray horizontal jitter during scrolling never accumulates into a swipe.
-      if (Math.abs(dy) > Math.abs(dx) * 1.5) {
+      if (Math.abs(dy) > Math.abs(dx) * 1.2) {
         preDX = 0
         return
       }
       // accumulate horizontal intent; engage only after a deliberate burst.
       preDX += dx
-      if (Math.abs(preDX) < 26) {
+      if (Math.abs(preDX) < engageThreshold) {
         return
       }
       engaged = true
-      committed = false
+      settling = false
       offset = 0
+    }
+    // once engaged, a clearly vertical burst means the user switched to
+    // scrolling: end the gesture (snap back) rather than staying stuck open.
+    if (Math.abs(dy) > Math.abs(dx) * 2.5) {
+      scheduleEnd(0)
+      return
     }
     event.preventDefault()
     settling = false
-    offset = clamp(offset - dx, -maxReveal, maxReveal)
+    offset = rubberBand(offset - dx, maxReveal)
+    scheduleEnd(200)
+  }
+
+  // scheduleEnd (re)arms the release timer. a trackpad wheel has no end event, so
+  // the gesture is considered released once deltas stop arriving for a moment.
+  function scheduleEnd(delay: number): void {
     if (idleTimer) {
       clearTimeout(idleTimer)
     }
-    idleTimer = setTimeout(endSwipe, 130)
+    idleTimer = setTimeout(endSwipe, delay)
   }
 
   function endSwipe(): void {
-    if (!engaged) {
+    if (!engaged || committed) {
       return
     }
     const dir = offset > 0 ? 'right' : 'left'
-    const action = offset > 0 ? rightAction : leftAction
+    const action = dir === 'right' ? rightAction : leftAction
     const passed = Math.abs(offset) >= commitDistance
     engaged = false
     preDX = 0
     settling = true
-    if (passed && action !== 'none' && !committed) {
+    if (passed && action !== 'none') {
       // slide the rest of the way so the whole row shows the action, then fire.
       committed = true
       offset = dir === 'right' ? maxReveal : -maxReveal
-      const fireDir = dir
       setTimeout(() => {
+        dispatch('swipe', dir)
         offset = 0
         committed = false
-        dispatch('swipe', fireDir)
-      }, 150)
+      }, 160)
     } else {
       offset = 0
     }
   }
 
-  function clamp(v: number, lo: number, hi: number): number {
-    return Math.max(lo, Math.min(hi, v))
+  // rubberBand keeps the drag 1:1 within the row and heavily resists beyond it,
+  // so the reveal feels anchored instead of sliding the row clean off-screen.
+  function rubberBand(v: number, max: number): number {
+    if (Math.abs(v) <= max) {
+      return v
+    }
+    const over = Math.abs(v) - max
+    return Math.sign(v) * (max + over * 0.25)
   }
 </script>
 
