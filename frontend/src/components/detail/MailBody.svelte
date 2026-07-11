@@ -74,7 +74,12 @@
     const cspMeta = `<meta http-equiv="Content-Security-Policy" content="${csp}">`
     const open = '<sty' + 'le>'
     const close = '</sty' + 'le>'
-    return `<!doctype html><html><head><meta charset="utf-8">${cspMeta}${open}${css}${close}</head><body>${html}</body></html>`
+    // data-pelton-ready marks the body as belonging to our own srcdoc, not
+    // the iframe's initial blank placeholder document: a fresh iframe already
+    // has an empty <body> before any srcdoc has loaded, so a readiness check
+    // that only looks for "a body" would resolve instantly against that
+    // placeholder instead of waiting for the real content.
+    return `<!doctype html><html><head><meta charset="utf-8">${cspMeta}${open}${css}${close}</head><body data-pelton-ready="1">${html}</body></html>`
   }
 
   $: srcdoc = buildSrcdoc(detail.bodyHtmlSafe, remoteLoaded, $prefs.messageFontSize)
@@ -95,8 +100,7 @@
   // short emails. a ResizeObserver on the body's own border box reports its
   // true content size independent of the iframe's current height.
   function measure(): void {
-    const doc = frame?.contentDocument
-    const body = doc?.body
+    const body = readyBody()
     if (!body) {
       return
     }
@@ -104,22 +108,74 @@
     frameHeight = Math.max(40, Math.ceil(h))
   }
 
-  function onFrameLoad(): void {
+  // readyBody returns the iframe's body only once it's our own rendered
+  // srcdoc, not the iframe's transient initial blank document.
+  function readyBody(): HTMLElement | null {
+    const body = frame?.contentDocument?.body
+    return body?.dataset.peltonReady ? body : null
+  }
+
+  // readyPollHandle cancels the fallback readiness poll started by
+  // scheduleAttach, so a later reload (a new message) doesn't leave a stale
+  // poll running against a document that's already been replaced.
+  let readyPollHandle = 0
+
+  // attachInteractivity wires up sizing and link handling for the iframe's
+  // current document. It is idempotent per document: calling it twice for the
+  // same load is harmless since a fresh resizeObserver/listener just replaces
+  // the previous one.
+  function attachInteractivity(): void {
     resizeObserver?.disconnect()
     resizeObserver = null
     const doc = frame?.contentDocument
-    const body = doc?.body
-    if (!body) {
-      measure()
+    const body = readyBody()
+    if (!doc || !body) {
       return
     }
     measure()
     resizeObserver = new ResizeObserver(() => measure())
     resizeObserver.observe(body)
-    // the sandbox has no allow-popups/allow-top-navigation, so links in the mail
-    // can't navigate on their own. intercept clicks and hand the url to the OS
-    // default browser, the way desktop mail clients do.
+    // links get a redundant native escape hatch (allow-popups +
+    // allow-top-navigation-by-user-activation on the iframe's sandbox) in
+    // case this listener never gets attached in a given webview engine: our
+    // own handling below still runs first and prevents the default action,
+    // so the native path only kicks in as a fallback, and it's the only way
+    // for a listener-attachment failure to still result in a working click
+    // instead of a silently dead one.
     doc.addEventListener('click', onBodyClick)
+  }
+
+  // onFrameLoad fires when the iframe's srcdoc finishes loading. It is the
+  // fast path; scheduleAttach below also runs unconditionally as a fallback
+  // in case 'load' fires before contentDocument.body is actually populated
+  // (observed to be unreliable timing on some webview engines).
+  function onFrameLoad(): void {
+    attachInteractivity()
+  }
+
+  // scheduleAttach polls (briefly, via rAF) until the iframe's document has a
+  // body, then attaches interactivity. This exists because relying solely on
+  // the 'load' event has proven unreliable: a listener registered a beat too
+  // late leaves clicks silently doing nothing, which is worse than the small
+  // cost of polling for under a second.
+  function scheduleAttach(): void {
+    cancelAnimationFrame(readyPollHandle)
+    let attempts = 0
+    const tick = (): void => {
+      if (readyBody()) {
+        attachInteractivity()
+        return
+      }
+      attempts += 1
+      if (attempts < 120) {
+        readyPollHandle = requestAnimationFrame(tick)
+      }
+    }
+    readyPollHandle = requestAnimationFrame(tick)
+  }
+
+  $: if (frame && srcdoc) {
+    scheduleAttach()
   }
 
   // onBodyClick opens a clicked link in the external browser instead of trying to
@@ -137,7 +193,10 @@
     }
   }
 
-  onDestroy(() => resizeObserver?.disconnect())
+  onDestroy(() => {
+    resizeObserver?.disconnect()
+    cancelAnimationFrame(readyPollHandle)
+  })
 
   async function loadRemote(): Promise<void> {
     try {
@@ -205,7 +264,7 @@
   <iframe
     class="body-frame"
     title={$t('detail.mailBody.iframeTitle')}
-    sandbox="allow-same-origin"
+    sandbox="allow-same-origin allow-popups allow-top-navigation-by-user-activation"
     bind:this={frame}
     on:load={onFrameLoad}
     style={`height:${frameHeight}px`}
