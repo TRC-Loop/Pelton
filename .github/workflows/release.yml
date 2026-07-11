@@ -19,18 +19,14 @@ env:
 
 jobs:
   # ---------------------------------------------------------------------------
-  # macOS: built separately per architecture (not a universal binary), each as
-  # its own .app + .dmg, per the project's request to ship distinct Intel and
-  # Apple Silicon builds.
+  # macOS: Apple Silicon only. Intel builds were dropped (no runner coverage
+  # to keep validating them, and the target audience has moved to arm64).
   # ---------------------------------------------------------------------------
   macos:
     strategy:
       fail-fast: false
       matrix:
         include:
-          - arch: amd64
-            runner: macos-13
-            label: intel
           - arch: arm64
             runner: macos-14
             label: applesilicon
@@ -310,6 +306,7 @@ jobs:
           mkdir -p "$stage"
           cp build/bin/Pelton "$stage/pelton"
           cp build/linux/pelton.desktop "$stage/pelton.desktop"
+          cp build/linux/pelton.metainfo.xml "$stage/pelton.metainfo.xml"
           cp build/icons/pelton-default.png "$stage/pelton.png"
           tar czf ".github/copr/pelton-$VERSION.tar.gz" "$stage"
 

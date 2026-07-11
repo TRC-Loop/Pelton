@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  AppStream MetaInfo for Pelton. Shipped to /usr/share/metainfo so GNOME
+  Software / KDE Discover recognise the installed app as a first-class
+  component: without it the graphical stores can install the .rpm but never
+  link the desktop entry to its owning package, so they show no "Remove"
+  button (the CLI `dnf remove pelton` still works, but users installing by
+  double-clicking the .rpm had no way to uninstall). The <launchable>
+  desktop-id must match the installed pelton.desktop for that link to work.
+-->
+<component type="desktop-application">
+  <id>sh.arne.Pelton</id>
+  <launchable type="desktop-id">pelton.desktop</launchable>
+
+  <name>Pelton</name>
+  <summary>Open-source desktop email client</summary>
+
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+
+  <developer id="sh.arne">
+    <name>Arne K. and the Pelton contributors</name>
+  </developer>
+
+  <description>
+    <p>
+      Pelton is an open-source, cross-platform desktop email client built with
+      Wails, Svelte and Go. It focuses on privacy: remote images and tracking
+      pixels are blocked by default, and the interface stays fast and native.
+    </p>
+  </description>
+
+  <categories>
+    <category>Network</category>
+    <category>Email</category>
+    <category>Office</category>
+  </categories>
+
+  <keywords>
+    <keyword>email</keyword>
+    <keyword>mail</keyword>
+    <keyword>imap</keyword>
+    <keyword>smtp</keyword>
+    <keyword>inbox</keyword>
+  </keywords>
+
+  <url type="homepage">https://github.com/TRC-Loop/Pelton</url>
+  <url type="bugtracker">https://github.com/TRC-Loop/Pelton/issues</url>
+
+  <content_rating type="oars-1.1" />
+
+  <releases>
+    <release version="1.0.4" date="2026-07-11" />
+  </releases>
+</component>
