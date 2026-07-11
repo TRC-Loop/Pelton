@@ -8,6 +8,8 @@ package desktop
 
 import (
 	"embed"
+	"os"
+	goruntime "runtime"
 
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
@@ -29,6 +31,20 @@ type Config struct {
 
 // Run constructs and runs the wails application. It returns wails.Run's error.
 func Run(cfg Config) error {
+	// WebKitGTK's DMA-BUF renderer misbehaves on many Wayland compositors
+	// (notably GNOME, which Fedora ships): the webview's GPU surface is not
+	// reallocated when the window manager resizes the window, so after a
+	// maximise the interface keeps rendering at its old size with the window
+	// background showing through the right and bottom. Falling back to the
+	// non-DMA-BUF path fixes that. Only set on Linux, and only when the user
+	// hasn't already chosen a value, so a distro package or power user can
+	// still override it.
+	if goruntime.GOOS == "linux" {
+		if _, set := os.LookupEnv("WEBKIT_DISABLE_DMABUF_RENDERER"); !set {
+			os.Setenv("WEBKIT_DISABLE_DMABUF_RENDERER", "1")
+		}
+	}
+
 	app := newApp(cfg.Version)
 	app.licenseManifest = cfg.LicenseManifest
 	app.programLicense = cfg.ProgramLicense
