@@ -1,0 +1,55 @@
+name: Packaging / installation issue
+description: Trouble installing, updating, or uninstalling Pelton (dnf, Copr, Windows installer, macOS .dmg, etc.)
+labels: ["area: packaging", "needs-triage"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened
+      description: Describe the install, update, or uninstall problem.
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - macOS
+        - Windows
+        - Linux
+    validations:
+      required: true
+  - type: input
+    id: distro
+    attributes:
+      label: Linux distro and version
+      description: Only if you selected Linux above.
+      placeholder: e.g. Fedora 40, openSUSE Tumbleweed
+  - type: dropdown
+    id: install_method
+    attributes:
+      label: How did you (try to) install Pelton
+      options:
+        - macOS .dmg
+        - Windows installer (.exe/NSIS)
+        - Fedora Copr (dnf copr enable + dnf install)
+        - Downloaded .rpm directly
+        - Built from source
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Pelton version
+      placeholder: e.g. v1.2.0
+  - type: textarea
+    id: commands
+    attributes:
+      label: Commands run and their output
+      description: e.g. the exact dnf/rpm/installer commands and any error output.
+      render: shell
+  - type: textarea
+    id: logs
+    attributes:
+      label: Additional logs or screenshots
