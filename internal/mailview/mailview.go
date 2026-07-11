@@ -62,10 +62,25 @@ func buildPolicy(allowRemote bool) *bluemonday.Policy {
 	p.AllowImages()
 	p.AllowAttrs("width", "height", "alt", "title").OnElements("img")
 
-	// keep simple inline styling that mail relies on, without url() vectors.
+	// keep simple inline styling that mail relies on.
 	p.AllowAttrs("style").Globally()
-	p.AllowStyles("color", "background-color", "text-align", "font-weight",
-		"font-style", "text-decoration", "font-size", "margin", "padding").Globally()
+	// "background" (shorthand) and "background-color" are both kept: many emails
+	// design a dark section with light text and set the background this way. if
+	// only the text color survived and the background was stripped, that light
+	// text landed on our fixed white page and became unreadable. any remote
+	// background image a shorthand might carry is still blocked by the iframe CSP
+	// (img-src) when remote content is off, so keeping it does not leak.
+	p.AllowStyles("color", "background-color", "background", "text-align",
+		"font-weight", "font-style", "text-decoration", "font-size", "line-height",
+		"margin", "padding", "border", "border-color").Globally()
+
+	// the legacy bgcolor attribute is the other common way mail sets a section
+	// background (on the body and table cells); preserve it for the same
+	// readability reason, alongside <font color> so its paired text color stays
+	// with the background instead of falling back to our dark default.
+	p.AllowAttrs("bgcolor").OnElements("body", "table", "thead", "tbody", "tfoot", "tr", "td", "th")
+	p.AllowElements("font")
+	p.AllowAttrs("color", "face", "size").OnElements("font")
 
 	// tables are heavily used by html mail.
 	p.AllowTables()
