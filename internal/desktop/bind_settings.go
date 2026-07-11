@@ -276,6 +276,9 @@ func (a *App) SetSetting(key, value string) error {
 	if key == storage.SettingTheme {
 		a.applyNativeTheme(value)
 	}
+	if key == settingLanguage {
+		a.RebuildMenu()
+	}
 	return nil
 }
 

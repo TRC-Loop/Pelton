@@ -86,6 +86,8 @@ export function ProgramLicense():Promise<string>;
 
 export function ReadAttachment(arg1:number,arg2:number):Promise<desktop.AttachmentContentDTO>;
 
+export function RebuildMenu():Promise<void>;
+
 export function RemoveImageAllow(arg1:string,arg2:string):Promise<void>;
 
 export function RemoveOffline(arg1:number):Promise<void>;

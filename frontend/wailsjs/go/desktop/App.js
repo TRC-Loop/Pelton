@@ -170,6 +170,10 @@ export function ReadAttachment(arg1, arg2) {
   return window['go']['desktop']['App']['ReadAttachment'](arg1, arg2);
 }
 
+export function RebuildMenu() {
+  return window['go']['desktop']['App']['RebuildMenu']();
+}
+
 export function RemoveImageAllow(arg1, arg2) {
   return window['go']['desktop']['App']['RemoveImageAllow'](arg1, arg2);
 }

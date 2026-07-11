@@ -43,8 +43,11 @@ type App struct {
 	programLicense  string
 	// mailMenuItems are the native Mail-menu items that act on the open message;
 	// they start disabled and SetMailActionsEnabled toggles them as the frontend's
-	// open message changes.
-	mailMenuItems []*menu.MenuItem
+	// open message changes. mailActionsEnabled mirrors that same state so a menu
+	// rebuild (RebuildMenu, on a language change) can restore it instead of
+	// resetting every item back to disabled.
+	mailMenuItems      []*menu.MenuItem
+	mailActionsEnabled bool
 
 	// dlMu guards dlCancel, the cancel function of the running bulk offline
 	// download (nil when none is running). CancelDownload calls it to stop the
