@@ -178,6 +178,8 @@ const fr: Record<string, string> = {
   'common.statusBar.saving': 'Enregistrement',
   'common.statusBar.lowPowerTitle': 'Le mode basse consommation est activé : la synchronisation automatique et les téléchargements en masse sont en pause. Clique pour le désactiver.',
   'common.statusBar.lowPower': 'Basse consommation',
+  'common.statusBar.devMode': 'MODE DÉVELOPPEUR',
+  'common.statusBar.devModeTitle': "Utilise le dossier de données de développement, pas votre vraie boîte mail.",
   'common.statusBar.syncing': 'Synchronisation…',
   'common.statusBar.synced': 'Synchronisé',
   'common.techBadges.encrypted': 'Chiffré',

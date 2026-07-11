@@ -178,6 +178,8 @@ const de: Record<string, string> = {
   'common.statusBar.saving': 'Wird gespeichert',
   'common.statusBar.lowPowerTitle': 'Energiesparmodus ist aktiv: Automatische Synchronisierung und Massendownloads sind pausiert. Klicken zum Ausschalten.',
   'common.statusBar.lowPower': 'Energiesparmodus',
+  'common.statusBar.devMode': 'ENTWICKLERMODUS',
+  'common.statusBar.devModeTitle': 'Läuft mit dem Entwickler-Datenverzeichnis, nicht mit deinem echten Postfach.',
   'common.statusBar.syncing': 'Synchronisiert…',
   'common.statusBar.synced': 'Synchronisiert',
   'common.techBadges.encrypted': 'Verschlüsselt',
