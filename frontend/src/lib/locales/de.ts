@@ -283,6 +283,8 @@ const de: Record<string, string> = {
   'compose.toolbar.edit': 'Bearbeiten',
   'compose.toolbar.preview': 'Vorschau',
   'compose.toolbar.linkUrlPrompt': 'Link-URL',
+  'about.website': 'Website',
+  'about.docs': 'Dokumentation',
   'about.reportIssue': 'Problem melden',
   'about.contributors': 'Mitwirkende',
   'about.licenses': 'Open-Source-Lizenzen',

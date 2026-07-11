@@ -283,6 +283,8 @@ const nl: Record<string, string> = {
   'compose.toolbar.edit': 'Bewerken',
   'compose.toolbar.preview': 'Voorbeeld',
   'compose.toolbar.linkUrlPrompt': 'Link-URL',
+  'about.website': 'Website',
+  'about.docs': 'Documentatie',
   'about.reportIssue': 'Probleem melden',
   'about.contributors': 'Bijdragers',
   'about.licenses': 'Opensource licenties',
