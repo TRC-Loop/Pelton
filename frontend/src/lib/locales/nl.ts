@@ -178,6 +178,8 @@ const nl: Record<string, string> = {
   'common.statusBar.saving': 'Opslaan',
   'common.statusBar.lowPowerTitle': 'Energiebesparende modus staat aan: automatisch synchroniseren en bulkdownloads zijn gepauzeerd. Klik om uit te zetten.',
   'common.statusBar.lowPower': 'Energiebesparend',
+  'common.statusBar.devMode': 'ONTWIKKELMODUS',
+  'common.statusBar.devModeTitle': 'Draait op de ontwikkel-datamap, niet je echte mailbox.',
   'common.statusBar.syncing': 'Synchroniseren…',
   'common.statusBar.synced': 'Gesynchroniseerd',
   'common.techBadges.encrypted': 'Versleuteld',

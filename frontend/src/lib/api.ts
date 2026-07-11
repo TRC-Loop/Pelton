@@ -41,6 +41,13 @@ export function isDemoMode(): Promise<boolean> {
   return App.IsDemoMode()
 }
 
+// isDevMode reports whether the app is running against the separate dev data
+// directory (PELTON_DEV), so the ui can show a persistent reminder that this
+// isn't pointed at a real install.
+export function isDevMode(): Promise<boolean> {
+  return App.IsDevMode()
+}
+
 // listAccounts returns every configured account.
 export function listAccounts(): Promise<Account[]> {
   if (isDemoActive()) {

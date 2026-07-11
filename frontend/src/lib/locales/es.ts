@@ -178,6 +178,8 @@ const es: Record<string, string> = {
   'common.statusBar.saving': 'Guardando',
   'common.statusBar.lowPowerTitle': 'El modo de bajo consumo está activado: la sincronización automática y las descargas masivas están en pausa. Haz clic para desactivarlo.',
   'common.statusBar.lowPower': 'Bajo consumo',
+  'common.statusBar.devMode': 'MODO DESARROLLADOR',
+  'common.statusBar.devModeTitle': 'Usando la carpeta de datos de desarrollo, no tu buzón real.',
   'common.statusBar.syncing': 'Sincronizando…',
   'common.statusBar.synced': 'Sincronizado',
   'common.techBadges.encrypted': 'Cifrado',

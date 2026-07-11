@@ -110,6 +110,10 @@ export function IsDemoMode() {
   return window['go']['desktop']['App']['IsDemoMode']();
 }
 
+export function IsDevMode() {
+  return window['go']['desktop']['App']['IsDevMode']();
+}
+
 export function Licenses() {
   return window['go']['desktop']['App']['Licenses']();
 }

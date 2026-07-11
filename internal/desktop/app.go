@@ -64,6 +64,15 @@ func (a *App) IsDemoMode() bool {
 	return a.demoMode
 }
 
+// IsDevMode reports whether the app is running against the separate dev data
+// directory (the PELTON_DEV env var storage.DefaultPath checks), so the
+// frontend can show a persistent indicator that this isn't a normal install -
+// it's easy to forget a dev build is pointed at throwaway data instead of a
+// real mailbox.
+func (a *App) IsDevMode() bool {
+	return os.Getenv("PELTON_DEV") != ""
+}
+
 // newApp creates the App with the build version. The heavy initialization
 // happens in startup once wails has handed us a context we can emit runtime
 // events on.

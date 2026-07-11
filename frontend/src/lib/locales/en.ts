@@ -178,6 +178,8 @@ const en: Record<string, string> = {
   'common.statusBar.saving': 'Saving',
   'common.statusBar.lowPowerTitle': 'Low power mode is on: auto-sync and bulk downloads are paused. Click to turn off.',
   'common.statusBar.lowPower': 'Low power',
+  'common.statusBar.devMode': 'DEVELOPER MODE',
+  'common.statusBar.devModeTitle': 'Running against the dev data directory, not your real mailbox.',
   'common.statusBar.syncing': 'Syncing…',
   'common.statusBar.synced': 'Synced',
   'common.techBadges.encrypted': 'Encrypted',

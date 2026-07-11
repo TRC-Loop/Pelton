@@ -3,15 +3,23 @@
   // clickable "N sending" that opens the outbox panel, plus a failed count. the
   // right side shows live sync state and the last-synced relative time. it is the
   // honest, always-visible window into background activity.
-  import { onDestroy } from 'svelte'
-  import { IconSend, IconAlertTriangle, IconRefresh, IconCheck, IconDownload, IconBatteryEco, IconX } from '@tabler/icons-svelte'
+  import { onDestroy, onMount } from 'svelte'
+  import { IconSend, IconAlertTriangle, IconRefresh, IconCheck, IconDownload, IconBatteryEco, IconX, IconBug } from '@tabler/icons-svelte'
   import { outbox, syncing, lastSynced } from '../../stores/outbox'
   import { downloadProgress, attachmentProgress } from '../../stores/progress'
   import { formatRelative } from '../../lib/format'
-  import { cancelDownload } from '../../lib/api'
+  import { cancelDownload, isDevMode } from '../../lib/api'
   import { prefs, setLowPowerMode } from '../../stores/prefs'
   import OutboxPanel from './OutboxPanel.svelte'
   import { t } from '../../lib/i18n'
+
+  // devMode is read once at startup: it's fixed for the lifetime of the
+  // process (set by the PELTON_DEV env var a dev run launches with), not
+  // something that can change while the app is open.
+  let devMode = false
+  onMount(async () => {
+    devMode = await isDevMode().catch(() => false)
+  })
 
   // format an eta in seconds as m:ss (or just seconds under a minute).
   function formatEta(sec: number): string {
@@ -50,6 +58,12 @@
 
 <footer class="statusbar">
   <div class="left">
+    {#if devMode}
+      <span class="dev-badge" title={$t('common.statusBar.devModeTitle')}>
+        <IconBug size={13} stroke={1.8} />
+        {$t('common.statusBar.devMode')}
+      </span>
+    {/if}
     {#if pending.length > 0 || failed.length > 0}
       <button type="button" class="outbox-btn" class:has-failed={failed.length > 0} on:click={() => (panelOpen = !panelOpen)}>
         {#if pending.length > 0}
@@ -280,6 +294,19 @@
     cursor: pointer;
     padding: var(--space-1) var(--space-2);
     border-radius: var(--radius-control);
+  }
+
+  .dev-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-control);
+    background: var(--danger-bg, var(--warning-bg, var(--surface-sunken)));
+    color: var(--danger, var(--warning));
+    font-size: var(--fz-meta);
+    font-weight: var(--fw-semibold);
+    letter-spacing: 0.02em;
   }
 
   .low-power:hover {
