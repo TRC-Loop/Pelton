@@ -1,10 +1,15 @@
 name: Draft release changelog
 
-# Pushing a version tag (vX.Y.Z) builds a categorized changelog from merged
-# PRs since the previous tag and opens (or updates) a *draft* GitHub Release
-# with it. Nothing is published automatically - review the draft, edit if
-# needed, and hit "Publish release" yourself. Publishing is what fires
-# release.yml's build/upload jobs (it only reacts to `release: published`).
+# Pushing a version tag (vX.Y.Z) builds a flat, alphabetically-sorted
+# changelog from merged PRs since the previous tag and opens (or updates) a
+# *draft* GitHub Release with it. Nothing is published automatically - review
+# the draft, edit if needed, and hit "Publish release" yourself. Publishing is
+# what fires release.yml's build/upload jobs (it only reacts to
+# `release: published`).
+#
+# This is a separate, independent mechanism from .github/release.yml, which
+# only configures GitHub's own "Generate release notes" button/API - it is
+# not read by this workflow.
 on:
   push:
     tags:
@@ -47,12 +52,6 @@ jobs:
             const { CURRENT_TAG, PREVIOUS_TAG } = process.env;
             const { owner, repo } = context.repo;
 
-            // Category label -> section title, in display order. Anything not
-            // matching one of these (and not excluded) lands in "Other Changes".
-            const CATEGORY_LABELS = [
-              ["feature", "Features"],
-              ["fix", "Bug Fixes"],
-            ];
             const EXCLUDE_LABELS = new Set(["documentation", "no-changelog"]);
 
             // Find every PR merged between the previous tag and this one. Look
@@ -80,17 +79,16 @@ jobs:
               if (!pr.merged_at) continue;
               prs.push(pr);
             }
-            prs.sort((a, b) => new Date(a.merged_at) - new Date(b.merged_at));
+            // Alphabetical by title, not merge order: PR titles carry their
+            // conventional-commit type as a prefix (feat:, fix:, ...), so
+            // this naturally groups by type too (feat: sorts before fix:)
+            // without needing separate category sections.
+            prs.sort((a, b) => a.title.localeCompare(b.title));
 
-            const sections = new Map(CATEGORY_LABELS.map(([, title]) => [title, []]));
-            sections.set("Other Changes", []);
-
+            const entries = [];
             for (const pr of prs) {
               const labels = pr.labels.map((l) => l.name);
               if (labels.some((l) => EXCLUDE_LABELS.has(l))) continue;
-
-              const match = CATEGORY_LABELS.find(([label]) => labels.includes(label));
-              const title = match ? match[1] : "Other Changes";
 
               // plain "@user" and "#123" so GitHub's own autolinking resolves
               // them, rather than wrapping them in an explicit markdown link
@@ -100,17 +98,16 @@ jobs:
               const credit = `${avatar} @${pr.user.login} in #${pr.number}`;
               const body = (pr.body || "").trim();
 
-              const entry = body
-                ? `<details>\n<summary><strong>${pr.title}</strong> - ${credit}</summary>\n\n${body}\n\n</details>`
-                : `- **${pr.title}** - ${credit}`;
-
-              sections.get(title).push(entry);
+              entries.push(
+                body
+                  ? `<details>\n<summary><strong>${pr.title}</strong> - ${credit}</summary>\n\n${body}\n\n</details>`
+                  : `- **${pr.title}** - ${credit}`
+              );
             }
 
             const parts = [];
-            for (const [title, entries] of sections) {
-              if (entries.length === 0) continue;
-              parts.push(`## ${title}\n\n${entries.join("\n")}`);
+            if (entries.length > 0) {
+              parts.push(`## Changes\n\n${entries.join("\n")}`);
             }
             if (PREVIOUS_TAG) {
               parts.push(`**Full Changelog**: https://github.com/${owner}/${repo}/compare/${PREVIOUS_TAG}...${CURRENT_TAG}`);
