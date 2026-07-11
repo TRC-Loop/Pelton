@@ -95,8 +95,17 @@ func (a *App) buildMenu() *menu.Menu {
 // RebuildMenu rebuilds and applies the native menubar in the current language
 // setting. The frontend calls this right after writing a new language setting
 // so the menu updates immediately instead of waiting for the next launch.
+//
+// Skipped on Linux: wails' GTK MenuSetApplicationMenu does not cleanly replace
+// the previous native menu's click-handler wiring there, and once poisoned
+// every subsequent menu click (not just the item that triggered the rebuild)
+// nil-pointer-crashes the whole process inside wails' own gtk.go
+// handleMenuItemClick. buildMenu already reads the persisted language setting
+// fresh each call, so the menu still comes up correctly translated on the
+// next launch; it just doesn't live-update mid-session on Linux, which is a
+// far better tradeoff than crashing the app.
 func (a *App) RebuildMenu() {
-	if a.ctx == nil {
+	if a.ctx == nil || goruntime.GOOS == "linux" {
 		return
 	}
 	wailsruntime.MenuSetApplicationMenu(a.ctx, a.buildMenu())
