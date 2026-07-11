@@ -20,6 +20,7 @@
   import MoveDialog from './components/detail/MoveDialog.svelte'
 
   import { initPrefs, prefs, setPaneWidths, setLowPowerMode } from './stores/prefs'
+  import { applyScale } from './theme/theme'
   import { loadSidebar, refreshSidebar, sidebar } from './stores/accounts'
   import { initSidebarState } from './stores/sidebarstate'
   import { loadSignatures } from './stores/signatures'
@@ -158,7 +159,30 @@
     )
     unsubscribers.push(onOutboxChanged(() => void loadOutbox()))
     unsubscribers.push(onMenu(handleMenu))
+
+    // WebKitGTK (Linux) has a known quirk where maximizing the window - a
+    // resize driven by the window manager rather than the user dragging an
+    // edge - doesn't always make the webview recompute layout against the
+    // new size, leaving the interface rendered at the old (smaller)
+    // dimensions with blank space along the right/bottom. Reapplying the css
+    // `zoom` we already use for interface scale forces a relayout; this is a
+    // no-op-looking but effective kick, and harmless on macOS/Windows where
+    // resize already reflows correctly on its own. Both a window 'resize'
+    // listener and a ResizeObserver on the root are wired up since it's
+    // unclear which signal fires reliably for a window-manager-driven
+    // maximize on WebKitGTK; either one firing is enough to fix it.
+    window.addEventListener('resize', onWindowResize)
+    unsubscribers.push(() => window.removeEventListener('resize', onWindowResize))
+    const rootResizeObserver = new ResizeObserver(onWindowResize)
+    rootResizeObserver.observe(document.documentElement)
+    unsubscribers.push(() => rootResizeObserver.disconnect())
   })
+
+  let resizeRelayoutHandle = 0
+  function onWindowResize(): void {
+    cancelAnimationFrame(resizeRelayoutHandle)
+    resizeRelayoutHandle = requestAnimationFrame(() => applyScale(get(prefs).uiScale))
+  }
 
   onDestroy(() => {
     for (const off of unsubscribers) {
