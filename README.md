@@ -131,6 +131,13 @@ sudo dnf install pelton
 
 (Fedora's Copr is a community repo host; enabling it adds Pelton's repo to `dnf` so future releases show up as normal updates.)
 
+> [!NOTE]  
+> **Fedora <=42 is not supported**, even if you pin the chroot.
+> 
+> You will get an error like package not available.
+> 
+> Update your System folks! (You have to do it anyway so ig)
+
 **Via the standalone `.rpm`:**
 
 Download `Pelton-<version>-linux-fedora-x86_64.rpm` from the release and install it directly:
