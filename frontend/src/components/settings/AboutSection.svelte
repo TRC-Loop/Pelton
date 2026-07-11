@@ -5,7 +5,7 @@
   // in-app webview.
   import { onDestroy, onMount } from 'svelte'
   import { createEventDispatcher } from 'svelte'
-  import { IconBrandGithub, IconBug, IconLicense, IconX, IconRefresh, IconUsers } from '@tabler/icons-svelte'
+  import { IconBrandGithub, IconBug, IconLicense, IconX, IconRefresh, IconUsers, IconWorld, IconBook2 } from '@tabler/icons-svelte'
   import { BrowserOpenURL } from '../../../wailsjs/runtime/runtime'
   import { APP } from '../../lib/app-info'
   import { appVersion, checkForUpdates, type UpdateCheckResult } from '../../lib/api'
@@ -87,6 +87,14 @@
   <p class="tagline">{APP.tagline}</p>
 
   <div class="links">
+    <button type="button" on:click={() => open(APP.website)}>
+      <IconWorld size={15} stroke={1.6} />
+      {$t('about.website')}
+    </button>
+    <button type="button" on:click={() => open(APP.docs)}>
+      <IconBook2 size={15} stroke={1.6} />
+      {$t('about.docs')}
+    </button>
     <button type="button" on:click={() => open(APP.repo)}>
       <IconBrandGithub size={15} stroke={1.6} />
       GitHub

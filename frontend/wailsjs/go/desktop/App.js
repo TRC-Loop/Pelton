@@ -70,8 +70,8 @@ export function DownloadRange(arg1, arg2) {
   return window['go']['desktop']['App']['DownloadRange'](arg1, arg2);
 }
 
-export function ExportData(arg1) {
-  return window['go']['desktop']['App']['ExportData'](arg1);
+export function ExportData(arg1, arg2) {
+  return window['go']['desktop']['App']['ExportData'](arg1, arg2);
 }
 
 export function ExportMessagePrintView(arg1) {
@@ -98,8 +98,8 @@ export function GetUIPrefs() {
   return window['go']['desktop']['App']['GetUIPrefs']();
 }
 
-export function ImportData(arg1, arg2) {
-  return window['go']['desktop']['App']['ImportData'](arg1, arg2);
+export function ImportData(arg1, arg2, arg3) {
+  return window['go']['desktop']['App']['ImportData'](arg1, arg2, arg3);
 }
 
 export function InspectBackupFile() {
@@ -108,6 +108,10 @@ export function InspectBackupFile() {
 
 export function IsDemoMode() {
   return window['go']['desktop']['App']['IsDemoMode']();
+}
+
+export function IsDevMode() {
+  return window['go']['desktop']['App']['IsDevMode']();
 }
 
 export function Licenses() {
@@ -164,6 +168,10 @@ export function ProgramLicense() {
 
 export function ReadAttachment(arg1, arg2) {
   return window['go']['desktop']['App']['ReadAttachment'](arg1, arg2);
+}
+
+export function RebuildMenu() {
+  return window['go']['desktop']['App']['RebuildMenu']();
 }
 
 export function RemoveImageAllow(arg1, arg2) {

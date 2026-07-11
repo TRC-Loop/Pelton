@@ -43,8 +43,11 @@ type App struct {
 	programLicense  string
 	// mailMenuItems are the native Mail-menu items that act on the open message;
 	// they start disabled and SetMailActionsEnabled toggles them as the frontend's
-	// open message changes.
-	mailMenuItems []*menu.MenuItem
+	// open message changes. mailActionsEnabled mirrors that same state so a menu
+	// rebuild (RebuildMenu, on a language change) can restore it instead of
+	// resetting every item back to disabled.
+	mailMenuItems      []*menu.MenuItem
+	mailActionsEnabled bool
 
 	// dlMu guards dlCancel, the cancel function of the running bulk offline
 	// download (nil when none is running). CancelDownload calls it to stop the
@@ -62,6 +65,15 @@ type App struct {
 // frontend reads it once at startup to decide whether to render sample data.
 func (a *App) IsDemoMode() bool {
 	return a.demoMode
+}
+
+// IsDevMode reports whether the app is running against the separate dev data
+// directory (the PELTON_DEV env var storage.DefaultPath checks), so the
+// frontend can show a persistent indicator that this isn't a normal install -
+// it's easy to forget a dev build is pointed at throwaway data instead of a
+// real mailbox.
+func (a *App) IsDevMode() bool {
+	return os.Getenv("PELTON_DEV") != ""
 }
 
 // newApp creates the App with the build version. The heavy initialization

@@ -41,6 +41,13 @@ export function isDemoMode(): Promise<boolean> {
   return App.IsDemoMode()
 }
 
+// isDevMode reports whether the app is running against the separate dev data
+// directory (PELTON_DEV), so the ui can show a persistent reminder that this
+// isn't pointed at a real install.
+export function isDevMode(): Promise<boolean> {
+  return App.IsDevMode()
+}
+
 // listAccounts returns every configured account.
 export function listAccounts(): Promise<Account[]> {
   if (isDemoActive()) {
@@ -445,9 +452,11 @@ export function cancelDownload(): Promise<void> {
 export type BackupInfo = desktop.BackupInfoDTO
 
 // exportData writes the selected categories to a user-chosen json file,
-// returning its path (empty if the save dialog was cancelled).
-export function exportData(categories: string[]): Promise<string> {
-  return App.ExportData(categories)
+// returning its path (empty if the save dialog was cancelled). credentialPassword,
+// when non-empty, also encrypts and includes each exported mailbox's stored
+// credential; pass an empty string to leave credentials out entirely.
+export function exportData(categories: string[], credentialPassword: string): Promise<string> {
+  return App.ExportData(categories, credentialPassword)
 }
 
 // inspectBackupFile opens a file picker and returns what the chosen backup
@@ -457,8 +466,10 @@ export function inspectBackupFile(): Promise<BackupInfo> {
 }
 
 // importData applies the selected categories from the backup file at path.
-export function importData(path: string, categories: string[]): Promise<void> {
-  return App.ImportData(path, categories)
+// credentialPassword, when non-empty, also decrypts and restores any mailbox
+// credentials the file carries; a wrong password rejects with an error.
+export function importData(path: string, categories: string[], credentialPassword: string): Promise<void> {
+  return App.ImportData(path, categories, credentialPassword)
 }
 
 // systemColorScheme returns the OS dark/light preference ("dark" | "light"), or

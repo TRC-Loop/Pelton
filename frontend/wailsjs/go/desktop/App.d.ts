@@ -36,7 +36,7 @@ export function DownloadMessageOffline(arg1:number):Promise<void>;
 
 export function DownloadRange(arg1:string,arg2:boolean):Promise<void>;
 
-export function ExportData(arg1:Array<string>):Promise<string>;
+export function ExportData(arg1:Array<string>,arg2:string):Promise<string>;
 
 export function ExportMessagePrintView(arg1:number):Promise<void>;
 
@@ -50,11 +50,13 @@ export function GetSetting(arg1:string):Promise<desktop.SettingResult>;
 
 export function GetUIPrefs():Promise<desktop.UIPrefsDTO>;
 
-export function ImportData(arg1:string,arg2:Array<string>):Promise<void>;
+export function ImportData(arg1:string,arg2:Array<string>,arg3:string):Promise<void>;
 
 export function InspectBackupFile():Promise<desktop.BackupInfoDTO>;
 
 export function IsDemoMode():Promise<boolean>;
+
+export function IsDevMode():Promise<boolean>;
 
 export function Licenses():Promise<string>;
 
@@ -83,6 +85,8 @@ export function MoveMessage(arg1:number,arg2:number):Promise<desktop.ArchiveUndo
 export function ProgramLicense():Promise<string>;
 
 export function ReadAttachment(arg1:number,arg2:number):Promise<desktop.AttachmentContentDTO>;
+
+export function RebuildMenu():Promise<void>;
 
 export function RemoveImageAllow(arg1:string,arg2:string):Promise<void>;
 
