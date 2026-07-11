@@ -26,6 +26,8 @@ contents:
       mode: 0755
   - src: ./build/linux/pelton.desktop
     dst: /usr/share/applications/pelton.desktop
+  - src: ./build/linux/pelton.metainfo.xml
+    dst: /usr/share/metainfo/pelton.metainfo.xml
   - src: ./build/icons/pelton-default.png
     dst: /usr/share/icons/hicolor/1024x1024/apps/pelton.png
   - src: ./build/icons/pelton-default.png

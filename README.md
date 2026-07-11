@@ -141,6 +141,8 @@ sudo dnf install ./Pelton-<version>-linux-fedora-x86_64.rpm
 
 This won't auto-update; you'll need to download and install each new version's `.rpm` by hand.
 
+To uninstall either way, run `sudo dnf remove pelton` (or use the Remove button in GNOME Software / KDE Discover).
+
 ### Other Linux distributions
 
 Only a Fedora package is published right now. On other distributions, build from source (needs Go, Node/pnpm, and the Wails CLI - see `make run` / `make build-linux` in the `Makefile`):
