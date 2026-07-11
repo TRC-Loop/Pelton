@@ -11,7 +11,7 @@
   import { getMessageHtml, trustSenderImages, allowDomainImages } from '../../lib/api'
   import { setBodyHtml } from '../../stores/message'
   import { errorMessage, toastError, toastSuccess } from '../../stores/toast'
-  import { displayName } from '../../lib/format'
+  import { displayName, linkifySegments } from '../../lib/format'
   import { t } from '../../lib/i18n'
   import type { MessageDetail } from '../../lib/types'
 
@@ -83,6 +83,11 @@
   }
 
   $: srcdoc = buildSrcdoc(detail.bodyHtmlSafe, remoteLoaded, $prefs.messageFontSize)
+
+  // plain-text bodies render in a <pre>, not the sandboxed iframe, so bare
+  // urls need their own linkification: nothing upstream turns them into real
+  // links the way html mail's own <a> tags already are.
+  $: plainSegments = detail.isHtml ? [] : linkifySegments(detail.bodyPlain)
 
   // the iframe is sized to its content height so the reading pane has a single
   // scrollbar instead of a nested one (which the interface zoom made worse). the
@@ -271,7 +276,11 @@
     {srcdoc}
   ></iframe>
 {:else}
-  <pre class="body-plain mono selectable" style={`font-size:${$prefs.messageFontSize}px`}>{detail.bodyPlain}</pre>
+  <pre class="body-plain mono selectable" style={`font-size:${$prefs.messageFontSize}px`}>{#each plainSegments as segment}{#if segment.href}<a
+        class="plain-link"
+        href={segment.href}
+        on:click|preventDefault={() => BrowserOpenURL(segment.href ?? '')}
+      >{segment.text}</a>{:else}{segment.text}{/if}{/each}</pre>
 {/if}
 
 <style>
@@ -361,5 +370,11 @@
     color: var(--text-primary);
     white-space: pre-wrap;
     word-break: break-word;
+  }
+
+  .plain-link {
+    color: var(--accent);
+    text-decoration: underline;
+    cursor: pointer;
   }
 </style>

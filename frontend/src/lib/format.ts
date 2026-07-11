@@ -119,3 +119,46 @@ export function formatRelative(epochMs: number): string {
 export function displayName(name: string, email: string): string {
   return name.trim() || email
 }
+
+// TextSegment is one piece of linkified plain text: either literal text to
+// render as-is, or a url/mailto to render as a clickable link.
+export type TextSegment = { text: string; href?: string }
+
+// urlPattern matches bare http(s) and mailto references in plain text, the
+// only two schemes Pelton ever hands off to the OS default browser.
+const urlPattern = /(https?:\/\/[^\s<>"')\]]+|mailto:[^\s<>"')\]]+)/gi
+
+// trailingPunctuation trims characters a URL is unlikely to end with when
+// it's actually the tail of a sentence, e.g. "see https://example.com."
+const trailingPunctuation = /[.,;:!?)\]]+$/
+
+// linkifySegments splits plain text mail into literal and link segments so
+// bare URLs in a plain-text message can be rendered as real clickable links,
+// the same way an html message's own <a> tags are. Sentence-trailing
+// punctuation right after a URL is kept as literal text, not part of the link.
+export function linkifySegments(text: string): TextSegment[] {
+  const segments: TextSegment[] = []
+  let lastIndex = 0
+  for (const match of text.matchAll(urlPattern)) {
+    const start = match.index ?? 0
+    if (start > lastIndex) {
+      segments.push({ text: text.slice(lastIndex, start) })
+    }
+    let url = match[0]
+    const trailing = url.match(trailingPunctuation)?.[0] ?? ''
+    if (trailing) {
+      url = url.slice(0, url.length - trailing.length)
+    }
+    if (url) {
+      segments.push({ text: url, href: url })
+    }
+    lastIndex = start + match[0].length
+    if (trailing) {
+      segments.push({ text: trailing })
+    }
+  }
+  if (lastIndex < text.length) {
+    segments.push({ text: text.slice(lastIndex) })
+  }
+  return segments
+}
