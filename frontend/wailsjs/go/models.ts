@@ -162,7 +162,11 @@ export namespace desktop {
 	    appVersion: string;
 	    hasSettings: boolean;
 	    hasWhitelist: boolean;
+	    hasMailboxes: boolean;
+	    hasSignatures: boolean;
 	    settingCount: number;
+	    mailboxCount: number;
+	    signatureCount: number;
 	
 	    static createFrom(source: any = {}) {
 	        return new BackupInfoDTO(source);
@@ -175,7 +179,11 @@ export namespace desktop {
 	        this.appVersion = source["appVersion"];
 	        this.hasSettings = source["hasSettings"];
 	        this.hasWhitelist = source["hasWhitelist"];
+	        this.hasMailboxes = source["hasMailboxes"];
+	        this.hasSignatures = source["hasSignatures"];
 	        this.settingCount = source["settingCount"];
+	        this.mailboxCount = source["mailboxCount"];
+	        this.signatureCount = source["signatureCount"];
 	    }
 	}
 	export class ComposeAttachment {
