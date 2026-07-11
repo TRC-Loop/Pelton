@@ -106,6 +106,10 @@ export function InspectBackupFile() {
   return window['go']['desktop']['App']['InspectBackupFile']();
 }
 
+export function IsDemoMode() {
+  return window['go']['desktop']['App']['IsDemoMode']();
+}
+
 export function Licenses() {
   return window['go']['desktop']['App']['Licenses']();
 }

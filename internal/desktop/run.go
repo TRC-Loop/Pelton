@@ -23,6 +23,8 @@ type Config struct {
 	Version         string
 	LicenseManifest string
 	ProgramLicense  string
+	// DemoMode runs the app in the cosmetic screenshot mode (--potatoes-are-nice).
+	DemoMode bool
 }
 
 // Run constructs and runs the wails application. It returns wails.Run's error.
@@ -30,6 +32,7 @@ func Run(cfg Config) error {
 	app := newApp(cfg.Version)
 	app.licenseManifest = cfg.LicenseManifest
 	app.programLicense = cfg.ProgramLicense
+	app.demoMode = cfg.DemoMode
 
 	return wails.Run(&options.App{
 		Title:     "Pelton",

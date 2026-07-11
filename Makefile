@@ -58,6 +58,13 @@ run: deps
 	wails generate module
 	PELTON_DEV=1 wails dev -ldflags "$(LDFLAGS)"
 
+# run the app in the cosmetic demo mode (--potatoes-are-nice): the ui fills with
+# fixed potato-themed sample data for website screenshots and never touches real
+# accounts, mail or the network. Same dev setup as `run`, just with the flag.
+nice-potatoes: deps
+	wails generate module
+	PELTON_DEV=1 wails dev -appargs "--potatoes-are-nice" -ldflags "$(LDFLAGS)"
+
 dev: run
 
 # alias kept for discoverability; identical to run.

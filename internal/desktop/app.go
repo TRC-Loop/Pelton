@@ -51,6 +51,17 @@ type App struct {
 	// job without tearing down the whole app context.
 	dlMu     sync.Mutex
 	dlCancel context.CancelFunc
+
+	// demoMode is the purely-cosmetic screenshot mode (the --potatoes-are-nice
+	// flag): the frontend fills the ui with fixed sample data instead of reading
+	// real accounts and mail. It never touches the store or the network.
+	demoMode bool
+}
+
+// IsDemoMode reports whether the app was launched in the cosmetic demo mode. The
+// frontend reads it once at startup to decide whether to render sample data.
+func (a *App) IsDemoMode() bool {
+	return a.demoMode
 }
 
 // newApp creates the App with the build version. The heavy initialization
@@ -80,6 +91,14 @@ func (a *App) startup(ctx context.Context) {
 	a.store = store
 	a.queue = outbox.NewQueue(store)
 	close(a.storeReady)
+
+	// demo mode is purely cosmetic: the frontend renders fixed sample data, so we
+	// skip everything that would touch the network or mutate the store (sync, idle,
+	// the outbox worker, auto-update checks, download resume, migrations). the
+	// store still opens so bound calls do not error, but nothing runs against it.
+	if a.demoMode {
+		return
+	}
 
 	// the old config-sync feature could redirect the data directory into a synced
 	// folder ("in-place" mode). that feature is gone; if a device still has that
