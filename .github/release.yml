@@ -1,22 +1,20 @@
 # Configures GitHub's auto-generated release notes (the "Generate release
 # notes" button, and the same data used by `gh release create --generate-notes`).
-# Each entry is rendered by GitHub as "* <PR title> by @<author> in #<number>",
-# grouped under the category its label matches, in the order listed below.
+# Each entry is rendered by GitHub as "* <PR title> by @<author> in #<number>".
 # PRs carrying an excluded label are left out entirely.
-# Labels are applied automatically by conventional-prs.yml based on the PR's
-# conventional-commit title type.
+#
+# A single catch-all category means every PR lands in one flat list with no
+# Features/Bug Fixes/Other Changes headers. GitHub lists entries within a
+# category in merge order (there is no alphabetical-sort option here), but
+# since PR titles already start with their conventional-commit type (feat:,
+# fix:, ...), PRs of the same type merged around the same time still tend to
+# cluster together.
 changelog:
   exclude:
     labels:
       - documentation
       - no-changelog
   categories:
-    - title: Features
-      labels:
-        - feature
-    - title: Bug Fixes
-      labels:
-        - fix
-    - title: Other Changes
+    - title: Changes
       labels:
         - "*"
