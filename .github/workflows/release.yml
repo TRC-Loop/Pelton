@@ -316,7 +316,15 @@ jobs:
         run: |
           mkdir -p ~/rpmbuild/SOURCES ~/rpmbuild/SRPMS
           cp ".github/copr/pelton-$VERSION.tar.gz" ~/rpmbuild/SOURCES/
-          rpmbuild -bs --define "_pelton_version $VERSION" ".github/copr/pelton.spec"
+          # a plain `rpmbuild --define` only affects this one invocation; it
+          # is not stored inside the resulting SRPM. Copr re-runs `rpmbuild
+          # -bs` from the spec bundled in that SRPM as its own first build
+          # step, with no knowledge of our custom define, so %{_pelton_version}
+          # came out unexpanded there and broke Version/Source0. Bake the
+          # real version into the spec text itself instead, so it's self
+          # contained and needs no external define ever again.
+          { echo "%global _pelton_version $VERSION"; cat ".github/copr/pelton.spec"; } > /tmp/pelton.spec
+          rpmbuild -bs /tmp/pelton.spec
           cp ~/rpmbuild/SRPMS/*.src.rpm "pelton-$VERSION.src.rpm"
 
       - name: Configure copr-cli credentials

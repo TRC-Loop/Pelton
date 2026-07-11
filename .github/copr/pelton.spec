@@ -17,6 +17,16 @@
 %global debug_package %{nil}
 AutoReqProv:    no
 
+# newer rpm (6.x, Fedora 43+) derives SOURCE_DATE_EPOCH from the top
+# %changelog entry's date by default, for reproducible builds. Our changelog
+# below is a static placeholder (the real history lives in git/GitHub
+# releases, not here) with a fake 1970 date that this rpm version's stricter
+# parser rejects outright as a "bad date", which aborted the whole SRPM build
+# on Copr. Disable that derivation since we don't need reproducible-build
+# timestamps from this placeholder.
+%global source_date_epoch_from_changelog 0
+%global _source_date_epoch_from_changelog 0
+
 Name:           pelton
 Version:        %{_pelton_version}
 Release:        1%{?dist}
