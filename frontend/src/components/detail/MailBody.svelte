@@ -1,9 +1,12 @@
 <script lang="ts">
-  // renders the message body. html mail goes into a sandboxed iframe with no
-  // script execution and no same-origin access, as defense in depth on top of the
-  // backend sanitization. plaintext renders in the mono font. remote images are
-  // blocked by the backend by default; a per-message affordance asks the backend
-  // to re-render with remote content allowed.
+  // renders the message body. html mail goes into a sandboxed iframe, as
+  // defense in depth on top of the backend sanitization: a strict CSP allows
+  // exactly one nonce-scoped inline script (Pelton's own click handler, built
+  // fresh per render - see buildSrcdoc), so nothing from the email itself can
+  // ever execute even though the sandbox now permits scripts to run at all.
+  // plaintext renders in the mono font, with bare urls linkified. remote
+  // images are blocked by the backend by default; a per-message affordance
+  // asks the backend to re-render with remote content allowed.
   import { onDestroy } from 'svelte'
   import { BrowserOpenURL } from '../../../wailsjs/runtime/runtime'
   import { IconPhoto, IconUserCheck, IconWorldCheck } from '@tabler/icons-svelte'
@@ -58,8 +61,22 @@
   // sanitizer: when remote content is not allowed, img-src is limited to data:
   // (our inlined cid images) so nothing can phone home even if a remote url ever
   // slipped past the sanitizer. when the user opts in, http(s) image sources are
-  // permitted. scripts are never allowed.
-  function buildSrcdoc(html: string, allowRemote: boolean, fontSize: number): string {
+  // permitted.
+  //
+  // script-src is scoped to a single nonce, generated fresh per render, and
+  // that nonce is used on exactly one inline <script> block below (Pelton's
+  // own, never sender content). Any <script> tag the sanitizer might have let
+  // through from the email itself has no nonce and so still can't execute:
+  // the sandbox no longer omits allow-scripts, but the CSP keeps the "sender
+  // html can never run code" guarantee. allow-scripts had to come back
+  // because clicks inside a script-less sandboxed iframe never reached a
+  // cross-frame listener registered from the parent on some webview engines
+  // (contentDocument access itself worked - measuring the body's height was
+  // fine - but no click ever arrived at a listener attached that way). A
+  // click handler that runs natively inside the iframe's own document, using
+  // postMessage to hand the url back to the parent, has no such dependency on
+  // cross-frame event delivery.
+  function buildSrcdoc(html: string, allowRemote: boolean, fontSize: number, nonce: string): string {
     const font = readVar('--font-ui')
     const css = `
   html,body{margin:0;background:#ffffff;color:#1a1a1a;font-family:${font};font-size:${fontSize}px;line-height:1.5;}
@@ -70,19 +87,35 @@
   table{max-width:100%;}
   pre{white-space:pre-wrap;}`
     const imgSrc = allowRemote ? 'data: https: http:' : 'data:'
-    const csp = `default-src 'none'; img-src ${imgSrc}; style-src 'unsafe-inline'; font-src data:`
+    const csp = `default-src 'none'; img-src ${imgSrc}; style-src 'unsafe-inline'; font-src data:; script-src 'nonce-${nonce}'`
     const cspMeta = `<meta http-equiv="Content-Security-Policy" content="${csp}">`
     const open = '<sty' + 'le>'
     const close = '</sty' + 'le>'
+    // relays clicked links to the parent instead of trying to navigate this
+    // sandboxed iframe (which has no allow-top-navigation and would silently
+    // do nothing). runs inside the iframe's own document so it's a normal,
+    // same-document click listener - no cross-frame event delivery involved.
+    const script =
+      '<scr' +
+      'ipt nonce="' +
+      nonce +
+      '">document.addEventListener("click",function(e){var a=e.target&&e.target.closest("a");if(!a)return;var href=(a.getAttribute("href")||"").trim();if(!href)return;e.preventDefault();if(/^(https?:|mailto:)/i.test(href)){window.parent.postMessage({peltonOpenUrl:href},"*")}});</scr' +
+      'ipt>'
     // data-pelton-ready marks the body as belonging to our own srcdoc, not
     // the iframe's initial blank placeholder document: a fresh iframe already
     // has an empty <body> before any srcdoc has loaded, so a readiness check
     // that only looks for "a body" would resolve instantly against that
     // placeholder instead of waiting for the real content.
-    return `<!doctype html><html><head><meta charset="utf-8">${cspMeta}${open}${css}${close}</head><body data-pelton-ready="1">${html}</body></html>`
+    return `<!doctype html><html><head><meta charset="utf-8">${cspMeta}${open}${css}${close}</head><body data-pelton-ready="1">${html}${script}</body></html>`
   }
 
-  $: srcdoc = buildSrcdoc(detail.bodyHtmlSafe, remoteLoaded, $prefs.messageFontSize)
+  // nonce is regenerated per message so a stale nonce from a previous render
+  // can never be replayed against a new one.
+  function makeNonce(): string {
+    return crypto.randomUUID().replace(/-/g, '')
+  }
+
+  $: srcdoc = buildSrcdoc(detail.bodyHtmlSafe, remoteLoaded, $prefs.messageFontSize, makeNonce())
 
   // plain-text bodies render in a <pre>, not the sandboxed iframe, so bare
   // urls need their own linkification: nothing upstream turns them into real
@@ -90,10 +123,8 @@
   $: plainSegments = detail.isHtml ? [] : linkifySegments(detail.bodyPlain)
 
   // the iframe is sized to its content height so the reading pane has a single
-  // scrollbar instead of a nested one (which the interface zoom made worse). the
-  // sandbox stays script-free; allow-same-origin only lets us measure the content
-  // height, it does not run any of the email's scripts (there are none: the CSP is
-  // default-src 'none' and allow-scripts is not set).
+  // scrollbar instead of a nested one (which the interface zoom made worse).
+  // allow-same-origin lets us measure the content height from the parent.
   let frame: HTMLIFrameElement
   let frameHeight = 320
   let resizeObserver: ResizeObserver | null = null
@@ -125,29 +156,22 @@
   // poll running against a document that's already been replaced.
   let readyPollHandle = 0
 
-  // attachInteractivity wires up sizing and link handling for the iframe's
-  // current document. It is idempotent per document: calling it twice for the
-  // same load is harmless since a fresh resizeObserver/listener just replaces
-  // the previous one.
+  // attachInteractivity wires up sizing for the iframe's current document.
+  // Link clicks are handled separately, by the nonce-scoped script inside the
+  // srcdoc itself (see buildSrcdoc) relaying to onWindowMessage below - not by
+  // a listener attached here from the parent, which proved unreliable. This
+  // is idempotent per document: calling it twice for the same load is
+  // harmless since a fresh resizeObserver just replaces the previous one.
   function attachInteractivity(): void {
     resizeObserver?.disconnect()
     resizeObserver = null
-    const doc = frame?.contentDocument
     const body = readyBody()
-    if (!doc || !body) {
+    if (!body) {
       return
     }
     measure()
     resizeObserver = new ResizeObserver(() => measure())
     resizeObserver.observe(body)
-    // links get a redundant native escape hatch (allow-popups +
-    // allow-top-navigation-by-user-activation on the iframe's sandbox) in
-    // case this listener never gets attached in a given webview engine: our
-    // own handling below still runs first and prevents the default action,
-    // so the native path only kicks in as a fallback, and it's the only way
-    // for a listener-attachment failure to still result in a working click
-    // instead of a silently dead one.
-    doc.addEventListener('click', onBodyClick)
   }
 
   // onFrameLoad fires when the iframe's srcdoc finishes loading. It is the
@@ -183,24 +207,27 @@
     scheduleAttach()
   }
 
-  // onBodyClick opens a clicked link in the external browser instead of trying to
-  // navigate the sandboxed iframe (which silently does nothing).
-  function onBodyClick(event: MouseEvent): void {
-    const anchor = (event.target as Element | null)?.closest?.('a')
-    const href = anchor?.getAttribute('href')?.trim()
-    if (!href) {
+  // onWindowMessage receives the url from the click handler running inside
+  // the iframe's own document (see the injected script in buildSrcdoc) and
+  // opens it in the external browser. The source check makes sure this only
+  // ever acts on messages from our own mail iframe, not anything else that
+  // might postMessage into this window.
+  function onWindowMessage(event: MessageEvent): void {
+    if (event.source !== frame?.contentWindow) {
       return
     }
-    event.preventDefault()
-    // only hand off real external schemes; ignore in-page (#anchor) links.
-    if (/^(https?:|mailto:)/i.test(href)) {
+    const href = (event.data as { peltonOpenUrl?: unknown } | null)?.peltonOpenUrl
+    if (typeof href === 'string' && /^(https?:|mailto:)/i.test(href)) {
       BrowserOpenURL(href)
     }
   }
 
+  window.addEventListener('message', onWindowMessage)
+
   onDestroy(() => {
     resizeObserver?.disconnect()
     cancelAnimationFrame(readyPollHandle)
+    window.removeEventListener('message', onWindowMessage)
   })
 
   async function loadRemote(): Promise<void> {
@@ -269,7 +296,7 @@
   <iframe
     class="body-frame"
     title={$t('detail.mailBody.iframeTitle')}
-    sandbox="allow-same-origin allow-popups allow-top-navigation-by-user-activation"
+    sandbox="allow-same-origin allow-scripts allow-popups allow-top-navigation-by-user-activation"
     bind:this={frame}
     on:load={onFrameLoad}
     style={`height:${frameHeight}px`}
