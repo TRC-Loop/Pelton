@@ -310,6 +310,7 @@ jobs:
           mkdir -p "$stage"
           cp build/bin/Pelton "$stage/pelton"
           cp build/linux/pelton.desktop "$stage/pelton.desktop"
+          cp build/linux/pelton.metainfo.xml "$stage/pelton.metainfo.xml"
           cp build/icons/pelton-default.png "$stage/pelton.png"
           tar czf ".github/copr/pelton-$VERSION.tar.gz" "$stage"
 
