@@ -2,7 +2,11 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8"/>
-    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <!-- no viewport meta on purpose: this is a desktop webview, not a mobile
+         page. WKWebView and WebView2 ignore the tag, but WebKitGTK (Linux) can
+         honor it and derive a layout viewport that disagrees with the actual
+         widget size, which left the interface smaller than the window with
+         dead space along the right and bottom edges. -->
     <title>Pelton</title>
     <style>
         /* instant splash painted before the bundle and svelte mount, so the

@@ -637,11 +637,15 @@
   .shell {
     display: grid;
     grid-template-rows: 1fr auto;
-    /* divide by the interface scale: css zoom enlarges everything but does not
-       shrink vh/vw, so without this a zoomed shell overflows and its bottom row
-       (the status bar) gets clipped. --ui-scale is set in theme.ts (default 1). */
-    height: calc(100vh / var(--ui-scale, 1));
-    width: calc(100vw / var(--ui-scale, 1));
+    /* percentages, not vh/vw: percentage sizes resolve against the zoomed
+       layout size, so they follow the css zoom the interface-scale setting
+       puts on the root (vh/vw don't, which is what the old
+       calc(100vh / var(--ui-scale)) compensated for), and they stay correct
+       on WebKitGTK, where viewport units misresolved and left the interface
+       smaller than the window. #app (the parent) is sized the same way in
+       style.css. */
+    height: 100%;
+    width: 100%;
     overflow: hidden;
   }
 

@@ -32,9 +32,14 @@ body {
   overflow: hidden;
 }
 
+/* percentages, not 100vh/100vw: viewport units misresolve on WebKitGTK (the
+   interface came up smaller than the window on Linux, with dead space along
+   the right and bottom), and unlike percentages they are not compensated for
+   the root css zoom the interface-scale setting applies. the percent chain
+   runs html -> body -> #app -> .shell. */
 #app {
-  height: 100vh;
-  width: 100vw;
+  height: 100%;
+  width: 100%;
 }
 
 code,

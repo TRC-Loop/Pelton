@@ -66,6 +66,29 @@
   // code-split and only mounted (in a modal) when the user opens it.
   let showLicenses = false
 
+  // clicking the version toggles a small technical readout of the webview's
+  // layout viewport. It exists to debug platform rendering issues (a screenshot
+  // of it tells us whether the engine's viewport matches the real window, which
+  // WebKitGTK has gotten wrong) without needing a dev build on the affected
+  // machine. Untranslated on purpose: it is diagnostic output, not ui copy.
+  let showViewportInfo = false
+  let viewportInfo = ''
+  function refreshViewportInfo(): void {
+    const de = document.documentElement
+    viewportInfo =
+      `inner ${window.innerWidth}x${window.innerHeight}` +
+      ` / client ${de.clientWidth}x${de.clientHeight}` +
+      ` / outer ${window.outerWidth}x${window.outerHeight}` +
+      ` / dpr ${window.devicePixelRatio}` +
+      ` / zoom ${$prefs.uiScale}`
+  }
+  function toggleViewportInfo(): void {
+    showViewportInfo = !showViewportInfo
+    if (showViewportInfo) {
+      refreshViewportInfo()
+    }
+  }
+
   function open(url: string): void {
     BrowserOpenURL(url)
   }
@@ -77,14 +100,17 @@
   }
 </script>
 
-<svelte:window on:keydown={showLicenses ? onKeydown : undefined} />
+<svelte:window on:keydown={showLicenses ? onKeydown : undefined} on:resize={showViewportInfo ? refreshViewportInfo : undefined} />
 
 <div class="about">
   <div class="identity">
     <span class="name">{APP.name}</span>
-    <span class="version">{version.startsWith('v') ? version : `v${version}`}</span>
+    <button type="button" class="version" on:click={toggleViewportInfo}>{version.startsWith('v') ? version : `v${version}`}</button>
   </div>
   <p class="tagline">{APP.tagline}</p>
+  {#if showViewportInfo}
+    <p class="viewport-info">{viewportInfo}</p>
+  {/if}
 
   <div class="links">
     <button type="button" on:click={() => open(APP.website)}>
@@ -195,10 +221,25 @@
     color: var(--text-primary);
   }
 
+  /* the version is a button (it toggles the viewport readout) but should keep
+     looking like the plain text label it always was. */
   .version {
+    padding: 0;
+    border: none;
+    background: none;
+    cursor: default;
     font-family: var(--font-mono);
     font-size: var(--fz-meta);
     color: var(--text-tertiary);
+  }
+
+  .viewport-info {
+    margin: var(--space-1) 0 0;
+    font-family: var(--font-mono);
+    font-size: var(--fz-meta);
+    color: var(--text-tertiary);
+    user-select: text;
+    -webkit-user-select: text;
   }
 
   .tagline {
