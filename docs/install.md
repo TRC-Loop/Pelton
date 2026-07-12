@@ -8,11 +8,13 @@ Every release ships builds for macOS, Windows and Linux on the [GitHub releases 
 
     !!! note "Unsigned app"
 
-        Pelton builds are not notarized by Apple, so the first launch is blocked by Gatekeeper. Either right-click the app and choose **Open** (once is enough), or clear the quarantine flag in a terminal:
+        Pelton builds are not notarized by Apple, so macOS blocks the first launch. Getting past that takes one round trip through System Settings:
 
-        ```sh
-        xattr -cr /Applications/Pelton.app
-        ```
+        1. Open Pelton. A dialog says the app could not be verified; press **Done** (not "Move to Bin").
+        2. Open **System Settings, Privacy & Security** and scroll down to where it says Pelton was blocked.
+        3. Press **Open Anyway**, then **Open** in the confirmation, and authenticate with Touch ID or your password.
+
+        That is needed once; afterwards Pelton opens normally. The terminal shortcut `xattr -cr /Applications/Pelton.app` achieves the same in one step.
 
 === "Windows"
 

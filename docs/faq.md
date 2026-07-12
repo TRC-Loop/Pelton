@@ -1,8 +1,8 @@
 # FAQ
 
-## macOS says the app is damaged or from an unidentified developer
+## macOS says the app could not be verified
 
-Pelton builds are not notarized (notarization requires a paid Apple developer account). Right-click the app and choose **Open**, or run `xattr -cr /Applications/Pelton.app` once. See [Install](install.md).
+Pelton builds are not notarized (notarization requires a paid Apple developer account). Press **Done** in the dialog, then allow the app under **System Settings, Privacy & Security, Open Anyway**. The exact steps are in [Install](install.md); `xattr -cr /Applications/Pelton.app` in a terminal does the same in one step.
 
 ## Does Pelton phone home?
 
