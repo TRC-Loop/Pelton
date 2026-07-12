@@ -1,0 +1,4 @@
+# Pelton documentation
+
+For the complete machine-readable documentation, fetch:
+https://docs.pelton.app/AGENTS.md
