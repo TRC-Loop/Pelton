@@ -27,6 +27,10 @@ type App struct {
 	log *slog.Logger
 
 	store *storage.DB
+	// dataDir is the app data directory the store opened in; themes and the
+	// search index live next to the database. Empty if the store failed to
+	// open.
+	dataDir string
 	// storeReady closes once startup has finished assigning (or failing to
 	// assign) store, giving domReady a happens-before edge before it reads
 	// store on its own goroutine - without it, the read is a data race even
@@ -101,6 +105,7 @@ func (a *App) startup(ctx context.Context) {
 		return
 	}
 	a.store = store
+	a.dataDir = dataDir
 	a.queue = outbox.NewQueue(store)
 	close(a.storeReady)
 

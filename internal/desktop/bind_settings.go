@@ -191,6 +191,9 @@ type UIPrefsDTO struct {
 	// EmptyStateImage is a data-uri image shown in the reading pane when no
 	// message is open. Empty means the bundled Pelton logo.
 	EmptyStateImage string `json:"emptyStateImage"`
+	// ThemeID selects an installed custom theme (see bind_themes.go). Empty
+	// means the built-in default themes driven by the Theme setting.
+	ThemeID string `json:"themeId"`
 }
 
 // GetUIPrefs returns all ui preferences with defaults filled in, so startup is a
@@ -245,6 +248,7 @@ func (a *App) GetUIPrefs() (UIPrefsDTO, error) {
 		ComposeChips:               a.boolSetting(settingComposeChips, true),
 		UpdateCheckFrequency:       a.stringSetting(settingUpdateCheckFreq, defaultUpdateCheckFrequency),
 		EmptyStateImage:            a.stringSetting(settingEmptyStateImage, ""),
+		ThemeID:                    a.stringSetting(settingThemeID, ""),
 	}, nil
 }
 

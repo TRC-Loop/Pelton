@@ -26,6 +26,7 @@
     IconWriting,
     IconLanguage,
     IconBatteryEco,
+    IconBrush,
   } from '@tabler/icons-svelte'
   import { createEventDispatcher } from 'svelte'
   import SegmentedSetting from './SegmentedSetting.svelte'
@@ -38,6 +39,8 @@
   import AddressBookSection from './AddressBookSection.svelte'
   import MailboxesSection from './MailboxesSection.svelte'
   import ImportExportSection from './ImportExportSection.svelte'
+  import ThemesSection from './ThemesSection.svelte'
+  import ThemedIcon from '../common/ThemedIcon.svelte'
   import RowLayoutPreview from './RowLayoutPreview.svelte'
   import AboutSection from './AboutSection.svelte'
   import ToggleSwitch from '../common/ToggleSwitch.svelte'
@@ -102,28 +105,30 @@
   const dispatch = createEventDispatcher<{ close: void; rerunOnboarding: void }>()
   $: currentLocale = $prefs.language as Locale
 
-  // left-nav categories. each maps to a block rendered on the right.
+  // left-nav categories. each maps to a block rendered on the right. iconName
+  // is the themeable icon slot (the tabler name in kebab, see ThemedIcon).
   $: categories = [
-    { key: 'appearance', label: $t('settingsPanel.category.appearance'), icon: IconPalette },
-    { key: 'language', label: $t('settings.language'), icon: IconLanguage },
-    { key: 'list', label: $t('settingsPanel.category.list'), icon: IconList },
-    { key: 'sidebar', label: $t('settingsPanel.category.sidebar'), icon: IconLayoutSidebar },
-    { key: 'avatars', label: $t('settingsPanel.category.avatars'), icon: IconUserCircle },
-    { key: 'signatures', label: $t('settingsPanel.category.signatures'), icon: IconSignature },
-    { key: 'sending', label: $t('settingsPanel.category.sending'), icon: IconSend2 },
-    { key: 'privacy', label: $t('settingsPanel.category.privacy'), icon: IconShieldLock },
-    { key: 'notifications', label: $t('settingsPanel.category.notifications'), icon: IconBell },
-    { key: 'panes', label: $t('settings.panes'), icon: IconLayoutColumns },
-    { key: 'display', label: $t('settingsPanel.category.display'), icon: IconEye },
-    { key: 'gestures', label: $t('settingsPanel.category.gestures'), icon: IconHandMove },
-    { key: 'offline', label: $t('settingsPanel.category.offline'), icon: IconCloudDownload },
-    { key: 'power', label: $t('settingsPanel.category.power'), icon: IconBatteryEco },
-    { key: 'mailboxes', label: $t('settingsPanel.category.mailboxes'), icon: IconMailbox },
-    { key: 'contacts', label: $t('settingsPanel.category.contacts'), icon: IconAddressBook },
-    { key: 'sync', label: $t('settingsPanel.category.importExport'), icon: IconFileImport },
-    { key: 'composing', label: $t('settingsPanel.category.composing'), icon: IconWriting },
-    { key: 'shortcuts', label: $t('settingsPanel.category.shortcuts'), icon: IconKeyboard },
-    { key: 'about', label: $t('settingsPanel.category.about'), icon: IconInfoCircle },
+    { key: 'appearance', label: $t('settingsPanel.category.appearance'), icon: IconPalette, iconName: 'palette' },
+    { key: 'themes', label: $t('settingsPanel.category.themes'), icon: IconBrush, iconName: 'brush' },
+    { key: 'language', label: $t('settings.language'), icon: IconLanguage, iconName: 'language' },
+    { key: 'list', label: $t('settingsPanel.category.list'), icon: IconList, iconName: 'list' },
+    { key: 'sidebar', label: $t('settingsPanel.category.sidebar'), icon: IconLayoutSidebar, iconName: 'layout-sidebar' },
+    { key: 'avatars', label: $t('settingsPanel.category.avatars'), icon: IconUserCircle, iconName: 'user-circle' },
+    { key: 'signatures', label: $t('settingsPanel.category.signatures'), icon: IconSignature, iconName: 'signature' },
+    { key: 'sending', label: $t('settingsPanel.category.sending'), icon: IconSend2, iconName: 'send-2' },
+    { key: 'privacy', label: $t('settingsPanel.category.privacy'), icon: IconShieldLock, iconName: 'shield-lock' },
+    { key: 'notifications', label: $t('settingsPanel.category.notifications'), icon: IconBell, iconName: 'bell' },
+    { key: 'panes', label: $t('settings.panes'), icon: IconLayoutColumns, iconName: 'layout-columns' },
+    { key: 'display', label: $t('settingsPanel.category.display'), icon: IconEye, iconName: 'eye' },
+    { key: 'gestures', label: $t('settingsPanel.category.gestures'), icon: IconHandMove, iconName: 'hand-move' },
+    { key: 'offline', label: $t('settingsPanel.category.offline'), icon: IconCloudDownload, iconName: 'cloud-download' },
+    { key: 'power', label: $t('settingsPanel.category.power'), icon: IconBatteryEco, iconName: 'battery-eco' },
+    { key: 'mailboxes', label: $t('settingsPanel.category.mailboxes'), icon: IconMailbox, iconName: 'mailbox' },
+    { key: 'contacts', label: $t('settingsPanel.category.contacts'), icon: IconAddressBook, iconName: 'address-book' },
+    { key: 'sync', label: $t('settingsPanel.category.importExport'), icon: IconFileImport, iconName: 'file-import' },
+    { key: 'composing', label: $t('settingsPanel.category.composing'), icon: IconWriting, iconName: 'writing' },
+    { key: 'shortcuts', label: $t('settingsPanel.category.shortcuts'), icon: IconKeyboard, iconName: 'keyboard' },
+    { key: 'about', label: $t('settingsPanel.category.about'), icon: IconInfoCircle, iconName: 'info-circle' },
   ]
 
   // auto-sync interval presets, in seconds (0 = off).
@@ -383,7 +388,7 @@
           aria-current={active === cat.key}
           on:click={() => (active = cat.key)}
         >
-          <span class="nav-icon"><svelte:component this={cat.icon} size={17} stroke={1.6} /></span>
+          <span class="nav-icon"><ThemedIcon name={cat.iconName} icon={cat.icon} size={17} stroke={1.6} /></span>
           <span>{cat.label}</span>
         </button>
       {/each}
@@ -396,10 +401,19 @@
           <p class="hint">{$t('settings.languageHint')}</p>
           <LanguageSelect value={currentLocale} onSelect={setLanguage} />
         </section>
+      {:else if active === 'themes'}
+        <section>
+          <h3>{$t('settingsPanel.category.themes')}</h3>
+          <ThemesSection />
+        </section>
       {:else if active === 'appearance'}
         <section>
           <h3>{$t('settingsPanel.category.appearance')}</h3>
-          <SegmentedSetting label={$t('settingsPanel.label.theme')} value={$prefs.theme} options={themeOptions} on:change={onTheme} />
+          {#if $prefs.themeId}
+            <p class="hint">{$t('themes.baseLockedHint')}</p>
+          {:else}
+            <SegmentedSetting label={$t('settingsPanel.label.theme')} value={$prefs.theme} options={themeOptions} on:change={onTheme} />
+          {/if}
           <AccentPicker />
           <SegmentedSetting label={$t('settingsPanel.label.density')} value={$prefs.density} options={densityOptions} on:change={onDensity} />
           <SegmentedSetting

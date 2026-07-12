@@ -33,6 +33,9 @@ import type {
   AccountSignatures,
   AddressBookEntry,
   AttachmentContent,
+  ThemeInfo,
+  ThemeApply,
+  ThemeImportPreview,
 } from './types'
 
 // isDemoMode reports whether the app launched in the cosmetic --potatoes-are-nice
@@ -578,4 +581,43 @@ export const SettingKeys = {
   composeChips: 'compose_chips',
   updateCheckFrequency: 'update_check_frequency',
   emptyStateImage: 'empty_state_image',
+  themeId: 'theme_id',
 } as const
+
+// --- custom themes ---
+
+// listThemes returns every installed custom theme for the settings gallery.
+export function listThemes(): Promise<ThemeInfo[]> {
+  return App.ListThemes() as Promise<ThemeInfo[]>
+}
+
+// getThemeApply loads an installed theme in apply form (base, validated token
+// overrides, concatenated css with bundled assets inlined, icon svgs).
+export function getThemeApply(id: string): Promise<ThemeApply> {
+  return App.GetThemeApply(id) as Promise<ThemeApply>
+}
+
+// previewThemeImport opens a file picker for a .peltontheme container and
+// returns the read-before-import view. canceled is true when dismissed;
+// nothing is installed yet.
+export function previewThemeImport(): Promise<ThemeImportPreview> {
+  return App.PreviewThemeImport() as Promise<ThemeImportPreview>
+}
+
+// confirmThemeImport installs a previewed container. allowRemote keeps the
+// css's network references; false strips them before anything hits disk.
+export function confirmThemeImport(path: string, allowRemote: boolean): Promise<ThemeInfo> {
+  return App.ConfirmThemeImport(path, allowRemote) as Promise<ThemeInfo>
+}
+
+// deleteTheme removes an installed theme (and resets the selection if it was
+// active).
+export function deleteTheme(id: string): Promise<void> {
+  return App.DeleteTheme(id)
+}
+
+// exportTheme zips an installed theme back into a shareable .peltontheme via
+// a save dialog, returning the chosen path ('' if cancelled).
+export function exportTheme(id: string): Promise<string> {
+  return App.ExportTheme(id)
+}

@@ -38,6 +38,10 @@ export function ClearSentOutbox() {
   return window['go']['desktop']['App']['ClearSentOutbox']();
 }
 
+export function ConfirmThemeImport(arg1, arg2) {
+  return window['go']['desktop']['App']['ConfirmThemeImport'](arg1, arg2);
+}
+
 export function DeleteAccount(arg1) {
   return window['go']['desktop']['App']['DeleteAccount'](arg1);
 }
@@ -56,6 +60,10 @@ export function DeleteMessage(arg1) {
 
 export function DeleteSignature(arg1) {
   return window['go']['desktop']['App']['DeleteSignature'](arg1);
+}
+
+export function DeleteTheme(arg1) {
+  return window['go']['desktop']['App']['DeleteTheme'](arg1);
 }
 
 export function DiscoverConfig(arg1) {
@@ -78,6 +86,10 @@ export function ExportMessagePrintView(arg1) {
   return window['go']['desktop']['App']['ExportMessagePrintView'](arg1);
 }
 
+export function ExportTheme(arg1) {
+  return window['go']['desktop']['App']['ExportTheme'](arg1);
+}
+
 export function GetAccountSignatures(arg1) {
   return window['go']['desktop']['App']['GetAccountSignatures'](arg1);
 }
@@ -92,6 +104,10 @@ export function GetMessageHTML(arg1, arg2) {
 
 export function GetSetting(arg1) {
   return window['go']['desktop']['App']['GetSetting'](arg1);
+}
+
+export function GetThemeApply(arg1) {
+  return window['go']['desktop']['App']['GetThemeApply'](arg1);
 }
 
 export function GetUIPrefs() {
@@ -154,12 +170,20 @@ export function ListSignatures() {
   return window['go']['desktop']['App']['ListSignatures']();
 }
 
+export function ListThemes() {
+  return window['go']['desktop']['App']['ListThemes']();
+}
+
 export function ListUnifiedViews() {
   return window['go']['desktop']['App']['ListUnifiedViews']();
 }
 
 export function MoveMessage(arg1, arg2) {
   return window['go']['desktop']['App']['MoveMessage'](arg1, arg2);
+}
+
+export function PreviewThemeImport() {
+  return window['go']['desktop']['App']['PreviewThemeImport']();
 }
 
 export function ProgramLicense() {

@@ -217,6 +217,54 @@ export interface UIPrefs {
   // emptyStateImage is a data-uri image shown in the reading pane when no
   // message is open; empty means the bundled Pelton logo.
   emptyStateImage: string
+  // themeId selects an installed custom theme; empty means the built-in
+  // default themes driven by the theme (light/dark/system) setting.
+  themeId: string
+}
+
+// an installed custom theme, as shown in the settings gallery.
+export interface ThemeInfo {
+  id: string
+  name: string
+  author: string
+  version: string
+  description: string
+  base: string
+  hasCss: boolean
+  // network references still present in the installed css (only non-empty
+  // when the user chose Allow at import).
+  remoteRefs: string[]
+  // preview screenshot as a data uri, or ''.
+  preview: string
+  // set when the running app version is outside the range the theme declares
+  // itself made for. informational only.
+  compatWarning: string
+}
+
+// everything needed to apply a custom theme to the document.
+export interface ThemeApply {
+  id: string
+  base: string
+  tokens: Record<string, string>
+  css: string
+  icons: Record<string, string>
+}
+
+// one stylesheet of a theme container, for the read-before-import viewer.
+export interface ThemeCSSFile {
+  path: string
+  content: string
+  remoteRefs: string[]
+}
+
+// the read-before-import view of a chosen .peltontheme file.
+export interface ThemeImportPreview {
+  canceled: boolean
+  path: string
+  info: ThemeInfo
+  cssFiles: ThemeCSSFile[]
+  updatesExisting: boolean
+  installedVersion: string
 }
 
 // a harvested contact for compose autocomplete and the settings manager.

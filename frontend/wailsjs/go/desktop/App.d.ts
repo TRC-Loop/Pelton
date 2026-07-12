@@ -20,6 +20,8 @@ export function CheckForUpdates():Promise<desktop.UpdateCheckResult>;
 
 export function ClearSentOutbox():Promise<void>;
 
+export function ConfirmThemeImport(arg1:string,arg2:boolean):Promise<desktop.ThemeInfoDTO>;
+
 export function DeleteAccount(arg1:number):Promise<void>;
 
 export function DeleteAddress(arg1:string):Promise<void>;
@@ -29,6 +31,8 @@ export function DeleteDraft(arg1:number):Promise<void>;
 export function DeleteMessage(arg1:number):Promise<void>;
 
 export function DeleteSignature(arg1:number):Promise<void>;
+
+export function DeleteTheme(arg1:string):Promise<void>;
 
 export function DiscoverConfig(arg1:string):Promise<desktop.DiscoveredDTO>;
 
@@ -40,6 +44,8 @@ export function ExportData(arg1:Array<string>,arg2:string):Promise<string>;
 
 export function ExportMessagePrintView(arg1:number):Promise<void>;
 
+export function ExportTheme(arg1:string):Promise<string>;
+
 export function GetAccountSignatures(arg1:number):Promise<desktop.AccountSignaturesDTO>;
 
 export function GetMessage(arg1:number):Promise<desktop.MessageDetailDTO>;
@@ -47,6 +53,8 @@ export function GetMessage(arg1:number):Promise<desktop.MessageDetailDTO>;
 export function GetMessageHTML(arg1:number,arg2:boolean):Promise<string>;
 
 export function GetSetting(arg1:string):Promise<desktop.SettingResult>;
+
+export function GetThemeApply(arg1:string):Promise<desktop.ThemeApplyDTO>;
 
 export function GetUIPrefs():Promise<desktop.UIPrefsDTO>;
 
@@ -78,9 +86,13 @@ export function ListOutbox():Promise<Array<desktop.OutboxRowDTO>>;
 
 export function ListSignatures():Promise<Array<desktop.SignatureDTO>>;
 
+export function ListThemes():Promise<Array<desktop.ThemeInfoDTO>>;
+
 export function ListUnifiedViews():Promise<Array<desktop.UnifiedViewDTO>>;
 
 export function MoveMessage(arg1:number,arg2:number):Promise<desktop.ArchiveUndoDTO>;
+
+export function PreviewThemeImport():Promise<desktop.ThemeImportPreviewDTO>;
 
 export function ProgramLicense():Promise<string>;
 
