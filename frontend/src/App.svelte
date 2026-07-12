@@ -379,7 +379,8 @@
         focusSearch()
         break
       case 'about':
-        toastInfo(get(t)('app.toast.about'))
+        settingsCategory = 'about'
+        settingsOpen = true
         break
       case 'reply':
       case 'reply-all':
