@@ -271,6 +271,11 @@
     background: var(--surface-sunken);
     border-bottom: var(--hairline) solid var(--border-subtle);
     user-select: none;
+    /* above the scrim, so while a menu is open the other titles still take
+       hover (roll-over to the neighboring menu, like a native bar) and
+       clicks; the scrim only catches clicks outside the bar. */
+    position: relative;
+    z-index: 220;
   }
 
   .menu-wrap {
