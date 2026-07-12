@@ -220,6 +220,12 @@ export interface UIPrefs {
   // themeId selects an installed custom theme; empty means the built-in
   // default themes driven by the theme (light/dark/system) setting.
   themeId: string
+  // menuBarInApp shows the in-app menu bar on macOS (Windows/Linux always show
+  // it); menuBarNativeMinimal then reduces the native macOS menu to the app
+  // menu. menuBarIcons shows icons next to the in-app bar's dropdown items.
+  menuBarInApp: boolean
+  menuBarNativeMinimal: boolean
+  menuBarIcons: boolean
 }
 
 // an installed custom theme, as shown in the settings gallery.

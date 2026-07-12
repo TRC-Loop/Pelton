@@ -86,9 +86,13 @@
     setComposeAutocomplete,
     setComposeChips,
     setEmptyStateImage,
+    setMenuBarInApp,
+    setMenuBarNativeMinimal,
+    setMenuBarIcons,
   } from '../../stores/prefs'
   import peltonLogo from '../../assets/images/icons/pelton-logo.png'
   import type { Locale } from '../../lib/i18n'
+  import { isMac } from '../../lib/i18n'
   import { downloadRange, cancelDownload } from '../../lib/api'
   import { downloadProgress } from '../../stores/progress'
   import { toastError, errorMessage } from '../../stores/toast'
@@ -423,6 +427,40 @@
             on:change={(e) => setUIScale(e.detail)}
           />
           <p class="hint">{$t('settingsPanel.hint.interfaceScale')}</p>
+
+          {#if isMac}
+            <div class="toggle">
+              <span class="row-label">{$t('settingsPanel.toggle.menuBarInApp')}</span>
+              <ToggleSwitch
+                checked={$prefs.menuBarInApp}
+                label={$t('settingsPanel.toggle.menuBarInApp')}
+                on:change={(e) => setMenuBarInApp(e.detail)}
+              />
+            </div>
+            <p class="hint">{$t('settingsPanel.hint.menuBarInApp')}</p>
+            {#if $prefs.menuBarInApp}
+              <div class="toggle">
+                <span class="row-label">{$t('settingsPanel.toggle.menuBarNativeMinimal')}</span>
+                <ToggleSwitch
+                  checked={$prefs.menuBarNativeMinimal}
+                  label={$t('settingsPanel.toggle.menuBarNativeMinimal')}
+                  on:change={(e) => setMenuBarNativeMinimal(e.detail)}
+                />
+              </div>
+              <p class="hint">{$t('settingsPanel.hint.menuBarNativeMinimal')}</p>
+            {/if}
+          {/if}
+          {#if !isMac || $prefs.menuBarInApp}
+            <div class="toggle">
+              <span class="row-label">{$t('settingsPanel.toggle.menuBarIcons')}</span>
+              <ToggleSwitch
+                checked={$prefs.menuBarIcons}
+                label={$t('settingsPanel.toggle.menuBarIcons')}
+                on:change={(e) => setMenuBarIcons(e.detail)}
+              />
+            </div>
+            <p class="hint">{$t('settingsPanel.hint.menuBarIcons')}</p>
+          {/if}
 
           <div class="field">
             <span class="row-label">{$t('settingsPanel.label.emptyStateImage')}</span>

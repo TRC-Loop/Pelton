@@ -56,6 +56,13 @@ const (
 	settingComposeAutocomplete = "compose_autocomplete"
 	settingComposeChips        = "compose_chips"
 	settingEmptyStateImage     = "empty_state_image"
+	// menu bar settings only matter on macOS: Windows/Linux always use the
+	// in-app bar (no native menu is created there at all).
+	settingMenuBarInApp         = "menu_bar_in_app"
+	settingMenuBarNativeMinimal = "menu_bar_native_minimal"
+	// icons in the in-app menu bar's dropdowns; off keeps the classic
+	// text-only native look.
+	settingMenuBarIcons = "menu_bar_icons"
 )
 
 // settingUpdateCheckFreq, settingLastUpdateCheck and defaultUpdateCheckFrequency
@@ -194,6 +201,13 @@ type UIPrefsDTO struct {
 	// ThemeID selects an installed custom theme (see bind_themes.go). Empty
 	// means the built-in default themes driven by the Theme setting.
 	ThemeID string `json:"themeId"`
+	// MenuBarInApp shows the in-app menu bar on macOS (it is always shown on
+	// Windows/Linux regardless of this). MenuBarNativeMinimal then reduces the
+	// native macOS menu to the app menu, dropping the duplicated submenus.
+	MenuBarInApp         bool `json:"menuBarInApp"`
+	MenuBarNativeMinimal bool `json:"menuBarNativeMinimal"`
+	// MenuBarIcons shows icons next to the in-app menu bar's dropdown items.
+	MenuBarIcons bool `json:"menuBarIcons"`
 }
 
 // GetUIPrefs returns all ui preferences with defaults filled in, so startup is a
@@ -249,6 +263,9 @@ func (a *App) GetUIPrefs() (UIPrefsDTO, error) {
 		UpdateCheckFrequency:       a.stringSetting(settingUpdateCheckFreq, defaultUpdateCheckFrequency),
 		EmptyStateImage:            a.stringSetting(settingEmptyStateImage, ""),
 		ThemeID:                    a.stringSetting(settingThemeID, ""),
+		MenuBarInApp:               a.boolSetting(settingMenuBarInApp, false),
+		MenuBarNativeMinimal:       a.boolSetting(settingMenuBarNativeMinimal, false),
+		MenuBarIcons:               a.boolSetting(settingMenuBarIcons, false),
 	}, nil
 }
 
@@ -280,7 +297,7 @@ func (a *App) SetSetting(key, value string) error {
 	if key == storage.SettingTheme {
 		a.applyNativeTheme(value)
 	}
-	if key == settingLanguage {
+	if key == settingLanguage || key == settingMenuBarInApp || key == settingMenuBarNativeMinimal {
 		a.RebuildMenu()
 	}
 	return nil

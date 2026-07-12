@@ -8,6 +8,7 @@
   import { t } from './lib/i18n'
 
   import Sidebar from './components/sidebar/Sidebar.svelte'
+  import MenuBar from './components/common/MenuBar.svelte'
   import MessageList from './components/list/MessageList.svelte'
   import MessageDetail from './components/detail/MessageDetail.svelte'
   import Compose from './components/compose/Compose.svelte'
@@ -50,6 +51,8 @@
   import { setDemoActive } from './lib/demo'
   import { recordArchived } from './stores/undoarchive'
   import { onMailNew, onSyncState, onOutboxChanged, onMenu, type Unsubscribe } from './lib/events'
+  import { isMac } from './lib/i18n'
+  import { Quit, WindowHide, WindowIsFullscreen, WindowFullscreen, WindowUnfullscreen } from '../wailsjs/runtime/runtime'
   import { matchShortcut, comboHasModifier, type ShortcutAction } from './lib/shortcuts'
   import { bindings, recording, initShortcuts } from './stores/shortcuts'
   import { triggerUndo } from './stores/undosend'
@@ -80,6 +83,10 @@
     listW = $prefs.listWidth
   }
   $: locked = $prefs.paneLocked
+
+  // the in-app menu bar is the only menu on Windows/Linux (no native menu is
+  // created there); on macOS the native bar stays and the in-app one is opt-in.
+  $: showMenuBar = !isMac || $prefs.menuBarInApp
 
   // the native Mail menu's message actions are only usable while a message is
   // open; keep them greyed in step with the open message.
@@ -342,8 +349,11 @@
     }
   }
 
+  // MenuAction covers the actions only menus emit, on top of the shortcuts.
+  type MenuAction = ShortcutAction | 'about' | 'undo' | 'toggle-low-power' | 'open-mailboxes' | 'hide-window'
+
   // dispatch maps an action (from a shortcut or a menu item) to its handler.
-  function dispatchAction(action: ShortcutAction | 'about' | 'export-pdf' | 'undo' | 'toggle-low-power' | 'open-mailboxes'): void {
+  function dispatchAction(action: MenuAction): void {
     switch (action) {
       case 'compose':
         startCompose()
@@ -391,11 +401,28 @@
       case 'toggle-low-power':
         setLowPowerMode(!$prefs.lowPowerMode)
         break
+      case 'toggle-fullscreen':
+        void toggleFullscreen()
+        break
+      case 'hide-window':
+        WindowHide()
+        break
+      case 'quit':
+        Quit()
+        break
+    }
+  }
+
+  async function toggleFullscreen(): Promise<void> {
+    if (await WindowIsFullscreen()) {
+      WindowUnfullscreen()
+    } else {
+      WindowFullscreen()
     }
   }
 
   function handleMenu(action: string): void {
-    dispatchAction(action as ShortcutAction | 'about' | 'export-pdf' | 'undo' | 'toggle-low-power' | 'open-mailboxes')
+    dispatchAction(action as MenuAction)
   }
 
   // suppress the webview's default context menu (inspect/reload) everywhere. the
@@ -577,7 +604,10 @@
 
 <svelte:window on:keydown={onKeydown} on:contextmenu={onContextMenu} />
 
-<div class="shell">
+<div class="shell" class:with-menubar={showMenuBar}>
+  {#if showMenuBar}
+    <MenuBar on:action={(e) => handleMenu(e.detail)} />
+  {/if}
   <div class="columns" style={`grid-template-columns: ${sidebarW}px 0 ${listW}px 0 1fr`}>
     <Sidebar
       on:compose={startCompose}
@@ -647,6 +677,11 @@
     height: 100%;
     width: 100%;
     overflow: hidden;
+  }
+
+  /* with the in-app menu bar the shell gains a top auto row for it. */
+  .shell.with-menubar {
+    grid-template-rows: auto minmax(0, 1fr) auto;
   }
 
   /* the two zero-width tracks hold the resizer handles, which overhang via
