@@ -64,8 +64,11 @@ func (a *App) buildMenu() *menu.Menu {
 		mailMenu.AddText(s.archive, nil, a.menuAction("archive")),
 		mailMenu.AddText(s.deleteMessage, nil, a.menuAction("delete-message")),
 	}
+	// on Linux the items stay enabled permanently: their sensitivity can never
+	// be updated live there (see SetMailActionsEnabled), and the frontend
+	// already ignores mail actions with a hint toast while no message is open.
 	for _, item := range a.mailMenuItems {
-		item.Disabled = !a.mailActionsEnabled
+		item.Disabled = !a.mailActionsEnabled && goruntime.GOOS != "linux"
 	}
 
 	// view menu: a reliable fullscreen toggle (the native green button can be
@@ -116,8 +119,18 @@ func (a *App) RebuildMenu() {
 // only selectable while a message is actually open. The chosen state is kept on
 // the App so a later menu rebuild (RebuildMenu, on a language change) restores
 // it instead of resetting every item back to disabled.
+//
+// Skipped on Linux for the same reason as RebuildMenu: wails' GTK
+// MenuUpdateApplicationMenu rebuilds the menu from scratch under the hood
+// (it is not an in-place update), which orphans the visible menubar's
+// click-handler wiring and nil-pointer-crashes the process on the next menu
+// click. The items are built enabled there instead (buildMenu) and the
+// frontend guards empty-state clicks with a hint toast.
 func (a *App) SetMailActionsEnabled(enabled bool) {
 	a.mailActionsEnabled = enabled
+	if goruntime.GOOS == "linux" {
+		return
+	}
 	for _, item := range a.mailMenuItems {
 		item.Disabled = !enabled
 	}
