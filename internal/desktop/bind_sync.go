@@ -170,6 +170,13 @@ func (a *App) syncAccount(account storage.Account) error {
 	}
 	defer client.Logout()
 
+	// an account can reach here with no folder rows at all: restored from a
+	// backup import, or its setup-time discovery failed. syncFolders only walks
+	// existing rows, so without this the sync would be a silent no-op forever.
+	if err := a.ensureFolders(client, account.ID); err != nil {
+		return err
+	}
+
 	return a.syncFolders(client, account.ID)
 }
 
