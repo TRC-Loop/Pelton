@@ -285,3 +285,27 @@ export function UnsnoozeMessage(arg1) {
 export function UpdateAccount(arg1) {
   return window['go']['desktop']['App']['UpdateAccount'](arg1);
 }
+
+export function ListThemes() {
+  return window['go']['desktop']['App']['ListThemes']();
+}
+
+export function GetThemeApply(arg1) {
+  return window['go']['desktop']['App']['GetThemeApply'](arg1);
+}
+
+export function PreviewThemeImport() {
+  return window['go']['desktop']['App']['PreviewThemeImport']();
+}
+
+export function ConfirmThemeImport(arg1, arg2) {
+  return window['go']['desktop']['App']['ConfirmThemeImport'](arg1, arg2);
+}
+
+export function DeleteTheme(arg1) {
+  return window['go']['desktop']['App']['DeleteTheme'](arg1);
+}
+
+export function ExportTheme(arg1) {
+  return window['go']['desktop']['App']['ExportTheme'](arg1);
+}

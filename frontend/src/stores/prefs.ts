@@ -6,8 +6,9 @@
 
 import { writable } from 'svelte/store'
 import type { UIPrefs, ThemePref, DensityPref, EditorMode } from '../lib/types'
-import { getUIPrefs, setSetting, SettingKeys, systemColorScheme, setWindowTheme } from '../lib/api'
+import { getUIPrefs, setSetting, SettingKeys, systemColorScheme, setWindowTheme, getThemeApply } from '../lib/api'
 import { applyTheme, applyDensity, applyAccent, applyScale, watchSystemTheme, setSystemSchemeOverride, resolveTheme } from '../theme/theme'
+import { applyUserTheme } from '../theme/usertheme'
 import { setLocale, type Locale } from '../lib/i18n'
 
 // defaults match the backend defaults so the ui renders sanely even before the
@@ -57,6 +58,7 @@ const defaults: UIPrefs = {
   composeChips: true,
   updateCheckFrequency: 'off',
   emptyStateImage: '',
+  themeId: '',
 }
 
 export const prefs = writable<UIPrefs>(defaults)
@@ -97,10 +99,22 @@ export async function initPrefs(): Promise<void> {
 
   applyAll(loaded)
 
+  // a persisted custom theme applies after the base prefs so its base wins.
+  // a missing or broken theme folder falls back to the default silently; the
+  // stored selection stays, so reinstalling the theme brings it back.
+  if (loaded.themeId) {
+    try {
+      applyUserTheme(await getThemeApply(loaded.themeId))
+    } catch {
+      applyUserTheme(null)
+    }
+  }
+
   watchSystemTheme(() => {
     let current: UIPrefs = defaults
     prefs.subscribe((p) => (current = p))()
-    if (current.theme === 'system') {
+    // a custom theme pins its own base; the os scheme only matters without one.
+    if (current.theme === 'system' && !current.themeId) {
       applyTheme('system')
       syncWindowChrome('system')
     }
@@ -116,6 +130,30 @@ export function setTheme(theme: ThemePref): void {
   applyTheme(theme)
   syncWindowChrome(theme)
   void setSetting(SettingKeys.theme, theme)
+}
+
+// setThemeId activates an installed custom theme ('' returns to the built-in
+// default). It loads and applies the theme before persisting, so a broken
+// theme folder surfaces as a rejection here instead of a half-applied ui.
+export async function setThemeId(themeId: string): Promise<void> {
+  if (themeId) {
+    applyUserTheme(await getThemeApply(themeId))
+    syncWindowChrome(themeIdBase())
+  } else {
+    applyUserTheme(null)
+    let current: UIPrefs = defaults
+    prefs.subscribe((p) => (current = p))()
+    applyTheme(current.theme as ThemePref)
+    syncWindowChrome(current.theme as ThemePref)
+  }
+  prefs.update((p) => ({ ...p, themeId }))
+  void setSetting(SettingKeys.themeId, themeId)
+}
+
+// themeIdBase reads the base the injected theme pinned on the root element,
+// so the native window chrome can follow it.
+function themeIdBase(): 'light' | 'dark' {
+  return document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light'
 }
 
 export function setDensity(density: DensityPref): void {

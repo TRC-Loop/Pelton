@@ -143,3 +143,15 @@ export function UndoDelete(arg1:number):Promise<void>;
 export function UnsnoozeMessage(arg1:number):Promise<void>;
 
 export function UpdateAccount(arg1:desktop.UpdateAccountRequest):Promise<desktop.AccountDTO>;
+
+export function ListThemes():Promise<any>;
+
+export function GetThemeApply(arg1:string):Promise<any>;
+
+export function PreviewThemeImport():Promise<any>;
+
+export function ConfirmThemeImport(arg1:string,arg2:boolean):Promise<any>;
+
+export function DeleteTheme(arg1:string):Promise<void>;
+
+export function ExportTheme(arg1:string):Promise<string>;
