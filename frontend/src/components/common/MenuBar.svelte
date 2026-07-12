@@ -216,7 +216,7 @@
 {/if}
 
 <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
-<nav class="menubar" aria-label="Pelton" bind:this={barEl} on:keydown={onBarKeydown}>
+<nav class="menubar" class:raised={openKey !== null} aria-label="Pelton" bind:this={barEl} on:keydown={onBarKeydown}>
   {#each menus as m (m.key)}
     <div class="menu-wrap">
       <button
@@ -271,10 +271,14 @@
     background: var(--surface-sunken);
     border-bottom: var(--hairline) solid var(--border-subtle);
     user-select: none;
-    /* above the scrim, so while a menu is open the other titles still take
-       hover (roll-over to the neighboring menu, like a native bar) and
-       clicks; the scrim only catches clicks outside the bar. */
     position: relative;
+  }
+
+  /* only while a menu is open: above the scrim, so the other titles still
+     take hover (roll-over to the neighboring menu, like a native bar) and
+     clicks. at rest the bar stays in normal stacking order and never covers
+     overlays like the settings screen. */
+  .menubar.raised {
     z-index: 220;
   }
 
