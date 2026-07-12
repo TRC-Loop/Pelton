@@ -175,7 +175,6 @@ const es: Record<string, string> = {
   'app.toast.mailboxAdded': 'Buzón añadido y sincronizando.',
   'app.toast.exportOpenFirst': 'Abre un mensaje primero para exportarlo.',
   'app.toast.openMessageFirst': 'Abre un mensaje primero.',
-  'app.toast.about': 'Pelton, un cliente de correo de código abierto.',
   'app.toast.nothingToUndo': 'Nada que deshacer.',
   'app.noSubject': '(sin asunto)',
   'app.pane.resizeSidebar': 'Redimensionar barra lateral',

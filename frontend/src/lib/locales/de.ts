@@ -175,7 +175,6 @@ const de: Record<string, string> = {
   'app.toast.mailboxAdded': 'Postfach hinzugefügt, wird synchronisiert.',
   'app.toast.exportOpenFirst': 'Öffne zuerst eine Nachricht, um sie zu exportieren.',
   'app.toast.openMessageFirst': 'Öffne zuerst eine Nachricht.',
-  'app.toast.about': 'Pelton, ein Open-Source-Mail-Client.',
   'app.toast.nothingToUndo': 'Nichts rückgängig zu machen.',
   'app.noSubject': '(kein Betreff)',
   'app.pane.resizeSidebar': 'Seitenleiste anpassen',

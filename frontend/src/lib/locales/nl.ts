@@ -175,7 +175,6 @@ const nl: Record<string, string> = {
   'app.toast.mailboxAdded': 'Mailbox toegevoegd en aan het synchroniseren.',
   'app.toast.exportOpenFirst': 'Open eerst een bericht om het te exporteren.',
   'app.toast.openMessageFirst': 'Open eerst een bericht.',
-  'app.toast.about': 'Pelton, een opensource mailclient.',
   'app.toast.nothingToUndo': 'Niets om ongedaan te maken.',
   'app.noSubject': '(geen onderwerp)',
   'app.pane.resizeSidebar': 'Zijbalk formaat aanpassen',
