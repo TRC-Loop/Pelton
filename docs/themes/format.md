@@ -2,9 +2,9 @@
 
 A `.peltontheme` file is a zip container. The only fixed name inside is `manifest.json`; everything else is declared by the manifest, so you can organize files however you like. Extra files such as a README or LICENSE ride along and are ignored by the engine.
 
-```text
+```sh
 Nordish.peltontheme
-├── manifest.json          required, everything else is referenced from here
+├── manifest.json # (1)!
 ├── tokens/
 │   ├── colors.json
 │   └── type.json
@@ -16,6 +16,8 @@ Nordish.peltontheme
 └── icons/
     └── palette.svg
 ```
+
+1. Required, and the only fixed name in the container. Everything else is declared in here, so you can organize the remaining files however you like.
 
 ## manifest.json
 
