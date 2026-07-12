@@ -51,10 +51,14 @@ func (a *App) PreviewThemeImport() (ThemeImportPreviewDTO, error) {
 	if err != nil {
 		return ThemeImportPreviewDTO{}, err
 	}
+	cssFiles := p.CSSFiles
+	if cssFiles == nil {
+		cssFiles = []themepack.CSSFile{}
+	}
 	preview := ThemeImportPreviewDTO{
 		Path:     path,
 		Info:     a.themeInfo(p),
-		CSSFiles: p.CSSFiles,
+		CSSFiles: cssFiles,
 	}
 	if root, err := a.themesDir(); err == nil {
 		if installed, err := themepack.LoadInstalled(filepath.Join(root, p.Manifest.ID)); err == nil {

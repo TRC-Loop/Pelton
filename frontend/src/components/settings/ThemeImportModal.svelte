@@ -15,7 +15,7 @@
 
   const dispatch = createEventDispatcher<{ installed: ThemeInfo; close: void }>()
 
-  $: remoteRefs = preview.cssFiles.flatMap((f) => f.remoteRefs)
+  $: remoteRefs = (preview.cssFiles ?? []).flatMap((f) => f.remoteRefs ?? [])
   // the remote choice: strip network references by default; allowing them is
   // the explicit opt-in.
   let allowRemote = false
@@ -78,14 +78,14 @@
         </div>
       {/if}
 
-      {#if preview.cssFiles.length}
+      {#if preview.cssFiles?.length}
         <p class="css-heading">{$t('themes.cssHeading')}</p>
         <p class="hint">{$t('themes.cssHint')}</p>
         {#each preview.cssFiles as file (file.path)}
           <details class="css-file">
             <summary>
               <span class="mono">{file.path}</span>
-              {#if file.remoteRefs.length}
+              {#if file.remoteRefs?.length}
                 <span class="badge warn">{$t('themes.remoteBadge')}</span>
               {/if}
             </summary>

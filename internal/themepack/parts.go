@@ -52,10 +52,16 @@ func (p *Package) loadCSS() error {
 		if total > maxCSSTotalBytes {
 			return fmt.Errorf("css files exceed %d KB together", maxCSSTotalBytes>>10)
 		}
+		// never nil: this struct crosses the json bridge, and a null where the
+		// frontend expects an array crashes the import modal.
+		refs := scanCSS(string(content))
+		if refs == nil {
+			refs = []string{}
+		}
 		p.CSSFiles = append(p.CSSFiles, CSSFile{
 			Path:       normalizePath(ref),
 			Content:    string(content),
-			RemoteRefs: scanCSS(string(content)),
+			RemoteRefs: refs,
 		})
 	}
 	return nil

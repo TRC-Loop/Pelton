@@ -75,9 +75,14 @@ func (a *App) themeDirByID(id string) (string, error) {
 	return dir, nil
 }
 
-// themeInfo builds the gallery DTO for a parsed theme.
+// themeInfo builds the gallery DTO for a parsed theme. Slice fields must not
+// be nil: they cross the json bridge, and the frontend expects arrays.
 func (a *App) themeInfo(p *themepack.Package) ThemeInfoDTO {
 	m := p.Manifest
+	refs := p.RemoteRefs()
+	if refs == nil {
+		refs = []string{}
+	}
 	return ThemeInfoDTO{
 		ID:            m.ID,
 		Name:          m.Name,
@@ -86,7 +91,7 @@ func (a *App) themeInfo(p *themepack.Package) ThemeInfoDTO {
 		Description:   m.Description,
 		Base:          m.Base,
 		HasCSS:        len(m.CSS) > 0,
-		RemoteRefs:    p.RemoteRefs(),
+		RemoteRefs:    refs,
 		Preview:       p.PreviewDataURI(),
 		CompatWarning: themepack.CompatWarning(m.Pelton, a.version),
 	}

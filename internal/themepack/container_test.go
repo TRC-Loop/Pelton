@@ -3,6 +3,7 @@ package themepack
 import (
 	"archive/zip"
 	"bytes"
+	"encoding/json"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -131,6 +132,25 @@ func TestInstallLoadExportRoundTrip(t *testing.T) {
 	}
 	if _, err := LoadInstalled(dir); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestCSSFileMarshalsRemoteRefsAsArray(t *testing.T) {
+	// the DTOs cross wails' json bridge; a nil slice becomes null there and
+	// crashes the import modal, so a css file without remote refs must still
+	// carry an empty array.
+	files := testFiles()
+	files["css/extra.css"] = `body { color: red; }`
+	p, err := ReadContainer(buildContainer(t, files))
+	if err != nil {
+		t.Fatal(err)
+	}
+	data, err := json.Marshal(p.CSSFiles)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(data), `"remoteRefs":null`) {
+		t.Fatalf("remoteRefs marshals as null: %s", data)
 	}
 }
 
