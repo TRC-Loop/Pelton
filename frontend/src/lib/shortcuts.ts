@@ -31,6 +31,7 @@ export type ShortcutAction =
   | 'download-offline'
   | 'delete-message'
   | 'archive'
+  | 'unsubscribe'
 
 // Shortcut pairs an action with its default combo and the label key for display.
 export interface Shortcut {
@@ -63,6 +64,7 @@ export const shortcuts: Shortcut[] = [
   { action: 'download-offline', combo: '', labelKey: 'shortcut.downloadOffline' },
   { action: 'delete-message', combo: '', labelKey: 'shortcut.deleteMessage' },
   { action: 'archive', combo: '', labelKey: 'shortcut.archive' },
+  { action: 'unsubscribe', combo: '', labelKey: 'shortcut.unsubscribe' },
 ]
 
 // ParsedCombo is a combo broken into its modifier flags and final key.

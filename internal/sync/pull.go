@@ -69,6 +69,9 @@ func (e *Engine) fetchAndStore(ctx context.Context, folder storage.Folder, uid u
 		BodyPlain:   msg.Text,
 		BodyHTML:    msg.HTML,
 		SizeBytes:   msg.Size,
+
+		ListUnsubscribe:     msg.ListUnsubscribe,
+		ListUnsubscribePost: msg.ListUnsubscribePost,
 	}
 
 	atts := make([]storage.IncomingAttachment, 0, len(msg.Attachments))

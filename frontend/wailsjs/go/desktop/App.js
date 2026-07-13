@@ -314,6 +314,10 @@ export function UnsnoozeMessage(arg1) {
   return window['go']['desktop']['App']['UnsnoozeMessage'](arg1);
 }
 
+export function Unsubscribe(arg1) {
+  return window['go']['desktop']['App']['Unsubscribe'](arg1);
+}
+
 export function UpdateAccount(arg1) {
   return window['go']['desktop']['App']['UpdateAccount'](arg1);
 }

@@ -125,7 +125,13 @@ export function getMessage(id: number): Promise<MessageDetail> {
   if (isDemoActive()) {
     return Promise.resolve(demoMessage(id))
   }
-  return App.GetMessage(id)
+  return App.GetMessage(id) as unknown as Promise<MessageDetail>
+}
+
+// unsubscribeMessage carries out a message's advertised unsubscribe (the
+// one-click POST or the mailto send); plain links are opened by the caller.
+export function unsubscribeMessage(id: number): Promise<void> {
+  return App.Unsubscribe(id)
 }
 
 // getMessageSource fetches a message's raw RFC 822 source on demand over imap.

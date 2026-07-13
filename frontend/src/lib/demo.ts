@@ -177,6 +177,7 @@ export function demoMessage(id: number): MessageDetail {
     ccAddresses: '',
     bodyPlain: 'Hey, quick one about the potato shipment...',
     bodyHtmlSafe: sharedBodyHtml,
+    unsubscribe: null,
     isHtml: true,
     hasRemoteContent: false,
     remoteAllowed: true,

@@ -384,6 +384,22 @@ export namespace desktop {
 	        this.offset = source["offset"];
 	    }
 	}
+	export class UnsubscribeDTO {
+	    kind: string;
+	    target: string;
+	    done: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new UnsubscribeDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.kind = source["kind"];
+	        this.target = source["target"];
+	        this.done = source["done"];
+	    }
+	}
 	export class MessageDetailDTO {
 	    id: number;
 	    accountId: number;
@@ -412,6 +428,7 @@ export namespace desktop {
 	    remoteAllowed: boolean;
 	    remoteHosts: string[];
 	    attachments: AttachmentDTO[];
+	    unsubscribe?: UnsubscribeDTO;
 	
 	    static createFrom(source: any = {}) {
 	        return new MessageDetailDTO(source);
@@ -446,6 +463,7 @@ export namespace desktop {
 	        this.remoteAllowed = source["remoteAllowed"];
 	        this.remoteHosts = source["remoteHosts"];
 	        this.attachments = this.convertValues(source["attachments"], AttachmentDTO);
+	        this.unsubscribe = this.convertValues(source["unsubscribe"], UnsubscribeDTO);
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
@@ -874,6 +892,7 @@ export namespace desktop {
 	        this.totalCount = source["totalCount"];
 	    }
 	}
+	
 	export class UpdateAccountRequest {
 	    id: number;
 	    displayName: string;

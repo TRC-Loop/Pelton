@@ -73,6 +73,18 @@ export interface MessageDetail extends MessageSummary {
   // remoteHosts lists the hosts blocked remote content would load from.
   remoteHosts: string[]
   attachments: Attachment[]
+  // unsubscribe describes the List-Unsubscribe mechanism the message
+  // advertises: oneclick (RFC 8058 background POST), mailto (sent via the
+  // account's smtp) or link (opened in the browser). null when none is on
+  // record; the ui may still fall back to an unsubscribe link in the body.
+  unsubscribe: UnsubscribeInfo | null
+}
+
+export interface UnsubscribeInfo {
+  kind: 'oneclick' | 'mailto' | 'link'
+  target: string
+  // done is true when this sender was already unsubscribed from.
+  done: boolean
 }
 
 export interface MessageList {

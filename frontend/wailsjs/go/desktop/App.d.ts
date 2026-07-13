@@ -157,4 +157,6 @@ export function UndoDelete(arg1:number):Promise<void>;
 
 export function UnsnoozeMessage(arg1:number):Promise<void>;
 
+export function Unsubscribe(arg1:number):Promise<void>;
+
 export function UpdateAccount(arg1:desktop.UpdateAccountRequest):Promise<desktop.AccountDTO>;
