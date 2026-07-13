@@ -50,6 +50,11 @@ type Message struct {
 	HTML        string
 	Size        int64 // raw rfc822 byte length
 	Attachments []Attachment
+	// ListUnsubscribe carries the raw List-Unsubscribe header value, and
+	// ListUnsubscribePost whether the message declares RFC 8058 one-click
+	// support via List-Unsubscribe-Post.
+	ListUnsubscribe     string
+	ListUnsubscribePost bool
 }
 
 // Attachment holds attachment metadata and its decoded content.
@@ -199,6 +204,9 @@ func parseBody(raw []byte, msg *Message) error {
 	if err != nil && !message.IsUnknownCharset(err) {
 		return fmt.Errorf("create mail reader: %w", err)
 	}
+
+	msg.ListUnsubscribe = mr.Header.Get("List-Unsubscribe")
+	msg.ListUnsubscribePost = strings.Contains(strings.ToLower(mr.Header.Get("List-Unsubscribe-Post")), "one-click")
 
 	for {
 		part, err := mr.NextPart()

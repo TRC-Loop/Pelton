@@ -53,6 +53,11 @@ type Message struct {
 	SnoozeUntil  string
 	SnoozeHidden bool
 	Offline      bool
+	// ListUnsubscribe is the raw List-Unsubscribe header value ('' when the
+	// message advertised none, or was cached before the column existed);
+	// ListUnsubscribePost marks RFC 8058 one-click support.
+	ListUnsubscribe     string
+	ListUnsubscribePost bool
 }
 
 // IncomingAttachment is attachment metadata together with its content, handed
@@ -117,12 +122,13 @@ func insertMessage(ctx context.Context, ex execer, m *Message) (int64, error) {
 INSERT INTO messages (
     account_id, folder_id, uid, message_id, subject, from_address, from_name,
     to_addresses, cc_addresses, date, flags, body_plain, body_html,
-    has_attachments, size_bytes
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    has_attachments, size_bytes, list_unsubscribe, list_unsubscribe_post
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 	res, err := ex.ExecContext(ctx, query,
 		m.AccountID, m.FolderID, m.UID, m.MessageID, m.Subject, m.FromAddress,
 		m.FromName, m.ToAddresses, m.CcAddresses, formatTime(m.Date), uint8(m.Flags),
-		m.BodyPlain, m.BodyHTML, boolToInt(m.HasAttachments), m.SizeBytes)
+		m.BodyPlain, m.BodyHTML, boolToInt(m.HasAttachments), m.SizeBytes,
+		m.ListUnsubscribe, boolToInt(m.ListUnsubscribePost))
 	if err != nil {
 		return 0, fmt.Errorf("storage: insert message uid %d: %w", m.UID, err)
 	}
@@ -221,7 +227,7 @@ const selectMessageColumns = `
 SELECT id, account_id, folder_id, uid, message_id, subject, from_address,
        from_name, to_addresses, cc_addresses, date, flags, body_plain,
        body_html, has_attachments, size_bytes, flag_color, snooze_until,
-       snooze_hidden, offline`
+       snooze_hidden, offline, list_unsubscribe, list_unsubscribe_post`
 
 const selectMessageByID = selectMessageColumns + `
 FROM messages WHERE id = ?`
@@ -234,11 +240,13 @@ func scanMessage(row rowScanner) (*Message, error) {
 		hasAtt       int
 		snoozeHidden int
 		offline      int
+		unsubPost    int
 	)
 	if err := row.Scan(&m.ID, &m.AccountID, &m.FolderID, &m.UID, &m.MessageID,
 		&m.Subject, &m.FromAddress, &m.FromName, &m.ToAddresses, &m.CcAddresses,
 		&date, &flags, &m.BodyPlain, &m.BodyHTML, &hasAtt, &m.SizeBytes,
-		&m.FlagColor, &m.SnoozeUntil, &snoozeHidden, &offline); err != nil {
+		&m.FlagColor, &m.SnoozeUntil, &snoozeHidden, &offline,
+		&m.ListUnsubscribe, &unsubPost); err != nil {
 		return nil, err
 	}
 	t, err := parseTime(date)
@@ -250,6 +258,7 @@ func scanMessage(row rowScanner) (*Message, error) {
 	m.HasAttachments = hasAtt != 0
 	m.SnoozeHidden = snoozeHidden != 0
 	m.Offline = offline != 0
+	m.ListUnsubscribePost = unsubPost != 0
 	return &m, nil
 }
 

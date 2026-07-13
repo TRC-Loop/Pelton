@@ -98,6 +98,7 @@ func (a *App) GetMessage(id int64) (MessageDetailDTO, error) {
 		RemoteAllowed:     autoAllow,
 		RemoteHosts:       mailview.RemoteHosts(m.BodyHTML),
 		Attachments:       toAttachmentDTOs(atts, m.BodyHTML),
+		Unsubscribe:       a.unsubscribeInfo(m),
 	}
 	detail.BodyHTMLSafe = a.renderHTML(m.BodyHTML, atts, autoAllow)
 	return detail, nil

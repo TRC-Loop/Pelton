@@ -46,7 +46,9 @@
     archiveMessage,
     setMailActionsEnabled,
     isDemoMode,
+    unsubscribeMessage,
   } from './lib/api'
+  import { BrowserOpenURL } from '../wailsjs/runtime/runtime'
   import { setDemoActive } from './lib/demo'
   import { recordArchived } from './stores/undoarchive'
   import { onMailNew, onSyncState, onOutboxChanged, onMenu, type Unsubscribe } from './lib/events'
@@ -325,6 +327,20 @@
             openMessageId.set(null)
           }
           break
+        case 'unsubscribe': {
+          const detail = await getMessage(msg.id)
+          if (!detail.unsubscribe) {
+            toastInfo(get(t)('detail.unsubscribe.none'))
+            break
+          }
+          if (detail.unsubscribe.kind === 'link') {
+            BrowserOpenURL(detail.unsubscribe.target)
+            break
+          }
+          await unsubscribeMessage(msg.id)
+          toastInfo(get(t)('detail.unsubscribe.done'))
+          break
+        }
         case 'archive': {
           const undo = await archiveMessage(msg.id)
           if (undo.messageId) {
@@ -381,6 +397,7 @@
       case 'download-offline':
       case 'delete-message':
       case 'archive':
+      case 'unsubscribe':
         void messageAction(action)
         break
       case 'undo':

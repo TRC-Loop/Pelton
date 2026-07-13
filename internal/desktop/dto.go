@@ -112,6 +112,9 @@ type MessageDetailDTO struct {
 	// the banner can show the user where.
 	RemoteHosts []string        `json:"remoteHosts"`
 	Attachments []AttachmentDTO `json:"attachments"`
+	// Unsubscribe describes the unsubscribe mechanism the message advertises
+	// via its List-Unsubscribe headers, nil when it has none on record.
+	Unsubscribe *UnsubscribeDTO `json:"unsubscribe"`
 }
 
 // authUnavailable is the placeholder auth status. The backend does not yet parse
