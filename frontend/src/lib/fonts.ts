@@ -27,6 +27,33 @@ export const bodyFonts: BodyFont[] = [
   { key: 'courier', label: 'Courier New', stack: '"Courier New", Courier, monospace' },
 ]
 
+// uiFonts are the interface font choices (#58): they flow into the --font-ui
+// token, so everything outside rendered mail follows. default is the bundled
+// Familjen Grotesk from tokens.css.
+export const uiFonts: BodyFont[] = [
+  { key: 'default', labelKey: 'settingsPanel.uiFont.default', stack: null },
+  { key: 'system', labelKey: 'settingsPanel.uiFont.system', stack: 'system-ui, -apple-system, "Segoe UI", sans-serif' },
+  { key: 'arial', label: 'Arial', stack: 'Arial, Helvetica, sans-serif' },
+  { key: 'verdana', label: 'Verdana', stack: 'Verdana, Geneva, sans-serif' },
+  { key: 'georgia', label: 'Georgia', stack: 'Georgia, serif' },
+]
+
+// monoFonts are the monospace choices for --font-mono (code blocks, the
+// message source view, technical labels). default is the bundled Spline Sans
+// Mono from tokens.css.
+export const monoFonts: BodyFont[] = [
+  { key: 'default', labelKey: 'settingsPanel.monoFont.default', stack: null },
+  { key: 'system', labelKey: 'settingsPanel.monoFont.system', stack: 'ui-monospace, "SF Mono", Consolas, "Liberation Mono", monospace' },
+  { key: 'courier', label: 'Courier New', stack: '"Courier New", Courier, monospace' },
+]
+
+// sysStack turns a "sys:<family>" key into a css stack over the given generic
+// fallback, in case the font was uninstalled since it was chosen.
+function sysStack(key: string, generic: string): string | null {
+  const family = key.slice(4).replace(/["\\]/g, '')
+  return family ? `"${family}", ${generic}` : null
+}
+
 // bodyFontStack maps a stored key to its css stack, or null for the default
 // (and for any unknown key, so a removed entry degrades to the ui font).
 // keys prefixed "sys:" name an installed system font family directly (the
@@ -34,8 +61,23 @@ export const bodyFonts: BodyFont[] = [
 // rides along in case the font was uninstalled since.
 export function bodyFontStack(key: string): string | null {
   if (key.startsWith('sys:')) {
-    const family = key.slice(4).replace(/["\\]/g, '')
-    return family ? `"${family}", sans-serif` : null
+    return sysStack(key, 'sans-serif')
   }
   return bodyFonts.find((f) => f.key === key)?.stack ?? null
+}
+
+// uiFontStack / monoFontStack are the same lookup for the interface and
+// monospace font settings; null means "keep the token's built-in value".
+export function uiFontStack(key: string): string | null {
+  if (key.startsWith('sys:')) {
+    return sysStack(key, 'sans-serif')
+  }
+  return uiFonts.find((f) => f.key === key)?.stack ?? null
+}
+
+export function monoFontStack(key: string): string | null {
+  if (key.startsWith('sys:')) {
+    return sysStack(key, 'monospace')
+  }
+  return monoFonts.find((f) => f.key === key)?.stack ?? null
 }

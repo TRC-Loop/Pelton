@@ -604,6 +604,8 @@ export const SettingKeys = {
   themeDarkStart: 'theme_dark_start',
   themeDarkEnd: 'theme_dark_end',
   bodyFont: 'body_font',
+  uiFont: 'ui_font',
+  monoFont: 'mono_font',
 } as const
 
 // listSystemFonts returns the installed font family names for the body font

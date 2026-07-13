@@ -7,8 +7,9 @@
 import { writable } from 'svelte/store'
 import type { UIPrefs, ThemePref, DensityPref, EditorMode } from '../lib/types'
 import { getUIPrefs, setSetting, SettingKeys, systemColorScheme, setWindowTheme, getThemeApply } from '../lib/api'
-import { applyTheme, applyDensity, applyAccent, applyScale, applyReduceMotion, setThemeSchedule, watchSystemTheme, setSystemSchemeOverride, resolveTheme } from '../theme/theme'
+import { applyTheme, applyDensity, applyAccent, applyScale, applyReduceMotion, setThemeSchedule, applyUIFont, applyMonoFont, watchSystemTheme, setSystemSchemeOverride, resolveTheme } from '../theme/theme'
 import { applyUserTheme } from '../theme/usertheme'
+import { uiFontStack, monoFontStack } from '../lib/fonts'
 import { setLocale } from '../lib/i18n'
 
 // defaults match the backend defaults so the ui renders sanely even before the
@@ -67,6 +68,8 @@ const defaults: UIPrefs = {
   themeDarkStart: '19:00',
   themeDarkEnd: '07:00',
   bodyFont: 'default',
+  uiFont: 'default',
+  monoFont: 'default',
 }
 
 export const prefs = writable<UIPrefs>(defaults)
@@ -86,6 +89,8 @@ function applyAll(p: UIPrefs): void {
   applyAccent(p.accent)
   applyScale(p.uiScale)
   applyReduceMotion(p.reduceMotion)
+  applyUIFont(uiFontStack(p.uiFont))
+  applyMonoFont(monoFontStack(p.monoFont))
   setLocale(p.language)
 }
 
@@ -366,6 +371,20 @@ export function setReduceMotion(value: boolean): void {
   prefs.update((p) => ({ ...p, reduceMotion: value }))
   applyReduceMotion(value)
   void setSetting(SettingKeys.reduceMotion, String(value))
+}
+
+// setUIFont / setMonoFont override the interface and monospace font tokens,
+// applying live like the other appearance settings.
+export function setUIFont(value: string): void {
+  prefs.update((p) => ({ ...p, uiFont: value }))
+  applyUIFont(uiFontStack(value))
+  void setSetting(SettingKeys.uiFont, value)
+}
+
+export function setMonoFont(value: string): void {
+  prefs.update((p) => ({ ...p, monoFont: value }))
+  applyMonoFont(monoFontStack(value))
+  void setSetting(SettingKeys.monoFont, value)
 }
 
 // toggle keys map a boolean preference to its setting key so setToggle stays

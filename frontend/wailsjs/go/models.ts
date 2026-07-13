@@ -832,6 +832,8 @@ export namespace desktop {
 	    themeDarkStart: string;
 	    themeDarkEnd: string;
 	    bodyFont: string;
+	    uiFont: string;
+	    monoFont: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new UIPrefsDTO(source);
@@ -892,6 +894,8 @@ export namespace desktop {
 	        this.themeDarkStart = source["themeDarkStart"];
 	        this.themeDarkEnd = source["themeDarkEnd"];
 	        this.bodyFont = source["bodyFont"];
+	        this.uiFont = source["uiFont"];
+	        this.monoFont = source["monoFont"];
 	    }
 	}
 	export class UnifiedViewDTO {

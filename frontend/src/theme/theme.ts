@@ -88,6 +88,27 @@ export function applyDensity(pref: DensityPref): void {
   document.documentElement.setAttribute('data-density', pref)
 }
 
+// applyUIFont / applyMonoFont override the font tokens with the user's chosen
+// stack; null removes the override so the token falls back to the built-in
+// (or active theme's) value. inline styles on the root win over any
+// stylesheet, which is exactly the precedence a per-user choice should have.
+export function applyUIFont(stack: string | null): void {
+  setFontToken('--font-ui', stack)
+}
+
+export function applyMonoFont(stack: string | null): void {
+  setFontToken('--font-mono', stack)
+}
+
+function setFontToken(name: string, stack: string | null): void {
+  const root = document.documentElement
+  if (stack) {
+    root.style.setProperty(name, stack)
+  } else {
+    root.style.removeProperty(name)
+  }
+}
+
 // applyReduceMotion marks the root so css can disable transitions and
 // animations. the os-level prefers-reduced-motion query is honored by the
 // same css block regardless of this flag; this is the explicit in-app switch.

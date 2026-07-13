@@ -96,6 +96,8 @@
     setReduceMotion,
     setThemeDarkTimes,
     setBodyFont,
+    setUIFont,
+    setMonoFont,
   } from '../../stores/prefs'
   import peltonLogo from '../../assets/images/icons/pelton-logo.png'
   import { isMac } from '../../lib/i18n'
@@ -234,10 +236,12 @@
     }
   }
 
-  import { bodyFonts } from '../../lib/fonts'
+  import { bodyFonts, uiFonts, monoFonts } from '../../lib/fonts'
   import { listSystemFonts } from '../../lib/api'
 
   $: bodyFontOptions = bodyFonts.map((f) => ({ key: f.key, label: f.label ?? $t(f.labelKey ?? '') }))
+  $: uiFontOptions = uiFonts.map((f) => ({ key: f.key, label: f.label ?? $t(f.labelKey ?? '') }))
+  $: monoFontOptions = monoFonts.map((f) => ({ key: f.key, label: f.label ?? $t(f.labelKey ?? '') }))
 
   // every installed system font, loaded once when the panel opens. the list
   // is backend-cached, so reopening settings is instant.
@@ -251,6 +255,12 @@
   // select handlers (the cast lives in script; inline ts casts break the parser).
   function onBodyFont(event: Event): void {
     setBodyFont((event.currentTarget as HTMLSelectElement).value)
+  }
+  function onUIFont(event: Event): void {
+    setUIFont((event.currentTarget as HTMLSelectElement).value)
+  }
+  function onMonoFont(event: Event): void {
+    setMonoFont((event.currentTarget as HTMLSelectElement).value)
   }
   function onSwipeLeft(event: Event): void {
     setSwipeLeftAction((event.currentTarget as HTMLSelectElement).value)
@@ -567,6 +577,42 @@
             />
           </div>
           <p class="hint">{$t('settingsPanel.hint.reduceMotion')}</p>
+          <div class="row">
+            <span class="row-label">{$t('settingsPanel.label.uiFont')}</span>
+            <select class="select" value={$prefs.uiFont} on:change={onUIFont}>
+              <optgroup label={$t('settingsPanel.bodyFont.groupCurated')}>
+                {#each uiFontOptions as opt}
+                  <option value={opt.key}>{opt.label}</option>
+                {/each}
+              </optgroup>
+              {#if systemFonts.length > 0}
+                <optgroup label={$t('settingsPanel.bodyFont.groupSystem')}>
+                  {#each systemFonts as family}
+                    <option value={`sys:${family}`}>{family}</option>
+                  {/each}
+                </optgroup>
+              {/if}
+            </select>
+          </div>
+          <p class="hint">{$t('settingsPanel.hint.uiFont')}</p>
+          <div class="row">
+            <span class="row-label">{$t('settingsPanel.label.monoFont')}</span>
+            <select class="select" value={$prefs.monoFont} on:change={onMonoFont}>
+              <optgroup label={$t('settingsPanel.bodyFont.groupCurated')}>
+                {#each monoFontOptions as opt}
+                  <option value={opt.key}>{opt.label}</option>
+                {/each}
+              </optgroup>
+              {#if systemFonts.length > 0}
+                <optgroup label={$t('settingsPanel.bodyFont.groupSystem')}>
+                  {#each systemFonts as family}
+                    <option value={`sys:${family}`}>{family}</option>
+                  {/each}
+                </optgroup>
+              {/if}
+            </select>
+          </div>
+          <p class="hint">{$t('settingsPanel.hint.monoFont')}</p>
 
           <div class="field">
             <span class="row-label">{$t('settingsPanel.label.emptyStateImage')}</span>
