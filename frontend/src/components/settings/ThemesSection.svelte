@@ -4,8 +4,8 @@
   // card applies immediately; the import flow goes through ThemeImportModal
   // (read-before-import, remote-reference choice).
   import { onMount } from 'svelte'
-  import { IconFileImport, IconRefresh, IconTrash, IconUpload, IconAlertTriangle, IconWorld, IconPlus, IconPencil } from '@tabler/icons-svelte'
-  import { listThemes, previewThemeImport, deleteTheme, exportTheme, getThemeApply } from '../../lib/api'
+  import { IconFileImport, IconRefresh, IconTrash, IconUpload, IconAlertTriangle, IconWorld, IconPlus, IconPencil, IconFolderOpen } from '@tabler/icons-svelte'
+  import { listThemes, previewThemeImport, deleteTheme, exportTheme, getThemeApply, openThemesFolder } from '../../lib/api'
   import type { ThemeInfo, ThemeImportPreview, ThemePref } from '../../lib/types'
   import { prefs, setThemeId } from '../../stores/prefs'
   import { applyUserTheme } from '../../theme/usertheme'
@@ -80,18 +80,25 @@
     editorSeed = { id: '', name: '', base, tokens: {} }
   }
 
-  // editTheme opens the editor prefilled with a theme's palette. built-in
-  // presets seed a new theme (they cannot be overwritten); installed palette
-  // themes are edited in place.
+  // editTheme opens the editor prefilled with a theme's palette; saving
+  // updates the theme's file in place.
   async function editTheme(theme: ThemeInfo): Promise<void> {
     try {
       const apply = await getThemeApply(theme.id)
       editorSeed = {
-        id: theme.builtin ? '' : theme.id,
-        name: theme.builtin ? $t('themes.copyName').replace('{name}', theme.name) : theme.name,
+        id: theme.id,
+        name: theme.name,
         base: apply.base === 'dark' ? 'dark' : 'light',
         tokens: apply.tokens ?? {},
       }
+    } catch (err) {
+      toastError(errorMessage(err))
+    }
+  }
+
+  async function openFolder(): Promise<void> {
+    try {
+      await openThemesFolder()
     } catch (err) {
       toastError(errorMessage(err))
     }
@@ -153,6 +160,10 @@
     <IconFileImport size={15} stroke={1.6} />
     {$t('themes.import')}
   </button>
+  <button type="button" class="action-btn" on:click={openFolder} title={$t('themes.openFolderHint')}>
+    <IconFolderOpen size={15} stroke={1.6} />
+    {$t('themes.openFolder')}
+  </button>
   <button type="button" class="action-btn" on:click={reload} title={$t('themes.reloadHint')}>
     <IconRefresh size={15} stroke={1.6} />
     {$t('themes.reload')}
@@ -185,12 +196,8 @@
         <div class="meta">
           <span class="name">{theme.name}</span>
           <span class="sub">
-            {#if theme.builtin}
-              {$t('themes.builtin')}
-            {:else}
-              {#if theme.author}{$t('themes.by').replace('{author}', theme.author)}{/if}
-              {#if theme.version}&nbsp;· v{theme.version}{/if}
-            {/if}
+            {#if theme.author}{$t('themes.by').replace('{author}', theme.author)}{/if}
+            {#if theme.version}&nbsp;· v{theme.version}{/if}
           </span>
           {#if theme.compatWarning}
             <span class="badge warn" title={theme.compatWarning}>
@@ -212,24 +219,22 @@
             <IconPencil size={14} stroke={1.6} />
           </button>
         {/if}
-        {#if !theme.builtin}
-          <button type="button" class="icon-btn" title={$t('themes.export')} on:click={() => onExport(theme.id)}>
-            <IconUpload size={14} stroke={1.6} />
-          </button>
-          <button
-            type="button"
-            class="icon-btn danger"
-            title={$t('themes.delete')}
-            on:click={() => onDelete(theme.id)}
-            on:mouseleave={() => (confirmingDelete = '')}
-          >
-            {#if confirmingDelete === theme.id}
-              <span class="confirm-text">{$t('themes.deleteConfirm')}</span>
-            {:else}
-              <IconTrash size={14} stroke={1.6} />
-            {/if}
-          </button>
-        {/if}
+        <button type="button" class="icon-btn" title={$t('themes.export')} on:click={() => onExport(theme.id)}>
+          <IconUpload size={14} stroke={1.6} />
+        </button>
+        <button
+          type="button"
+          class="icon-btn danger"
+          title={$t('themes.delete')}
+          on:click={() => onDelete(theme.id)}
+          on:mouseleave={() => (confirmingDelete = '')}
+        >
+          {#if confirmingDelete === theme.id}
+            <span class="confirm-text">{$t('themes.deleteConfirm')}</span>
+          {:else}
+            <IconTrash size={14} stroke={1.6} />
+          {/if}
+        </button>
       </div>
     </div>
   {/each}

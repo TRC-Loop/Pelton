@@ -4,6 +4,7 @@ import (
 	"archive/zip"
 	"bytes"
 	"encoding/json"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -100,18 +101,22 @@ func TestReadContainerRejects(t *testing.T) {
 	}
 }
 
-func TestInstallLoadExportRoundTrip(t *testing.T) {
+func TestWriteContainerBlockedRoundTrip(t *testing.T) {
 	root := t.TempDir()
 	p, err := ReadContainer(buildContainer(t, testFiles()))
 	if err != nil {
 		t.Fatal(err)
 	}
-	dir, err := Install(p, root, true) // block remote refs
-	if err != nil {
+	dest := filepath.Join(root, ContainerFileName(p.Manifest.Name))
+	if err := WriteContainer(p, dest, true); err != nil { // block remote refs
 		t.Fatal(err)
 	}
 
-	loaded, err := LoadInstalled(dir)
+	data, err := os.ReadFile(dest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	loaded, err := ReadContainer(data)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -124,14 +129,6 @@ func TestInstallLoadExportRoundTrip(t *testing.T) {
 	}
 	if strings.Contains(css, "tracker.example") {
 		t.Errorf("remote ref survived blocked install:\n%s", css)
-	}
-
-	dest := filepath.Join(root, ContainerFileName(loaded.Manifest.Name))
-	if err := Export(dir, dest); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := LoadInstalled(dir); err != nil {
-		t.Fatal(err)
 	}
 }
 
@@ -154,16 +151,20 @@ func TestCSSFileMarshalsRemoteRefsAsArray(t *testing.T) {
 	}
 }
 
-func TestInstallKeepsRemoteWhenAllowed(t *testing.T) {
+func TestWriteContainerKeepsRemoteWhenAllowed(t *testing.T) {
 	p, err := ReadContainer(buildContainer(t, testFiles()))
 	if err != nil {
 		t.Fatal(err)
 	}
-	dir, err := Install(p, t.TempDir(), false) // user allowed remote refs
+	dest := filepath.Join(t.TempDir(), "allowed.peltontheme")
+	if err := WriteContainer(p, dest, false); err != nil { // user allowed remote refs
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(dest)
 	if err != nil {
 		t.Fatal(err)
 	}
-	loaded, err := LoadInstalled(dir)
+	loaded, err := ReadContainer(data)
 	if err != nil {
 		t.Fatal(err)
 	}

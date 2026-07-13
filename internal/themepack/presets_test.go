@@ -1,7 +1,7 @@
 package themepack
 
 import (
-	"strings"
+	"os"
 	"testing"
 )
 
@@ -13,9 +13,6 @@ func TestPresetsLoadAndValidate(t *testing.T) {
 	seen := make(map[string]bool)
 	for _, p := range presets {
 		m := p.Manifest
-		if !strings.HasPrefix(m.ID, "preset-") {
-			t.Errorf("preset id %q must carry the preset- prefix so it cannot collide with installed themes", m.ID)
-		}
 		if seen[m.ID] {
 			t.Errorf("duplicate preset id %q", m.ID)
 		}
@@ -29,8 +26,30 @@ func TestPresetsLoadAndValidate(t *testing.T) {
 		if len(p.CSSFiles) != 0 || len(p.Icons) != 0 {
 			t.Errorf("preset %s: presets must be token-only", m.ID)
 		}
-		if by, ok := Preset(m.ID); !ok || by != p {
-			t.Errorf("Preset(%q) does not return the listed package", m.ID)
-		}
+	}
+}
+
+func TestWriteContainerRoundTrip(t *testing.T) {
+	presets := Presets()
+	if len(presets) == 0 {
+		t.Fatal("no presets")
+	}
+	dest := t.TempDir() + "/roundtrip.peltontheme"
+	if err := WriteContainer(presets[0], dest, false); err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(dest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	back, err := ReadContainer(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if back.Manifest.ID != presets[0].Manifest.ID {
+		t.Fatalf("round trip changed id: %q -> %q", presets[0].Manifest.ID, back.Manifest.ID)
+	}
+	if len(back.Tokens) != len(presets[0].Tokens) {
+		t.Fatalf("round trip changed token count: %d -> %d", len(presets[0].Tokens), len(back.Tokens))
 	}
 }

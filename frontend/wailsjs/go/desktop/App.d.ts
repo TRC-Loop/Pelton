@@ -92,6 +92,8 @@ export function ListUnifiedViews():Promise<Array<desktop.UnifiedViewDTO>>;
 
 export function MoveMessage(arg1:number,arg2:number):Promise<desktop.ArchiveUndoDTO>;
 
+export function OpenThemesFolder():Promise<void>;
+
 export function PreviewThemeImport():Promise<desktop.ThemeImportPreviewDTO>;
 
 export function ProgramLicense():Promise<string>;

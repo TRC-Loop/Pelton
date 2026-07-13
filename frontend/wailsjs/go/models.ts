@@ -681,7 +681,6 @@ export namespace desktop {
 	    preview: string;
 	    compatWarning: string;
 	
-	    builtin: boolean;
 	    swatches: string[];
 
 	    static createFrom(source: any = {}) {
@@ -700,7 +699,6 @@ export namespace desktop {
 	        this.remoteRefs = source["remoteRefs"];
 	        this.preview = source["preview"];
 	        this.compatWarning = source["compatWarning"];
-	        this.builtin = source["builtin"];
 	        this.swatches = source["swatches"];
 	    }
 	}

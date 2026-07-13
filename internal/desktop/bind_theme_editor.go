@@ -10,10 +10,9 @@ import (
 	"github.com/TRC-Loop/Pelton/internal/themepack"
 )
 
-// The palette editor (#57) saves its themes as regular installed theme
-// folders: a manifest.json with inline tokens, nothing else. That way an
-// edited palette shows up in the gallery, exports as a .peltontheme and
-// travels with backups exactly like an imported theme.
+// The palette editor (#57) saves its themes as regular .peltontheme files in
+// the themes folder, so an edited palette shows up in the gallery, exports
+// and travels with backups exactly like an imported theme.
 
 // SaveThemeRequest is a palette-editor save: name, light/dark base and the
 // token overrides. ID is set when editing an existing installed theme and
@@ -27,7 +26,8 @@ type SaveThemeRequest struct {
 
 // SaveCustomTheme validates and writes a palette-editor theme, returning its
 // gallery info. New themes get an id derived from the name, kept clear of
-// presets and existing installs.
+// existing themes. Editing keeps everything else the theme carries (author,
+// icons, preview, bundled files) and only replaces name, base and tokens.
 func (a *App) SaveCustomTheme(req SaveThemeRequest) (ThemeInfoDTO, error) {
 	if err := a.ready(); err != nil {
 		return ThemeInfoDTO{}, err
@@ -47,47 +47,58 @@ func (a *App) SaveCustomTheme(req SaveThemeRequest) (ThemeInfoDTO, error) {
 	if err != nil {
 		return ThemeInfoDTO{}, err
 	}
-	id := req.ID
-	if id == "" {
-		id, err = a.newThemeID(root, name)
+
+	manifest := themepack.Manifest{ManifestVersion: themepack.ManifestVersion}
+	files := map[string][]byte{}
+	var previousPath string
+	if req.ID == "" {
+		id, err := a.newThemeID(root, name)
 		if err != nil {
 			return ThemeInfoDTO{}, err
 		}
-	} else if _, err := a.themeDirByID(id); err != nil {
-		// editing requires an existing installed theme; presets are not on
-		// disk, so their ids fail here too.
+		manifest.ID = id
+	} else {
+		existing, err := a.findTheme(req.ID)
+		if err != nil {
+			return ThemeInfoDTO{}, err
+		}
+		manifest = existing.pkg.Manifest
+		for f, content := range existing.pkg.Files {
+			files[f] = content
+		}
+		previousPath = existing.path
+	}
+	manifest.Name = name
+	manifest.Base = req.Base
+	if manifest.Tokens, err = json.Marshal(tokens); err != nil {
 		return ThemeInfoDTO{}, err
 	}
-	tokensJSON, err := json.Marshal(tokens)
+	manifestJSON, err := json.MarshalIndent(manifest, "", "  ")
 	if err != nil {
 		return ThemeInfoDTO{}, err
 	}
-	manifest, err := json.MarshalIndent(themepack.Manifest{
-		ManifestVersion: themepack.ManifestVersion,
-		ID:              id,
-		Name:            name,
-		Base:            req.Base,
-		Tokens:          tokensJSON,
-	}, "", "  ")
+	files["manifest.json"] = manifestJSON
+
+	dest := filepath.Join(root, containerName(manifest.ID))
+	err = themepack.WriteContainer(&themepack.Package{Manifest: manifest, Files: files}, dest, false)
 	if err != nil {
 		return ThemeInfoDTO{}, err
 	}
-	dir := filepath.Join(root, id)
-	if err := os.MkdirAll(dir, 0o700); err != nil {
-		return ThemeInfoDTO{}, err
+	// an edited legacy folder migrates to a file; drop the folder.
+	if previousPath != "" && previousPath != dest {
+		if err := os.RemoveAll(previousPath); err != nil {
+			a.log.Warn("remove replaced theme", "path", previousPath, "err", err)
+		}
 	}
-	if err := os.WriteFile(filepath.Join(dir, "manifest.json"), manifest, 0o600); err != nil {
-		return ThemeInfoDTO{}, err
-	}
-	p, err := themepack.LoadInstalled(dir)
+	p, err := a.readContainerFile(dest)
 	if err != nil {
 		return ThemeInfoDTO{}, err
 	}
 	return a.themeInfo(p), nil
 }
 
-// newThemeID derives a fresh theme id from the name, stepping around presets
-// and already installed themes with a numeric suffix.
+// newThemeID derives a fresh theme id from the name, stepping around
+// existing themes with a numeric suffix.
 func (a *App) newThemeID(root, name string) (string, error) {
 	slug := themepack.Slug(name)
 	for i := 1; i <= 100; i++ {
@@ -95,10 +106,7 @@ func (a *App) newThemeID(root, name string) (string, error) {
 		if i > 1 {
 			id = fmt.Sprintf("%s-%d", slug, i)
 		}
-		if _, ok := themepack.Preset(id); ok {
-			continue
-		}
-		if _, err := os.Stat(filepath.Join(root, id)); os.IsNotExist(err) {
+		if _, err := a.findTheme(id); err != nil {
 			return id, nil
 		}
 	}

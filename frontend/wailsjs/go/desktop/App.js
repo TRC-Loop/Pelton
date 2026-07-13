@@ -182,6 +182,10 @@ export function MoveMessage(arg1, arg2) {
   return window['go']['desktop']['App']['MoveMessage'](arg1, arg2);
 }
 
+export function OpenThemesFolder() {
+  return window['go']['desktop']['App']['OpenThemesFolder']();
+}
+
 export function PreviewThemeImport() {
   return window['go']['desktop']['App']['PreviewThemeImport']();
 }

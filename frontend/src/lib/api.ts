@@ -623,8 +623,13 @@ export function exportTheme(id: string): Promise<string> {
   return App.ExportTheme(id)
 }
 
-// saveCustomTheme validates and writes a palette-editor theme as an installed
-// theme folder, returning its gallery info.
+// saveCustomTheme validates and writes a palette-editor theme as a
+// .peltontheme file in the themes folder, returning its gallery info.
 export function saveCustomTheme(req: SaveThemeRequest): Promise<ThemeInfo> {
   return App.SaveCustomTheme(req) as Promise<ThemeInfo>
+}
+
+// openThemesFolder shows the themes folder in the system file manager.
+export function openThemesFolder(): Promise<void> {
+  return App.OpenThemesFolder()
 }

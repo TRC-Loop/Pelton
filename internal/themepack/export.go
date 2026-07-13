@@ -20,6 +20,33 @@ func Export(dir, dest string) error {
 	if _, ok := files["manifest.json"]; !ok {
 		return fmt.Errorf("%s has no manifest.json", dir)
 	}
+	return writeZip(files, dest)
+}
+
+// WriteContainer writes a parsed package back out as a .peltontheme file.
+// When blockRemote is set - the user's choice at the import warning - every
+// css file is written with its remote references stripped, so the container
+// on disk is exactly what will run. This is how themes land in the themes
+// folder: imports copy through here, the palette editor saves through here,
+// and the default themes are seeded through here.
+func WriteContainer(p *Package, dest string, blockRemote bool) error {
+	files := make(map[string][]byte, len(p.Files))
+	cssPaths := make(map[string]bool, len(p.CSSFiles))
+	for _, f := range p.CSSFiles {
+		cssPaths[f.Path] = true
+	}
+	for name, content := range p.Files {
+		if blockRemote && cssPaths[name] {
+			content = []byte(StripRemote(string(content)))
+		}
+		files[name] = content
+	}
+	return writeZip(files, dest)
+}
+
+// writeZip writes a path-keyed file map as a zip at dest, entries in sorted
+// order for reproducibility.
+func writeZip(files map[string][]byte, dest string) error {
 	names := make([]string, 0, len(files))
 	for name := range files {
 		names = append(names, name)

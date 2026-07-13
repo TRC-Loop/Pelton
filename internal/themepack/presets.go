@@ -9,10 +9,11 @@ import (
 	"sync"
 )
 
-// presetsFS embeds the built-in preset themes. Each preset is a regular theme
-// folder (manifest.json with inline tokens) and goes through the same parsing
-// and validation as an imported .peltontheme, so presets double as reference
-// themes for the format.
+// presetsFS embeds the default themes that are seeded into the user's themes
+// folder as regular .peltontheme files on first use. Each preset is a normal
+// theme (manifest.json with inline tokens) and goes through the same parsing
+// and validation as an imported container. Once seeded, the files in the
+// themes folder are the themes; the embedded copies are only the seed source.
 //
 //go:embed presets
 var presetsFS embed.FS
@@ -87,15 +88,9 @@ func loadPresetDir(dir string) (*Package, error) {
 	return p, nil
 }
 
-// Presets returns the built-in preset themes, sorted by name.
+// Presets returns the default themes to seed the themes folder with, sorted
+// by name.
 func Presets() []*Package {
 	presetsOnce.Do(loadPresets)
 	return presetsList
-}
-
-// Preset returns the built-in preset with the given id, if there is one.
-func Preset(id string) (*Package, bool) {
-	presetsOnce.Do(loadPresets)
-	p, ok := presetsByID[id]
-	return p, ok
 }
