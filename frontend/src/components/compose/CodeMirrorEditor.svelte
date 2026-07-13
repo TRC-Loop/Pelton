@@ -26,8 +26,12 @@
     {
       '&': { height: '100%', backgroundColor: 'transparent', color: 'var(--text-primary)' },
       '&.cm-focused': { outline: 'none' },
+      // --compose-font is the mail body font setting, set by Compose on the
+      // editor container (#64); unset, each mode keeps its built-in font. the
+      // markdown editor stays on the ui font: it edits source, and the
+      // preview pane is what mirrors the recipient's view.
       '.cm-scroller': {
-        fontFamily: mono ? 'var(--font-mono, ui-monospace, monospace)' : 'var(--font-ui)',
+        fontFamily: mono ? 'var(--compose-font, var(--font-mono, ui-monospace, monospace))' : 'var(--font-ui)',
         fontSize: 'var(--fz-body)',
         lineHeight: '1.55',
         overflow: 'auto',

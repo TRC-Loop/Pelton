@@ -34,10 +34,17 @@
   import { loadOutbox } from '../../stores/outbox'
   import { scheduleUndo } from '../../stores/undosend'
   import { prefs } from '../../stores/prefs'
+  import { bodyFontStack } from '../../lib/fonts'
   import { buildRequest, hasRecipients } from '../../lib/mailcompose'
   import { atTime, addDays, nextWeekday } from '../../lib/datepresets'
   import { errorMessage, toastError, toastSuccess } from '../../stores/toast'
   import type CodeMirrorEditor from './CodeMirrorEditor.svelte'
+
+  // the mail body font setting flows into the editors as a css variable so
+  // what you type looks like what recipients without their own fonts see
+  // (#64). null (the default) leaves each editor's built-in font untouched.
+  let composeFont: string | null = null
+  $: composeFont = bodyFontStack($prefs.bodyFont)
   import type { EditorMode } from '../../lib/types'
   import { t } from '../../lib/i18n'
 
@@ -434,7 +441,7 @@
 
     <AddressFields {session} />
 
-    <div class="editor">
+    <div class="editor" style:--compose-font={composeFont}>
       {#if session.mode === 'wysiwyg'}
         <!-- the rich editor loads lazily; show a hint while the chunk arrives. -->
         {#if RichEditor}
@@ -672,6 +679,7 @@
     min-height: 0;
     background: transparent;
     color: var(--text-primary);
+    font-family: var(--compose-font, inherit);
     font-size: var(--fz-body);
     line-height: 1.55;
     overflow-y: auto;
