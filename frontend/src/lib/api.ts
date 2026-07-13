@@ -582,6 +582,9 @@ export const SettingKeys = {
   updateCheckFrequency: 'update_check_frequency',
   emptyStateImage: 'empty_state_image',
   themeId: 'theme_id',
+  menuBarInApp: 'menu_bar_in_app',
+  menuBarNativeMinimal: 'menu_bar_native_minimal',
+  menuBarIcons: 'menu_bar_icons',
 } as const
 
 // --- custom themes ---

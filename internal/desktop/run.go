@@ -53,7 +53,7 @@ func Run(cfg Config) error {
 		OnStartup:         app.startup,
 		OnDomReady:        app.domReady,
 		OnShutdown:        app.shutdown,
-		Menu:              app.buildMenu(),
+		Menu:              app.initialMenu(),
 		Mac: &mac.Options{
 			About: &mac.AboutInfo{
 				Title:   "Pelton",

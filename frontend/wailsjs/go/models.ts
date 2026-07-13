@@ -786,6 +786,9 @@ export namespace desktop {
 	    updateCheckFrequency: string;
 	    emptyStateImage: string;
 	    themeId: string;
+	    menuBarInApp: boolean;
+	    menuBarNativeMinimal: boolean;
+	    menuBarIcons: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new UIPrefsDTO(source);
@@ -838,6 +841,9 @@ export namespace desktop {
 	        this.updateCheckFrequency = source["updateCheckFrequency"];
 	        this.emptyStateImage = source["emptyStateImage"];
 	        this.themeId = source["themeId"];
+	        this.menuBarInApp = source["menuBarInApp"];
+	        this.menuBarNativeMinimal = source["menuBarNativeMinimal"];
+	        this.menuBarIcons = source["menuBarIcons"];
 	    }
 	}
 	export class UnifiedViewDTO {

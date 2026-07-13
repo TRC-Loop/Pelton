@@ -59,6 +59,9 @@ const defaults: UIPrefs = {
   updateCheckFrequency: 'off',
   emptyStateImage: '',
   themeId: '',
+  menuBarInApp: false,
+  menuBarNativeMinimal: false,
+  menuBarIcons: false,
 }
 
 export const prefs = writable<UIPrefs>(defaults)
@@ -288,6 +291,25 @@ export function setAccent(accent: string): void {
   prefs.update((p) => ({ ...p, accent }))
   applyAccent(accent)
   void setSetting(SettingKeys.accent, accent)
+}
+
+// setMenuBarInApp shows the in-app menu bar on macOS. setMenuBarNativeMinimal
+// reduces the native macOS menu to the app menu while the in-app bar is on;
+// the backend rebuilds the native menu when either setting is written.
+export function setMenuBarInApp(value: boolean): void {
+  prefs.update((p) => ({ ...p, menuBarInApp: value }))
+  void setSetting(SettingKeys.menuBarInApp, String(value))
+}
+
+export function setMenuBarNativeMinimal(value: boolean): void {
+  prefs.update((p) => ({ ...p, menuBarNativeMinimal: value }))
+  void setSetting(SettingKeys.menuBarNativeMinimal, String(value))
+}
+
+// setMenuBarIcons toggles icons in the in-app menu bar's dropdowns.
+export function setMenuBarIcons(value: boolean): void {
+  prefs.update((p) => ({ ...p, menuBarIcons: value }))
+  void setSetting(SettingKeys.menuBarIcons, String(value))
 }
 
 // toggle keys map a boolean preference to its setting key so setToggle stays
