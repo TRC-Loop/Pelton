@@ -56,6 +56,9 @@ const (
 	settingComposeAutocomplete = "compose_autocomplete"
 	settingComposeChips        = "compose_chips"
 	settingEmptyStateImage     = "empty_state_image"
+	// reader fallback font for mail bodies (a key from the frontend's curated
+	// list; mail that declares its own fonts keeps them).
+	settingBodyFont = "body_font"
 )
 
 // settingUpdateCheckFreq, settingLastUpdateCheck and defaultUpdateCheckFrequency
@@ -194,6 +197,8 @@ type UIPrefsDTO struct {
 	// ThemeID selects an installed custom theme (see bind_themes.go). Empty
 	// means the built-in default themes driven by the Theme setting.
 	ThemeID string `json:"themeId"`
+	// BodyFont is the reader fallback font for mail bodies.
+	BodyFont string `json:"bodyFont"`
 }
 
 // GetUIPrefs returns all ui preferences with defaults filled in, so startup is a
@@ -249,6 +254,7 @@ func (a *App) GetUIPrefs() (UIPrefsDTO, error) {
 		UpdateCheckFrequency:       a.stringSetting(settingUpdateCheckFreq, defaultUpdateCheckFrequency),
 		EmptyStateImage:            a.stringSetting(settingEmptyStateImage, ""),
 		ThemeID:                    a.stringSetting(settingThemeID, ""),
+		BodyFont:                   a.stringSetting(settingBodyFont, "default"),
 	}, nil
 }
 

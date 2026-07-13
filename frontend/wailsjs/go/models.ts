@@ -786,6 +786,7 @@ export namespace desktop {
 	    updateCheckFrequency: string;
 	    emptyStateImage: string;
 	    themeId: string;
+	    bodyFont: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new UIPrefsDTO(source);
@@ -838,6 +839,7 @@ export namespace desktop {
 	        this.updateCheckFrequency = source["updateCheckFrequency"];
 	        this.emptyStateImage = source["emptyStateImage"];
 	        this.themeId = source["themeId"];
+	        this.bodyFont = source["bodyFont"];
 	    }
 	}
 	export class UnifiedViewDTO {

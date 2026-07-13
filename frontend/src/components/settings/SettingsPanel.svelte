@@ -86,6 +86,7 @@
     setComposeAutocomplete,
     setComposeChips,
     setEmptyStateImage,
+    setBodyFont,
   } from '../../stores/prefs'
   import peltonLogo from '../../assets/images/icons/pelton-logo.png'
   import type { Locale } from '../../lib/i18n'
@@ -197,7 +198,14 @@
     }
   }
 
+  import { bodyFonts } from '../../lib/fonts'
+
+  $: bodyFontOptions = bodyFonts.map((f) => ({ key: f.key, label: f.label ?? $t(f.labelKey ?? '') }))
+
   // select handlers (the cast lives in script; inline ts casts break the parser).
+  function onBodyFont(event: Event): void {
+    setBodyFont((event.currentTarget as HTMLSelectElement).value)
+  }
   function onSwipeLeft(event: Event): void {
     setSwipeLeftAction((event.currentTarget as HTMLSelectElement).value)
   }
@@ -663,6 +671,15 @@
             on:change={(e) => setMessageFontSize(Number(e.detail))}
           />
           <p class="hint">{$t('settingsPanel.hint.fontSize')}</p>
+          <div class="row">
+            <span class="row-label">{$t('settingsPanel.label.bodyFont')}</span>
+            <select class="select" value={$prefs.bodyFont} on:change={onBodyFont}>
+              {#each bodyFontOptions as opt}
+                <option value={opt.key}>{opt.label}</option>
+              {/each}
+            </select>
+          </div>
+          <p class="hint">{$t('settingsPanel.hint.bodyFont')}</p>
           <TechToggles />
         </section>
       {:else if active === 'gestures'}

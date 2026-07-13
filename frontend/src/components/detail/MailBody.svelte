@@ -15,6 +15,7 @@
   import { setBodyHtml } from '../../stores/message'
   import { errorMessage, toastError, toastSuccess } from '../../stores/toast'
   import { displayName, linkifySegments } from '../../lib/format'
+  import { bodyFontStack } from '../../lib/fonts'
   import { t } from '../../lib/i18n'
   import type { MessageDetail } from '../../lib/types'
 
@@ -76,8 +77,10 @@
   // click handler that runs natively inside the iframe's own document, using
   // postMessage to hand the url back to the parent, has no such dependency on
   // cross-frame event delivery.
-  function buildSrcdoc(html: string, allowRemote: boolean, fontSize: number, nonce: string): string {
-    const font = readVar('--font-ui')
+  function buildSrcdoc(html: string, allowRemote: boolean, fontSize: number, bodyFont: string, nonce: string): string {
+    // the reader font preference only sets the fallback; mail that declares
+    // its own fonts keeps them since this is just the base font-family.
+    const font = bodyFontStack(bodyFont) ?? readVar('--font-ui')
     const css = `
   html,body{margin:0;background:#ffffff;color:#1a1a1a;font-family:${font};font-size:${fontSize}px;line-height:1.5;}
   body{padding:4px 2px;word-wrap:break-word;overflow-wrap:break-word;}
@@ -115,7 +118,7 @@
     return crypto.randomUUID().replace(/-/g, '')
   }
 
-  $: srcdoc = buildSrcdoc(detail.bodyHtmlSafe, remoteLoaded, $prefs.messageFontSize, makeNonce())
+  $: srcdoc = buildSrcdoc(detail.bodyHtmlSafe, remoteLoaded, $prefs.messageFontSize, $prefs.bodyFont, makeNonce())
 
   // plain-text bodies render in a <pre>, not the sandboxed iframe, so bare
   // urls need their own linkification: nothing upstream turns them into real

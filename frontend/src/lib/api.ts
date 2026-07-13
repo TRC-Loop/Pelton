@@ -582,6 +582,7 @@ export const SettingKeys = {
   updateCheckFrequency: 'update_check_frequency',
   emptyStateImage: 'empty_state_image',
   themeId: 'theme_id',
+  bodyFont: 'body_font',
 } as const
 
 // --- custom themes ---

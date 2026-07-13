@@ -59,6 +59,7 @@ const defaults: UIPrefs = {
   updateCheckFrequency: 'off',
   emptyStateImage: '',
   themeId: '',
+  bodyFont: 'default',
 }
 
 export const prefs = writable<UIPrefs>(defaults)
@@ -288,6 +289,12 @@ export function setAccent(accent: string): void {
   prefs.update((p) => ({ ...p, accent }))
   applyAccent(accent)
   void setSetting(SettingKeys.accent, accent)
+}
+
+// setBodyFont picks the reader fallback font for mail bodies.
+export function setBodyFont(value: string): void {
+  prefs.update((p) => ({ ...p, bodyFont: value }))
+  void setSetting(SettingKeys.bodyFont, value)
 }
 
 // toggle keys map a boolean preference to its setting key so setToggle stays
