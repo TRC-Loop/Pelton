@@ -787,6 +787,8 @@ export namespace desktop {
 	    emptyStateImage: string;
 	    themeId: string;
 	    bodyFont: string;
+	    uiFont: string;
+	    monoFont: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new UIPrefsDTO(source);
@@ -840,6 +842,8 @@ export namespace desktop {
 	        this.emptyStateImage = source["emptyStateImage"];
 	        this.themeId = source["themeId"];
 	        this.bodyFont = source["bodyFont"];
+	        this.uiFont = source["uiFont"];
+	        this.monoFont = source["monoFont"];
 	    }
 	}
 	export class UnifiedViewDTO {

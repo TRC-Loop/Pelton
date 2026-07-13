@@ -223,6 +223,10 @@ export interface UIPrefs {
   // bodyFont is the reader fallback font for mail bodies (a key from the
   // curated list in lib/fonts.ts).
   bodyFont: string
+  // uiFont / monoFont override the interface and monospace font tokens (a
+  // curated key or 'sys:<family>'; 'default' keeps the built-in fonts).
+  uiFont: string
+  monoFont: string
 }
 
 // an installed custom theme, as shown in the settings gallery.

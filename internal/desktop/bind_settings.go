@@ -59,6 +59,11 @@ const (
 	// reader fallback font for mail bodies (a key from the frontend's curated
 	// list; mail that declares its own fonts keeps them).
 	settingBodyFont = "body_font"
+	// interface and monospace fonts (#58): keys from the frontend's curated
+	// lists or "sys:<family>" for an installed font, overriding the --font-ui
+	// and --font-mono tokens.
+	settingUIFont   = "ui_font"
+	settingMonoFont = "mono_font"
 )
 
 // settingUpdateCheckFreq, settingLastUpdateCheck and defaultUpdateCheckFrequency
@@ -199,6 +204,9 @@ type UIPrefsDTO struct {
 	ThemeID string `json:"themeId"`
 	// BodyFont is the reader fallback font for mail bodies.
 	BodyFont string `json:"bodyFont"`
+	// UIFont and MonoFont override the interface and monospace font tokens.
+	UIFont   string `json:"uiFont"`
+	MonoFont string `json:"monoFont"`
 }
 
 // GetUIPrefs returns all ui preferences with defaults filled in, so startup is a
@@ -255,6 +263,8 @@ func (a *App) GetUIPrefs() (UIPrefsDTO, error) {
 		EmptyStateImage:            a.stringSetting(settingEmptyStateImage, ""),
 		ThemeID:                    a.stringSetting(settingThemeID, ""),
 		BodyFont:                   a.stringSetting(settingBodyFont, "default"),
+		UIFont:                     a.stringSetting(settingUIFont, "default"),
+		MonoFont:                   a.stringSetting(settingMonoFont, "default"),
 	}, nil
 }
 

@@ -7,8 +7,9 @@
 import { writable } from 'svelte/store'
 import type { UIPrefs, ThemePref, DensityPref, EditorMode } from '../lib/types'
 import { getUIPrefs, setSetting, SettingKeys, systemColorScheme, setWindowTheme, getThemeApply } from '../lib/api'
-import { applyTheme, applyDensity, applyAccent, applyScale, watchSystemTheme, setSystemSchemeOverride, resolveTheme } from '../theme/theme'
+import { applyTheme, applyDensity, applyAccent, applyScale, applyUIFont, applyMonoFont, watchSystemTheme, setSystemSchemeOverride, resolveTheme } from '../theme/theme'
 import { applyUserTheme } from '../theme/usertheme'
+import { uiFontStack, monoFontStack } from '../lib/fonts'
 import { setLocale, type Locale } from '../lib/i18n'
 
 // defaults match the backend defaults so the ui renders sanely even before the
@@ -60,6 +61,8 @@ const defaults: UIPrefs = {
   emptyStateImage: '',
   themeId: '',
   bodyFont: 'default',
+  uiFont: 'default',
+  monoFont: 'default',
 }
 
 export const prefs = writable<UIPrefs>(defaults)
@@ -77,6 +80,8 @@ function applyAll(p: UIPrefs): void {
   applyDensity(p.density as DensityPref)
   applyAccent(p.accent)
   applyScale(p.uiScale)
+  applyUIFont(uiFontStack(p.uiFont))
+  applyMonoFont(monoFontStack(p.monoFont))
   setLocale(p.language as Locale)
 }
 
@@ -295,6 +300,20 @@ export function setAccent(accent: string): void {
 export function setBodyFont(value: string): void {
   prefs.update((p) => ({ ...p, bodyFont: value }))
   void setSetting(SettingKeys.bodyFont, value)
+}
+
+// setUIFont / setMonoFont override the interface and monospace font tokens,
+// applying live like the other appearance settings.
+export function setUIFont(value: string): void {
+  prefs.update((p) => ({ ...p, uiFont: value }))
+  applyUIFont(uiFontStack(value))
+  void setSetting(SettingKeys.uiFont, value)
+}
+
+export function setMonoFont(value: string): void {
+  prefs.update((p) => ({ ...p, monoFont: value }))
+  applyMonoFont(monoFontStack(value))
+  void setSetting(SettingKeys.monoFont, value)
 }
 
 // toggle keys map a boolean preference to its setting key so setToggle stays

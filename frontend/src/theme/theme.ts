@@ -46,6 +46,27 @@ export function applyDensity(pref: DensityPref): void {
   document.documentElement.setAttribute('data-density', pref)
 }
 
+// applyUIFont / applyMonoFont override the font tokens with the user's chosen
+// stack; null removes the override so the token falls back to the built-in
+// (or active theme's) value. inline styles on the root win over any
+// stylesheet, which is exactly the precedence a per-user choice should have.
+export function applyUIFont(stack: string | null): void {
+  setFontToken('--font-ui', stack)
+}
+
+export function applyMonoFont(stack: string | null): void {
+  setFontToken('--font-mono', stack)
+}
+
+function setFontToken(name: string, stack: string | null): void {
+  const root = document.documentElement
+  if (stack) {
+    root.style.setProperty(name, stack)
+  } else {
+    root.style.removeProperty(name)
+  }
+}
+
 // applyScale zooms the whole interface by a string multiplier ("1" = 100%).
 // zoom (rather than a root font-size) scales the px-based tokens and layout
 // together, and is supported in both WKWebView and WebView2. an invalid or

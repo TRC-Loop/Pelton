@@ -583,6 +583,8 @@ export const SettingKeys = {
   emptyStateImage: 'empty_state_image',
   themeId: 'theme_id',
   bodyFont: 'body_font',
+  uiFont: 'ui_font',
+  monoFont: 'mono_font',
 } as const
 
 // listSystemFonts returns the installed font family names for the body font
