@@ -218,6 +218,10 @@ export function SaveAttachment(arg1, arg2) {
   return window['go']['desktop']['App']['SaveAttachment'](arg1, arg2);
 }
 
+export function SaveCustomTheme(arg1) {
+  return window['go']['desktop']['App']['SaveCustomTheme'](arg1);
+}
+
 export function SaveDraft(arg1, arg2) {
   return window['go']['desktop']['App']['SaveDraft'](arg1, arg2);
 }

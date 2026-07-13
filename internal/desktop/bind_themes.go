@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	wailsruntime "github.com/wailsapp/wails/v2/pkg/runtime"
 
@@ -32,6 +33,12 @@ type ThemeInfoDTO struct {
 	// CompatWarning is set when the running app version is outside the range
 	// the theme declares itself made for. Informational only.
 	CompatWarning string `json:"compatWarning"`
+	// Builtin marks a preset shipped inside the app: not on disk, cannot be
+	// deleted or exported, always listed first.
+	Builtin bool `json:"builtin"`
+	// Swatches are a few of the theme's token colors for the gallery card,
+	// for themes without a preview screenshot.
+	Swatches []string `json:"swatches"`
 }
 
 // ThemeApplyDTO is everything the frontend needs to apply a theme: the base
@@ -94,7 +101,24 @@ func (a *App) themeInfo(p *themepack.Package) ThemeInfoDTO {
 		RemoteRefs:    refs,
 		Preview:       p.PreviewDataURI(),
 		CompatWarning: themepack.CompatWarning(m.Pelton, a.version),
+		Swatches:      swatchTokens(p.Tokens),
 	}
+}
+
+// swatchTokens picks a handful of directly renderable token colors for the
+// gallery card, in a fixed order. Derived values (rgba, color-mix) are
+// skipped; the card only needs a recognizable strip, not the full palette.
+func swatchTokens(tokens map[string]string) []string {
+	swatches := []string{}
+	for _, name := range []string{
+		"surface-base", "surface-raised", "text-primary",
+		"success", "warning", "danger",
+	} {
+		if v, ok := tokens[name]; ok && strings.HasPrefix(v, "#") {
+			swatches = append(swatches, v)
+		}
+	}
+	return swatches
 }
 
 // ListThemes returns every installed theme. Folders that fail to parse are
@@ -112,7 +136,13 @@ func (a *App) ListThemes() ([]ThemeInfoDTO, error) {
 	if err != nil {
 		return nil, err
 	}
-	infos := make([]ThemeInfoDTO, 0, len(entries))
+	presets := themepack.Presets()
+	infos := make([]ThemeInfoDTO, 0, len(presets)+len(entries))
+	for _, p := range presets {
+		info := a.themeInfo(p)
+		info.Builtin = true
+		infos = append(infos, info)
+	}
 	for _, e := range entries {
 		if !e.IsDir() {
 			continue
@@ -133,6 +163,15 @@ func (a *App) ListThemes() ([]ThemeInfoDTO, error) {
 func (a *App) GetThemeApply(id string) (ThemeApplyDTO, error) {
 	if err := a.ready(); err != nil {
 		return ThemeApplyDTO{}, err
+	}
+	if p, ok := themepack.Preset(id); ok {
+		return ThemeApplyDTO{
+			ID:     p.Manifest.ID,
+			Base:   p.Manifest.Base,
+			Tokens: p.Tokens,
+			CSS:    p.AppliedCSS(),
+			Icons:  p.Icons,
+		}, nil
 	}
 	dir, err := a.themeDirByID(id)
 	if err != nil {
@@ -157,6 +196,9 @@ func (a *App) GetThemeApply(id string) (ThemeApplyDTO, error) {
 func (a *App) DeleteTheme(id string) error {
 	if err := a.ready(); err != nil {
 		return err
+	}
+	if _, ok := themepack.Preset(id); ok {
+		return fmt.Errorf("built-in themes cannot be deleted")
 	}
 	dir, err := a.themeDirByID(id)
 	if err != nil {

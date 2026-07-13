@@ -4,16 +4,27 @@
   // card applies immediately; the import flow goes through ThemeImportModal
   // (read-before-import, remote-reference choice).
   import { onMount } from 'svelte'
-  import { IconFileImport, IconRefresh, IconTrash, IconUpload, IconAlertTriangle, IconWorld } from '@tabler/icons-svelte'
-  import { listThemes, previewThemeImport, deleteTheme, exportTheme } from '../../lib/api'
-  import type { ThemeInfo, ThemeImportPreview } from '../../lib/types'
+  import { IconFileImport, IconRefresh, IconTrash, IconUpload, IconAlertTriangle, IconWorld, IconPlus, IconPencil } from '@tabler/icons-svelte'
+  import { listThemes, previewThemeImport, deleteTheme, exportTheme, getThemeApply } from '../../lib/api'
+  import type { ThemeInfo, ThemeImportPreview, ThemePref } from '../../lib/types'
   import { prefs, setThemeId } from '../../stores/prefs'
+  import { applyUserTheme } from '../../theme/usertheme'
+  import { applyTheme } from '../../theme/theme'
   import { toastInfo, toastError, errorMessage } from '../../stores/toast'
   import { t } from '../../lib/i18n'
   import ThemeImportModal from './ThemeImportModal.svelte'
+  import ThemeEditorModal from './ThemeEditorModal.svelte'
+
+  interface EditorSeed {
+    id: string
+    name: string
+    base: 'light' | 'dark'
+    tokens: Record<string, string>
+  }
 
   let themes: ThemeInfo[] = []
   let importPreview: ThemeImportPreview | null = null
+  let editorSeed: EditorSeed | null = null
   // id of the theme whose delete button is in its confirm step.
   let confirmingDelete = ''
 
@@ -62,6 +73,57 @@
     }
   }
 
+  // createTheme opens the editor on a blank palette over the currently
+  // resolved base.
+  function createTheme(): void {
+    const base = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light'
+    editorSeed = { id: '', name: '', base, tokens: {} }
+  }
+
+  // editTheme opens the editor prefilled with a theme's palette. built-in
+  // presets seed a new theme (they cannot be overwritten); installed palette
+  // themes are edited in place.
+  async function editTheme(theme: ThemeInfo): Promise<void> {
+    try {
+      const apply = await getThemeApply(theme.id)
+      editorSeed = {
+        id: theme.builtin ? '' : theme.id,
+        name: theme.builtin ? $t('themes.copyName').replace('{name}', theme.name) : theme.name,
+        base: apply.base === 'dark' ? 'dark' : 'light',
+        tokens: apply.tokens ?? {},
+      }
+    } catch (err) {
+      toastError(errorMessage(err))
+    }
+  }
+
+  // closeEditor drops the draft preview and restores whatever theme was
+  // active before the editor opened.
+  async function closeEditor(): Promise<void> {
+    editorSeed = null
+    try {
+      if ($prefs.themeId) {
+        applyUserTheme(await getThemeApply($prefs.themeId))
+      } else {
+        applyUserTheme(null)
+        applyTheme($prefs.theme as ThemePref)
+      }
+    } catch {
+      applyUserTheme(null)
+      applyTheme($prefs.theme as ThemePref)
+    }
+  }
+
+  async function onEditorSaved(event: CustomEvent<ThemeInfo>): Promise<void> {
+    editorSeed = null
+    await reload()
+    try {
+      await setThemeId(event.detail.id)
+    } catch (err) {
+      toastError(errorMessage(err))
+    }
+  }
+
   async function onDelete(id: string): Promise<void> {
     if (confirmingDelete !== id) {
       confirmingDelete = id
@@ -83,6 +145,10 @@
 <p class="hint">{$t('themes.hint')}</p>
 
 <div class="toolbar">
+  <button type="button" class="action-btn" on:click={createTheme}>
+    <IconPlus size={15} stroke={1.6} />
+    {$t('themes.create')}
+  </button>
   <button type="button" class="action-btn" on:click={startImport}>
     <IconFileImport size={15} stroke={1.6} />
     {$t('themes.import')}
@@ -107,14 +173,24 @@
       <button type="button" class="card-body" on:click={() => activate(theme.id)}>
         {#if theme.preview}
           <img class="preview" src={theme.preview} alt="" draggable="false" />
+        {:else if theme.swatches?.length}
+          <div class="swatch strip">
+            {#each theme.swatches as color, i (i)}
+              <span class="chip" style:background={color}></span>
+            {/each}
+          </div>
         {:else}
           <div class="swatch" class:dark-base={theme.base === 'dark'}></div>
         {/if}
         <div class="meta">
           <span class="name">{theme.name}</span>
           <span class="sub">
-            {#if theme.author}{$t('themes.by').replace('{author}', theme.author)}{/if}
-            {#if theme.version}&nbsp;· v{theme.version}{/if}
+            {#if theme.builtin}
+              {$t('themes.builtin')}
+            {:else}
+              {#if theme.author}{$t('themes.by').replace('{author}', theme.author)}{/if}
+              {#if theme.version}&nbsp;· v{theme.version}{/if}
+            {/if}
           </span>
           {#if theme.compatWarning}
             <span class="badge warn" title={theme.compatWarning}>
@@ -131,22 +207,29 @@
         </div>
       </button>
       <div class="card-actions">
-        <button type="button" class="icon-btn" title={$t('themes.export')} on:click={() => onExport(theme.id)}>
-          <IconUpload size={14} stroke={1.6} />
-        </button>
-        <button
-          type="button"
-          class="icon-btn danger"
-          title={$t('themes.delete')}
-          on:click={() => onDelete(theme.id)}
-          on:mouseleave={() => (confirmingDelete = '')}
-        >
-          {#if confirmingDelete === theme.id}
-            <span class="confirm-text">{$t('themes.deleteConfirm')}</span>
-          {:else}
-            <IconTrash size={14} stroke={1.6} />
-          {/if}
-        </button>
+        {#if !theme.hasCss}
+          <button type="button" class="icon-btn" title={$t('themes.edit')} on:click={() => editTheme(theme)}>
+            <IconPencil size={14} stroke={1.6} />
+          </button>
+        {/if}
+        {#if !theme.builtin}
+          <button type="button" class="icon-btn" title={$t('themes.export')} on:click={() => onExport(theme.id)}>
+            <IconUpload size={14} stroke={1.6} />
+          </button>
+          <button
+            type="button"
+            class="icon-btn danger"
+            title={$t('themes.delete')}
+            on:click={() => onDelete(theme.id)}
+            on:mouseleave={() => (confirmingDelete = '')}
+          >
+            {#if confirmingDelete === theme.id}
+              <span class="confirm-text">{$t('themes.deleteConfirm')}</span>
+            {:else}
+              <IconTrash size={14} stroke={1.6} />
+            {/if}
+          </button>
+        {/if}
       </div>
     </div>
   {/each}
@@ -154,6 +237,17 @@
 
 {#if importPreview}
   <ThemeImportModal preview={importPreview} on:installed={onInstalled} on:close={() => (importPreview = null)} />
+{/if}
+
+{#if editorSeed}
+  <ThemeEditorModal
+    id={editorSeed.id}
+    name={editorSeed.name}
+    base={editorSeed.base}
+    tokens={editorSeed.tokens}
+    on:saved={onEditorSaved}
+    on:close={closeEditor}
+  />
 {/if}
 
 <style>
@@ -237,6 +331,14 @@
 
   .swatch.dark-base {
     background: #1a1c1f;
+  }
+
+  .swatch.strip {
+    display: flex;
+  }
+
+  .chip {
+    flex: 1;
   }
 
   .default-swatch {

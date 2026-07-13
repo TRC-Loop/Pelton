@@ -1,0 +1,29 @@
+{
+  "manifestVersion": 1,
+  "id": "preset-gruvbox-dark",
+  "name": "Gruvbox Dark",
+  "author": "Pelton",
+  "version": "1.0",
+  "description": "Retro warm dark palette based on Gruvbox by Pavel Pertsev.",
+  "license": "MIT",
+  "base": "dark",
+  "tokens": {
+    "surface-base": "#282828",
+    "surface-raised": "#32302f",
+    "surface-overlay": "#3c3836",
+    "surface-sunken": "#1d2021",
+    "surface-hover": "#403c3a",
+    "text-primary": "#ebdbb2",
+    "text-secondary": "#bdae93",
+    "text-tertiary": "#928374",
+    "border-subtle": "rgba(235, 219, 178, 0.08)",
+    "border-default": "rgba(235, 219, 178, 0.14)",
+    "border-strong": "rgba(235, 219, 178, 0.26)",
+    "success": "#b8bb26",
+    "success-bg": "color-mix(in srgb, #b8bb26 16%, transparent)",
+    "warning": "#fabd2f",
+    "warning-bg": "color-mix(in srgb, #fabd2f 16%, transparent)",
+    "danger": "#fb4934",
+    "danger-bg": "color-mix(in srgb, #fb4934 16%, transparent)"
+  }
+}

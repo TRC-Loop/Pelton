@@ -1,0 +1,29 @@
+{
+  "manifestVersion": 1,
+  "id": "preset-paper",
+  "name": "Paper",
+  "author": "Pelton",
+  "version": "1.0",
+  "description": "Warm off-white palette that reads like paper.",
+  "license": "MIT",
+  "base": "light",
+  "tokens": {
+    "surface-base": "#f4f1ea",
+    "surface-raised": "#fcfaf5",
+    "surface-overlay": "#fcfaf5",
+    "surface-sunken": "#ece8de",
+    "surface-hover": "#eae6da",
+    "text-primary": "#26231d",
+    "text-secondary": "#5a5546",
+    "text-tertiary": "#8d8778",
+    "border-subtle": "rgba(60, 50, 30, 0.08)",
+    "border-default": "rgba(60, 50, 30, 0.14)",
+    "border-strong": "rgba(60, 50, 30, 0.24)",
+    "success": "#4a7c3a",
+    "success-bg": "color-mix(in srgb, #4a7c3a 12%, transparent)",
+    "warning": "#9a6700",
+    "warning-bg": "color-mix(in srgb, #9a6700 14%, transparent)",
+    "danger": "#b5432e",
+    "danger-bg": "color-mix(in srgb, #b5432e 12%, transparent)"
+  }
+}

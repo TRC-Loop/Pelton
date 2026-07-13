@@ -1,0 +1,29 @@
+{
+  "manifestVersion": 1,
+  "id": "preset-nord",
+  "name": "Nord",
+  "author": "Pelton",
+  "version": "1.0",
+  "description": "Cool arctic dark palette based on Nord by Sven Greb.",
+  "license": "MIT",
+  "base": "dark",
+  "tokens": {
+    "surface-base": "#2e3440",
+    "surface-raised": "#3b4252",
+    "surface-overlay": "#434c5e",
+    "surface-sunken": "#272c36",
+    "surface-hover": "#404a5c",
+    "text-primary": "#eceff4",
+    "text-secondary": "#d8dee9",
+    "text-tertiary": "#8b95a7",
+    "border-subtle": "rgba(216, 222, 233, 0.1)",
+    "border-default": "rgba(216, 222, 233, 0.16)",
+    "border-strong": "rgba(216, 222, 233, 0.28)",
+    "success": "#a3be8c",
+    "success-bg": "color-mix(in srgb, #a3be8c 16%, transparent)",
+    "warning": "#ebcb8b",
+    "warning-bg": "color-mix(in srgb, #ebcb8b 16%, transparent)",
+    "danger": "#bf616a",
+    "danger-bg": "color-mix(in srgb, #bf616a 16%, transparent)"
+  }
+}

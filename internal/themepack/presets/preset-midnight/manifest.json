@@ -1,0 +1,30 @@
+{
+  "manifestVersion": 1,
+  "id": "preset-midnight",
+  "name": "Midnight",
+  "author": "Pelton",
+  "version": "1.0",
+  "description": "True black palette for OLED displays.",
+  "license": "MIT",
+  "base": "dark",
+  "tokens": {
+    "surface-base": "#000000",
+    "surface-raised": "#0e0e11",
+    "surface-overlay": "#17171c",
+    "surface-sunken": "#060608",
+    "surface-hover": "#1c1c22",
+    "text-primary": "#ededf0",
+    "text-secondary": "#a9acb4",
+    "text-tertiary": "#6e7178",
+    "border-subtle": "rgba(255, 255, 255, 0.08)",
+    "border-default": "rgba(255, 255, 255, 0.14)",
+    "border-strong": "rgba(255, 255, 255, 0.24)",
+    "success": "#3fb27a",
+    "success-bg": "color-mix(in srgb, #3fb27a 16%, transparent)",
+    "warning": "#d9a441",
+    "warning-bg": "color-mix(in srgb, #d9a441 16%, transparent)",
+    "danger": "#e5675a",
+    "danger-bg": "color-mix(in srgb, #e5675a 16%, transparent)",
+    "shadow-overlay": "0 8px 24px rgba(0, 0, 0, 0.8)"
+  }
+}

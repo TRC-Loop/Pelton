@@ -35,6 +35,13 @@ var tokenAllowlist = map[string]bool{
 	"shadow-overlay": true,
 }
 
+// ValidateTokens checks a token map against the allowlist and the safe value
+// charset, returning a cleaned copy. It is the entry point for tokens that do
+// not arrive inside a container, like the settings palette editor.
+func ValidateTokens(tokens map[string]string) (map[string]string, error) {
+	return validateTokens(tokens)
+}
+
 // validateTokens checks a token map against the allowlist and the safe value
 // charset, returning a cleaned copy. Unknown token names are rejected rather
 // than ignored so a typo in a theme fails loudly at import, not silently.

@@ -110,6 +110,8 @@ export function SaveAllAttachments(arg1:number):Promise<string>;
 
 export function SaveAttachment(arg1:number,arg2:number):Promise<string>;
 
+export function SaveCustomTheme(arg1:desktop.SaveThemeRequest):Promise<desktop.ThemeInfoDTO>;
+
 export function SaveDraft(arg1:number,arg2:desktop.ComposeRequest):Promise<number>;
 
 export function SaveSignature(arg1:desktop.SignatureDTO):Promise<desktop.SignatureDTO>;

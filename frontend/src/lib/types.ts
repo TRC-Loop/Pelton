@@ -239,6 +239,21 @@ export interface ThemeInfo {
   // set when the running app version is outside the range the theme declares
   // itself made for. informational only.
   compatWarning: string
+  // a preset shipped inside the app: listed first, cannot be deleted or
+  // exported.
+  builtin: boolean
+  // a few of the theme's token colors for the gallery card, for themes
+  // without a preview screenshot.
+  swatches: string[]
+}
+
+// a palette-editor save: name, light/dark base and token overrides. id is
+// set when editing an existing installed theme, empty when creating one.
+export interface SaveThemeRequest {
+  id: string
+  name: string
+  base: string
+  tokens: Record<string, string>
 }
 
 // everything needed to apply a custom theme to the document.
