@@ -152,6 +152,30 @@ func (c *Client) FetchMessage(uid imap.UID) (*Message, error) {
 	return msg, nil
 }
 
+// FetchRawMessage returns a message's RFC 822 source by UID, exactly as the
+// server stores it, undecoded and unparsed (PEEK, so reading it never sets
+// \Seen).
+func (c *Client) FetchRawMessage(uid imap.UID) ([]byte, error) {
+	section := &imap.FetchItemBodySection{Peek: true}
+	options := &imap.FetchOptions{
+		UID:         true,
+		BodySection: []*imap.FetchItemBodySection{section},
+	}
+
+	buffers, err := c.raw.Fetch(imap.UIDSetNum(uid), options).Collect()
+	if err != nil {
+		return nil, fmt.Errorf("imap: fetch raw message uid %d: %w", uid, err)
+	}
+	if len(buffers) == 0 {
+		return nil, fmt.Errorf("imap: message uid %d not found", uid)
+	}
+	raw := buffers[0].FindBodySection(section)
+	if raw == nil {
+		return nil, fmt.Errorf("imap: message uid %d returned no body", uid)
+	}
+	return raw, nil
+}
+
 // FetchAllFlags returns the UID and flags of every message in the selected
 // mailbox and nothing else, so it stays cheap. sync diffs this against the
 // local cache to find new, deleted and reflagged messages. over very large

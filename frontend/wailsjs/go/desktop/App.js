@@ -106,6 +106,10 @@ export function ListSystemFonts() {
   return window['go']['desktop']['App']['ListSystemFonts']();
 }
 
+export function GetMessageSource(arg1) {
+  return window['go']['desktop']['App']['GetMessageSource'](arg1);
+}
+
 export function GetSetting(arg1) {
   return window['go']['desktop']['App']['GetSetting'](arg1);
 }
