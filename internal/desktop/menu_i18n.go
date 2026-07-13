@@ -14,6 +14,7 @@ type menuStrings struct {
 	exportPDF        string
 	mailboxMenu      string
 	syncNow          string
+	openWindow       string
 	addMailbox       string
 	manageMailboxes  string
 	mailMenu         string
@@ -45,6 +46,7 @@ var menuLocales = map[string]menuStrings{
 		exportPDF:        "Export Message as PDF…",
 		mailboxMenu:      "Mailbox",
 		syncNow:          "Sync Now",
+		openWindow:       "Open Pelton",
 		addMailbox:       "Add Mailbox…",
 		manageMailboxes:  "Manage Mailboxes…",
 		mailMenu:         "Mail",
@@ -69,6 +71,7 @@ var menuLocales = map[string]menuStrings{
 		exportPDF:        "Nachricht als PDF exportieren…",
 		mailboxMenu:      "Postfach",
 		syncNow:          "Jetzt synchronisieren",
+		openWindow:       "Pelton öffnen",
 		addMailbox:       "Postfach hinzufügen…",
 		manageMailboxes:  "Postfächer verwalten…",
 		mailMenu:         "Nachricht",
@@ -93,6 +96,7 @@ var menuLocales = map[string]menuStrings{
 		exportPDF:        "Exporter le message en PDF…",
 		mailboxMenu:      "Boîte mail",
 		syncNow:          "Synchroniser maintenant",
+		openWindow:       "Ouvrir Pelton",
 		addMailbox:       "Ajouter une boîte mail…",
 		manageMailboxes:  "Gérer les boîtes mail…",
 		mailMenu:         "Message",
@@ -117,6 +121,7 @@ var menuLocales = map[string]menuStrings{
 		exportPDF:        "Bericht exporteren als PDF…",
 		mailboxMenu:      "Mailbox",
 		syncNow:          "Nu synchroniseren",
+		openWindow:       "Pelton openen",
 		addMailbox:       "Mailbox toevoegen…",
 		manageMailboxes:  "Mailboxen beheren…",
 		mailMenu:         "Bericht",
@@ -141,6 +146,7 @@ var menuLocales = map[string]menuStrings{
 		exportPDF:        "Exportar mensaje como PDF…",
 		mailboxMenu:      "Buzón",
 		syncNow:          "Sincronizar ahora",
+		openWindow:       "Abrir Pelton",
 		addMailbox:       "Añadir buzón…",
 		manageMailboxes:  "Administrar buzones…",
 		mailMenu:         "Mensaje",

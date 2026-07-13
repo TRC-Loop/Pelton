@@ -2,9 +2,26 @@
 // sender initials for the avatar, and human byte sizes for attachments. keeping
 // them here keeps formatting out of component markup.
 
+// TimeFormat is the user's clock preference: auto follows the system locale,
+// 12/24 force that clock everywhere times render. Callers pass the current
+// preference in (usually $prefs.timeFormat) so views re-render when it changes.
+export type TimeFormat = 'auto' | '12' | '24'
+
+// hour12Of maps the preference onto Intl's hour12 option; undefined lets the
+// locale decide.
+function hour12Of(timeFormat: TimeFormat): boolean | undefined {
+  if (timeFormat === '12') {
+    return true
+  }
+  if (timeFormat === '24') {
+    return false
+  }
+  return undefined
+}
+
 // formatListDate renders a date compactly for the message list: time for today,
 // weekday for the last week, otherwise a short date. empty input yields "".
-export function formatListDate(iso: string): string {
+export function formatListDate(iso: string, timeFormat: TimeFormat = 'auto'): string {
   if (!iso) {
     return ''
   }
@@ -16,7 +33,7 @@ export function formatListDate(iso: string): string {
   const now = new Date()
   const sameDay = date.toDateString() === now.toDateString()
   if (sameDay) {
-    return date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
+    return date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', hour12: hour12Of(timeFormat) })
   }
 
   const weekMs = 7 * 24 * 60 * 60 * 1000
@@ -33,7 +50,7 @@ export function formatListDate(iso: string): string {
 }
 
 // formatFullDate renders a full, unambiguous date for the message header.
-export function formatFullDate(iso: string): string {
+export function formatFullDate(iso: string, timeFormat: TimeFormat = 'auto'): string {
   if (!iso) {
     return ''
   }
@@ -48,7 +65,32 @@ export function formatFullDate(iso: string): string {
     year: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
+    hour12: hour12Of(timeFormat),
   })
+}
+
+// formatWeekdayTime renders "Mon 9:30" style labels for scheduling presets
+// (send later, snooze, outbox rows).
+export function formatWeekdayTime(date: Date, timeFormat: TimeFormat = 'auto'): string {
+  return date.toLocaleString(undefined, {
+    weekday: 'short',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: hour12Of(timeFormat),
+  })
+}
+
+// formatDateTimeMedium renders a medium date, optionally with a short time,
+// for the date picker's selection summary.
+export function formatDateTimeMedium(date: Date, withTime: boolean, timeFormat: TimeFormat = 'auto'): string {
+  if (!withTime) {
+    return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(date)
+  }
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+    hour12: hour12Of(timeFormat),
+  }).format(date)
 }
 
 // initials derives one or two uppercase letters for an avatar from a display

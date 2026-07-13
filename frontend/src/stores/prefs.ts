@@ -6,9 +6,11 @@
 
 import { writable } from 'svelte/store'
 import type { UIPrefs, ThemePref, DensityPref, EditorMode } from '../lib/types'
-import { getUIPrefs, setSetting, SettingKeys, systemColorScheme, setWindowTheme } from '../lib/api'
-import { applyTheme, applyDensity, applyAccent, applyScale, watchSystemTheme, setSystemSchemeOverride, resolveTheme } from '../theme/theme'
-import { setLocale, type Locale } from '../lib/i18n'
+import { getUIPrefs, setSetting, SettingKeys, systemColorScheme, setWindowTheme, getThemeApply } from '../lib/api'
+import { applyTheme, applyDensity, applyAccent, applyScale, applyReduceMotion, setThemeSchedule, applyUIFont, applyMonoFont, applyCorners, watchSystemTheme, setSystemSchemeOverride, resolveTheme } from '../theme/theme'
+import { applyUserTheme } from '../theme/usertheme'
+import { uiFontStack, monoFontStack } from '../lib/fonts'
+import { setLocale } from '../lib/i18n'
 
 // defaults match the backend defaults so the ui renders sanely even before the
 // first load resolves.
@@ -57,6 +59,18 @@ const defaults: UIPrefs = {
   composeChips: true,
   updateCheckFrequency: 'off',
   emptyStateImage: '',
+  cornerStyle: 'default',
+  themeId: '',
+  menuBarInApp: false,
+  menuBarNativeMinimal: false,
+  menuBarIcons: false,
+  timeFormat: 'auto',
+  reduceMotion: false,
+  themeDarkStart: '19:00',
+  themeDarkEnd: '07:00',
+  bodyFont: 'default',
+  uiFont: 'default',
+  monoFont: 'default',
 }
 
 export const prefs = writable<UIPrefs>(defaults)
@@ -69,12 +83,17 @@ function syncWindowChrome(pref: ThemePref): void {
 
 // applyAll pushes the current preferences onto the document.
 function applyAll(p: UIPrefs): void {
+  setThemeSchedule(p.themeDarkStart, p.themeDarkEnd)
   applyTheme(p.theme as ThemePref)
   syncWindowChrome(p.theme as ThemePref)
   applyDensity(p.density as DensityPref)
   applyAccent(p.accent)
   applyScale(p.uiScale)
-  setLocale(p.language as Locale)
+  applyReduceMotion(p.reduceMotion)
+  applyUIFont(uiFontStack(p.uiFont))
+  applyMonoFont(monoFontStack(p.monoFont))
+  applyCorners(p.cornerStyle)
+  setLocale(p.language)
 }
 
 // initPrefs loads preferences, applies them, and keeps the theme in sync with
@@ -97,14 +116,40 @@ export async function initPrefs(): Promise<void> {
 
   applyAll(loaded)
 
+  // a persisted custom theme applies after the base prefs so its base wins.
+  // a missing or broken theme folder falls back to the default silently; the
+  // stored selection stays, so reinstalling the theme brings it back.
+  if (loaded.themeId) {
+    try {
+      applyUserTheme(await getThemeApply(loaded.themeId))
+    } catch {
+      applyUserTheme(null)
+    }
+  }
+
   watchSystemTheme(() => {
     let current: UIPrefs = defaults
     prefs.subscribe((p) => (current = p))()
-    if (current.theme === 'system') {
+    // a custom theme pins its own base; the os scheme only matters without one.
+    if (current.theme === 'system' && !current.themeId) {
       applyTheme('system')
       syncWindowChrome('system')
     }
   })
+
+  // the schedule mode flips at its window bounds without any external event:
+  // re-evaluate once a minute and when the window regains focus (a timer that
+  // slept through os suspend fires late, so the focus check covers wake).
+  const reapplySchedule = (): void => {
+    let current: UIPrefs = defaults
+    prefs.subscribe((p) => (current = p))()
+    if (current.theme === 'schedule' && !current.themeId) {
+      applyTheme('schedule')
+      syncWindowChrome('schedule')
+    }
+  }
+  setInterval(reapplySchedule, 60_000)
+  window.addEventListener('focus', reapplySchedule)
 }
 
 // the setters below update the store, apply the change immediately, and persist
@@ -116,6 +161,37 @@ export function setTheme(theme: ThemePref): void {
   applyTheme(theme)
   syncWindowChrome(theme)
   void setSetting(SettingKeys.theme, theme)
+}
+
+// setThemeId activates an installed custom theme ('' returns to the built-in
+// default). It loads and applies the theme before persisting, so a broken
+// theme folder surfaces as a rejection here instead of a half-applied ui.
+export async function setThemeId(themeId: string): Promise<void> {
+  if (themeId) {
+    applyUserTheme(await getThemeApply(themeId))
+    syncWindowChrome(themeIdBase())
+  } else {
+    applyUserTheme(null)
+    let current: UIPrefs = defaults
+    prefs.subscribe((p) => (current = p))()
+    applyTheme(current.theme as ThemePref)
+    syncWindowChrome(current.theme as ThemePref)
+  }
+  prefs.update((p) => ({ ...p, themeId }))
+  void setSetting(SettingKeys.themeId, themeId)
+}
+
+// themeIdBase reads the base the injected theme pinned on the root element,
+// so the native window chrome can follow it.
+function themeIdBase(): 'light' | 'dark' {
+  return document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light'
+}
+
+// setCornerStyle picks the corner radius look and applies it immediately.
+export function setCornerStyle(value: string): void {
+  prefs.update((p) => ({ ...p, cornerStyle: value }))
+  applyCorners(value)
+  void setSetting(SettingKeys.cornerStyle, value)
 }
 
 export function setDensity(density: DensityPref): void {
@@ -191,8 +267,9 @@ export function setAppVimMode(value: boolean): void {
   void setSetting(SettingKeys.appVimMode, String(value))
 }
 
-// setLanguage persists the chosen ui locale and applies it immediately.
-export function setLanguage(language: Locale): void {
+// setLanguage persists the chosen ui language and applies it immediately.
+// The value is a built-in code or "user:<id>" for a custom language file.
+export function setLanguage(language: string): void {
   prefs.update((p) => ({ ...p, language }))
   setLocale(language)
   void setSetting(SettingKeys.language, language)
@@ -250,6 +327,73 @@ export function setAccent(accent: string): void {
   prefs.update((p) => ({ ...p, accent }))
   applyAccent(accent)
   void setSetting(SettingKeys.accent, accent)
+}
+
+// setBodyFont picks the reader fallback font for mail bodies.
+export function setBodyFont(value: string): void {
+  prefs.update((p) => ({ ...p, bodyFont: value }))
+  void setSetting(SettingKeys.bodyFont, value)
+}
+
+// setThemeDarkTimes updates the schedule mode's dark window and reapplies the
+// theme immediately when that mode is active.
+export function setThemeDarkTimes(start: string, end: string): void {
+  prefs.update((p) => ({ ...p, themeDarkStart: start, themeDarkEnd: end }))
+  setThemeSchedule(start, end)
+  let current: UIPrefs = defaults
+  prefs.subscribe((p) => (current = p))()
+  if (current.theme === 'schedule' && !current.themeId) {
+    applyTheme('schedule')
+    syncWindowChrome('schedule')
+  }
+  void setSetting(SettingKeys.themeDarkStart, start)
+  void setSetting(SettingKeys.themeDarkEnd, end)
+}
+
+// setMenuBarInApp shows the in-app menu bar on macOS. setMenuBarNativeMinimal
+// reduces the native macOS menu to the app menu while the in-app bar is on;
+// the backend rebuilds the native menu when either setting is written.
+export function setMenuBarInApp(value: boolean): void {
+  prefs.update((p) => ({ ...p, menuBarInApp: value }))
+  void setSetting(SettingKeys.menuBarInApp, String(value))
+}
+
+export function setMenuBarNativeMinimal(value: boolean): void {
+  prefs.update((p) => ({ ...p, menuBarNativeMinimal: value }))
+  void setSetting(SettingKeys.menuBarNativeMinimal, String(value))
+}
+
+// setMenuBarIcons toggles icons in the in-app menu bar's dropdowns.
+export function setMenuBarIcons(value: boolean): void {
+  prefs.update((p) => ({ ...p, menuBarIcons: value }))
+  void setSetting(SettingKeys.menuBarIcons, String(value))
+}
+
+// setTimeFormat picks the clock for rendered times: 'auto' (locale), '12', '24'.
+export function setTimeFormat(value: string): void {
+  prefs.update((p) => ({ ...p, timeFormat: value }))
+  void setSetting(SettingKeys.timeFormat, value)
+}
+
+// setReduceMotion toggles the ui transition/animation kill switch.
+export function setReduceMotion(value: boolean): void {
+  prefs.update((p) => ({ ...p, reduceMotion: value }))
+  applyReduceMotion(value)
+  void setSetting(SettingKeys.reduceMotion, String(value))
+}
+
+// setUIFont / setMonoFont override the interface and monospace font tokens,
+// applying live like the other appearance settings.
+export function setUIFont(value: string): void {
+  prefs.update((p) => ({ ...p, uiFont: value }))
+  applyUIFont(uiFontStack(value))
+  void setSetting(SettingKeys.uiFont, value)
+}
+
+export function setMonoFont(value: string): void {
+  prefs.update((p) => ({ ...p, monoFont: value }))
+  applyMonoFont(monoFontStack(value))
+  void setSetting(SettingKeys.monoFont, value)
 }
 
 // toggle keys map a boolean preference to its setting key so setToggle stays

@@ -179,11 +179,14 @@
     overflow-y: auto;
   }
 
-  /* the prosemirror editable area. tokens only; the editor injects .ProseMirror. */
+  /* the prosemirror editable area. tokens only; the editor injects .ProseMirror.
+     --compose-font is the mail body font setting, set by Compose on the editor
+     container (#64); unset, the ui font is inherited as before. */
   .surface :global(.ProseMirror) {
     min-height: 100%;
     outline: none;
     padding: var(--space-3) var(--space-4);
+    font-family: var(--compose-font, inherit);
     font-size: var(--fz-body);
     line-height: 1.55;
     color: var(--text-primary);

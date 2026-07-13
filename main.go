@@ -26,6 +26,13 @@ var licenseManifest string
 //go:embed LICENSE
 var programLicense string
 
+// trayIcon is the Windows notification-area icon (see the desktop package's
+// tray_windows.go). Embedded on every platform - it is a few KB - but only
+// used on Windows.
+//
+//go:embed build/windows/icon.ico
+var trayIcon []byte
+
 // version is overridden at build time with -ldflags "-X main.version=<v>" (see
 // the Makefile) and defaults to "dev".
 var version = "dev"
@@ -41,6 +48,7 @@ func main() {
 		Version:         version,
 		LicenseManifest: licenseManifest,
 		ProgramLicense:  programLicense,
+		TrayIcon:        trayIcon,
 		DemoMode:        demoMode,
 	}); err != nil {
 		println("Error:", err.Error())

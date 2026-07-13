@@ -33,6 +33,12 @@ import type {
   AccountSignatures,
   AddressBookEntry,
   AttachmentContent,
+  ThemeInfo,
+  ThemeApply,
+  ThemeImportPreview,
+  SaveThemeRequest,
+  UserLocale,
+  UserLocaleApply,
 } from './types'
 
 // isDemoMode reports whether the app launched in the cosmetic --potatoes-are-nice
@@ -122,7 +128,18 @@ export function getMessage(id: number): Promise<MessageDetail> {
   if (isDemoActive()) {
     return Promise.resolve(demoMessage(id))
   }
-  return App.GetMessage(id)
+  return App.GetMessage(id) as unknown as Promise<MessageDetail>
+}
+
+// unsubscribeMessage carries out a message's advertised unsubscribe (the
+// one-click POST or the mailto send); plain links are opened by the caller.
+export function unsubscribeMessage(id: number): Promise<void> {
+  return App.Unsubscribe(id)
+}
+
+// getMessageSource fetches a message's raw RFC 822 source on demand over imap.
+export function getMessageSource(id: number): Promise<string> {
+  return App.GetMessageSource(id)
 }
 
 // getMessageHtml re-renders a body with the chosen remote-image policy.
@@ -578,4 +595,94 @@ export const SettingKeys = {
   composeChips: 'compose_chips',
   updateCheckFrequency: 'update_check_frequency',
   emptyStateImage: 'empty_state_image',
+  cornerStyle: 'corner_style',
+  themeId: 'theme_id',
+  menuBarInApp: 'menu_bar_in_app',
+  menuBarNativeMinimal: 'menu_bar_native_minimal',
+  menuBarIcons: 'menu_bar_icons',
+  timeFormat: 'time_format',
+  reduceMotion: 'reduce_motion',
+  themeDarkStart: 'theme_dark_start',
+  themeDarkEnd: 'theme_dark_end',
+  bodyFont: 'body_font',
+  uiFont: 'ui_font',
+  monoFont: 'mono_font',
 } as const
+
+// listSystemFonts returns the installed font family names for the body font
+// dropdown (cached backend-side after the first scan).
+export function listSystemFonts(): Promise<string[]> {
+  return App.ListSystemFonts().then((f) => f ?? [])
+}
+
+// --- custom themes ---
+
+// listThemes returns every installed custom theme for the settings gallery.
+export function listThemes(): Promise<ThemeInfo[]> {
+  return App.ListThemes() as Promise<ThemeInfo[]>
+}
+
+// getThemeApply loads an installed theme in apply form (base, validated token
+// overrides, concatenated css with bundled assets inlined, icon svgs).
+export function getThemeApply(id: string): Promise<ThemeApply> {
+  return App.GetThemeApply(id) as Promise<ThemeApply>
+}
+
+// previewThemeImport opens a file picker for a .peltontheme container and
+// returns the read-before-import view. canceled is true when dismissed;
+// nothing is installed yet.
+export function previewThemeImport(): Promise<ThemeImportPreview> {
+  return App.PreviewThemeImport() as Promise<ThemeImportPreview>
+}
+
+// confirmThemeImport installs a previewed container. allowRemote keeps the
+// css's network references; false strips them before anything hits disk.
+export function confirmThemeImport(path: string, allowRemote: boolean): Promise<ThemeInfo> {
+  return App.ConfirmThemeImport(path, allowRemote) as Promise<ThemeInfo>
+}
+
+// deleteTheme removes an installed theme (and resets the selection if it was
+// active).
+export function deleteTheme(id: string): Promise<void> {
+  return App.DeleteTheme(id)
+}
+
+// exportTheme zips an installed theme back into a shareable .peltontheme via
+// a save dialog, returning the chosen path ('' if cancelled).
+export function exportTheme(id: string): Promise<string> {
+  return App.ExportTheme(id)
+}
+
+// saveCustomTheme validates and writes a palette-editor theme as a
+// .peltontheme file in the themes folder, returning its gallery info.
+export function saveCustomTheme(req: SaveThemeRequest): Promise<ThemeInfo> {
+  return App.SaveCustomTheme(req) as Promise<ThemeInfo>
+}
+
+// openThemesFolder shows the themes folder in the system file manager.
+export function openThemesFolder(): Promise<void> {
+  return App.OpenThemesFolder()
+}
+
+// --- custom languages ---
+
+// listUserLocales returns every valid language file in the locales folder.
+export function listUserLocales(): Promise<UserLocale[]> {
+  return App.ListUserLocales() as Promise<UserLocale[]>
+}
+
+// getUserLocale loads one custom language in apply form (base + strings).
+export function getUserLocale(id: string): Promise<UserLocaleApply> {
+  return App.GetUserLocale(id) as Promise<UserLocaleApply>
+}
+
+// openLocalesFolder shows the locales folder in the system file manager.
+export function openLocalesFolder(): Promise<void> {
+  return App.OpenLocalesFolder()
+}
+
+// saveLocaleTemplate writes a translation template file via a save dialog,
+// returning the chosen path ('' if cancelled).
+export function saveLocaleTemplate(content: string): Promise<string> {
+  return App.SaveLocaleTemplate(content)
+}

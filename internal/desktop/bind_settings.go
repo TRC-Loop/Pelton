@@ -56,6 +56,31 @@ const (
 	settingComposeAutocomplete = "compose_autocomplete"
 	settingComposeChips        = "compose_chips"
 	settingEmptyStateImage     = "empty_state_image"
+	// menu bar settings only matter on macOS: Windows/Linux always use the
+	// in-app bar (no native menu is created there at all).
+	settingMenuBarInApp         = "menu_bar_in_app"
+	settingMenuBarNativeMinimal = "menu_bar_native_minimal"
+	// icons in the in-app menu bar's dropdowns; off keeps the classic
+	// text-only native look.
+	settingMenuBarIcons = "menu_bar_icons"
+	// clock preference for rendered times: auto (locale), 12, or 24.
+	settingTimeFormat = "time_format"
+	// disable ui transitions and animations (the os-level preference is
+	// honored by the frontend css regardless).
+	settingReduceMotion = "reduce_motion"
+	// dark window bounds ("HH:MM") for the schedule theme mode.
+	settingThemeDarkStart = "theme_dark_start"
+	settingThemeDarkEnd   = "theme_dark_end"
+	// reader fallback font for mail bodies (a key from the frontend's curated
+	// list; mail that declares its own fonts keeps them).
+	settingBodyFont = "body_font"
+	// interface and monospace fonts (#58): keys from the frontend's curated
+	// lists or "sys:<family>" for an installed font, overriding the --font-ui
+	// and --font-mono tokens.
+	settingUIFont   = "ui_font"
+	settingMonoFont = "mono_font"
+	// corner style for controls and cards: default, square, or round (#60).
+	settingCornerStyle = "corner_style"
 )
 
 // settingUpdateCheckFreq, settingLastUpdateCheck and defaultUpdateCheckFrequency
@@ -191,6 +216,31 @@ type UIPrefsDTO struct {
 	// EmptyStateImage is a data-uri image shown in the reading pane when no
 	// message is open. Empty means the bundled Pelton logo.
 	EmptyStateImage string `json:"emptyStateImage"`
+	// CornerStyle picks the corner radius look: default, square, or round.
+	CornerStyle string `json:"cornerStyle"`
+	// ThemeID selects an installed custom theme (see bind_themes.go). Empty
+	// means the built-in default themes driven by the Theme setting.
+	ThemeID string `json:"themeId"`
+	// MenuBarInApp shows the in-app menu bar on macOS (it is always shown on
+	// Windows/Linux regardless of this). MenuBarNativeMinimal then reduces the
+	// native macOS menu to the app menu, dropping the duplicated submenus.
+	MenuBarInApp         bool `json:"menuBarInApp"`
+	MenuBarNativeMinimal bool `json:"menuBarNativeMinimal"`
+	// MenuBarIcons shows icons next to the in-app menu bar's dropdown items.
+	MenuBarIcons bool `json:"menuBarIcons"`
+	// TimeFormat picks the clock for rendered times: auto (locale), 12, or 24.
+	TimeFormat string `json:"timeFormat"`
+	// ReduceMotion disables ui transitions and animations.
+	ReduceMotion bool `json:"reduceMotion"`
+	// ThemeDarkStart/ThemeDarkEnd bound the dark window ("HH:MM") for the
+	// schedule theme mode.
+	ThemeDarkStart string `json:"themeDarkStart"`
+	ThemeDarkEnd   string `json:"themeDarkEnd"`
+	// BodyFont is the reader fallback font for mail bodies.
+	BodyFont string `json:"bodyFont"`
+	// UIFont and MonoFont override the interface and monospace font tokens.
+	UIFont   string `json:"uiFont"`
+	MonoFont string `json:"monoFont"`
 }
 
 // GetUIPrefs returns all ui preferences with defaults filled in, so startup is a
@@ -245,6 +295,18 @@ func (a *App) GetUIPrefs() (UIPrefsDTO, error) {
 		ComposeChips:               a.boolSetting(settingComposeChips, true),
 		UpdateCheckFrequency:       a.stringSetting(settingUpdateCheckFreq, defaultUpdateCheckFrequency),
 		EmptyStateImage:            a.stringSetting(settingEmptyStateImage, ""),
+		CornerStyle:                a.stringSetting(settingCornerStyle, "default"),
+		ThemeID:                    a.stringSetting(settingThemeID, ""),
+		MenuBarInApp:               a.boolSetting(settingMenuBarInApp, false),
+		MenuBarNativeMinimal:       a.boolSetting(settingMenuBarNativeMinimal, false),
+		MenuBarIcons:               a.boolSetting(settingMenuBarIcons, false),
+		TimeFormat:                 a.stringSetting(settingTimeFormat, "auto"),
+		ReduceMotion:               a.boolSetting(settingReduceMotion, false),
+		ThemeDarkStart:             a.stringSetting(settingThemeDarkStart, "19:00"),
+		ThemeDarkEnd:               a.stringSetting(settingThemeDarkEnd, "07:00"),
+		BodyFont:                   a.stringSetting(settingBodyFont, "default"),
+		UIFont:                     a.stringSetting(settingUIFont, "default"),
+		MonoFont:                   a.stringSetting(settingMonoFont, "default"),
 	}, nil
 }
 
@@ -276,7 +338,7 @@ func (a *App) SetSetting(key, value string) error {
 	if key == storage.SettingTheme {
 		a.applyNativeTheme(value)
 	}
-	if key == settingLanguage {
+	if key == settingLanguage || key == settingMenuBarInApp || key == settingMenuBarNativeMinimal {
 		a.RebuildMenu()
 	}
 	return nil

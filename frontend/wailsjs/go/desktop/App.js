@@ -38,6 +38,10 @@ export function ClearSentOutbox() {
   return window['go']['desktop']['App']['ClearSentOutbox']();
 }
 
+export function ConfirmThemeImport(arg1, arg2) {
+  return window['go']['desktop']['App']['ConfirmThemeImport'](arg1, arg2);
+}
+
 export function DeleteAccount(arg1) {
   return window['go']['desktop']['App']['DeleteAccount'](arg1);
 }
@@ -56,6 +60,10 @@ export function DeleteMessage(arg1) {
 
 export function DeleteSignature(arg1) {
   return window['go']['desktop']['App']['DeleteSignature'](arg1);
+}
+
+export function DeleteTheme(arg1) {
+  return window['go']['desktop']['App']['DeleteTheme'](arg1);
 }
 
 export function DiscoverConfig(arg1) {
@@ -78,6 +86,10 @@ export function ExportMessagePrintView(arg1) {
   return window['go']['desktop']['App']['ExportMessagePrintView'](arg1);
 }
 
+export function ExportTheme(arg1) {
+  return window['go']['desktop']['App']['ExportTheme'](arg1);
+}
+
 export function GetAccountSignatures(arg1) {
   return window['go']['desktop']['App']['GetAccountSignatures'](arg1);
 }
@@ -90,8 +102,24 @@ export function GetMessageHTML(arg1, arg2) {
   return window['go']['desktop']['App']['GetMessageHTML'](arg1, arg2);
 }
 
+export function ListSystemFonts() {
+  return window['go']['desktop']['App']['ListSystemFonts']();
+}
+
+export function GetMessageSource(arg1) {
+  return window['go']['desktop']['App']['GetMessageSource'](arg1);
+}
+
 export function GetSetting(arg1) {
   return window['go']['desktop']['App']['GetSetting'](arg1);
+}
+
+export function GetThemeApply(arg1) {
+  return window['go']['desktop']['App']['GetThemeApply'](arg1);
+}
+
+export function GetUserLocale(arg1) {
+  return window['go']['desktop']['App']['GetUserLocale'](arg1);
 }
 
 export function GetUIPrefs() {
@@ -154,12 +182,28 @@ export function ListSignatures() {
   return window['go']['desktop']['App']['ListSignatures']();
 }
 
+export function ListThemes() {
+  return window['go']['desktop']['App']['ListThemes']();
+}
+
+export function ListUserLocales() {
+  return window['go']['desktop']['App']['ListUserLocales']();
+}
+
 export function ListUnifiedViews() {
   return window['go']['desktop']['App']['ListUnifiedViews']();
 }
 
 export function MoveMessage(arg1, arg2) {
   return window['go']['desktop']['App']['MoveMessage'](arg1, arg2);
+}
+
+export function OpenThemesFolder() {
+  return window['go']['desktop']['App']['OpenThemesFolder']();
+}
+
+export function PreviewThemeImport() {
+  return window['go']['desktop']['App']['PreviewThemeImport']();
 }
 
 export function ProgramLicense() {
@@ -186,6 +230,10 @@ export function ResumePendingDownload() {
   return window['go']['desktop']['App']['ResumePendingDownload']();
 }
 
+export function OpenLocalesFolder() {
+  return window['go']['desktop']['App']['OpenLocalesFolder']();
+}
+
 export function SaveAllAttachments(arg1) {
   return window['go']['desktop']['App']['SaveAllAttachments'](arg1);
 }
@@ -194,8 +242,16 @@ export function SaveAttachment(arg1, arg2) {
   return window['go']['desktop']['App']['SaveAttachment'](arg1, arg2);
 }
 
+export function SaveCustomTheme(arg1) {
+  return window['go']['desktop']['App']['SaveCustomTheme'](arg1);
+}
+
 export function SaveDraft(arg1, arg2) {
   return window['go']['desktop']['App']['SaveDraft'](arg1, arg2);
+}
+
+export function SaveLocaleTemplate(arg1) {
+  return window['go']['desktop']['App']['SaveLocaleTemplate'](arg1);
 }
 
 export function SaveSignature(arg1) {
@@ -280,6 +336,10 @@ export function UndoDelete(arg1) {
 
 export function UnsnoozeMessage(arg1) {
   return window['go']['desktop']['App']['UnsnoozeMessage'](arg1);
+}
+
+export function Unsubscribe(arg1) {
+  return window['go']['desktop']['App']['Unsubscribe'](arg1);
 }
 
 export function UpdateAccount(arg1) {

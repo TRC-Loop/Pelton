@@ -6,7 +6,8 @@
   // header fetch, so we show an honest placeholder rather than faking a result.
   import { createEventDispatcher } from 'svelte'
   import { IconX, IconCopy, IconCheck } from '@tabler/icons-svelte'
-  import { formatFullDate, formatBytes } from '../../lib/format'
+  import { formatFullDate, formatBytes, type TimeFormat } from '../../lib/format'
+  import { prefs } from '../../stores/prefs'
   import { toastSuccess, toastError } from '../../stores/toast'
   import { t } from '../../lib/i18n'
   import type { MessageDetail } from '../../lib/types'
@@ -37,7 +38,7 @@
       list.push({ label: $t('detail.infoModal.cc'), value: d.ccAddresses })
     }
     list.push(
-      { label: $t('detail.infoModal.date'), value: formatFullDate(d.date) || d.date },
+      { label: $t('detail.infoModal.date'), value: formatFullDate(d.date, $prefs.timeFormat as TimeFormat) || d.date },
       { label: $t('detail.infoModal.account'), value: d.accountEmail },
       { label: $t('detail.infoModal.folder'), value: d.folderName },
       { label: $t('detail.infoModal.format'), value: d.isHtml ? $t('detail.infoModal.formatHtml') : $t('detail.infoModal.formatPlain') },

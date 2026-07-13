@@ -26,8 +26,12 @@
     IconWriting,
     IconLanguage,
     IconBatteryEco,
+    IconBrush,
+    IconFolderOpen,
+    IconFileExport,
+    IconRefresh,
   } from '@tabler/icons-svelte'
-  import { createEventDispatcher } from 'svelte'
+  import { createEventDispatcher, onMount } from 'svelte'
   import SegmentedSetting from './SegmentedSetting.svelte'
   import StepSlider from './StepSlider.svelte'
   import AccentPicker from './AccentPicker.svelte'
@@ -38,6 +42,8 @@
   import AddressBookSection from './AddressBookSection.svelte'
   import MailboxesSection from './MailboxesSection.svelte'
   import ImportExportSection from './ImportExportSection.svelte'
+  import ThemesSection from './ThemesSection.svelte'
+  import ThemedIcon from '../common/ThemedIcon.svelte'
   import RowLayoutPreview from './RowLayoutPreview.svelte'
   import AboutSection from './AboutSection.svelte'
   import ToggleSwitch from '../common/ToggleSwitch.svelte'
@@ -49,6 +55,7 @@
     prefs,
     setTheme,
     setDensity,
+    setCornerStyle,
     setUIScale,
     setMessageFontSize,
     setToastPosition,
@@ -83,12 +90,22 @@
     setComposeAutocomplete,
     setComposeChips,
     setEmptyStateImage,
+    setMenuBarInApp,
+    setMenuBarNativeMinimal,
+    setMenuBarIcons,
+    setTimeFormat,
+    setReduceMotion,
+    setThemeDarkTimes,
+    setBodyFont,
+    setUIFont,
+    setMonoFont,
   } from '../../stores/prefs'
   import peltonLogo from '../../assets/images/icons/pelton-logo.png'
-  import type { Locale } from '../../lib/i18n'
-  import { downloadRange, cancelDownload } from '../../lib/api'
+  import { isMac } from '../../lib/i18n'
+  import { downloadRange, cancelDownload, openLocalesFolder, saveLocaleTemplate } from '../../lib/api'
+  import en from '../../lib/locales/en'
   import { downloadProgress } from '../../stores/progress'
-  import { toastError, errorMessage } from '../../stores/toast'
+  import { toastInfo, toastError, errorMessage } from '../../stores/toast'
   import { t } from '../../lib/i18n'
   import type { ThemePref, DensityPref, EditorMode } from '../../lib/types'
 
@@ -100,30 +117,58 @@
   ]
 
   const dispatch = createEventDispatcher<{ close: void; rerunOnboarding: void }>()
-  $: currentLocale = $prefs.language as Locale
+  $: currentLocale = $prefs.language
 
-  // left-nav categories. each maps to a block rendered on the right.
+  // languageReload remounts the picker so newly dropped language files show
+  // up without leaving settings.
+  let languageReload = 0
+
+  async function onOpenLocalesFolder(): Promise<void> {
+    try {
+      await openLocalesFolder()
+    } catch (err) {
+      toastError(errorMessage(err))
+    }
+  }
+
+  // onSaveLocaleTemplate writes a ready-to-translate template: every English
+  // string plus the meta fields a language file needs.
+  async function onSaveLocaleTemplate(): Promise<void> {
+    const template = JSON.stringify({ name: 'My Language', author: '', base: 'en', strings: en }, null, 2)
+    try {
+      const path = await saveLocaleTemplate(template)
+      if (path) {
+        toastInfo($t('language.templateSaved'))
+      }
+    } catch (err) {
+      toastError(errorMessage(err))
+    }
+  }
+
+  // left-nav categories. each maps to a block rendered on the right. iconName
+  // is the themeable icon slot (the tabler name in kebab, see ThemedIcon).
   $: categories = [
-    { key: 'appearance', label: $t('settingsPanel.category.appearance'), icon: IconPalette },
-    { key: 'language', label: $t('settings.language'), icon: IconLanguage },
-    { key: 'list', label: $t('settingsPanel.category.list'), icon: IconList },
-    { key: 'sidebar', label: $t('settingsPanel.category.sidebar'), icon: IconLayoutSidebar },
-    { key: 'avatars', label: $t('settingsPanel.category.avatars'), icon: IconUserCircle },
-    { key: 'signatures', label: $t('settingsPanel.category.signatures'), icon: IconSignature },
-    { key: 'sending', label: $t('settingsPanel.category.sending'), icon: IconSend2 },
-    { key: 'privacy', label: $t('settingsPanel.category.privacy'), icon: IconShieldLock },
-    { key: 'notifications', label: $t('settingsPanel.category.notifications'), icon: IconBell },
-    { key: 'panes', label: $t('settings.panes'), icon: IconLayoutColumns },
-    { key: 'display', label: $t('settingsPanel.category.display'), icon: IconEye },
-    { key: 'gestures', label: $t('settingsPanel.category.gestures'), icon: IconHandMove },
-    { key: 'offline', label: $t('settingsPanel.category.offline'), icon: IconCloudDownload },
-    { key: 'power', label: $t('settingsPanel.category.power'), icon: IconBatteryEco },
-    { key: 'mailboxes', label: $t('settingsPanel.category.mailboxes'), icon: IconMailbox },
-    { key: 'contacts', label: $t('settingsPanel.category.contacts'), icon: IconAddressBook },
-    { key: 'sync', label: $t('settingsPanel.category.importExport'), icon: IconFileImport },
-    { key: 'composing', label: $t('settingsPanel.category.composing'), icon: IconWriting },
-    { key: 'shortcuts', label: $t('settingsPanel.category.shortcuts'), icon: IconKeyboard },
-    { key: 'about', label: $t('settingsPanel.category.about'), icon: IconInfoCircle },
+    { key: 'appearance', label: $t('settingsPanel.category.appearance'), icon: IconPalette, iconName: 'palette' },
+    { key: 'themes', label: $t('settingsPanel.category.themes'), icon: IconBrush, iconName: 'brush' },
+    { key: 'language', label: $t('settings.language'), icon: IconLanguage, iconName: 'language' },
+    { key: 'list', label: $t('settingsPanel.category.list'), icon: IconList, iconName: 'list' },
+    { key: 'sidebar', label: $t('settingsPanel.category.sidebar'), icon: IconLayoutSidebar, iconName: 'layout-sidebar' },
+    { key: 'avatars', label: $t('settingsPanel.category.avatars'), icon: IconUserCircle, iconName: 'user-circle' },
+    { key: 'signatures', label: $t('settingsPanel.category.signatures'), icon: IconSignature, iconName: 'signature' },
+    { key: 'sending', label: $t('settingsPanel.category.sending'), icon: IconSend2, iconName: 'send-2' },
+    { key: 'privacy', label: $t('settingsPanel.category.privacy'), icon: IconShieldLock, iconName: 'shield-lock' },
+    { key: 'notifications', label: $t('settingsPanel.category.notifications'), icon: IconBell, iconName: 'bell' },
+    { key: 'panes', label: $t('settings.panes'), icon: IconLayoutColumns, iconName: 'layout-columns' },
+    { key: 'display', label: $t('settingsPanel.category.display'), icon: IconEye, iconName: 'eye' },
+    { key: 'gestures', label: $t('settingsPanel.category.gestures'), icon: IconHandMove, iconName: 'hand-move' },
+    { key: 'offline', label: $t('settingsPanel.category.offline'), icon: IconCloudDownload, iconName: 'cloud-download' },
+    { key: 'power', label: $t('settingsPanel.category.power'), icon: IconBatteryEco, iconName: 'battery-eco' },
+    { key: 'mailboxes', label: $t('settingsPanel.category.mailboxes'), icon: IconMailbox, iconName: 'mailbox' },
+    { key: 'contacts', label: $t('settingsPanel.category.contacts'), icon: IconAddressBook, iconName: 'address-book' },
+    { key: 'sync', label: $t('settingsPanel.category.importExport'), icon: IconFileImport, iconName: 'file-import' },
+    { key: 'composing', label: $t('settingsPanel.category.composing'), icon: IconWriting, iconName: 'writing' },
+    { key: 'shortcuts', label: $t('settingsPanel.category.shortcuts'), icon: IconKeyboard, iconName: 'keyboard' },
+    { key: 'about', label: $t('settingsPanel.category.about'), icon: IconInfoCircle, iconName: 'info-circle' },
   ]
 
   // auto-sync interval presets, in seconds (0 = off).
@@ -192,7 +237,32 @@
     }
   }
 
+  import { bodyFonts, uiFonts, monoFonts } from '../../lib/fonts'
+  import { listSystemFonts } from '../../lib/api'
+
+  $: bodyFontOptions = bodyFonts.map((f) => ({ key: f.key, label: f.label ?? $t(f.labelKey ?? '') }))
+  $: uiFontOptions = uiFonts.map((f) => ({ key: f.key, label: f.label ?? $t(f.labelKey ?? '') }))
+  $: monoFontOptions = monoFonts.map((f) => ({ key: f.key, label: f.label ?? $t(f.labelKey ?? '') }))
+
+  // every installed system font, loaded once when the panel opens. the list
+  // is backend-cached, so reopening settings is instant.
+  let systemFonts: string[] = []
+  onMount(() => {
+    listSystemFonts()
+      .then((fonts) => (systemFonts = fonts))
+      .catch(() => (systemFonts = []))
+  })
+
   // select handlers (the cast lives in script; inline ts casts break the parser).
+  function onBodyFont(event: Event): void {
+    setBodyFont((event.currentTarget as HTMLSelectElement).value)
+  }
+  function onUIFont(event: Event): void {
+    setUIFont((event.currentTarget as HTMLSelectElement).value)
+  }
+  function onMonoFont(event: Event): void {
+    setMonoFont((event.currentTarget as HTMLSelectElement).value)
+  }
   function onSwipeLeft(event: Event): void {
     setSwipeLeftAction((event.currentTarget as HTMLSelectElement).value)
   }
@@ -208,12 +278,26 @@
     { key: 'system', label: $t('onboarding.theme.system') },
     { key: 'light', label: $t('onboarding.theme.light') },
     { key: 'dark', label: $t('onboarding.theme.dark') },
+    { key: 'schedule', label: $t('settingsPanel.theme.schedule') },
   ]
 
   $: densityOptions = [
     { key: 'compact', label: $t('onboarding.density.compact') },
     { key: 'medium', label: $t('onboarding.density.medium') },
     { key: 'luxe', label: $t('onboarding.density.luxe') },
+  ]
+
+  // clock preference for rendered times.
+  $: timeFormatOptions = [
+    { key: 'auto', label: $t('settingsPanel.timeFormat.auto') },
+    { key: '12', label: $t('settingsPanel.timeFormat.h12') },
+    { key: '24', label: $t('settingsPanel.timeFormat.h24') },
+  ]
+
+  $: cornerOptions = [
+    { key: 'square', label: $t('settingsPanel.corners.square') },
+    { key: 'default', label: $t('settingsPanel.corners.default') },
+    { key: 'round', label: $t('settingsPanel.corners.round') },
   ]
 
   // interface zoom. values are string multipliers applied as css zoom.
@@ -383,7 +467,7 @@
           aria-current={active === cat.key}
           on:click={() => (active = cat.key)}
         >
-          <span class="nav-icon"><svelte:component this={cat.icon} size={17} stroke={1.6} /></span>
+          <span class="nav-icon"><ThemedIcon name={cat.iconName} icon={cat.icon} size={17} stroke={1.6} /></span>
           <span>{cat.label}</span>
         </button>
       {/each}
@@ -394,14 +478,69 @@
         <section>
           <h3>{$t('settings.language')}</h3>
           <p class="hint">{$t('settings.languageHint')}</p>
-          <LanguageSelect value={currentLocale} onSelect={setLanguage} />
+          {#key languageReload}
+            <LanguageSelect value={currentLocale} onSelect={setLanguage} />
+          {/key}
+          <h4 class="lang-tools-heading">{$t('language.custom')}</h4>
+          <p class="hint">{$t('language.customHint')}</p>
+          <div class="lang-tools">
+            <button type="button" class="lang-tool-btn" on:click={onOpenLocalesFolder} title={$t('language.openFolderHint')}>
+              <IconFolderOpen size={15} stroke={1.6} />
+              {$t('language.openFolder')}
+            </button>
+            <button type="button" class="lang-tool-btn" on:click={onSaveLocaleTemplate} title={$t('language.templateHint')}>
+              <IconFileExport size={15} stroke={1.6} />
+              {$t('language.template')}
+            </button>
+            <button type="button" class="lang-tool-btn" on:click={() => (languageReload += 1)} title={$t('language.reloadHint')}>
+              <IconRefresh size={15} stroke={1.6} />
+              {$t('language.reload')}
+            </button>
+          </div>
+        </section>
+      {:else if active === 'themes'}
+        <section>
+          <h3>{$t('settingsPanel.category.themes')}</h3>
+          <ThemesSection />
         </section>
       {:else if active === 'appearance'}
         <section>
           <h3>{$t('settingsPanel.category.appearance')}</h3>
-          <SegmentedSetting label={$t('settingsPanel.label.theme')} value={$prefs.theme} options={themeOptions} on:change={onTheme} />
+          {#if $prefs.themeId}
+            <p class="hint">{$t('themes.baseLockedHint')}</p>
+          {:else}
+            <SegmentedSetting label={$t('settingsPanel.label.theme')} value={$prefs.theme} options={themeOptions} on:change={onTheme} />
+            {#if $prefs.theme === 'schedule'}
+              <div class="schedule-times">
+                <label class="schedule-time">
+                  <span>{$t('settingsPanel.label.darkFrom')}</span>
+                  <input
+                    type="time"
+                    value={$prefs.themeDarkStart}
+                    on:change={(e) => setThemeDarkTimes(e.currentTarget.value, $prefs.themeDarkEnd)}
+                  />
+                </label>
+                <label class="schedule-time">
+                  <span>{$t('settingsPanel.label.darkUntil')}</span>
+                  <input
+                    type="time"
+                    value={$prefs.themeDarkEnd}
+                    on:change={(e) => setThemeDarkTimes($prefs.themeDarkStart, e.currentTarget.value)}
+                  />
+                </label>
+              </div>
+              <p class="hint">{$t('settingsPanel.hint.themeSchedule')}</p>
+            {/if}
+          {/if}
           <AccentPicker />
           <SegmentedSetting label={$t('settingsPanel.label.density')} value={$prefs.density} options={densityOptions} on:change={onDensity} />
+          <SegmentedSetting
+            label={$t('settingsPanel.label.corners')}
+            value={$prefs.cornerStyle}
+            options={cornerOptions}
+            on:change={(e) => setCornerStyle(e.detail)}
+          />
+          <p class="hint">{$t('settingsPanel.hint.corners')}</p>
           <SegmentedSetting
             label={$t('settingsPanel.label.interfaceScale')}
             value={$prefs.uiScale}
@@ -409,6 +548,85 @@
             on:change={(e) => setUIScale(e.detail)}
           />
           <p class="hint">{$t('settingsPanel.hint.interfaceScale')}</p>
+
+          {#if isMac}
+            <div class="toggle">
+              <span class="row-label">{$t('settingsPanel.toggle.menuBarInApp')}</span>
+              <ToggleSwitch
+                checked={$prefs.menuBarInApp}
+                label={$t('settingsPanel.toggle.menuBarInApp')}
+                on:change={(e) => setMenuBarInApp(e.detail)}
+              />
+            </div>
+            <p class="hint">{$t('settingsPanel.hint.menuBarInApp')}</p>
+            {#if $prefs.menuBarInApp}
+              <div class="toggle">
+                <span class="row-label">{$t('settingsPanel.toggle.menuBarNativeMinimal')}</span>
+                <ToggleSwitch
+                  checked={$prefs.menuBarNativeMinimal}
+                  label={$t('settingsPanel.toggle.menuBarNativeMinimal')}
+                  on:change={(e) => setMenuBarNativeMinimal(e.detail)}
+                />
+              </div>
+              <p class="hint">{$t('settingsPanel.hint.menuBarNativeMinimal')}</p>
+            {/if}
+          {/if}
+          {#if !isMac || $prefs.menuBarInApp}
+            <div class="toggle">
+              <span class="row-label">{$t('settingsPanel.toggle.menuBarIcons')}</span>
+              <ToggleSwitch
+                checked={$prefs.menuBarIcons}
+                label={$t('settingsPanel.toggle.menuBarIcons')}
+                on:change={(e) => setMenuBarIcons(e.detail)}
+              />
+            </div>
+            <p class="hint">{$t('settingsPanel.hint.menuBarIcons')}</p>
+          {/if}
+          <div class="toggle">
+            <span class="row-label">{$t('settingsPanel.toggle.reduceMotion')}</span>
+            <ToggleSwitch
+              checked={$prefs.reduceMotion}
+              label={$t('settingsPanel.toggle.reduceMotion')}
+              on:change={(e) => setReduceMotion(e.detail)}
+            />
+          </div>
+          <p class="hint">{$t('settingsPanel.hint.reduceMotion')}</p>
+          <div class="row">
+            <span class="row-label">{$t('settingsPanel.label.uiFont')}</span>
+            <select class="select" value={$prefs.uiFont} on:change={onUIFont}>
+              <optgroup label={$t('settingsPanel.bodyFont.groupCurated')}>
+                {#each uiFontOptions as opt}
+                  <option value={opt.key}>{opt.label}</option>
+                {/each}
+              </optgroup>
+              {#if systemFonts.length > 0}
+                <optgroup label={$t('settingsPanel.bodyFont.groupSystem')}>
+                  {#each systemFonts as family}
+                    <option value={`sys:${family}`}>{family}</option>
+                  {/each}
+                </optgroup>
+              {/if}
+            </select>
+          </div>
+          <p class="hint">{$t('settingsPanel.hint.uiFont')}</p>
+          <div class="row">
+            <span class="row-label">{$t('settingsPanel.label.monoFont')}</span>
+            <select class="select" value={$prefs.monoFont} on:change={onMonoFont}>
+              <optgroup label={$t('settingsPanel.bodyFont.groupCurated')}>
+                {#each monoFontOptions as opt}
+                  <option value={opt.key}>{opt.label}</option>
+                {/each}
+              </optgroup>
+              {#if systemFonts.length > 0}
+                <optgroup label={$t('settingsPanel.bodyFont.groupSystem')}>
+                  {#each systemFonts as family}
+                    <option value={`sys:${family}`}>{family}</option>
+                  {/each}
+                </optgroup>
+              {/if}
+            </select>
+          </div>
+          <p class="hint">{$t('settingsPanel.hint.monoFont')}</p>
 
           <div class="field">
             <span class="row-label">{$t('settingsPanel.label.emptyStateImage')}</span>
@@ -649,6 +867,31 @@
             on:change={(e) => setMessageFontSize(Number(e.detail))}
           />
           <p class="hint">{$t('settingsPanel.hint.fontSize')}</p>
+          <SegmentedSetting
+            label={$t('settingsPanel.label.timeFormat')}
+            value={$prefs.timeFormat}
+            options={timeFormatOptions}
+            on:change={(e) => setTimeFormat(e.detail)}
+          />
+          <p class="hint">{$t('settingsPanel.hint.timeFormat')}</p>
+          <div class="row">
+            <span class="row-label">{$t('settingsPanel.label.bodyFont')}</span>
+            <select class="select" value={$prefs.bodyFont} on:change={onBodyFont}>
+              <optgroup label={$t('settingsPanel.bodyFont.groupCurated')}>
+                {#each bodyFontOptions as opt}
+                  <option value={opt.key}>{opt.label}</option>
+                {/each}
+              </optgroup>
+              {#if systemFonts.length > 0}
+                <optgroup label={$t('settingsPanel.bodyFont.groupSystem')}>
+                  {#each systemFonts as family}
+                    <option value={`sys:${family}`}>{family}</option>
+                  {/each}
+                </optgroup>
+              {/if}
+            </select>
+          </div>
+          <p class="hint">{$t('settingsPanel.hint.bodyFont')}</p>
           <TechToggles />
         </section>
       {:else if active === 'gestures'}
@@ -991,6 +1234,29 @@
     color: var(--text-primary);
   }
 
+  .schedule-times {
+    display: flex;
+    gap: var(--space-5);
+    margin: var(--space-2) 0;
+  }
+
+  .schedule-time {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    font-size: var(--fz-label);
+    color: var(--text-secondary);
+  }
+
+  .schedule-time input {
+    padding: var(--space-1) var(--space-2);
+    border: var(--hairline) solid var(--border-default);
+    border-radius: var(--radius-control);
+    background: var(--surface-sunken);
+    color: var(--text-primary);
+    font-size: var(--fz-label);
+  }
+
   .hint {
     margin: var(--space-2) 0 0;
     font-size: var(--fz-label);
@@ -1209,5 +1475,35 @@
   .preset-btn:hover {
     background: var(--surface-hover);
     color: var(--text-primary);
+  }
+
+  .lang-tools-heading {
+    margin: var(--space-5) 0 var(--space-1);
+    font-size: var(--fz-label);
+    font-weight: var(--fw-semibold);
+    color: var(--text-primary);
+  }
+
+  .lang-tools {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+
+  .lang-tool-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-4);
+    border: var(--hairline) solid var(--border-default);
+    border-radius: var(--radius-control);
+    background: var(--surface-raised);
+    color: var(--text-primary);
+    font-size: var(--fz-label);
+    cursor: pointer;
+  }
+
+  .lang-tool-btn:hover {
+    background: var(--surface-hover);
   }
 </style>

@@ -27,6 +27,10 @@ type App struct {
 	log *slog.Logger
 
 	store *storage.DB
+	// dataDir is the app data directory the store opened in; themes and the
+	// search index live next to the database. Empty if the store failed to
+	// open.
+	dataDir string
 	// storeReady closes once startup has finished assigning (or failing to
 	// assign) store, giving domReady a happens-before edge before it reads
 	// store on its own goroutine - without it, the read is a data race even
@@ -41,6 +45,9 @@ type App struct {
 	// embedded license data served to the about section on demand.
 	licenseManifest string
 	programLicense  string
+	// trayIcon is the embedded .ico for the Windows notification-area icon
+	// (see tray_windows.go); empty elsewhere.
+	trayIcon []byte
 	// mailMenuItems are the native Mail-menu items that act on the open message;
 	// they start disabled and SetMailActionsEnabled toggles them as the frontend's
 	// open message changes. mailActionsEnabled mirrors that same state so a menu
@@ -98,11 +105,19 @@ func (a *App) startup(ctx context.Context) {
 	if err != nil {
 		a.log.Error("open store", "err", err)
 		close(a.storeReady)
+		// even without a store the tray must come up: with the window closed
+		// it is the only visible way to reopen or quit the app.
+		a.startTray()
 		return
 	}
 	a.store = store
+	a.dataDir = dataDir
 	a.queue = outbox.NewQueue(store)
 	close(a.storeReady)
+
+	// the Windows tray icon (no-op elsewhere). started after the store is up
+	// so its menu labels can follow the language setting.
+	a.startTray()
 
 	// demo mode is purely cosmetic: the frontend renders fixed sample data, so we
 	// skip everything that would touch the network or mutate the store (sync, idle,
@@ -160,6 +175,7 @@ func (a *App) domReady(ctx context.Context) {
 // shutdown is the wails OnShutdown hook. It closes the store so the sqlite wal
 // is checkpointed cleanly.
 func (a *App) shutdown(ctx context.Context) {
+	a.stopTray()
 	if a.index != nil {
 		if err := a.index.Close(); err != nil {
 			a.log.Error("close search index", "err", err)

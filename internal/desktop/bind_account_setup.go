@@ -209,6 +209,24 @@ func (a *App) discoverFolders(account storage.Account) error {
 	return a.createFolderTree(account.ID, folders)
 }
 
+// ensureFolders discovers the folder tree over an already-connected client when
+// the account has no folder rows yet: accounts restored from a backup import,
+// or whose discovery failed during setup. With folders present it is a no-op.
+func (a *App) ensureFolders(client *pimap.Client, accountID int64) error {
+	folders, err := a.store.ListFolders(a.ctx, accountID)
+	if err != nil {
+		return err
+	}
+	if len(folders) > 0 {
+		return nil
+	}
+	serverFolders, err := client.ListFolders()
+	if err != nil {
+		return err
+	}
+	return a.createFolderTree(accountID, serverFolders)
+}
+
 // createFolderTree inserts folders parent-first so each child can resolve its
 // parent id from the path above it, splitting on the server's delimiter.
 func (a *App) createFolderTree(accountID int64, folders []pimap.Folder) error {

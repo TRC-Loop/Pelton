@@ -18,6 +18,9 @@ export type ShortcutAction =
   | 'sync'
   | 'search'
   | 'add-mailbox'
+  | 'export-pdf'
+  | 'toggle-fullscreen'
+  | 'quit'
   | 'reply'
   | 'reply-all'
   | 'forward'
@@ -28,6 +31,7 @@ export type ShortcutAction =
   | 'download-offline'
   | 'delete-message'
   | 'archive'
+  | 'unsubscribe'
 
 // Shortcut pairs an action with its default combo and the label key for display.
 export interface Shortcut {
@@ -44,6 +48,11 @@ export const shortcuts: Shortcut[] = [
   { action: 'sync', combo: 'mod+r', labelKey: 'shortcut.sync' },
   { action: 'add-mailbox', combo: 'mod+m', labelKey: 'shortcut.addMailbox' },
   { action: 'search', combo: 'mod+f', labelKey: 'shortcut.search' },
+  { action: 'export-pdf', combo: 'mod+p', labelKey: 'shortcut.exportPdf' },
+  // on macOS the native menu owns fullscreen (Cmd+Ctrl+F) and quit (Cmd+Q);
+  // elsewhere the in-app menu bar relies on these frontend bindings.
+  { action: 'toggle-fullscreen', combo: isMac ? '' : 'f11', labelKey: 'shortcut.toggleFullscreen' },
+  { action: 'quit', combo: isMac ? '' : 'mod+q', labelKey: 'shortcut.quit' },
   // message-level actions, unbound by default.
   { action: 'reply', combo: '', labelKey: 'shortcut.reply' },
   { action: 'reply-all', combo: '', labelKey: 'shortcut.replyAll' },
@@ -55,6 +64,7 @@ export const shortcuts: Shortcut[] = [
   { action: 'download-offline', combo: '', labelKey: 'shortcut.downloadOffline' },
   { action: 'delete-message', combo: '', labelKey: 'shortcut.deleteMessage' },
   { action: 'archive', combo: '', labelKey: 'shortcut.archive' },
+  { action: 'unsubscribe', combo: '', labelKey: 'shortcut.unsubscribe' },
 ]
 
 // ParsedCombo is a combo broken into its modifier flags and final key.

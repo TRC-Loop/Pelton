@@ -31,7 +31,7 @@
     }
     const found = await photosFor(source, em)
     if (source === $prefs.avatarSource && em === email) {
-      candidates = found
+      candidates = found ?? []
     }
   }
 

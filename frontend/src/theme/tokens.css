@@ -177,3 +177,15 @@
   --control-height: 34px;
   --stack-gap: 14px;
 }
+
+/* corner style variants. these swap only the radius tokens, so every
+   component stays corner-agnostic. the default 5px values live on :root. */
+:root[data-corners="square"] {
+  --radius-control: 0;
+  --radius-card: 0;
+}
+
+:root[data-corners="round"] {
+  --radius-control: 10px;
+  --radius-card: 12px;
+}

@@ -5,9 +5,9 @@
   // chooses; nothing leaves the machine on its own.
   import { IconDownload, IconUpload, IconFileImport } from '@tabler/icons-svelte'
   import { inspectBackupFile, importData, type BackupInfo } from '../../lib/api'
-  import { initPrefs } from '../../stores/prefs'
+  import { initPrefs, prefs } from '../../stores/prefs'
   import { toastError, toastSuccess, errorMessage } from '../../stores/toast'
-  import { formatFullDate } from '../../lib/format'
+  import { formatFullDate, type TimeFormat } from '../../lib/format'
   import { get } from 'svelte/store'
   import { t } from '../../lib/i18n'
 
@@ -103,7 +103,7 @@
       <div class="file-info">
         <div class="meta-row">
           <span class="meta-label">{$t('importExport.created')}</span>
-          <span class="meta-value">{file.createdAt ? formatFullDate(file.createdAt) : '—'}</span>
+          <span class="meta-value">{file.createdAt ? formatFullDate(file.createdAt, $prefs.timeFormat as TimeFormat) : '—'}</span>
         </div>
         {#if file.appVersion}
           <div class="meta-row">

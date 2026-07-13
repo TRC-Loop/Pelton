@@ -23,6 +23,9 @@ type Config struct {
 	Version         string
 	LicenseManifest string
 	ProgramLicense  string
+	// TrayIcon is the .ico shown in the Windows notification area; unused on
+	// other platforms.
+	TrayIcon []byte
 	// DemoMode runs the app in the cosmetic screenshot mode (--potatoes-are-nice).
 	DemoMode bool
 }
@@ -32,6 +35,7 @@ func Run(cfg Config) error {
 	app := newApp(cfg.Version)
 	app.licenseManifest = cfg.LicenseManifest
 	app.programLicense = cfg.ProgramLicense
+	app.trayIcon = cfg.TrayIcon
 	app.demoMode = cfg.DemoMode
 
 	return wails.Run(&options.App{
@@ -53,7 +57,7 @@ func Run(cfg Config) error {
 		OnStartup:         app.startup,
 		OnDomReady:        app.domReady,
 		OnShutdown:        app.shutdown,
-		Menu:              app.buildMenu(),
+		Menu:              app.initialMenu(),
 		Mac: &mac.Options{
 			About: &mac.AboutInfo{
 				Title:   "Pelton",

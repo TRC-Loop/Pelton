@@ -18,7 +18,12 @@ export function photosFor(source: string, email: string): Promise<string[]> {
   const key = `${source}:${email.toLowerCase()}`
   let pending = cache.get(key)
   if (!pending) {
-    pending = senderPhotos(email).catch(() => [])
+    // the binding returns json null for a sender without candidates (a nil Go
+    // slice), which resolves successfully - normalize it, the catch alone
+    // does not cover it.
+    pending = senderPhotos(email)
+      .then((found) => found ?? [])
+      .catch(() => [])
     cache.set(key, pending)
   }
   return pending

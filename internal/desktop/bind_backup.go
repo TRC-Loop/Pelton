@@ -33,12 +33,16 @@ const backupFileTag = "pelton-backup"
 
 // backupSkipSettings are settings that must not travel between installs: the
 // search watermark and the pending-download marker are local, transient state,
-// and the whitelist keys are exported under their own category instead.
+// the whitelist keys are exported under their own category instead, and local
+// drafts reference account ids that don't exist on the target install (and can
+// carry whole attachments). The skip applies on import too, so backup files
+// written before a key landed here are also filtered.
 var backupSkipSettings = map[string]bool{
 	settingSearchWatermark: true,
 	settingDownloadPending: true,
 	settingRemoteSenders:   true,
 	settingRemoteDomains:   true,
+	draftsKey:              true,
 }
 
 // whitelistBackup is the trusted-sender allowlist as exported.
@@ -140,7 +144,15 @@ func (a *App) ExportData(categories []string, credentialPassword string) (string
 	if err != nil {
 		return "", err
 	}
-	if err := os.WriteFile(filepath.Clean(dest), data, 0o644); err != nil {
+	// 0600: the export always carries the full server config and settings, and
+	// optionally encrypted mailbox credentials; no other local user should be
+	// able to read it. The user can still loosen a file they intend to share.
+	if err := os.WriteFile(filepath.Clean(dest), data, 0o600); err != nil {
+		return "", err
+	}
+	// WriteFile keeps an existing file's mode, so overwriting an old export
+	// left with looser permissions must be tightened explicitly.
+	if err := os.Chmod(filepath.Clean(dest), 0o600); err != nil {
 		return "", err
 	}
 	return dest, nil
@@ -315,8 +327,22 @@ func (a *App) ImportData(path string, categories []string, credentialPassword st
 		}
 	}
 	if want[backupCategoryMailboxes] {
-		if err := a.importMailboxes(doc.Mailboxes, credentialPassword); err != nil {
+		ready, err := a.importMailboxes(doc.Mailboxes, credentialPassword)
+		if err != nil {
 			return err
+		}
+		// sync and idle the new (and newly healed) accounts in the background,
+		// same as the setup wizard does, so an import with credentials starts
+		// pulling mail right away instead of waiting for a restart. Accounts
+		// without credentials drop out of both with errNoCredentials, which is
+		// not an error here.
+		for _, acc := range ready {
+			go func(acc storage.Account) {
+				if err := a.syncAccount(acc); err != nil && !errors.Is(err, errNoCredentials) {
+					a.log.Error("sync imported account", "account", acc.Email, "err", err)
+				}
+				go a.idleLoop(acc)
+			}(acc)
 		}
 	}
 	if want[backupCategorySignatures] {
@@ -327,56 +353,92 @@ func (a *App) ImportData(path string, categories []string, credentialPassword st
 	return nil
 }
 
-// importMailboxes recreates accounts from their backed-up server config,
-// skipping any email already present locally so a re-import never duplicates
-// a mailbox. When credentialPassword is non-empty and an entry carries an
-// encrypted credential, it's decrypted and stored in the keyring for the
-// newly created account; otherwise (no password given, or the entry has no
-// credential) the mailbox still needs its password re-entered once before it
-// can sync, same as before this existed.
-func (a *App) importMailboxes(mailboxes []mailboxBackup, credentialPassword string) error {
+// importMailboxes recreates accounts from their backed-up server config and
+// returns the ones now ready to start syncing, skipping any email already
+// present locally so a re-import never duplicates a mailbox. When
+// credentialPassword is non-empty and an entry carries an encrypted
+// credential, it's decrypted and stored in the keyring; otherwise (no
+// password given, or the entry has no credential) the mailbox still needs its
+// password re-entered once before it can sync, same as before this existed.
+//
+// Every credential is decrypted up front, before anything is created: a
+// wrong export password then fails cleanly with nothing half-imported, and
+// the retry with the right password starts from the same clean state (#68).
+func (a *App) importMailboxes(mailboxes []mailboxBackup, credentialPassword string) ([]storage.Account, error) {
 	if len(mailboxes) == 0 {
-		return nil
+		return nil, nil
+	}
+	secrets := make(map[string]credentials.Secret)
+	if credentialPassword != "" {
+		for _, m := range mailboxes {
+			if m.Secret == nil {
+				continue
+			}
+			plaintext, err := decryptWithPassword(credentialPassword, m.Secret)
+			if err != nil {
+				return nil, err
+			}
+			var secret credentials.Secret
+			if err := json.Unmarshal(plaintext, &secret); err != nil {
+				return nil, err
+			}
+			secrets[m.Email] = secret
+		}
 	}
 	existing, err := a.store.ListAccounts(a.ctx)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	have := make(map[string]bool, len(existing))
+	have := make(map[string]int64, len(existing))
 	for _, acc := range existing {
-		have[acc.Email] = true
+		have[acc.Email] = acc.ID
 	}
+	var ready []storage.Account
 	for _, m := range mailboxes {
-		if have[m.Email] {
+		if id, ok := have[m.Email]; ok {
+			// the account exists but may have no stored credential - the
+			// leftover of an import that failed after creating it (the pre-#68
+			// bug). storing the credential now heals it, and it joins the
+			// post-import sync like a fresh account.
+			secret, hasSecret := secrets[m.Email]
+			if !hasSecret {
+				continue
+			}
+			if _, err := credentials.Load(id); err == nil {
+				continue
+			}
+			if err := credentials.Store(id, secret); err != nil {
+				return ready, err
+			}
+			for _, acc := range existing {
+				if acc.ID == id {
+					ready = append(ready, acc)
+					break
+				}
+			}
 			continue
 		}
-		id, err := a.store.CreateAccount(a.ctx, &storage.Account{
+		account := storage.Account{
 			Email:       m.Email,
 			DisplayName: m.DisplayName,
 			IMAPHost:    m.IMAPHost,
 			IMAPPort:    m.IMAPPort,
 			SMTPHost:    m.SMTPHost,
 			SMTPPort:    m.SMTPPort,
-		})
-		if err != nil {
-			return err
 		}
-		have[m.Email] = true
-		if credentialPassword != "" && m.Secret != nil {
-			plaintext, err := decryptWithPassword(credentialPassword, m.Secret)
-			if err != nil {
-				return err
-			}
-			var secret credentials.Secret
-			if err := json.Unmarshal(plaintext, &secret); err != nil {
-				return err
-			}
+		id, err := a.store.CreateAccount(a.ctx, &account)
+		if err != nil {
+			return ready, err
+		}
+		have[m.Email] = id
+		ready = append(ready, account)
+		if secret, ok := secrets[m.Email]; ok {
 			if err := credentials.Store(id, secret); err != nil {
-				return err
+				return ready, err
 			}
 		}
 	}
-	return nil
+	return ready, nil
 }
 
 // importSignatures recreates signatures from the backup, skipping any

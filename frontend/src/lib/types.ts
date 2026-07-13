@@ -73,6 +73,18 @@ export interface MessageDetail extends MessageSummary {
   // remoteHosts lists the hosts blocked remote content would load from.
   remoteHosts: string[]
   attachments: Attachment[]
+  // unsubscribe describes the List-Unsubscribe mechanism the message
+  // advertises: oneclick (RFC 8058 background POST), mailto (sent via the
+  // account's smtp) or link (opened in the browser). null when none is on
+  // record; the ui may still fall back to an unsubscribe link in the body.
+  unsubscribe: UnsubscribeInfo | null
+}
+
+export interface UnsubscribeInfo {
+  kind: 'oneclick' | 'mailto' | 'link'
+  target: string
+  // done is true when this sender was already unsubscribed from.
+  done: boolean
 }
 
 export interface MessageList {
@@ -217,6 +229,108 @@ export interface UIPrefs {
   // emptyStateImage is a data-uri image shown in the reading pane when no
   // message is open; empty means the bundled Pelton logo.
   emptyStateImage: string
+  // cornerStyle picks the corner radius look: default, square, or round.
+  cornerStyle: string
+  // themeId selects an installed custom theme; empty means the built-in
+  // default themes driven by the theme (light/dark/system) setting.
+  themeId: string
+  // menuBarInApp shows the in-app menu bar on macOS (Windows/Linux always show
+  // it); menuBarNativeMinimal then reduces the native macOS menu to the app
+  // menu. menuBarIcons shows icons next to the in-app bar's dropdown items.
+  menuBarInApp: boolean
+  menuBarNativeMinimal: boolean
+  menuBarIcons: boolean
+  // timeFormat picks the clock for rendered times: auto (locale), 12, or 24.
+  timeFormat: string
+  // reduceMotion disables ui transitions and animations.
+  reduceMotion: boolean
+  // themeDarkStart/themeDarkEnd bound the dark window ("HH:MM") for the
+  // schedule theme mode.
+  themeDarkStart: string
+  themeDarkEnd: string
+  // bodyFont is the reader fallback font for mail bodies (a key from the
+  // curated list in lib/fonts.ts).
+  bodyFont: string
+  // uiFont / monoFont override the interface and monospace font tokens (a
+  // curated key or 'sys:<family>'; 'default' keeps the built-in fonts).
+  uiFont: string
+  monoFont: string
+}
+
+// an installed custom theme, as shown in the settings gallery.
+export interface ThemeInfo {
+  id: string
+  name: string
+  author: string
+  version: string
+  description: string
+  base: string
+  hasCss: boolean
+  // network references still present in the installed css (only non-empty
+  // when the user chose Allow at import).
+  remoteRefs: string[]
+  // preview screenshot as a data uri, or ''.
+  preview: string
+  // set when the running app version is outside the range the theme declares
+  // itself made for. informational only.
+  compatWarning: string
+  // a few of the theme's token colors for the gallery card, for themes
+  // without a preview screenshot.
+  swatches: string[]
+}
+
+// a palette-editor save: name, light/dark base and token overrides. id is
+// set when editing an existing installed theme, empty when creating one.
+export interface SaveThemeRequest {
+  id: string
+  name: string
+  base: string
+  tokens: Record<string, string>
+}
+
+// everything needed to apply a custom theme to the document.
+export interface ThemeApply {
+  id: string
+  base: string
+  tokens: Record<string, string>
+  css: string
+  icons: Record<string, string>
+}
+
+// one stylesheet of a theme container, for the read-before-import viewer.
+export interface ThemeCSSFile {
+  path: string
+  content: string
+  remoteRefs: string[]
+}
+
+// the read-before-import view of a chosen .peltontheme file.
+export interface ThemeImportPreview {
+  canceled: boolean
+  path: string
+  info: ThemeInfo
+  cssFiles: ThemeCSSFile[]
+  updatesExisting: boolean
+  installedVersion: string
+}
+
+// a custom language file in the locales folder, as shown in the picker.
+export interface UserLocale {
+  id: string
+  name: string
+  author: string
+  base: string
+  // the number of strings the file provides; a low count marks a partial
+  // override on top of its base language.
+  count: number
+}
+
+// a custom language in apply form.
+export interface UserLocaleApply {
+  id: string
+  name: string
+  base: string
+  strings: Record<string, string>
 }
 
 // a harvested contact for compose autocomplete and the settings manager.
@@ -336,7 +450,7 @@ export type AuthStatus = 'unavailable'
 export type EditorMode = 'plaintext' | 'markdown' | 'wysiwyg'
 
 // theme and density preference values.
-export type ThemePref = 'system' | 'light' | 'dark'
+export type ThemePref = 'system' | 'light' | 'dark' | 'schedule'
 export type DensityPref = 'compact' | 'medium' | 'luxe'
 
 // Selection identifies what the message list is currently showing: either a

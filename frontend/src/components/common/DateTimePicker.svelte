@@ -5,6 +5,8 @@
   // datetime mode). all date math here is local wall-clock time, matching
   // what the native inputs produced, so callers keep their existing
   // parsing/formatting untouched.
+  import { formatDateTimeMedium, type TimeFormat } from '../../lib/format'
+  import { prefs } from '../../stores/prefs'
   import { tick, createEventDispatcher } from 'svelte'
   import { IconCalendar, IconChevronLeft, IconChevronRight } from '@tabler/icons-svelte'
   import { currentUIScale } from '../../theme/theme'
@@ -203,9 +205,7 @@
       return ''
     }
     const d = new Date(sel.y, sel.m, sel.d, h, min)
-    return mode === 'datetime'
-      ? new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(d)
-      : new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(d)
+    return formatDateTimeMedium(d, mode === 'datetime', $prefs.timeFormat as TimeFormat)
   }
 
   function commit(): void {

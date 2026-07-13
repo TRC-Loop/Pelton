@@ -1,0 +1,29 @@
+{
+  "manifestVersion": 1,
+  "id": "solarized-light",
+  "name": "Solarized Light",
+  "author": "Pelton",
+  "version": "1.0",
+  "description": "Warm, low-contrast light palette based on Ethan Schoonover's Solarized.",
+  "license": "MIT",
+  "base": "light",
+  "tokens": {
+    "surface-base": "#f5efdc",
+    "surface-raised": "#fdf6e3",
+    "surface-overlay": "#fdf6e3",
+    "surface-sunken": "#eee8d5",
+    "surface-hover": "#ece5d0",
+    "text-primary": "#073642",
+    "text-secondary": "#586e75",
+    "text-tertiary": "#839496",
+    "border-subtle": "rgba(88, 110, 117, 0.12)",
+    "border-default": "rgba(88, 110, 117, 0.22)",
+    "border-strong": "rgba(88, 110, 117, 0.4)",
+    "success": "#859900",
+    "success-bg": "color-mix(in srgb, #859900 12%, transparent)",
+    "warning": "#b58900",
+    "warning-bg": "color-mix(in srgb, #b58900 14%, transparent)",
+    "danger": "#dc322f",
+    "danger-bg": "color-mix(in srgb, #dc322f 12%, transparent)"
+  }
+}
