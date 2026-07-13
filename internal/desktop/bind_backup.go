@@ -327,15 +327,16 @@ func (a *App) ImportData(path string, categories []string, credentialPassword st
 		}
 	}
 	if want[backupCategoryMailboxes] {
-		created, err := a.importMailboxes(doc.Mailboxes, credentialPassword)
+		ready, err := a.importMailboxes(doc.Mailboxes, credentialPassword)
 		if err != nil {
 			return err
 		}
-		// sync and idle the new accounts in the background, same as the setup
-		// wizard does, so an import with credentials starts pulling mail right
-		// away instead of waiting for a restart. Accounts without credentials
-		// drop out of both with errNoCredentials, which is not an error here.
-		for _, acc := range created {
+		// sync and idle the new (and newly healed) accounts in the background,
+		// same as the setup wizard does, so an import with credentials starts
+		// pulling mail right away instead of waiting for a restart. Accounts
+		// without credentials drop out of both with errNoCredentials, which is
+		// not an error here.
+		for _, acc := range ready {
 			go func(acc storage.Account) {
 				if err := a.syncAccount(acc); err != nil && !errors.Is(err, errNoCredentials) {
 					a.log.Error("sync imported account", "account", acc.Email, "err", err)
@@ -353,27 +354,68 @@ func (a *App) ImportData(path string, categories []string, credentialPassword st
 }
 
 // importMailboxes recreates accounts from their backed-up server config and
-// returns the ones it created, skipping any email already present locally so
-// a re-import never duplicates a mailbox. When credentialPassword is non-empty
-// and an entry carries an encrypted credential, it's decrypted and stored in
-// the keyring for the newly created account; otherwise (no password given, or
-// the entry has no credential) the mailbox still needs its password re-entered
-// once before it can sync, same as before this existed.
+// returns the ones now ready to start syncing, skipping any email already
+// present locally so a re-import never duplicates a mailbox. When
+// credentialPassword is non-empty and an entry carries an encrypted
+// credential, it's decrypted and stored in the keyring; otherwise (no
+// password given, or the entry has no credential) the mailbox still needs its
+// password re-entered once before it can sync, same as before this existed.
+//
+// Every credential is decrypted up front, before anything is created: a
+// wrong export password then fails cleanly with nothing half-imported, and
+// the retry with the right password starts from the same clean state (#68).
 func (a *App) importMailboxes(mailboxes []mailboxBackup, credentialPassword string) ([]storage.Account, error) {
 	if len(mailboxes) == 0 {
 		return nil, nil
+	}
+	secrets := make(map[string]credentials.Secret)
+	if credentialPassword != "" {
+		for _, m := range mailboxes {
+			if m.Secret == nil {
+				continue
+			}
+			plaintext, err := decryptWithPassword(credentialPassword, m.Secret)
+			if err != nil {
+				return nil, err
+			}
+			var secret credentials.Secret
+			if err := json.Unmarshal(plaintext, &secret); err != nil {
+				return nil, err
+			}
+			secrets[m.Email] = secret
+		}
 	}
 	existing, err := a.store.ListAccounts(a.ctx)
 	if err != nil {
 		return nil, err
 	}
-	have := make(map[string]bool, len(existing))
+	have := make(map[string]int64, len(existing))
 	for _, acc := range existing {
-		have[acc.Email] = true
+		have[acc.Email] = acc.ID
 	}
-	var created []storage.Account
+	var ready []storage.Account
 	for _, m := range mailboxes {
-		if have[m.Email] {
+		if id, ok := have[m.Email]; ok {
+			// the account exists but may have no stored credential - the
+			// leftover of an import that failed after creating it (the pre-#68
+			// bug). storing the credential now heals it, and it joins the
+			// post-import sync like a fresh account.
+			secret, hasSecret := secrets[m.Email]
+			if !hasSecret {
+				continue
+			}
+			if _, err := credentials.Load(id); err == nil {
+				continue
+			}
+			if err := credentials.Store(id, secret); err != nil {
+				return ready, err
+			}
+			for _, acc := range existing {
+				if acc.ID == id {
+					ready = append(ready, acc)
+					break
+				}
+			}
 			continue
 		}
 		account := storage.Account{
@@ -386,25 +428,17 @@ func (a *App) importMailboxes(mailboxes []mailboxBackup, credentialPassword stri
 		}
 		id, err := a.store.CreateAccount(a.ctx, &account)
 		if err != nil {
-			return created, err
+			return ready, err
 		}
-		have[m.Email] = true
-		created = append(created, account)
-		if credentialPassword != "" && m.Secret != nil {
-			plaintext, err := decryptWithPassword(credentialPassword, m.Secret)
-			if err != nil {
-				return created, err
-			}
-			var secret credentials.Secret
-			if err := json.Unmarshal(plaintext, &secret); err != nil {
-				return created, err
-			}
+		have[m.Email] = id
+		ready = append(ready, account)
+		if secret, ok := secrets[m.Email]; ok {
 			if err := credentials.Store(id, secret); err != nil {
-				return created, err
+				return ready, err
 			}
 		}
 	}
-	return created, nil
+	return ready, nil
 }
 
 // importSignatures recreates signatures from the backup, skipping any
