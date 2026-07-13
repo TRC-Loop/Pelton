@@ -36,6 +36,7 @@ import type {
   ThemeInfo,
   ThemeApply,
   ThemeImportPreview,
+  SaveThemeRequest,
 } from './types'
 
 // isDemoMode reports whether the app launched in the cosmetic --potatoes-are-nice
@@ -645,4 +646,15 @@ export function deleteTheme(id: string): Promise<void> {
 // a save dialog, returning the chosen path ('' if cancelled).
 export function exportTheme(id: string): Promise<string> {
   return App.ExportTheme(id)
+}
+
+// saveCustomTheme validates and writes a palette-editor theme as a
+// .peltontheme file in the themes folder, returning its gallery info.
+export function saveCustomTheme(req: SaveThemeRequest): Promise<ThemeInfo> {
+  return App.SaveCustomTheme(req) as Promise<ThemeInfo>
+}
+
+// openThemesFolder shows the themes folder in the system file manager.
+export function openThemesFolder(): Promise<void> {
+  return App.OpenThemesFolder()
 }

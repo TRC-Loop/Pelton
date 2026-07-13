@@ -1,16 +1,19 @@
 // Package themepack implements the .peltontheme container format: a zip
 // holding a manifest.json that declares token override files, css files, icon
-// overrides and assets. The package parses and validates containers for
-// import, installs them as extracted folders (so a theme stays hand-editable
-// on disk), loads installed themes for applying, and zips a folder back up
-// for export. Everything security-relevant (path safety, size caps, token
-// allowlisting, css remote-reference scanning, svg sanitizing) lives here so
-// the bind layer and the frontend never see unvalidated theme content.
+// overrides and assets. Installed themes live as .peltontheme files in the
+// user's themes folder; the package parses and validates containers, writes
+// them back out (imports, editor saves and the seeded default themes all go
+// through WriteContainer), and still reads extracted folders from the
+// previous layout. Everything security-relevant (path safety, size caps,
+// token allowlisting, css remote-reference scanning, svg sanitizing) lives
+// here so the bind layer and the frontend never see unvalidated theme
+// content.
 //
 // File map: manifest.go (manifest schema + parsing), tokens.go (allowlist +
 // value checks), css.go (remote-reference scan/strip), svg.go (icon
 // sanitizing), version.go (app version range warnings), container.go (zip
-// reading), install.go (install/load/export on disk).
+// reading), export.go (zip writing), install.go (legacy folder reading),
+// presets.go (embedded default themes for seeding).
 package themepack
 
 // ManifestVersion is the container format version this engine understands. A

@@ -7,39 +7,11 @@ import (
 	"strings"
 )
 
-// Install writes a validated package to themesRoot/<id>, replacing any
-// existing install of that id (which is how updates work). When blockRemote
-// is set - the user's choice at the import warning - every css file is
-// written with its remote references stripped, so what is on disk is exactly
-// what will run; nothing re-decides at apply time. Returns the install dir.
-func Install(p *Package, themesRoot string, blockRemote bool) (string, error) {
-	dir := filepath.Join(themesRoot, p.Manifest.ID)
-	if err := os.RemoveAll(dir); err != nil {
-		return "", err
-	}
-	cssPaths := make(map[string]bool, len(p.CSSFiles))
-	for _, f := range p.CSSFiles {
-		cssPaths[f.Path] = true
-	}
-	for name, content := range p.Files {
-		if blockRemote && cssPaths[name] {
-			content = []byte(StripRemote(string(content)))
-		}
-		dest := filepath.Join(dir, filepath.FromSlash(name))
-		if err := os.MkdirAll(filepath.Dir(dest), 0o700); err != nil {
-			return "", err
-		}
-		if err := os.WriteFile(dest, content, 0o600); err != nil {
-			return "", err
-		}
-	}
-	return dir, nil
-}
-
-// LoadInstalled reads an installed theme folder back into a validated
-// package. It goes through the exact same validation as an import, so a
-// hand-edited folder (the authoring loop) gets the same safety checks, and a
-// file corrupted after install fails loudly instead of half-applying.
+// LoadInstalled reads an extracted theme folder back into a validated
+// package. Themes normally live as .peltontheme files, but folders from the
+// previous layout (and hand-authored folders) keep working; they go through
+// the exact same validation as a container, so a corrupted or edited folder
+// fails loudly instead of half-applying.
 func LoadInstalled(dir string) (*Package, error) {
 	files, err := readDirEntries(dir)
 	if err != nil {

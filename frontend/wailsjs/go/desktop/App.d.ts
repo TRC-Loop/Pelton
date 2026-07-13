@@ -95,6 +95,8 @@ export function ListUnifiedViews():Promise<Array<desktop.UnifiedViewDTO>>;
 
 export function MoveMessage(arg1:number,arg2:number):Promise<desktop.ArchiveUndoDTO>;
 
+export function OpenThemesFolder():Promise<void>;
+
 export function PreviewThemeImport():Promise<desktop.ThemeImportPreviewDTO>;
 
 export function ProgramLicense():Promise<string>;
@@ -112,6 +114,8 @@ export function ResumePendingDownload():Promise<void>;
 export function SaveAllAttachments(arg1:number):Promise<string>;
 
 export function SaveAttachment(arg1:number,arg2:number):Promise<string>;
+
+export function SaveCustomTheme(arg1:desktop.SaveThemeRequest):Promise<desktop.ThemeInfoDTO>;
 
 export function SaveDraft(arg1:number,arg2:desktop.ComposeRequest):Promise<number>;
 

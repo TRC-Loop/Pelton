@@ -1,0 +1,29 @@
+{
+  "manifestVersion": 1,
+  "id": "solarized-dark",
+  "name": "Solarized Dark",
+  "author": "Pelton",
+  "version": "1.0",
+  "description": "Deep teal dark palette based on Ethan Schoonover's Solarized.",
+  "license": "MIT",
+  "base": "dark",
+  "tokens": {
+    "surface-base": "#002b36",
+    "surface-raised": "#073642",
+    "surface-overlay": "#0b3f4d",
+    "surface-sunken": "#00232c",
+    "surface-hover": "#0e4250",
+    "text-primary": "#eee8d5",
+    "text-secondary": "#93a1a1",
+    "text-tertiary": "#657b83",
+    "border-subtle": "rgba(147, 161, 161, 0.12)",
+    "border-default": "rgba(147, 161, 161, 0.2)",
+    "border-strong": "rgba(147, 161, 161, 0.35)",
+    "success": "#859900",
+    "success-bg": "color-mix(in srgb, #859900 16%, transparent)",
+    "warning": "#b58900",
+    "warning-bg": "color-mix(in srgb, #b58900 16%, transparent)",
+    "danger": "#dc322f",
+    "danger-bg": "color-mix(in srgb, #dc322f 16%, transparent)"
+  }
+}
