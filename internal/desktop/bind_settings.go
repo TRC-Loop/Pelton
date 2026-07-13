@@ -65,6 +65,9 @@ const (
 	settingMenuBarIcons = "menu_bar_icons"
 	// clock preference for rendered times: auto (locale), 12, or 24.
 	settingTimeFormat = "time_format"
+	// disable ui transitions and animations (the os-level preference is
+	// honored by the frontend css regardless).
+	settingReduceMotion = "reduce_motion"
 )
 
 // settingUpdateCheckFreq, settingLastUpdateCheck and defaultUpdateCheckFrequency
@@ -212,6 +215,8 @@ type UIPrefsDTO struct {
 	MenuBarIcons bool `json:"menuBarIcons"`
 	// TimeFormat picks the clock for rendered times: auto (locale), 12, or 24.
 	TimeFormat string `json:"timeFormat"`
+	// ReduceMotion disables ui transitions and animations.
+	ReduceMotion bool `json:"reduceMotion"`
 }
 
 // GetUIPrefs returns all ui preferences with defaults filled in, so startup is a
@@ -271,6 +276,7 @@ func (a *App) GetUIPrefs() (UIPrefsDTO, error) {
 		MenuBarNativeMinimal:       a.boolSetting(settingMenuBarNativeMinimal, false),
 		MenuBarIcons:               a.boolSetting(settingMenuBarIcons, false),
 		TimeFormat:                 a.stringSetting(settingTimeFormat, "auto"),
+		ReduceMotion:               a.boolSetting(settingReduceMotion, false),
 	}, nil
 }
 

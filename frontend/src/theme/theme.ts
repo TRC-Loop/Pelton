@@ -46,6 +46,17 @@ export function applyDensity(pref: DensityPref): void {
   document.documentElement.setAttribute('data-density', pref)
 }
 
+// applyReduceMotion marks the root so css can disable transitions and
+// animations. the os-level prefers-reduced-motion query is honored by the
+// same css block regardless of this flag; this is the explicit in-app switch.
+export function applyReduceMotion(on: boolean): void {
+  if (on) {
+    document.documentElement.setAttribute('data-reduce-motion', '')
+  } else {
+    document.documentElement.removeAttribute('data-reduce-motion')
+  }
+}
+
 // applyScale zooms the whole interface by a string multiplier ("1" = 100%).
 // zoom (rather than a root font-size) scales the px-based tokens and layout
 // together, and is supported in both WKWebView and WebView2. an invalid or

@@ -726,6 +726,8 @@ const en: Record<string, string> = {
   'settingsPanel.timeFormat.auto': 'Auto',
   'settingsPanel.timeFormat.h12': '12-hour',
   'settingsPanel.timeFormat.h24': '24-hour',
+  'settingsPanel.toggle.reduceMotion': 'Reduce motion',
+  'settingsPanel.hint.reduceMotion': 'Turns off interface animations and transitions. Also follows your system\'s reduced-motion preference automatically.',
   'settingsPanel.toggle.shortcutHints': 'Show keyboard shortcut hints in the app',
   'settingsPanel.toggle.menuBarInApp': 'Use the in-app menu bar',
   'settingsPanel.hint.menuBarInApp': "Shows Pelton's own menu bar at the top of the window. The macOS menu bar stays available.",

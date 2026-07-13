@@ -726,6 +726,8 @@ const nl: Record<string, string> = {
   'settingsPanel.timeFormat.auto': 'Auto',
   'settingsPanel.timeFormat.h12': '12 uur',
   'settingsPanel.timeFormat.h24': '24 uur',
+  'settingsPanel.toggle.reduceMotion': 'Beweging verminderen',
+  'settingsPanel.hint.reduceMotion': 'Schakelt animaties en overgangen van de interface uit. De systeemvoorkeur voor verminderde beweging wordt ook automatisch gevolgd.',
   'settingsPanel.toggle.shortcutHints': 'Sneltoetshints tonen in de app',
   'settingsPanel.toggle.menuBarInApp': 'In-app menubalk gebruiken',
   'settingsPanel.hint.menuBarInApp': 'Toont Peltons eigen menubalk boven in het venster. De macOS-menubalk blijft beschikbaar.',

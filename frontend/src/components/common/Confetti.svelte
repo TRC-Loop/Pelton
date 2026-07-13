@@ -12,6 +12,15 @@
   let canvas: HTMLCanvasElement
   let raf = 0
 
+  // purely decorative, so it skips entirely under reduced motion (the in-app
+  // setting marks the root; the media query covers the os preference).
+  function motionReduced(): boolean {
+    return (
+      document.documentElement.hasAttribute('data-reduce-motion') ||
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    )
+  }
+
   interface Piece {
     x: number
     y: number
@@ -61,7 +70,7 @@
   }
 
   function start(): void {
-    if (!canvas) {
+    if (!canvas || motionReduced()) {
       return
     }
     const ctx = canvas.getContext('2d')

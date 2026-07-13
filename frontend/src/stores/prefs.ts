@@ -7,7 +7,7 @@
 import { writable } from 'svelte/store'
 import type { UIPrefs, ThemePref, DensityPref, EditorMode } from '../lib/types'
 import { getUIPrefs, setSetting, SettingKeys, systemColorScheme, setWindowTheme, getThemeApply } from '../lib/api'
-import { applyTheme, applyDensity, applyAccent, applyScale, watchSystemTheme, setSystemSchemeOverride, resolveTheme } from '../theme/theme'
+import { applyTheme, applyDensity, applyAccent, applyScale, applyReduceMotion, watchSystemTheme, setSystemSchemeOverride, resolveTheme } from '../theme/theme'
 import { applyUserTheme } from '../theme/usertheme'
 import { setLocale, type Locale } from '../lib/i18n'
 
@@ -63,6 +63,7 @@ const defaults: UIPrefs = {
   menuBarNativeMinimal: false,
   menuBarIcons: false,
   timeFormat: 'auto',
+  reduceMotion: false,
 }
 
 export const prefs = writable<UIPrefs>(defaults)
@@ -80,6 +81,7 @@ function applyAll(p: UIPrefs): void {
   applyDensity(p.density as DensityPref)
   applyAccent(p.accent)
   applyScale(p.uiScale)
+  applyReduceMotion(p.reduceMotion)
   setLocale(p.language as Locale)
 }
 
@@ -315,6 +317,11 @@ export function setMenuBarIcons(value: boolean): void {
 export function setTimeFormat(value: string): void {
   prefs.update((p) => ({ ...p, timeFormat: value }))
   void setSetting(SettingKeys.timeFormat, value)
+// setReduceMotion toggles the ui transition/animation kill switch.
+export function setReduceMotion(value: boolean): void {
+  prefs.update((p) => ({ ...p, reduceMotion: value }))
+  applyReduceMotion(value)
+  void setSetting(SettingKeys.reduceMotion, String(value))
 }
 
 // toggle keys map a boolean preference to its setting key so setToggle stays

@@ -790,6 +790,7 @@ export namespace desktop {
 	    menuBarNativeMinimal: boolean;
 	    menuBarIcons: boolean;
 	    timeFormat: string;
+	    reduceMotion: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new UIPrefsDTO(source);
@@ -846,6 +847,7 @@ export namespace desktop {
 	        this.menuBarNativeMinimal = source["menuBarNativeMinimal"];
 	        this.menuBarIcons = source["menuBarIcons"];
 	        this.timeFormat = source["timeFormat"];
+	        this.reduceMotion = source["reduceMotion"];
 	    }
 	}
 	export class UnifiedViewDTO {

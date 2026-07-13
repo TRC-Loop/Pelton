@@ -726,6 +726,8 @@ const fr: Record<string, string> = {
   'settingsPanel.timeFormat.auto': 'Auto',
   'settingsPanel.timeFormat.h12': '12 heures',
   'settingsPanel.timeFormat.h24': '24 heures',
+  'settingsPanel.toggle.reduceMotion': 'Réduire les animations',
+  'settingsPanel.hint.reduceMotion': 'Désactive les animations et transitions de l\'interface. La préférence système de réduction des animations est aussi suivie automatiquement.',
   'settingsPanel.toggle.shortcutHints': 'Afficher les indices de raccourcis clavier dans l\'application',
   'settingsPanel.toggle.menuBarInApp': 'Utiliser la barre de menus intégrée',
   'settingsPanel.hint.menuBarInApp': 'Affiche la barre de menus de Pelton en haut de la fenêtre. La barre de menus macOS reste disponible.',

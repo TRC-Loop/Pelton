@@ -586,6 +586,7 @@ export const SettingKeys = {
   menuBarNativeMinimal: 'menu_bar_native_minimal',
   menuBarIcons: 'menu_bar_icons',
   timeFormat: 'time_format',
+  reduceMotion: 'reduce_motion',
 } as const
 
 // --- custom themes ---

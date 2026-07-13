@@ -726,6 +726,8 @@ const de: Record<string, string> = {
   'settingsPanel.timeFormat.auto': 'Auto',
   'settingsPanel.timeFormat.h12': '12 Stunden',
   'settingsPanel.timeFormat.h24': '24 Stunden',
+  'settingsPanel.toggle.reduceMotion': 'Bewegung reduzieren',
+  'settingsPanel.hint.reduceMotion': 'Schaltet Animationen und Übergänge der Oberfläche aus. Die Systemeinstellung für reduzierte Bewegung wird automatisch berücksichtigt.',
   'settingsPanel.toggle.shortcutHints': 'Tastenkürzel-Hinweise in der App anzeigen',
   'settingsPanel.toggle.menuBarInApp': 'In-App-Menüleiste verwenden',
   'settingsPanel.hint.menuBarInApp': 'Zeigt Peltons eigene Menüleiste oben im Fenster. Die macOS-Menüleiste bleibt verfügbar.',

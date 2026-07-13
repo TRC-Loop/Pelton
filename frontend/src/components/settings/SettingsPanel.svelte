@@ -90,6 +90,7 @@
     setMenuBarNativeMinimal,
     setMenuBarIcons,
     setTimeFormat,
+    setReduceMotion,
   } from '../../stores/prefs'
   import peltonLogo from '../../assets/images/icons/pelton-logo.png'
   import type { Locale } from '../../lib/i18n'
@@ -469,6 +470,15 @@
             </div>
             <p class="hint">{$t('settingsPanel.hint.menuBarIcons')}</p>
           {/if}
+          <div class="toggle">
+            <span class="row-label">{$t('settingsPanel.toggle.reduceMotion')}</span>
+            <ToggleSwitch
+              checked={$prefs.reduceMotion}
+              label={$t('settingsPanel.toggle.reduceMotion')}
+              on:change={(e) => setReduceMotion(e.detail)}
+            />
+          </div>
+          <p class="hint">{$t('settingsPanel.hint.reduceMotion')}</p>
 
           <div class="field">
             <span class="row-label">{$t('settingsPanel.label.emptyStateImage')}</span>
