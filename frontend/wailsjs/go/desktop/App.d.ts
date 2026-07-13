@@ -52,8 +52,6 @@ export function GetMessage(arg1:number):Promise<desktop.MessageDetailDTO>;
 
 export function GetMessageHTML(arg1:number,arg2:boolean):Promise<string>;
 
-export function Unsubscribe(arg1:number):Promise<void>;
-
 export function GetSetting(arg1:string):Promise<desktop.SettingResult>;
 
 export function GetThemeApply(arg1:string):Promise<desktop.ThemeApplyDTO>;
@@ -155,5 +153,7 @@ export function UnarchiveMessage(arg1:string,arg2:number):Promise<void>;
 export function UndoDelete(arg1:number):Promise<void>;
 
 export function UnsnoozeMessage(arg1:number):Promise<void>;
+
+export function Unsubscribe(arg1:number):Promise<void>;
 
 export function UpdateAccount(arg1:desktop.UpdateAccountRequest):Promise<desktop.AccountDTO>;

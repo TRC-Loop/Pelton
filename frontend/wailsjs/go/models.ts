@@ -428,7 +428,7 @@ export namespace desktop {
 	    remoteAllowed: boolean;
 	    remoteHosts: string[];
 	    attachments: AttachmentDTO[];
-	    unsubscribe: UnsubscribeDTO | null;
+	    unsubscribe?: UnsubscribeDTO;
 	
 	    static createFrom(source: any = {}) {
 	        return new MessageDetailDTO(source);
@@ -876,6 +876,7 @@ export namespace desktop {
 	        this.totalCount = source["totalCount"];
 	    }
 	}
+	
 	export class UpdateAccountRequest {
 	    id: number;
 	    displayName: string;
