@@ -58,6 +58,17 @@ jobs:
         id: version
         run: echo "version=${GITHUB_REF_NAME:-dev}" >> "$GITHUB_OUTPUT"
 
+      # Stamp info.productVersion so the bundle's Info.plist
+      # (CFBundleVersion / CFBundleShortVersionString, i.e. Finder's Get
+      # Info) matches the app instead of the checked-in dev placeholder.
+      # Without this, every release reported the same bundle version and a
+      # stale app copy was indistinguishable from the new one (#83).
+      - name: Stamp product version
+        run: |
+          ver="${{ steps.version.outputs.version }}"
+          jq --arg v "${ver#v}" '.info.productVersion = $v' wails.json > wails.json.tmp
+          mv wails.json.tmp wails.json
+
       - name: Build (${{ matrix.arch }})
         run: wails build -platform darwin/${{ matrix.arch }} -ldflags "-X main.version=${{ steps.version.outputs.version }}"
 
@@ -161,6 +172,15 @@ jobs:
         id: version
         shell: bash
         run: echo "version=${GITHUB_REF_NAME:-dev}" >> "$GITHUB_OUTPUT"
+
+      # Stamp info.productVersion into the exe's version resources and the
+      # NSIS installer metadata, same reasoning as the macOS job (#83).
+      - name: Stamp product version
+        shell: bash
+        run: |
+          ver="${{ steps.version.outputs.version }}"
+          jq --arg v "${ver#v}" '.info.productVersion = $v' wails.json > wails.json.tmp
+          mv wails.json.tmp wails.json
 
       - name: Build + NSIS installer
         run: wails build -platform windows/amd64 -nsis -ldflags "-X main.version=${{ steps.version.outputs.version }}"
