@@ -704,6 +704,8 @@ const en: Record<string, string> = {
   'settingsPanel.hint.vimEditorDetail': 'Adds modal (normal/insert/visual) editing to the plain text and markdown editor.',
   'settingsPanel.label.bodyFont': 'Mail body font',
   'settingsPanel.hint.bodyFont': 'Used to render emails that do not bring their own fonts. Emails that do keep them.',
+  'settingsPanel.bodyFont.groupCurated': 'Standard',
+  'settingsPanel.bodyFont.groupSystem': 'Installed on this computer',
   'settingsPanel.bodyFont.default': 'Same as interface',
   'settingsPanel.bodyFont.serif': 'Serif',
   'settingsPanel.bodyFont.sans': 'Sans-serif',

@@ -704,6 +704,8 @@ const nl: Record<string, string> = {
   'settingsPanel.hint.vimEditorDetail': 'Voegt modale bewerking (normaal/invoegen/visueel) toe aan de platte-tekst- en markdown-editor.',
   'settingsPanel.label.bodyFont': 'Lettertype voor berichten',
   'settingsPanel.hint.bodyFont': 'Gebruikt voor e-mails zonder eigen lettertypen. E-mails met eigen lettertypen behouden ze.',
+  'settingsPanel.bodyFont.groupCurated': 'Standaard',
+  'settingsPanel.bodyFont.groupSystem': 'Geïnstalleerd op deze computer',
   'settingsPanel.bodyFont.default': 'Zoals de interface',
   'settingsPanel.bodyFont.serif': 'Serif',
   'settingsPanel.bodyFont.sans': 'Sans-serif',

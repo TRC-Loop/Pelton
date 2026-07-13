@@ -585,6 +585,12 @@ export const SettingKeys = {
   bodyFont: 'body_font',
 } as const
 
+// listSystemFonts returns the installed font family names for the body font
+// dropdown (cached backend-side after the first scan).
+export function listSystemFonts(): Promise<string[]> {
+  return App.ListSystemFonts().then((f) => f ?? [])
+}
+
 // --- custom themes ---
 
 // listThemes returns every installed custom theme for the settings gallery.

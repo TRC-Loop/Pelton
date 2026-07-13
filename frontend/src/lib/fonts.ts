@@ -29,6 +29,13 @@ export const bodyFonts: BodyFont[] = [
 
 // bodyFontStack maps a stored key to its css stack, or null for the default
 // (and for any unknown key, so a removed entry degrades to the ui font).
+// keys prefixed "sys:" name an installed system font family directly (the
+// dropdown lists them from the ListSystemFonts binding); a generic fallback
+// rides along in case the font was uninstalled since.
 export function bodyFontStack(key: string): string | null {
+  if (key.startsWith('sys:')) {
+    const family = key.slice(4).replace(/["\\]/g, '')
+    return family ? `"${family}", sans-serif` : null
+  }
   return bodyFonts.find((f) => f.key === key)?.stack ?? null
 }

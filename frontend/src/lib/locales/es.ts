@@ -704,6 +704,8 @@ const es: Record<string, string> = {
   'settingsPanel.hint.vimEditorDetail': 'Añade edición modal (normal/inserción/visual) al editor de texto sin formato y markdown.',
   'settingsPanel.label.bodyFont': 'Fuente de los mensajes',
   'settingsPanel.hint.bodyFont': 'Se usa para correos sin fuentes propias. Los correos que las declaran las conservan.',
+  'settingsPanel.bodyFont.groupCurated': 'Estándar',
+  'settingsPanel.bodyFont.groupSystem': 'Instaladas en este equipo',
   'settingsPanel.bodyFont.default': 'Como la interfaz',
   'settingsPanel.bodyFont.serif': 'Serif',
   'settingsPanel.bodyFont.sans': 'Sans-serif',

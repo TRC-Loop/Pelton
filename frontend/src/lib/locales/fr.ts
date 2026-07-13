@@ -704,6 +704,8 @@ const fr: Record<string, string> = {
   'settingsPanel.hint.vimEditorDetail': 'Ajoute l\'édition modale (normal/insertion/visuel) à l\'éditeur de texte brut et markdown.',
   'settingsPanel.label.bodyFont': 'Police des messages',
   'settingsPanel.hint.bodyFont': 'Utilisée pour les e-mails sans polices propres. Les e-mails qui en déclarent les conservent.',
+  'settingsPanel.bodyFont.groupCurated': 'Standard',
+  'settingsPanel.bodyFont.groupSystem': 'Installées sur cet ordinateur',
   'settingsPanel.bodyFont.default': 'Comme l\'interface',
   'settingsPanel.bodyFont.serif': 'Serif',
   'settingsPanel.bodyFont.sans': 'Sans-serif',

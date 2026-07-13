@@ -102,6 +102,10 @@ export function GetMessageHTML(arg1, arg2) {
   return window['go']['desktop']['App']['GetMessageHTML'](arg1, arg2);
 }
 
+export function ListSystemFonts() {
+  return window['go']['desktop']['App']['ListSystemFonts']();
+}
+
 export function GetSetting(arg1) {
   return window['go']['desktop']['App']['GetSetting'](arg1);
 }
