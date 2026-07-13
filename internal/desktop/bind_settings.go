@@ -79,6 +79,8 @@ const (
 	// and --font-mono tokens.
 	settingUIFont   = "ui_font"
 	settingMonoFont = "mono_font"
+	// corner style for controls and cards: default, square, or round (#60).
+	settingCornerStyle = "corner_style"
 )
 
 // settingUpdateCheckFreq, settingLastUpdateCheck and defaultUpdateCheckFrequency
@@ -214,6 +216,8 @@ type UIPrefsDTO struct {
 	// EmptyStateImage is a data-uri image shown in the reading pane when no
 	// message is open. Empty means the bundled Pelton logo.
 	EmptyStateImage string `json:"emptyStateImage"`
+	// CornerStyle picks the corner radius look: default, square, or round.
+	CornerStyle string `json:"cornerStyle"`
 	// ThemeID selects an installed custom theme (see bind_themes.go). Empty
 	// means the built-in default themes driven by the Theme setting.
 	ThemeID string `json:"themeId"`
@@ -291,6 +295,7 @@ func (a *App) GetUIPrefs() (UIPrefsDTO, error) {
 		ComposeChips:               a.boolSetting(settingComposeChips, true),
 		UpdateCheckFrequency:       a.stringSetting(settingUpdateCheckFreq, defaultUpdateCheckFrequency),
 		EmptyStateImage:            a.stringSetting(settingEmptyStateImage, ""),
+		CornerStyle:                a.stringSetting(settingCornerStyle, "default"),
 		ThemeID:                    a.stringSetting(settingThemeID, ""),
 		MenuBarInApp:               a.boolSetting(settingMenuBarInApp, false),
 		MenuBarNativeMinimal:       a.boolSetting(settingMenuBarNativeMinimal, false),

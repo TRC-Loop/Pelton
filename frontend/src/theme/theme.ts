@@ -88,6 +88,16 @@ export function applyDensity(pref: DensityPref): void {
   document.documentElement.setAttribute('data-density', pref)
 }
 
+// applyCorners writes the corner style onto the root element; the default
+// removes the attribute so the base radius tokens apply untouched.
+export function applyCorners(pref: string): void {
+  if (pref === 'square' || pref === 'round') {
+    document.documentElement.setAttribute('data-corners', pref)
+  } else {
+    document.documentElement.removeAttribute('data-corners')
+  }
+}
+
 // applyUIFont / applyMonoFont override the font tokens with the user's chosen
 // stack; null removes the override so the token falls back to the built-in
 // (or active theme's) value. inline styles on the root win over any

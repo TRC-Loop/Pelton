@@ -55,6 +55,7 @@
     prefs,
     setTheme,
     setDensity,
+    setCornerStyle,
     setUIScale,
     setMessageFontSize,
     setToastPosition,
@@ -293,6 +294,12 @@
     { key: '24', label: $t('settingsPanel.timeFormat.h24') },
   ]
 
+  $: cornerOptions = [
+    { key: 'square', label: $t('settingsPanel.corners.square') },
+    { key: 'default', label: $t('settingsPanel.corners.default') },
+    { key: 'round', label: $t('settingsPanel.corners.round') },
+  ]
+
   // interface zoom. values are string multipliers applied as css zoom.
   $: scaleOptions = [
     { key: '0.9', label: $t('settingsPanel.scale.90') },
@@ -527,6 +534,13 @@
           {/if}
           <AccentPicker />
           <SegmentedSetting label={$t('settingsPanel.label.density')} value={$prefs.density} options={densityOptions} on:change={onDensity} />
+          <SegmentedSetting
+            label={$t('settingsPanel.label.corners')}
+            value={$prefs.cornerStyle}
+            options={cornerOptions}
+            on:change={(e) => setCornerStyle(e.detail)}
+          />
+          <p class="hint">{$t('settingsPanel.hint.corners')}</p>
           <SegmentedSetting
             label={$t('settingsPanel.label.interfaceScale')}
             value={$prefs.uiScale}

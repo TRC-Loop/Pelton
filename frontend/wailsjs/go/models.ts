@@ -823,6 +823,7 @@ export namespace desktop {
 	    composeChips: boolean;
 	    updateCheckFrequency: string;
 	    emptyStateImage: string;
+	    cornerStyle: string;
 	    themeId: string;
 	    menuBarInApp: boolean;
 	    menuBarNativeMinimal: boolean;
@@ -885,6 +886,7 @@ export namespace desktop {
 	        this.composeChips = source["composeChips"];
 	        this.updateCheckFrequency = source["updateCheckFrequency"];
 	        this.emptyStateImage = source["emptyStateImage"];
+	        this.cornerStyle = source["cornerStyle"];
 	        this.themeId = source["themeId"];
 	        this.menuBarInApp = source["menuBarInApp"];
 	        this.menuBarNativeMinimal = source["menuBarNativeMinimal"];
