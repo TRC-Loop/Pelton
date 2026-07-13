@@ -7,7 +7,7 @@
 import { writable } from 'svelte/store'
 import type { UIPrefs, ThemePref, DensityPref, EditorMode } from '../lib/types'
 import { getUIPrefs, setSetting, SettingKeys, systemColorScheme, setWindowTheme, getThemeApply } from '../lib/api'
-import { applyTheme, applyDensity, applyAccent, applyScale, applyReduceMotion, watchSystemTheme, setSystemSchemeOverride, resolveTheme } from '../theme/theme'
+import { applyTheme, applyDensity, applyAccent, applyScale, applyReduceMotion, setThemeSchedule, watchSystemTheme, setSystemSchemeOverride, resolveTheme } from '../theme/theme'
 import { applyUserTheme } from '../theme/usertheme'
 import { setLocale, type Locale } from '../lib/i18n'
 
@@ -64,6 +64,8 @@ const defaults: UIPrefs = {
   menuBarIcons: false,
   timeFormat: 'auto',
   reduceMotion: false,
+  themeDarkStart: '19:00',
+  themeDarkEnd: '07:00',
 }
 
 export const prefs = writable<UIPrefs>(defaults)
@@ -76,6 +78,7 @@ function syncWindowChrome(pref: ThemePref): void {
 
 // applyAll pushes the current preferences onto the document.
 function applyAll(p: UIPrefs): void {
+  setThemeSchedule(p.themeDarkStart, p.themeDarkEnd)
   applyTheme(p.theme as ThemePref)
   syncWindowChrome(p.theme as ThemePref)
   applyDensity(p.density as DensityPref)
@@ -125,6 +128,20 @@ export async function initPrefs(): Promise<void> {
       syncWindowChrome('system')
     }
   })
+
+  // the schedule mode flips at its window bounds without any external event:
+  // re-evaluate once a minute and when the window regains focus (a timer that
+  // slept through os suspend fires late, so the focus check covers wake).
+  const reapplySchedule = (): void => {
+    let current: UIPrefs = defaults
+    prefs.subscribe((p) => (current = p))()
+    if (current.theme === 'schedule' && !current.themeId) {
+      applyTheme('schedule')
+      syncWindowChrome('schedule')
+    }
+  }
+  setInterval(reapplySchedule, 60_000)
+  window.addEventListener('focus', reapplySchedule)
 }
 
 // the setters below update the store, apply the change immediately, and persist
@@ -296,6 +313,21 @@ export function setAccent(accent: string): void {
   void setSetting(SettingKeys.accent, accent)
 }
 
+// setThemeDarkTimes updates the schedule mode's dark window and reapplies the
+// theme immediately when that mode is active.
+export function setThemeDarkTimes(start: string, end: string): void {
+  prefs.update((p) => ({ ...p, themeDarkStart: start, themeDarkEnd: end }))
+  setThemeSchedule(start, end)
+  let current: UIPrefs = defaults
+  prefs.subscribe((p) => (current = p))()
+  if (current.theme === 'schedule' && !current.themeId) {
+    applyTheme('schedule')
+    syncWindowChrome('schedule')
+  }
+  void setSetting(SettingKeys.themeDarkStart, start)
+  void setSetting(SettingKeys.themeDarkEnd, end)
+}
+
 // setMenuBarInApp shows the in-app menu bar on macOS. setMenuBarNativeMinimal
 // reduces the native macOS menu to the app menu while the in-app bar is on;
 // the backend rebuilds the native menu when either setting is written.
@@ -313,10 +345,14 @@ export function setMenuBarNativeMinimal(value: boolean): void {
 export function setMenuBarIcons(value: boolean): void {
   prefs.update((p) => ({ ...p, menuBarIcons: value }))
   void setSetting(SettingKeys.menuBarIcons, String(value))
+}
+
 // setTimeFormat picks the clock for rendered times: 'auto' (locale), '12', '24'.
 export function setTimeFormat(value: string): void {
   prefs.update((p) => ({ ...p, timeFormat: value }))
   void setSetting(SettingKeys.timeFormat, value)
+}
+
 // setReduceMotion toggles the ui transition/animation kill switch.
 export function setReduceMotion(value: boolean): void {
   prefs.update((p) => ({ ...p, reduceMotion: value }))

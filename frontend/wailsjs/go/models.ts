@@ -791,6 +791,8 @@ export namespace desktop {
 	    menuBarIcons: boolean;
 	    timeFormat: string;
 	    reduceMotion: boolean;
+	    themeDarkStart: string;
+	    themeDarkEnd: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new UIPrefsDTO(source);
@@ -848,6 +850,8 @@ export namespace desktop {
 	        this.menuBarIcons = source["menuBarIcons"];
 	        this.timeFormat = source["timeFormat"];
 	        this.reduceMotion = source["reduceMotion"];
+	        this.themeDarkStart = source["themeDarkStart"];
+	        this.themeDarkEnd = source["themeDarkEnd"];
 	    }
 	}
 	export class UnifiedViewDTO {

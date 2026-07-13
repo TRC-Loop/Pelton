@@ -68,6 +68,9 @@ const (
 	// disable ui transitions and animations (the os-level preference is
 	// honored by the frontend css regardless).
 	settingReduceMotion = "reduce_motion"
+	// dark window bounds ("HH:MM") for the schedule theme mode.
+	settingThemeDarkStart = "theme_dark_start"
+	settingThemeDarkEnd   = "theme_dark_end"
 )
 
 // settingUpdateCheckFreq, settingLastUpdateCheck and defaultUpdateCheckFrequency
@@ -217,6 +220,10 @@ type UIPrefsDTO struct {
 	TimeFormat string `json:"timeFormat"`
 	// ReduceMotion disables ui transitions and animations.
 	ReduceMotion bool `json:"reduceMotion"`
+	// ThemeDarkStart/ThemeDarkEnd bound the dark window ("HH:MM") for the
+	// schedule theme mode.
+	ThemeDarkStart string `json:"themeDarkStart"`
+	ThemeDarkEnd   string `json:"themeDarkEnd"`
 }
 
 // GetUIPrefs returns all ui preferences with defaults filled in, so startup is a
@@ -277,6 +284,8 @@ func (a *App) GetUIPrefs() (UIPrefsDTO, error) {
 		MenuBarIcons:               a.boolSetting(settingMenuBarIcons, false),
 		TimeFormat:                 a.stringSetting(settingTimeFormat, "auto"),
 		ReduceMotion:               a.boolSetting(settingReduceMotion, false),
+		ThemeDarkStart:             a.stringSetting(settingThemeDarkStart, "19:00"),
+		ThemeDarkEnd:               a.stringSetting(settingThemeDarkEnd, "07:00"),
 	}, nil
 }
 

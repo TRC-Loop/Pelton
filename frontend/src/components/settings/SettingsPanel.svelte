@@ -91,6 +91,7 @@
     setMenuBarIcons,
     setTimeFormat,
     setReduceMotion,
+    setThemeDarkTimes,
   } from '../../stores/prefs'
   import peltonLogo from '../../assets/images/icons/pelton-logo.png'
   import type { Locale } from '../../lib/i18n'
@@ -219,6 +220,7 @@
     { key: 'system', label: $t('onboarding.theme.system') },
     { key: 'light', label: $t('onboarding.theme.light') },
     { key: 'dark', label: $t('onboarding.theme.dark') },
+    { key: 'schedule', label: $t('settingsPanel.theme.schedule') },
   ]
 
   $: densityOptions = [
@@ -426,6 +428,27 @@
             <p class="hint">{$t('themes.baseLockedHint')}</p>
           {:else}
             <SegmentedSetting label={$t('settingsPanel.label.theme')} value={$prefs.theme} options={themeOptions} on:change={onTheme} />
+            {#if $prefs.theme === 'schedule'}
+              <div class="schedule-times">
+                <label class="schedule-time">
+                  <span>{$t('settingsPanel.label.darkFrom')}</span>
+                  <input
+                    type="time"
+                    value={$prefs.themeDarkStart}
+                    on:change={(e) => setThemeDarkTimes(e.currentTarget.value, $prefs.themeDarkEnd)}
+                  />
+                </label>
+                <label class="schedule-time">
+                  <span>{$t('settingsPanel.label.darkUntil')}</span>
+                  <input
+                    type="time"
+                    value={$prefs.themeDarkEnd}
+                    on:change={(e) => setThemeDarkTimes($prefs.themeDarkStart, e.currentTarget.value)}
+                  />
+                </label>
+              </div>
+              <p class="hint">{$t('settingsPanel.hint.themeSchedule')}</p>
+            {/if}
           {/if}
           <AccentPicker />
           <SegmentedSetting label={$t('settingsPanel.label.density')} value={$prefs.density} options={densityOptions} on:change={onDensity} />
@@ -1066,6 +1089,29 @@
   .row-label {
     font-size: var(--fz-body);
     color: var(--text-primary);
+  }
+
+  .schedule-times {
+    display: flex;
+    gap: var(--space-5);
+    margin: var(--space-2) 0;
+  }
+
+  .schedule-time {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    font-size: var(--fz-label);
+    color: var(--text-secondary);
+  }
+
+  .schedule-time input {
+    padding: var(--space-1) var(--space-2);
+    border: var(--hairline) solid var(--border-default);
+    border-radius: var(--radius-control);
+    background: var(--surface-sunken);
+    color: var(--text-primary);
+    font-size: var(--fz-label);
   }
 
   .hint {

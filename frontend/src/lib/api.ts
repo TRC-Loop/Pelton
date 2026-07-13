@@ -587,6 +587,8 @@ export const SettingKeys = {
   menuBarIcons: 'menu_bar_icons',
   timeFormat: 'time_format',
   reduceMotion: 'reduce_motion',
+  themeDarkStart: 'theme_dark_start',
+  themeDarkEnd: 'theme_dark_end',
 } as const
 
 // --- custom themes ---
