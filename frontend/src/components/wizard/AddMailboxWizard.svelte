@@ -24,6 +24,9 @@
 
   type Step = 'provider' | 'config' | 'oauth' | 'working' | 'done' | 'error'
   let step: Step = 'provider'
+  // the form the last submit came from, so the error screen returns there
+  // (gmail can submit from either form since oauth is optional for it).
+  let formStep: 'config' | 'oauth' = 'config'
   let preset: ProviderPreset | null = null
   let error = ''
   let workingMessage = ''
@@ -125,6 +128,7 @@
   }
 
   async function addPassword(): Promise<void> {
+    formStep = 'config'
     step = 'working'
     workingMessage = get(t)('wizard.working.connecting')
     try {
@@ -136,6 +140,7 @@
   }
 
   async function signIn(): Promise<void> {
+    formStep = 'oauth'
     step = 'working'
     workingMessage = get(t)('wizard.working.signIn')
     try {
@@ -222,7 +227,7 @@
         </label>
         {#if preset?.appPasswordUrl}
           <div class="app-password-warning">
-            <span>{$t('wizard.appPassword.warning')}</span>
+            <span>{preset?.id === 'gmail' ? $t('wizard.gmail.appPasswordWarning') : $t('wizard.appPassword.warning')}</span>
             <button type="button" class="app-password-link" on:click={() => BrowserOpenURL(preset?.appPasswordUrl ?? '')}>
               {$t('wizard.appPassword.link')}
             </button>
@@ -266,6 +271,11 @@
             {$t('addMailbox.cta')}
           </button>
         </div>
+        {#if preset?.oauthOptional}
+          <button type="button" class="disclosure" on:click={() => { error = ''; step = 'oauth' }}>
+            {$t('wizard.gmail.useOauthInstead')}
+          </button>
+        {/if}
       {:else if step === 'oauth'}
         <h3>{$t('wizard.step.oauth.title')} {preset?.label}</h3>
         <p class="note">
@@ -307,6 +317,11 @@
             {$t('wizard.signInWith')} {preset?.label}
           </button>
         </div>
+        {#if preset?.oauthOptional}
+          <button type="button" class="disclosure" on:click={() => { error = ''; step = 'config' }}>
+            {$t('wizard.gmail.useAppPasswordInstead')}
+          </button>
+        {/if}
       {:else if step === 'working'}
         <Spinner label={workingMessage} />
       {:else if step === 'done'}
@@ -320,7 +335,7 @@
         <div class="result">
           <h3>{$t('wizard.error.title')}</h3>
           <p class="err">{error}</p>
-          <button type="button" class="ghost" on:click={() => (step = preset?.kind === 'oauth' ? 'oauth' : 'config')}>
+          <button type="button" class="ghost" on:click={() => (step = formStep)}>
             {$t('wizard.back')}
           </button>
         </div>
