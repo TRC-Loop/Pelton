@@ -589,7 +589,14 @@ export const SettingKeys = {
   reduceMotion: 'reduce_motion',
   themeDarkStart: 'theme_dark_start',
   themeDarkEnd: 'theme_dark_end',
+  bodyFont: 'body_font',
 } as const
+
+// listSystemFonts returns the installed font family names for the body font
+// dropdown (cached backend-side after the first scan).
+export function listSystemFonts(): Promise<string[]> {
+  return App.ListSystemFonts().then((f) => f ?? [])
+}
 
 // --- custom themes ---
 

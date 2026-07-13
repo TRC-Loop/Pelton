@@ -28,7 +28,7 @@
     IconBatteryEco,
     IconBrush,
   } from '@tabler/icons-svelte'
-  import { createEventDispatcher } from 'svelte'
+  import { createEventDispatcher, onMount } from 'svelte'
   import SegmentedSetting from './SegmentedSetting.svelte'
   import StepSlider from './StepSlider.svelte'
   import AccentPicker from './AccentPicker.svelte'
@@ -92,6 +92,7 @@
     setTimeFormat,
     setReduceMotion,
     setThemeDarkTimes,
+    setBodyFont,
   } from '../../stores/prefs'
   import peltonLogo from '../../assets/images/icons/pelton-logo.png'
   import type { Locale } from '../../lib/i18n'
@@ -204,7 +205,24 @@
     }
   }
 
+  import { bodyFonts } from '../../lib/fonts'
+  import { listSystemFonts } from '../../lib/api'
+
+  $: bodyFontOptions = bodyFonts.map((f) => ({ key: f.key, label: f.label ?? $t(f.labelKey ?? '') }))
+
+  // every installed system font, loaded once when the panel opens. the list
+  // is backend-cached, so reopening settings is instant.
+  let systemFonts: string[] = []
+  onMount(() => {
+    listSystemFonts()
+      .then((fonts) => (systemFonts = fonts))
+      .catch(() => (systemFonts = []))
+  })
+
   // select handlers (the cast lives in script; inline ts casts break the parser).
+  function onBodyFont(event: Event): void {
+    setBodyFont((event.currentTarget as HTMLSelectElement).value)
+  }
   function onSwipeLeft(event: Event): void {
     setSwipeLeftAction((event.currentTarget as HTMLSelectElement).value)
   }
@@ -749,6 +767,24 @@
             on:change={(e) => setTimeFormat(e.detail)}
           />
           <p class="hint">{$t('settingsPanel.hint.timeFormat')}</p>
+          <div class="row">
+            <span class="row-label">{$t('settingsPanel.label.bodyFont')}</span>
+            <select class="select" value={$prefs.bodyFont} on:change={onBodyFont}>
+              <optgroup label={$t('settingsPanel.bodyFont.groupCurated')}>
+                {#each bodyFontOptions as opt}
+                  <option value={opt.key}>{opt.label}</option>
+                {/each}
+              </optgroup>
+              {#if systemFonts.length > 0}
+                <optgroup label={$t('settingsPanel.bodyFont.groupSystem')}>
+                  {#each systemFonts as family}
+                    <option value={`sys:${family}`}>{family}</option>
+                  {/each}
+                </optgroup>
+              {/if}
+            </select>
+          </div>
+          <p class="hint">{$t('settingsPanel.hint.bodyFont')}</p>
           <TechToggles />
         </section>
       {:else if active === 'gestures'}

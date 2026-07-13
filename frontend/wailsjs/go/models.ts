@@ -793,6 +793,7 @@ export namespace desktop {
 	    reduceMotion: boolean;
 	    themeDarkStart: string;
 	    themeDarkEnd: string;
+	    bodyFont: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new UIPrefsDTO(source);
@@ -852,6 +853,7 @@ export namespace desktop {
 	        this.reduceMotion = source["reduceMotion"];
 	        this.themeDarkStart = source["themeDarkStart"];
 	        this.themeDarkEnd = source["themeDarkEnd"];
+	        this.bodyFont = source["bodyFont"];
 	    }
 	}
 	export class UnifiedViewDTO {

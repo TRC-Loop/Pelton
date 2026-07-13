@@ -66,6 +66,7 @@ const defaults: UIPrefs = {
   reduceMotion: false,
   themeDarkStart: '19:00',
   themeDarkEnd: '07:00',
+  bodyFont: 'default',
 }
 
 export const prefs = writable<UIPrefs>(defaults)
@@ -311,6 +312,12 @@ export function setAccent(accent: string): void {
   prefs.update((p) => ({ ...p, accent }))
   applyAccent(accent)
   void setSetting(SettingKeys.accent, accent)
+}
+
+// setBodyFont picks the reader fallback font for mail bodies.
+export function setBodyFont(value: string): void {
+  prefs.update((p) => ({ ...p, bodyFont: value }))
+  void setSetting(SettingKeys.bodyFont, value)
 }
 
 // setThemeDarkTimes updates the schedule mode's dark window and reapplies the

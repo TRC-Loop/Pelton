@@ -234,6 +234,9 @@ export interface UIPrefs {
   // schedule theme mode.
   themeDarkStart: string
   themeDarkEnd: string
+  // bodyFont is the reader fallback font for mail bodies (a key from the
+  // curated list in lib/fonts.ts).
+  bodyFont: string
 }
 
 // an installed custom theme, as shown in the settings gallery.

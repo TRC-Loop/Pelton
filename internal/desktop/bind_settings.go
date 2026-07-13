@@ -71,6 +71,9 @@ const (
 	// dark window bounds ("HH:MM") for the schedule theme mode.
 	settingThemeDarkStart = "theme_dark_start"
 	settingThemeDarkEnd   = "theme_dark_end"
+	// reader fallback font for mail bodies (a key from the frontend's curated
+	// list; mail that declares its own fonts keeps them).
+	settingBodyFont = "body_font"
 )
 
 // settingUpdateCheckFreq, settingLastUpdateCheck and defaultUpdateCheckFrequency
@@ -224,6 +227,8 @@ type UIPrefsDTO struct {
 	// schedule theme mode.
 	ThemeDarkStart string `json:"themeDarkStart"`
 	ThemeDarkEnd   string `json:"themeDarkEnd"`
+	// BodyFont is the reader fallback font for mail bodies.
+	BodyFont string `json:"bodyFont"`
 }
 
 // GetUIPrefs returns all ui preferences with defaults filled in, so startup is a
@@ -286,6 +291,7 @@ func (a *App) GetUIPrefs() (UIPrefsDTO, error) {
 		ReduceMotion:               a.boolSetting(settingReduceMotion, false),
 		ThemeDarkStart:             a.stringSetting(settingThemeDarkStart, "19:00"),
 		ThemeDarkEnd:               a.stringSetting(settingThemeDarkEnd, "07:00"),
+		BodyFont:                   a.stringSetting(settingBodyFont, "default"),
 	}, nil
 }
 
