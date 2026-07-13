@@ -56,6 +56,9 @@ const (
 	settingComposeAutocomplete = "compose_autocomplete"
 	settingComposeChips        = "compose_chips"
 	settingEmptyStateImage     = "empty_state_image"
+	// dark window bounds ("HH:MM") for the schedule theme mode.
+	settingThemeDarkStart = "theme_dark_start"
+	settingThemeDarkEnd   = "theme_dark_end"
 )
 
 // settingUpdateCheckFreq, settingLastUpdateCheck and defaultUpdateCheckFrequency
@@ -194,6 +197,10 @@ type UIPrefsDTO struct {
 	// ThemeID selects an installed custom theme (see bind_themes.go). Empty
 	// means the built-in default themes driven by the Theme setting.
 	ThemeID string `json:"themeId"`
+	// ThemeDarkStart/ThemeDarkEnd bound the dark window ("HH:MM") for the
+	// schedule theme mode.
+	ThemeDarkStart string `json:"themeDarkStart"`
+	ThemeDarkEnd   string `json:"themeDarkEnd"`
 }
 
 // GetUIPrefs returns all ui preferences with defaults filled in, so startup is a
@@ -249,6 +256,8 @@ func (a *App) GetUIPrefs() (UIPrefsDTO, error) {
 		UpdateCheckFrequency:       a.stringSetting(settingUpdateCheckFreq, defaultUpdateCheckFrequency),
 		EmptyStateImage:            a.stringSetting(settingEmptyStateImage, ""),
 		ThemeID:                    a.stringSetting(settingThemeID, ""),
+		ThemeDarkStart:             a.stringSetting(settingThemeDarkStart, "19:00"),
+		ThemeDarkEnd:               a.stringSetting(settingThemeDarkEnd, "07:00"),
 	}, nil
 }
 

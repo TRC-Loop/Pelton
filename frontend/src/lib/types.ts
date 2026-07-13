@@ -220,6 +220,10 @@ export interface UIPrefs {
   // themeId selects an installed custom theme; empty means the built-in
   // default themes driven by the theme (light/dark/system) setting.
   themeId: string
+  // themeDarkStart/themeDarkEnd bound the dark window ("HH:MM") for the
+  // schedule theme mode.
+  themeDarkStart: string
+  themeDarkEnd: string
 }
 
 // an installed custom theme, as shown in the settings gallery.
@@ -384,7 +388,7 @@ export type AuthStatus = 'unavailable'
 export type EditorMode = 'plaintext' | 'markdown' | 'wysiwyg'
 
 // theme and density preference values.
-export type ThemePref = 'system' | 'light' | 'dark'
+export type ThemePref = 'system' | 'light' | 'dark' | 'schedule'
 export type DensityPref = 'compact' | 'medium' | 'luxe'
 
 // Selection identifies what the message list is currently showing: either a
