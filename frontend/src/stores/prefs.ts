@@ -62,6 +62,7 @@ const defaults: UIPrefs = {
   menuBarInApp: false,
   menuBarNativeMinimal: false,
   menuBarIcons: false,
+  timeFormat: 'auto',
 }
 
 export const prefs = writable<UIPrefs>(defaults)
@@ -310,6 +311,10 @@ export function setMenuBarNativeMinimal(value: boolean): void {
 export function setMenuBarIcons(value: boolean): void {
   prefs.update((p) => ({ ...p, menuBarIcons: value }))
   void setSetting(SettingKeys.menuBarIcons, String(value))
+// setTimeFormat picks the clock for rendered times: 'auto' (locale), '12', '24'.
+export function setTimeFormat(value: string): void {
+  prefs.update((p) => ({ ...p, timeFormat: value }))
+  void setSetting(SettingKeys.timeFormat, value)
 }
 
 // toggle keys map a boolean preference to its setting key so setToggle stays

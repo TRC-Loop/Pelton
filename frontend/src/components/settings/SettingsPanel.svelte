@@ -89,6 +89,7 @@
     setMenuBarInApp,
     setMenuBarNativeMinimal,
     setMenuBarIcons,
+    setTimeFormat,
   } from '../../stores/prefs'
   import peltonLogo from '../../assets/images/icons/pelton-logo.png'
   import type { Locale } from '../../lib/i18n'
@@ -223,6 +224,13 @@
     { key: 'compact', label: $t('onboarding.density.compact') },
     { key: 'medium', label: $t('onboarding.density.medium') },
     { key: 'luxe', label: $t('onboarding.density.luxe') },
+  ]
+
+  // clock preference for rendered times.
+  $: timeFormatOptions = [
+    { key: 'auto', label: $t('settingsPanel.timeFormat.auto') },
+    { key: '12', label: $t('settingsPanel.timeFormat.h12') },
+    { key: '24', label: $t('settingsPanel.timeFormat.h24') },
   ]
 
   // interface zoom. values are string multipliers applied as css zoom.
@@ -701,6 +709,13 @@
             on:change={(e) => setMessageFontSize(Number(e.detail))}
           />
           <p class="hint">{$t('settingsPanel.hint.fontSize')}</p>
+          <SegmentedSetting
+            label={$t('settingsPanel.label.timeFormat')}
+            value={$prefs.timeFormat}
+            options={timeFormatOptions}
+            on:change={(e) => setTimeFormat(e.detail)}
+          />
+          <p class="hint">{$t('settingsPanel.hint.timeFormat')}</p>
           <TechToggles />
         </section>
       {:else if active === 'gestures'}

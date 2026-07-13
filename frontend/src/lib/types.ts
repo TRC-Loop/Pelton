@@ -226,6 +226,8 @@ export interface UIPrefs {
   menuBarInApp: boolean
   menuBarNativeMinimal: boolean
   menuBarIcons: boolean
+  // timeFormat picks the clock for rendered times: auto (locale), 12, or 24.
+  timeFormat: string
 }
 
 // an installed custom theme, as shown in the settings gallery.

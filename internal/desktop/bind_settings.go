@@ -63,6 +63,8 @@ const (
 	// icons in the in-app menu bar's dropdowns; off keeps the classic
 	// text-only native look.
 	settingMenuBarIcons = "menu_bar_icons"
+	// clock preference for rendered times: auto (locale), 12, or 24.
+	settingTimeFormat = "time_format"
 )
 
 // settingUpdateCheckFreq, settingLastUpdateCheck and defaultUpdateCheckFrequency
@@ -208,6 +210,8 @@ type UIPrefsDTO struct {
 	MenuBarNativeMinimal bool `json:"menuBarNativeMinimal"`
 	// MenuBarIcons shows icons next to the in-app menu bar's dropdown items.
 	MenuBarIcons bool `json:"menuBarIcons"`
+	// TimeFormat picks the clock for rendered times: auto (locale), 12, or 24.
+	TimeFormat string `json:"timeFormat"`
 }
 
 // GetUIPrefs returns all ui preferences with defaults filled in, so startup is a
@@ -266,6 +270,7 @@ func (a *App) GetUIPrefs() (UIPrefsDTO, error) {
 		MenuBarInApp:               a.boolSetting(settingMenuBarInApp, false),
 		MenuBarNativeMinimal:       a.boolSetting(settingMenuBarNativeMinimal, false),
 		MenuBarIcons:               a.boolSetting(settingMenuBarIcons, false),
+		TimeFormat:                 a.stringSetting(settingTimeFormat, "auto"),
 	}, nil
 }
 

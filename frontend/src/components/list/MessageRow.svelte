@@ -21,7 +21,7 @@
   } from '@tabler/icons-svelte'
   import Avatar from '../common/Avatar.svelte'
   import { prefs } from '../../stores/prefs'
-  import { formatListDate, displayName } from '../../lib/format'
+  import { formatListDate, displayName, type TimeFormat } from '../../lib/format'
   import { flagColorHex } from '../../theme/flagcolors'
   import type { MessageSummary, RowTemplate, SwipeAction } from '../../lib/types'
   import { t } from '../../lib/i18n'
@@ -237,7 +237,7 @@
             <IconPaperclip size={12} stroke={1.6} />
           {/if}
           {#if $prefs.showDateTime}
-            <time class="time">{formatListDate(message.date)}</time>
+            <time class="time">{formatListDate(message.date, $prefs.timeFormat as TimeFormat)}</time>
           {/if}
         </span>
       </div>

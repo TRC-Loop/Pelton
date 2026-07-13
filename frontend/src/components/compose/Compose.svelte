@@ -4,6 +4,7 @@
   // to its title bar or expanded to fill the window. markdown mode gets a
   // formatting toolbar and a github-style live preview. send enqueues to the
   // outbox (with the undo-send window when enabled); save stores a local draft.
+  import { formatWeekdayTime, type TimeFormat } from '../../lib/format'
   import { onMount, tick } from 'svelte'
   import { marked } from 'marked'
   import {
@@ -91,11 +92,7 @@
   $: formattedSendPresets = sendPresets.map((p) => ({ ...p, sub: formatSendWhen(p.when) }))
 
   function formatSendWhen(d: Date): string {
-    return d.toLocaleString(undefined, {
-      weekday: 'short',
-      hour: 'numeric',
-      minute: '2-digit',
-    })
+    return formatWeekdayTime(d, $prefs.timeFormat as TimeFormat)
   }
 
   // toggleSendMenu opens the menu anchored above the caret button (fixed
