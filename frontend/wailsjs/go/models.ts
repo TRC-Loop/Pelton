@@ -902,6 +902,44 @@ export namespace desktop {
 	        this.error = source["error"];
 	    }
 	}
+	export class UserLocaleApplyDTO {
+	    id: string;
+	    name: string;
+	    base: string;
+	    strings: Record<string, string>;
+
+	    static createFrom(source: any = {}) {
+	        return new UserLocaleApplyDTO(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.name = source["name"];
+	        this.base = source["base"];
+	        this.strings = source["strings"];
+	    }
+	}
+	export class UserLocaleDTO {
+	    id: string;
+	    name: string;
+	    author: string;
+	    base: string;
+	    count: number;
+
+	    static createFrom(source: any = {}) {
+	        return new UserLocaleDTO(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.name = source["name"];
+	        this.author = source["author"];
+	        this.base = source["base"];
+	        this.count = source["count"];
+	    }
+	}
 
 }
 

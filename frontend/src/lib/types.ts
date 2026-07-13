@@ -267,6 +267,25 @@ export interface ThemeImportPreview {
   installedVersion: string
 }
 
+// a custom language file in the locales folder, as shown in the picker.
+export interface UserLocale {
+  id: string
+  name: string
+  author: string
+  base: string
+  // the number of strings the file provides; a low count marks a partial
+  // override on top of its base language.
+  count: number
+}
+
+// a custom language in apply form.
+export interface UserLocaleApply {
+  id: string
+  name: string
+  base: string
+  strings: Record<string, string>
+}
+
 // a harvested contact for compose autocomplete and the settings manager.
 export interface AddressBookEntry {
   email: string

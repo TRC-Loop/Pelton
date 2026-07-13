@@ -27,6 +27,9 @@
     IconLanguage,
     IconBatteryEco,
     IconBrush,
+    IconFolderOpen,
+    IconFileExport,
+    IconRefresh,
   } from '@tabler/icons-svelte'
   import { createEventDispatcher } from 'svelte'
   import SegmentedSetting from './SegmentedSetting.svelte'
@@ -88,10 +91,10 @@
     setEmptyStateImage,
   } from '../../stores/prefs'
   import peltonLogo from '../../assets/images/icons/pelton-logo.png'
-  import type { Locale } from '../../lib/i18n'
-  import { downloadRange, cancelDownload } from '../../lib/api'
+  import { downloadRange, cancelDownload, openLocalesFolder, saveLocaleTemplate } from '../../lib/api'
+  import en from '../../lib/locales/en'
   import { downloadProgress } from '../../stores/progress'
-  import { toastError, errorMessage } from '../../stores/toast'
+  import { toastInfo, toastError, errorMessage } from '../../stores/toast'
   import { t } from '../../lib/i18n'
   import type { ThemePref, DensityPref, EditorMode } from '../../lib/types'
 
@@ -103,7 +106,33 @@
   ]
 
   const dispatch = createEventDispatcher<{ close: void; rerunOnboarding: void }>()
-  $: currentLocale = $prefs.language as Locale
+  $: currentLocale = $prefs.language
+
+  // languageReload remounts the picker so newly dropped language files show
+  // up without leaving settings.
+  let languageReload = 0
+
+  async function onOpenLocalesFolder(): Promise<void> {
+    try {
+      await openLocalesFolder()
+    } catch (err) {
+      toastError(errorMessage(err))
+    }
+  }
+
+  // onSaveLocaleTemplate writes a ready-to-translate template: every English
+  // string plus the meta fields a language file needs.
+  async function onSaveLocaleTemplate(): Promise<void> {
+    const template = JSON.stringify({ name: 'My Language', author: '', base: 'en', strings: en }, null, 2)
+    try {
+      const path = await saveLocaleTemplate(template)
+      if (path) {
+        toastInfo($t('language.templateSaved'))
+      }
+    } catch (err) {
+      toastError(errorMessage(err))
+    }
+  }
 
   // left-nav categories. each maps to a block rendered on the right. iconName
   // is the themeable icon slot (the tabler name in kebab, see ThemedIcon).
@@ -399,7 +428,25 @@
         <section>
           <h3>{$t('settings.language')}</h3>
           <p class="hint">{$t('settings.languageHint')}</p>
-          <LanguageSelect value={currentLocale} onSelect={setLanguage} />
+          {#key languageReload}
+            <LanguageSelect value={currentLocale} onSelect={setLanguage} />
+          {/key}
+          <h4 class="lang-tools-heading">{$t('language.custom')}</h4>
+          <p class="hint">{$t('language.customHint')}</p>
+          <div class="lang-tools">
+            <button type="button" class="lang-tool-btn" on:click={onOpenLocalesFolder} title={$t('language.openFolderHint')}>
+              <IconFolderOpen size={15} stroke={1.6} />
+              {$t('language.openFolder')}
+            </button>
+            <button type="button" class="lang-tool-btn" on:click={onSaveLocaleTemplate} title={$t('language.templateHint')}>
+              <IconFileExport size={15} stroke={1.6} />
+              {$t('language.template')}
+            </button>
+            <button type="button" class="lang-tool-btn" on:click={() => (languageReload += 1)} title={$t('language.reloadHint')}>
+              <IconRefresh size={15} stroke={1.6} />
+              {$t('language.reload')}
+            </button>
+          </div>
         </section>
       {:else if active === 'themes'}
         <section>
@@ -1223,5 +1270,35 @@
   .preset-btn:hover {
     background: var(--surface-hover);
     color: var(--text-primary);
+  }
+
+  .lang-tools-heading {
+    margin: var(--space-5) 0 var(--space-1);
+    font-size: var(--fz-label);
+    font-weight: var(--fw-semibold);
+    color: var(--text-primary);
+  }
+
+  .lang-tools {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+
+  .lang-tool-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-4);
+    border: var(--hairline) solid var(--border-default);
+    border-radius: var(--radius-control);
+    background: var(--surface-raised);
+    color: var(--text-primary);
+    font-size: var(--fz-label);
+    cursor: pointer;
+  }
+
+  .lang-tool-btn:hover {
+    background: var(--surface-hover);
   }
 </style>
