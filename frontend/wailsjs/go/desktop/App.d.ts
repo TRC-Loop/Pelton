@@ -59,6 +59,8 @@ export function GetSetting(arg1:string):Promise<desktop.SettingResult>;
 
 export function GetThemeApply(arg1:string):Promise<desktop.ThemeApplyDTO>;
 
+export function GetUserLocale(arg1:string):Promise<desktop.UserLocaleApplyDTO>;
+
 export function GetUIPrefs():Promise<desktop.UIPrefsDTO>;
 
 export function ImportData(arg1:string,arg2:Array<string>,arg3:string):Promise<void>;
@@ -91,6 +93,8 @@ export function ListSignatures():Promise<Array<desktop.SignatureDTO>>;
 
 export function ListThemes():Promise<Array<desktop.ThemeInfoDTO>>;
 
+export function ListUserLocales():Promise<Array<desktop.UserLocaleDTO>>;
+
 export function ListUnifiedViews():Promise<Array<desktop.UnifiedViewDTO>>;
 
 export function MoveMessage(arg1:number,arg2:number):Promise<desktop.ArchiveUndoDTO>;
@@ -111,6 +115,8 @@ export function RemoveOffline(arg1:number):Promise<void>;
 
 export function ResumePendingDownload():Promise<void>;
 
+export function OpenLocalesFolder():Promise<void>;
+
 export function SaveAllAttachments(arg1:number):Promise<string>;
 
 export function SaveAttachment(arg1:number,arg2:number):Promise<string>;
@@ -118,6 +124,8 @@ export function SaveAttachment(arg1:number,arg2:number):Promise<string>;
 export function SaveCustomTheme(arg1:desktop.SaveThemeRequest):Promise<desktop.ThemeInfoDTO>;
 
 export function SaveDraft(arg1:number,arg2:desktop.ComposeRequest):Promise<number>;
+
+export function SaveLocaleTemplate(arg1:string):Promise<string>;
 
 export function SaveSignature(arg1:desktop.SignatureDTO):Promise<desktop.SignatureDTO>;
 

@@ -3,14 +3,29 @@
   // shown in its own spelling (Deutsch, Français, ...) rather than translated
   // into the currently active one, so it stays recognizable regardless of what
   // is selected. the OS-detected language gets a "Recommended" badge, but it is
-  // never auto-applied: the caller decides the initial value.
+  // never auto-applied: the caller decides the initial value. custom language
+  // files from the locales folder are listed after the built-ins; their value
+  // is "user:<id>".
+  import { onMount } from 'svelte'
   import { IconCheck } from '@tabler/icons-svelte'
-  import { locales, localeNames, detectOSLocale, t, type Locale } from '../../lib/i18n'
+  import { locales, localeNames, detectOSLocale, userLocalePrefix, t } from '../../lib/i18n'
+  import { listUserLocales } from '../../lib/api'
+  import type { UserLocale } from '../../lib/types'
 
-  export let value: Locale
-  export let onSelect: (locale: Locale) => void
+  /** the persisted language setting: a built-in code or "user:<id>". */
+  export let value: string
+  export let onSelect: (value: string) => void
 
   const recommended = detectOSLocale()
+
+  let userLocales: UserLocale[] = []
+  onMount(async () => {
+    try {
+      userLocales = await listUserLocales()
+    } catch {
+      // no storage yet (early onboarding); the built-ins are always there.
+    }
+  })
 </script>
 
 <div class="lang-grid" role="listbox" aria-label={$t('settings.language')}>
@@ -28,6 +43,26 @@
     </button>
   {/each}
 </div>
+
+{#if userLocales.length}
+  <p class="user-heading">{$t('language.custom')}</p>
+  <div class="lang-grid" role="listbox" aria-label={$t('language.custom')}>
+    {#each userLocales as l (l.id)}
+      {@const v = userLocalePrefix + l.id}
+      <button type="button" class="lang-card" class:active={value === v} on:click={() => onSelect(v)} role="option" aria-selected={value === v}>
+        <span class="lang-row">
+          <span class="lang-name">{l.name}</span>
+          {#if value === v}
+            <IconCheck size={14} stroke={2} class="lang-check" />
+          {/if}
+        </span>
+        {#if l.author}
+          <span class="lang-badge">{l.author}</span>
+        {/if}
+      </button>
+    {/each}
+  </div>
+{/if}
 
 <style>
   .lang-grid {
@@ -89,5 +124,12 @@
   .lang-card.active :global(.lang-check) {
     color: var(--accent);
     flex-shrink: 0;
+  }
+
+  .user-heading {
+    margin: var(--space-4) 0 var(--space-3);
+    font-size: var(--fz-label);
+    font-weight: var(--fw-medium);
+    color: var(--text-primary);
   }
 </style>

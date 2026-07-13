@@ -37,6 +37,8 @@ import type {
   ThemeApply,
   ThemeImportPreview,
   SaveThemeRequest,
+  UserLocale,
+  UserLocaleApply,
 } from './types'
 
 // isDemoMode reports whether the app launched in the cosmetic --potatoes-are-nice
@@ -657,4 +659,27 @@ export function saveCustomTheme(req: SaveThemeRequest): Promise<ThemeInfo> {
 // openThemesFolder shows the themes folder in the system file manager.
 export function openThemesFolder(): Promise<void> {
   return App.OpenThemesFolder()
+}
+
+// --- custom languages ---
+
+// listUserLocales returns every valid language file in the locales folder.
+export function listUserLocales(): Promise<UserLocale[]> {
+  return App.ListUserLocales() as Promise<UserLocale[]>
+}
+
+// getUserLocale loads one custom language in apply form (base + strings).
+export function getUserLocale(id: string): Promise<UserLocaleApply> {
+  return App.GetUserLocale(id) as Promise<UserLocaleApply>
+}
+
+// openLocalesFolder shows the locales folder in the system file manager.
+export function openLocalesFolder(): Promise<void> {
+  return App.OpenLocalesFolder()
+}
+
+// saveLocaleTemplate writes a translation template file via a save dialog,
+// returning the chosen path ('' if cancelled).
+export function saveLocaleTemplate(content: string): Promise<string> {
+  return App.SaveLocaleTemplate(content)
 }

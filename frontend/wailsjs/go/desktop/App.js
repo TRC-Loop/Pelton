@@ -118,6 +118,10 @@ export function GetThemeApply(arg1) {
   return window['go']['desktop']['App']['GetThemeApply'](arg1);
 }
 
+export function GetUserLocale(arg1) {
+  return window['go']['desktop']['App']['GetUserLocale'](arg1);
+}
+
 export function GetUIPrefs() {
   return window['go']['desktop']['App']['GetUIPrefs']();
 }
@@ -182,6 +186,10 @@ export function ListThemes() {
   return window['go']['desktop']['App']['ListThemes']();
 }
 
+export function ListUserLocales() {
+  return window['go']['desktop']['App']['ListUserLocales']();
+}
+
 export function ListUnifiedViews() {
   return window['go']['desktop']['App']['ListUnifiedViews']();
 }
@@ -222,6 +230,10 @@ export function ResumePendingDownload() {
   return window['go']['desktop']['App']['ResumePendingDownload']();
 }
 
+export function OpenLocalesFolder() {
+  return window['go']['desktop']['App']['OpenLocalesFolder']();
+}
+
 export function SaveAllAttachments(arg1) {
   return window['go']['desktop']['App']['SaveAllAttachments'](arg1);
 }
@@ -236,6 +248,10 @@ export function SaveCustomTheme(arg1) {
 
 export function SaveDraft(arg1, arg2) {
   return window['go']['desktop']['App']['SaveDraft'](arg1, arg2);
+}
+
+export function SaveLocaleTemplate(arg1) {
+  return window['go']['desktop']['App']['SaveLocaleTemplate'](arg1);
 }
 
 export function SaveSignature(arg1) {

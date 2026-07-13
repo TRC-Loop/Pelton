@@ -57,12 +57,12 @@
   import { ACCENT_PRESETS } from '../../theme/accent'
   import { pfpDataUri, type PfpStyle } from '../../lib/pfp'
   import { initials } from '../../lib/format'
-  import { shortcutLabel, t, type Locale } from '../../lib/i18n'
+  import { shortcutLabel, t } from '../../lib/i18n'
   import logo from '../../assets/images/icons/pelton-logo.png'
   import type { ThemePref, DensityPref, Account } from '../../lib/types'
 
   const dispatch = createEventDispatcher<{ finish: void; added: Account }>()
-  $: currentLocale = $prefs.language as Locale
+  $: currentLocale = $prefs.language
 
   // labels for choice cards are translated reactively so they follow the
   // language step's live pick, not just the persisted setting.

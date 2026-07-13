@@ -9,7 +9,7 @@ import type { UIPrefs, ThemePref, DensityPref, EditorMode } from '../lib/types'
 import { getUIPrefs, setSetting, SettingKeys, systemColorScheme, setWindowTheme, getThemeApply } from '../lib/api'
 import { applyTheme, applyDensity, applyAccent, applyScale, applyReduceMotion, setThemeSchedule, watchSystemTheme, setSystemSchemeOverride, resolveTheme } from '../theme/theme'
 import { applyUserTheme } from '../theme/usertheme'
-import { setLocale, type Locale } from '../lib/i18n'
+import { setLocale } from '../lib/i18n'
 
 // defaults match the backend defaults so the ui renders sanely even before the
 // first load resolves.
@@ -86,7 +86,7 @@ function applyAll(p: UIPrefs): void {
   applyAccent(p.accent)
   applyScale(p.uiScale)
   applyReduceMotion(p.reduceMotion)
-  setLocale(p.language as Locale)
+  setLocale(p.language)
 }
 
 // initPrefs loads preferences, applies them, and keeps the theme in sync with
@@ -253,8 +253,9 @@ export function setAppVimMode(value: boolean): void {
   void setSetting(SettingKeys.appVimMode, String(value))
 }
 
-// setLanguage persists the chosen ui locale and applies it immediately.
-export function setLanguage(language: Locale): void {
+// setLanguage persists the chosen ui language and applies it immediately.
+// The value is a built-in code or "user:<id>" for a custom language file.
+export function setLanguage(language: string): void {
   prefs.update((p) => ({ ...p, language }))
   setLocale(language)
   void setSetting(SettingKeys.language, language)
