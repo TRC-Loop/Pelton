@@ -106,3 +106,27 @@ a:hover {
   -webkit-user-select: text;
   user-select: text;
 }
+
+/* reduce motion: freeze animations and transitions when the user asked for it,
+   either through the in-app setting (data-reduce-motion on the root) or the
+   os-level preference. near-zero durations instead of `none` so animation and
+   transition end events still fire and js waiting on them never hangs. */
+:root[data-reduce-motion] *,
+:root[data-reduce-motion] *::before,
+:root[data-reduce-motion] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

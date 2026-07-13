@@ -702,6 +702,8 @@ const nl: Record<string, string> = {
   'settingsPanel.hint.plainRecipients': 'Ontvangers worden getoond als platte tekst, gescheiden door komma\'s.',
   'settingsPanel.hint.vimEditor': 'Gebruik vim-toetsbindingen in de opsteleditor.',
   'settingsPanel.hint.vimEditorDetail': 'Voegt modale bewerking (normaal/invoegen/visueel) toe aan de platte-tekst- en markdown-editor.',
+  'settingsPanel.toggle.reduceMotion': 'Beweging verminderen',
+  'settingsPanel.hint.reduceMotion': 'Schakelt animaties en overgangen van de interface uit. De systeemvoorkeur voor verminderde beweging wordt ook automatisch gevolgd.',
   'settingsPanel.toggle.shortcutHints': 'Sneltoetshints tonen in de app',
   'settingsPanel.hint.appVim': 'Gebruik h/j/k/l om door de app zelf te navigeren, buiten het opstellen.',
   'settingsPanel.hint.appVimDetail': 'j/k beweegt door de berichtenlijst, l/Enter opent, h/Escape gaat terug, gg/G springt naar het begin/einde. Uitgeschakeld tijdens typen, in de zijbalk, of wanneer een dialoogvenster open is.',

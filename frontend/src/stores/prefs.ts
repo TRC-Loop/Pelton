@@ -7,7 +7,7 @@
 import { writable } from 'svelte/store'
 import type { UIPrefs, ThemePref, DensityPref, EditorMode } from '../lib/types'
 import { getUIPrefs, setSetting, SettingKeys, systemColorScheme, setWindowTheme, getThemeApply } from '../lib/api'
-import { applyTheme, applyDensity, applyAccent, applyScale, watchSystemTheme, setSystemSchemeOverride, resolveTheme } from '../theme/theme'
+import { applyTheme, applyDensity, applyAccent, applyScale, applyReduceMotion, watchSystemTheme, setSystemSchemeOverride, resolveTheme } from '../theme/theme'
 import { applyUserTheme } from '../theme/usertheme'
 import { setLocale, type Locale } from '../lib/i18n'
 
@@ -59,6 +59,7 @@ const defaults: UIPrefs = {
   updateCheckFrequency: 'off',
   emptyStateImage: '',
   themeId: '',
+  reduceMotion: false,
 }
 
 export const prefs = writable<UIPrefs>(defaults)
@@ -76,6 +77,7 @@ function applyAll(p: UIPrefs): void {
   applyDensity(p.density as DensityPref)
   applyAccent(p.accent)
   applyScale(p.uiScale)
+  applyReduceMotion(p.reduceMotion)
   setLocale(p.language as Locale)
 }
 
@@ -288,6 +290,13 @@ export function setAccent(accent: string): void {
   prefs.update((p) => ({ ...p, accent }))
   applyAccent(accent)
   void setSetting(SettingKeys.accent, accent)
+}
+
+// setReduceMotion toggles the ui transition/animation kill switch.
+export function setReduceMotion(value: boolean): void {
+  prefs.update((p) => ({ ...p, reduceMotion: value }))
+  applyReduceMotion(value)
+  void setSetting(SettingKeys.reduceMotion, String(value))
 }
 
 // toggle keys map a boolean preference to its setting key so setToggle stays

@@ -702,6 +702,8 @@ const en: Record<string, string> = {
   'settingsPanel.hint.plainRecipients': 'Recipients show as plain text, separated by commas.',
   'settingsPanel.hint.vimEditor': 'Use vim keybindings in the compose editor.',
   'settingsPanel.hint.vimEditorDetail': 'Adds modal (normal/insert/visual) editing to the plain text and markdown editor.',
+  'settingsPanel.toggle.reduceMotion': 'Reduce motion',
+  'settingsPanel.hint.reduceMotion': 'Turns off interface animations and transitions. Also follows your system\'s reduced-motion preference automatically.',
   'settingsPanel.toggle.shortcutHints': 'Show keyboard shortcut hints in the app',
   'settingsPanel.hint.appVim': 'Use h/j/k/l to move around the app itself, outside of compose.',
   'settingsPanel.hint.appVimDetail': 'j/k move through the message list, l/Enter opens, h/Escape goes back, gg/G jump to the top/bottom. Disabled while typing, in the sidebar, or while a dialog is open.',

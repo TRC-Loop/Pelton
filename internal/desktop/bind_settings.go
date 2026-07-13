@@ -56,6 +56,9 @@ const (
 	settingComposeAutocomplete = "compose_autocomplete"
 	settingComposeChips        = "compose_chips"
 	settingEmptyStateImage     = "empty_state_image"
+	// disable ui transitions and animations (the os-level preference is
+	// honored by the frontend css regardless).
+	settingReduceMotion = "reduce_motion"
 )
 
 // settingUpdateCheckFreq, settingLastUpdateCheck and defaultUpdateCheckFrequency
@@ -194,6 +197,8 @@ type UIPrefsDTO struct {
 	// ThemeID selects an installed custom theme (see bind_themes.go). Empty
 	// means the built-in default themes driven by the Theme setting.
 	ThemeID string `json:"themeId"`
+	// ReduceMotion disables ui transitions and animations.
+	ReduceMotion bool `json:"reduceMotion"`
 }
 
 // GetUIPrefs returns all ui preferences with defaults filled in, so startup is a
@@ -249,6 +254,7 @@ func (a *App) GetUIPrefs() (UIPrefsDTO, error) {
 		UpdateCheckFrequency:       a.stringSetting(settingUpdateCheckFreq, defaultUpdateCheckFrequency),
 		EmptyStateImage:            a.stringSetting(settingEmptyStateImage, ""),
 		ThemeID:                    a.stringSetting(settingThemeID, ""),
+		ReduceMotion:               a.boolSetting(settingReduceMotion, false),
 	}, nil
 }
 

@@ -702,6 +702,8 @@ const de: Record<string, string> = {
   'settingsPanel.hint.plainRecipients': 'Empfänger werden als reiner Text angezeigt, durch Kommas getrennt.',
   'settingsPanel.hint.vimEditor': 'Verwendet Vim-Tastenkürzel im Verfassen-Editor.',
   'settingsPanel.hint.vimEditorDetail': 'Fügt dem Text- und Markdown-Editor eine modale Bedienung (Normal/Einfügen/Visuell) hinzu.',
+  'settingsPanel.toggle.reduceMotion': 'Bewegung reduzieren',
+  'settingsPanel.hint.reduceMotion': 'Schaltet Animationen und Übergänge der Oberfläche aus. Die Systemeinstellung für reduzierte Bewegung wird automatisch berücksichtigt.',
   'settingsPanel.toggle.shortcutHints': 'Tastenkürzel-Hinweise in der App anzeigen',
   'settingsPanel.hint.appVim': 'Nutze h/j/k/l, um dich außerhalb des Verfassens durch die App zu bewegen.',
   'settingsPanel.hint.appVimDetail': 'j/k bewegt durch die Nachrichtenliste, l/Enter öffnet, h/Escape geht zurück, gg/G springt an Anfang/Ende. Deaktiviert während der Eingabe, in der Seitenleiste oder wenn ein Dialog geöffnet ist.',

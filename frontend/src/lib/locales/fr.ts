@@ -702,6 +702,8 @@ const fr: Record<string, string> = {
   'settingsPanel.hint.plainRecipients': 'Les destinataires s\'affichent en texte brut, séparés par des virgules.',
   'settingsPanel.hint.vimEditor': 'Utilise les raccourcis clavier vim dans l\'éditeur de rédaction.',
   'settingsPanel.hint.vimEditorDetail': 'Ajoute l\'édition modale (normal/insertion/visuel) à l\'éditeur de texte brut et markdown.',
+  'settingsPanel.toggle.reduceMotion': 'Réduire les animations',
+  'settingsPanel.hint.reduceMotion': 'Désactive les animations et transitions de l\'interface. La préférence système de réduction des animations est aussi suivie automatiquement.',
   'settingsPanel.toggle.shortcutHints': 'Afficher les indices de raccourcis clavier dans l\'application',
   'settingsPanel.hint.appVim': 'Utilise h/j/k/l pour te déplacer dans l\'application elle-même, en dehors de la rédaction.',
   'settingsPanel.hint.appVimDetail': 'j/k parcourt la liste des messages, l/Entrée ouvre, h/Échap revient en arrière, gg/G va au début/à la fin. Désactivé pendant la saisie, dans la barre latérale, ou quand une boîte de dialogue est ouverte.',

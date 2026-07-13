@@ -702,6 +702,8 @@ const es: Record<string, string> = {
   'settingsPanel.hint.plainRecipients': 'Los destinatarios se muestran como texto plano, separados por comas.',
   'settingsPanel.hint.vimEditor': 'Usa los atajos de teclado de vim en el editor de redacción.',
   'settingsPanel.hint.vimEditorDetail': 'Añade edición modal (normal/inserción/visual) al editor de texto sin formato y markdown.',
+  'settingsPanel.toggle.reduceMotion': 'Reducir el movimiento',
+  'settingsPanel.hint.reduceMotion': 'Desactiva las animaciones y transiciones de la interfaz. La preferencia del sistema de movimiento reducido también se sigue automáticamente.',
   'settingsPanel.toggle.shortcutHints': 'Mostrar sugerencias de atajos de teclado en la aplicación',
   'settingsPanel.hint.appVim': 'Usa h/j/k/l para moverte por la aplicación, fuera del área de redacción.',
   'settingsPanel.hint.appVimDetail': 'j/k recorre la lista de mensajes, l/Intro lo abre, h/Esc vuelve atrás, gg/G salta al principio/final. Desactivado mientras escribes, en la barra lateral, o mientras un diálogo está abierto.',
