@@ -217,6 +217,8 @@ export interface UIPrefs {
   // emptyStateImage is a data-uri image shown in the reading pane when no
   // message is open; empty means the bundled Pelton logo.
   emptyStateImage: string
+  // cornerStyle picks the corner radius look: default, square, or round.
+  cornerStyle: string
   // themeId selects an installed custom theme; empty means the built-in
   // default themes driven by the theme (light/dark/system) setting.
   themeId: string

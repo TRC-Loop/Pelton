@@ -581,6 +581,7 @@ export const SettingKeys = {
   composeChips: 'compose_chips',
   updateCheckFrequency: 'update_check_frequency',
   emptyStateImage: 'empty_state_image',
+  cornerStyle: 'corner_style',
   themeId: 'theme_id',
 } as const
 

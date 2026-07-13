@@ -46,6 +46,16 @@ export function applyDensity(pref: DensityPref): void {
   document.documentElement.setAttribute('data-density', pref)
 }
 
+// applyCorners writes the corner style onto the root element; the default
+// removes the attribute so the base radius tokens apply untouched.
+export function applyCorners(pref: string): void {
+  if (pref === 'square' || pref === 'round') {
+    document.documentElement.setAttribute('data-corners', pref)
+  } else {
+    document.documentElement.removeAttribute('data-corners')
+  }
+}
+
 // applyScale zooms the whole interface by a string multiplier ("1" = 100%).
 // zoom (rather than a root font-size) scales the px-based tokens and layout
 // together, and is supported in both WKWebView and WebView2. an invalid or

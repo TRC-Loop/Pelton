@@ -7,7 +7,7 @@
 import { writable } from 'svelte/store'
 import type { UIPrefs, ThemePref, DensityPref, EditorMode } from '../lib/types'
 import { getUIPrefs, setSetting, SettingKeys, systemColorScheme, setWindowTheme, getThemeApply } from '../lib/api'
-import { applyTheme, applyDensity, applyAccent, applyScale, watchSystemTheme, setSystemSchemeOverride, resolveTheme } from '../theme/theme'
+import { applyTheme, applyDensity, applyAccent, applyScale, applyCorners, watchSystemTheme, setSystemSchemeOverride, resolveTheme } from '../theme/theme'
 import { applyUserTheme } from '../theme/usertheme'
 import { setLocale, type Locale } from '../lib/i18n'
 
@@ -58,6 +58,7 @@ const defaults: UIPrefs = {
   composeChips: true,
   updateCheckFrequency: 'off',
   emptyStateImage: '',
+  cornerStyle: 'default',
   themeId: '',
 }
 
@@ -76,6 +77,7 @@ function applyAll(p: UIPrefs): void {
   applyDensity(p.density as DensityPref)
   applyAccent(p.accent)
   applyScale(p.uiScale)
+  applyCorners(p.cornerStyle)
   setLocale(p.language as Locale)
 }
 
@@ -154,6 +156,13 @@ export async function setThemeId(themeId: string): Promise<void> {
 // so the native window chrome can follow it.
 function themeIdBase(): 'light' | 'dark' {
   return document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light'
+}
+
+// setCornerStyle picks the corner radius look and applies it immediately.
+export function setCornerStyle(value: string): void {
+  prefs.update((p) => ({ ...p, cornerStyle: value }))
+  applyCorners(value)
+  void setSetting(SettingKeys.cornerStyle, value)
 }
 
 export function setDensity(density: DensityPref): void {

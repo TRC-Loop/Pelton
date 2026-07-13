@@ -785,6 +785,7 @@ export namespace desktop {
 	    composeChips: boolean;
 	    updateCheckFrequency: string;
 	    emptyStateImage: string;
+	    cornerStyle: string;
 	    themeId: string;
 	
 	    static createFrom(source: any = {}) {
@@ -837,6 +838,7 @@ export namespace desktop {
 	        this.composeChips = source["composeChips"];
 	        this.updateCheckFrequency = source["updateCheckFrequency"];
 	        this.emptyStateImage = source["emptyStateImage"];
+	        this.cornerStyle = source["cornerStyle"];
 	        this.themeId = source["themeId"];
 	    }
 	}
