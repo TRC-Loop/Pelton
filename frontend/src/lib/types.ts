@@ -220,6 +220,8 @@ export interface UIPrefs {
   // themeId selects an installed custom theme; empty means the built-in
   // default themes driven by the theme (light/dark/system) setting.
   themeId: string
+  // timeFormat picks the clock for rendered times: auto (locale), 12, or 24.
+  timeFormat: string
 }
 
 // an installed custom theme, as shown in the settings gallery.

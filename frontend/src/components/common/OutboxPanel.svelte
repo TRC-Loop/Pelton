@@ -6,6 +6,8 @@
   // "send later", not just the short undo-send delay) shows its scheduled time
   // and a cancel button instead of the generic "queued" label; cancelling pulls
   // it back to a draft the same way undo-send does.
+  import { formatWeekdayTime, type TimeFormat } from '../../lib/format'
+  import { prefs } from '../../stores/prefs'
   import { IconSend, IconClock, IconAlertTriangle, IconX } from '@tabler/icons-svelte'
   import { createEventDispatcher } from 'svelte'
   import { outbox, loadOutbox } from '../../stores/outbox'
@@ -39,11 +41,7 @@
   }
 
   function formatScheduled(iso: string): string {
-    return new Date(iso).toLocaleString(undefined, {
-      weekday: 'short',
-      hour: 'numeric',
-      minute: '2-digit',
-    })
+    return formatWeekdayTime(new Date(iso), $prefs.timeFormat as TimeFormat)
   }
 
   let cancelling: number | null = null

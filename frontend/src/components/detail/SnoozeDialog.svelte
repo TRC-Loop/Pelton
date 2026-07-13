@@ -3,6 +3,8 @@
   // date-time picker, plus an unchecked-by-default option to also hide the mail
   // from the inbox until it resurfaces. on confirm it schedules the snooze; the
   // message reappears marked unread when the time comes.
+  import { formatWeekdayTime, type TimeFormat } from '../../lib/format'
+  import { prefs } from '../../stores/prefs'
   import { fade, scale } from 'svelte/transition'
   import {
     IconClock,
@@ -75,11 +77,7 @@
   $: formattedPresets = presets.map((p) => ({ ...p, sub: formatWhen(p.when) }))
 
   function formatWhen(d: Date): string {
-    return d.toLocaleString(undefined, {
-      weekday: 'short',
-      hour: 'numeric',
-      minute: '2-digit',
-    })
+    return formatWeekdayTime(d, $prefs.timeFormat as TimeFormat)
   }
 
   async function confirm(when: Date): Promise<void> {

@@ -582,6 +582,7 @@ export const SettingKeys = {
   updateCheckFrequency: 'update_check_frequency',
   emptyStateImage: 'empty_state_image',
   themeId: 'theme_id',
+  timeFormat: 'time_format',
 } as const
 
 // --- custom themes ---

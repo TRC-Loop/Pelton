@@ -59,6 +59,7 @@ const defaults: UIPrefs = {
   updateCheckFrequency: 'off',
   emptyStateImage: '',
   themeId: '',
+  timeFormat: 'auto',
 }
 
 export const prefs = writable<UIPrefs>(defaults)
@@ -288,6 +289,12 @@ export function setAccent(accent: string): void {
   prefs.update((p) => ({ ...p, accent }))
   applyAccent(accent)
   void setSetting(SettingKeys.accent, accent)
+}
+
+// setTimeFormat picks the clock for rendered times: 'auto' (locale), '12', '24'.
+export function setTimeFormat(value: string): void {
+  prefs.update((p) => ({ ...p, timeFormat: value }))
+  void setSetting(SettingKeys.timeFormat, value)
 }
 
 // toggle keys map a boolean preference to its setting key so setToggle stays

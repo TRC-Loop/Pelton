@@ -4,7 +4,7 @@
   import Avatar from '../common/Avatar.svelte'
   import TechBadges from '../common/TechBadges.svelte'
   import { prefs } from '../../stores/prefs'
-  import { formatFullDate, displayName } from '../../lib/format'
+  import { formatFullDate, displayName, type TimeFormat } from '../../lib/format'
   import { t } from '../../lib/i18n'
   import type { MessageDetail } from '../../lib/types'
 
@@ -29,7 +29,7 @@
       </div>
     </div>
     {#if $prefs.showDateTime}
-      <time class="date">{formatFullDate(detail.date)}</time>
+      <time class="date">{formatFullDate(detail.date, $prefs.timeFormat as TimeFormat)}</time>
     {/if}
   </div>
 
