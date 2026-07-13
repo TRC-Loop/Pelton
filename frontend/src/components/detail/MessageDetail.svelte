@@ -8,6 +8,7 @@
   import MailBody from './MailBody.svelte'
   import AttachmentList from './AttachmentList.svelte'
   import InfoModal from './InfoModal.svelte'
+  import SourceModal from './SourceModal.svelte'
   import Spinner from '../common/Spinner.svelte'
   import ErrorState from '../common/ErrorState.svelte'
   import { openMessageId } from '../../stores/selection'
@@ -27,6 +28,7 @@
   $: replyMode = $prefs.defaultEditorMode as EditorMode
 
   let infoOpen = false
+  let sourceOpen = false
 
   let loadedId = -1
   $: if ($openMessageId !== null && $openMessageId !== loadedId) {
@@ -161,11 +163,16 @@ ${bodyHtml}
         on:toggleFlag={() => toggleFlag(detail)}
         on:print={() => printMessage(detail)}
         on:info={() => (infoOpen = true)}
+        on:source={() => (sourceOpen = true)}
       />
     </div>
 
     {#if infoOpen}
       <InfoModal {detail} on:close={() => (infoOpen = false)} />
+    {/if}
+
+    {#if sourceOpen}
+      <SourceModal messageId={detail.id} on:close={() => (sourceOpen = false)} />
     {/if}
 
     <div class="scroll selectable">

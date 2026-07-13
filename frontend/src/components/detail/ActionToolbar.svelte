@@ -13,6 +13,7 @@
     IconFlagFilled,
     IconPrinter,
     IconInfoCircle,
+    IconCode,
   } from '@tabler/icons-svelte'
   import IconButton from '../common/IconButton.svelte'
   import { t } from '../../lib/i18n'
@@ -28,6 +29,7 @@
     toggleFlag: void
     print: void
     info: void
+    source: void
   }>()
 
   $: flagLabel = flagged ? $t('detail.toolbar.unflag') : $t('detail.toolbar.flag')
@@ -67,6 +69,9 @@
   </IconButton>
   <IconButton label={$t('detail.toolbar.messageInfo')} on:click={() => dispatch('info')}>
     <IconInfoCircle size={18} stroke={1.6} />
+  </IconButton>
+  <IconButton label={$t('detail.toolbar.viewSource')} on:click={() => dispatch('source')}>
+    <IconCode size={18} stroke={1.6} />
   </IconButton>
 </div>
 

@@ -128,6 +128,11 @@ export function getMessage(id: number): Promise<MessageDetail> {
   return App.GetMessage(id)
 }
 
+// getMessageSource fetches a message's raw RFC 822 source on demand over imap.
+export function getMessageSource(id: number): Promise<string> {
+  return App.GetMessageSource(id)
+}
+
 // getMessageHtml re-renders a body with the chosen remote-image policy.
 export function getMessageHtml(id: number, allowRemote: boolean): Promise<string> {
   return App.GetMessageHTML(id, allowRemote)
