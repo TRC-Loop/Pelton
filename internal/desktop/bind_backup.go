@@ -140,7 +140,15 @@ func (a *App) ExportData(categories []string, credentialPassword string) (string
 	if err != nil {
 		return "", err
 	}
-	if err := os.WriteFile(filepath.Clean(dest), data, 0o644); err != nil {
+	// 0600: the export always carries the full server config and settings, and
+	// optionally encrypted mailbox credentials; no other local user should be
+	// able to read it. The user can still loosen a file they intend to share.
+	if err := os.WriteFile(filepath.Clean(dest), data, 0o600); err != nil {
+		return "", err
+	}
+	// WriteFile keeps an existing file's mode, so overwriting an old export
+	// left with looser permissions must be tightened explicitly.
+	if err := os.Chmod(filepath.Clean(dest), 0o600); err != nil {
 		return "", err
 	}
 	return dest, nil
