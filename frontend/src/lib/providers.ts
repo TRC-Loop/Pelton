@@ -22,6 +22,9 @@ export interface ProviderPreset {
   appPasswordUrl?: string
   // custom means "use autodiscovery and let the user edit servers".
   custom?: boolean
+  // oauthOptional marks a password-first preset that can still switch to the
+  // oauth sign-in form (for users who bring their own client id).
+  oauthOptional?: boolean
   // allowClientSecret reveals an optional oauth client-secret field, for
   // providers whose app registration may be a confidential client.
   allowClientSecret?: boolean
@@ -29,14 +32,19 @@ export interface ProviderPreset {
 
 export const providerPresets: ProviderPreset[] = [
   {
+    // password-first: an app password works today on consumer accounts with
+    // no Google Cloud Console involved. oauth stays reachable behind
+    // oauthOptional for users who registered their own client (#56).
     id: 'gmail',
     label: 'Gmail',
-    kind: 'oauth',
+    kind: 'password',
     oauthProvider: 'google',
     imapHost: 'imap.gmail.com',
     imapPort: 993,
     smtpHost: 'smtp.gmail.com',
     smtpPort: 465,
+    appPasswordUrl: 'https://myaccount.google.com/apppasswords',
+    oauthOptional: true,
   },
   {
     id: 'outlook',
