@@ -1,135 +1,48 @@
 <script lang="ts">
   // the in-app menu bar: the top row of the ui on Windows/Linux (where the
   // native menu bar cannot follow the app theme and, on Linux, crashed GTK on
-  // rebuild), opt-in on macOS. it mirrors the native menu's structure and emits
-  // the same action strings the native menu did, so App.svelte handles both
-  // through one dispatcher. labels come from the frontend i18n and live-update
-  // on a language change; item state follows the open-message selection
-  // directly instead of round-tripping through the backend.
-  import { createEventDispatcher, type ComponentType } from 'svelte'
-  import {
-    IconInfoCircle,
-    IconSettings,
-    IconEyeOff,
-    IconPower,
-    IconPencil,
-    IconFileTypePdf,
-    IconRefresh,
-    IconPlus,
-    IconMailbox,
-    IconArrowBackUp,
-    IconMailOpened,
-    IconMail,
-    IconFlag,
-    IconArchive,
-    IconTrash,
-    IconMaximize,
-    IconBatteryEco,
-  } from '@tabler/icons-svelte'
+  // rebuild), opt-in on macOS. it emits the same action strings the native menu
+  // did, so App.svelte handles both through one dispatcher. its structure is the
+  // user-customizable layout from stores/menubar.ts, resolved to render-ready
+  // menus; labels come from the frontend i18n (built-ins) or the user's text
+  // (custom entries) and live-update on a language change; item state follows
+  // the open-message selection directly instead of round-tripping the backend.
+  import { createEventDispatcher } from 'svelte'
   import ThemedIcon from './ThemedIcon.svelte'
-  import { t, isMac, shortcutLabel } from '../../lib/i18n'
+  import MenuGlyph from './MenuGlyph.svelte'
+  import { t, shortcutLabel } from '../../lib/i18n'
   import { prefs } from '../../stores/prefs'
   import { bindings } from '../../stores/shortcuts'
   import { openMessageId } from '../../stores/selection'
+  import { menuBarLayout, resolveBar, type RenderItem } from '../../stores/menubar'
 
   const dispatch = createEventDispatcher<{ action: string }>()
 
-  interface Item {
-    action: string
-    labelKey: string
-    icon: ComponentType
-    iconName: string
-    // hint is a fixed combo shown as the shortcut hint; unset items look their
-    // hint up in the rebindable shortcut map under their action name.
-    hint?: string
-    // needsMessage items are disabled while no message is open.
-    needsMessage?: boolean
-    danger?: boolean
-  }
-  type Entry = Item | 'separator'
-
-  interface MenuDef {
-    key: string
-    label: string
-    entries: Entry[]
-  }
-
-  // the app menu's Hide item only exists on macOS (WindowHide there is the
-  // standard Cmd+H behavior; on Windows/Linux the titlebar minimize covers it).
-  // rebuilt reactively so labels follow a live language change.
-  $: menus = buildMenus($t)
-
-  function buildMenus(tFn: (key: string) => string): MenuDef[] {
-    return [
-    {
-      key: 'app',
-      label: 'Pelton',
-      entries: [
-        { action: 'about', labelKey: 'menu.about', icon: IconInfoCircle, iconName: 'info-circle' },
-        'separator',
-        { action: 'preferences', labelKey: 'menu.preferences', icon: IconSettings, iconName: 'settings' },
-        'separator',
-        ...(isMac
-          ? [{ action: 'hide-window', labelKey: 'menu.hide', icon: IconEyeOff, iconName: 'eye-off', hint: 'mod+h' } as Item]
-          : []),
-        { action: 'quit', labelKey: 'menu.quit', icon: IconPower, iconName: 'power', hint: isMac ? 'mod+q' : undefined },
-      ],
-    },
-    {
-      key: 'file',
-      label: tFn('menu.file'),
-      entries: [
-        { action: 'compose', labelKey: 'menu.compose', icon: IconPencil, iconName: 'pencil' },
-        'separator',
-        { action: 'export-pdf', labelKey: 'menu.exportPdf', icon: IconFileTypePdf, iconName: 'file-type-pdf' },
-      ],
-    },
-    {
-      key: 'mailbox',
-      label: tFn('menu.mailbox'),
-      entries: [
-        { action: 'sync', labelKey: 'menu.sync', icon: IconRefresh, iconName: 'refresh' },
-        'separator',
-        { action: 'add-mailbox', labelKey: 'menu.addMailbox', icon: IconPlus, iconName: 'plus' },
-        { action: 'open-mailboxes', labelKey: 'menu.manageMailboxes', icon: IconMailbox, iconName: 'mailbox' },
-      ],
-    },
-    {
-      key: 'mail',
-      label: tFn('menu.mail'),
-      entries: [
-        { action: 'undo', labelKey: 'menu.undo', icon: IconArrowBackUp, iconName: 'arrow-back-up', hint: 'mod+z' },
-        'separator',
-        { action: 'mark-read', labelKey: 'menu.markRead', icon: IconMailOpened, iconName: 'mail-opened', needsMessage: true },
-        { action: 'mark-unread', labelKey: 'menu.markUnread', icon: IconMail, iconName: 'mail', needsMessage: true },
-        { action: 'flag', labelKey: 'menu.flag', icon: IconFlag, iconName: 'flag', needsMessage: true },
-        { action: 'archive', labelKey: 'menu.archive', icon: IconArchive, iconName: 'archive', needsMessage: true },
-        { action: 'delete-message', labelKey: 'menu.deleteMessage', icon: IconTrash, iconName: 'trash', needsMessage: true, danger: true },
-      ],
-    },
-    {
-      key: 'view',
-      label: tFn('menu.view'),
-      entries: [
-        { action: 'toggle-fullscreen', labelKey: 'menu.toggleFullscreen', icon: IconMaximize, iconName: 'maximize' },
-        'separator',
-        { action: 'toggle-low-power', labelKey: 'menu.lowPower', icon: IconBatteryEco, iconName: 'battery-eco' },
-      ],
-    },
-    ]
-  }
+  // the render-ready menus, reactive to layout edits (a customizer change
+  // previews here instantly). i18n labels resolve in the template so a language
+  // switch updates them without rebuilding.
+  $: menus = resolveBar($menuBarLayout)
 
   let openKey: string | null = null
   let barEl: HTMLElement
 
+  // itemLabel is the display text: the raw user label for a custom entry, the
+  // translated catalog label for a built-in item.
+  function itemLabel(item: RenderItem, tFn: (key: string) => string): string {
+    if (item.kind === 'custom') {
+      return item.label ?? ''
+    }
+    return item.labelKey ? tFn(item.labelKey) : ''
+  }
+
   // hintFor resolves an item's shortcut hint: a fixed combo if the item
   // declares one, otherwise the live (user-rebindable) binding for its action.
-  function hintFor(item: Item, map: Record<string, string>): string {
-    const combo = item.hint ?? map[item.action] ?? ''
+  function hintFor(item: RenderItem, map: Record<string, string>): string {
+    const combo = item.hint ?? (item.action ? map[item.action] : undefined) ?? ''
     return combo ? shortcutLabel(combo) : ''
   }
 
-  function isDisabled(item: Item, openId: number | null): boolean {
+  function isDisabled(item: RenderItem, openId: number | null): boolean {
     return !!item.needsMessage && openId === null
   }
 
@@ -149,8 +62,8 @@
     openKey = null
   }
 
-  function run(item: Item): void {
-    if (isDisabled(item, $openMessageId)) {
+  function run(item: RenderItem): void {
+    if (isDisabled(item, $openMessageId) || !item.action) {
       return
     }
     close()
@@ -177,7 +90,7 @@
     if (openKey === null) {
       return
     }
-    const keys = menus.map((m) => m.key)
+    const keys = menus.map((m) => m.id)
     const next = (keys.indexOf(openKey) + delta + keys.length) % keys.length
     openKey = keys[next]
   }
@@ -217,40 +130,47 @@
 
 <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
 <nav class="menubar" class:raised={openKey !== null} aria-label="Pelton" bind:this={barEl} on:keydown={onBarKeydown}>
-  {#each menus as m (m.key)}
+  {#each menus as m (m.id)}
+    {@const label = m.labelKey ? $t(m.labelKey) : (m.label ?? '')}
     <div class="menu-wrap">
       <button
         type="button"
         class="title"
-        class:open={openKey === m.key}
+        class:open={openKey === m.id}
         role="menuitem"
         aria-haspopup="menu"
-        aria-expanded={openKey === m.key}
-        on:click={() => toggle(m.key)}
-        on:mouseenter={() => hoverTitle(m.key)}
+        aria-expanded={openKey === m.id}
+        on:click={() => toggle(m.id)}
+        on:mouseenter={() => hoverTitle(m.id)}
       >
-        {m.label}
+        {label}
       </button>
-      {#if openKey === m.key}
-        <div class="dropdown" role="menu" aria-label={m.label}>
-          {#each m.entries as entry}
-            {#if entry === 'separator'}
+      {#if openKey === m.id}
+        <div class="dropdown" role="menu" aria-label={label}>
+          {#each m.items as item (item.id)}
+            {#if item.kind === 'separator'}
               <div class="sep" role="separator"></div>
             {:else}
               <button
                 type="button"
                 class="item"
-                class:danger={entry.danger}
+                class:danger={item.danger}
                 role="menuitem"
-                disabled={isDisabled(entry, $openMessageId)}
-                on:click={() => run(entry)}
+                disabled={isDisabled(item, $openMessageId)}
+                on:click={() => run(item)}
               >
                 {#if $prefs.menuBarIcons}
-                  <span class="icon"><ThemedIcon name={entry.iconName} icon={entry.icon} size={15} stroke={1.7} /></span>
+                  <span class="icon">
+                    {#if item.kind === 'custom'}
+                      <MenuGlyph iconName={item.iconName} iconNodes={item.iconNodes} size={15} stroke={1.7} />
+                    {:else if item.icon}
+                      <ThemedIcon name={item.iconName ?? ''} icon={item.icon} size={15} stroke={1.7} />
+                    {/if}
+                  </span>
                 {/if}
-                <span class="label">{$t(entry.labelKey)}</span>
-                {#if hintFor(entry, $bindings)}
-                  <span class="hint">{hintFor(entry, $bindings)}</span>
+                <span class="label">{itemLabel(item, $t)}</span>
+                {#if hintFor(item, $bindings)}
+                  <span class="hint">{hintFor(item, $bindings)}</span>
                 {/if}
               </button>
             {/if}

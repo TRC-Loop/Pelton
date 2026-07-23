@@ -602,6 +602,8 @@ export const SettingKeys = {
   menuBarInApp: 'menu_bar_in_app',
   menuBarNativeMinimal: 'menu_bar_native_minimal',
   menuBarIcons: 'menu_bar_icons',
+  menuBarLayout: 'menu_bar_layout',
+  menuBarNewItems: 'menu_bar_new_items',
   timeFormat: 'time_format',
   reduceMotion: 'reduce_motion',
   themeDarkStart: 'theme_dark_start',

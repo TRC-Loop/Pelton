@@ -30,13 +30,15 @@
     "@fontsource/familjen-grotesk": "^5.2.8",
     "@fontsource/spline-sans-mono": "^5.2.8",
     "@replit/codemirror-vim": "^6.3.0",
+    "@tabler/icons": "^3.45.0",
     "@tabler/icons-svelte": "^3.44.0",
     "@tiptap/core": "^3.27.3",
     "@tiptap/extension-link": "^3.27.3",
     "@tiptap/pm": "^3.27.3",
     "@tiptap/starter-kit": "^3.27.3",
     "codemirror": "^6.0.2",
-    "marked": "^18.0.6"
+    "marked": "^18.0.6",
+    "svelte-dnd-action": "^0.9.74"
   },
   "pnpm": {
     "onlyBuiltDependencies": [

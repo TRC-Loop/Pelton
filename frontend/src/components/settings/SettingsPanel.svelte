@@ -43,6 +43,7 @@
   import AddressBookSection from './AddressBookSection.svelte'
   import MailboxesSection from './MailboxesSection.svelte'
   import NetworkSection from './NetworkSection.svelte'
+  import MenuBarCustomizer from './MenuBarCustomizer.svelte'
   import ImportExportSection from './ImportExportSection.svelte'
   import ThemesSection from './ThemesSection.svelte'
   import ThemedIcon from '../common/ThemedIcon.svelte'
@@ -584,6 +585,7 @@
               />
             </div>
             <p class="hint">{$t('settingsPanel.hint.menuBarIcons')}</p>
+            <MenuBarCustomizer />
           {/if}
           <div class="toggle">
             <span class="row-label">{$t('settingsPanel.toggle.reduceMotion')}</span>
