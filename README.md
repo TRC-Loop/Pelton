@@ -6,6 +6,9 @@
   <a href="https://github.com/TRC-Loop/Pelton/blob/main/LICENSE">
     <img src="https://img.shields.io/github/license/TRC-Loop/Pelton?style=for-the-badge&color=blue" alt="License: GPL-3.0">
   </a>
+  <a href="#-versioning">
+    <img src="https://img.shields.io/badge/CalVer-YYYY.Q.INCR-22bfda?style=for-the-badge" alt="CalVer YYYY.Q.INCR">
+  </a>
   <img src="https://img.shields.io/badge/Language-Go-00ADD8?style=for-the-badge&logo=go" alt="Written in Go">
   <a href="https://arne.sh/discord">
     <img src="https://img.shields.io/badge/Discord-Join_Community-7289DA?style=for-the-badge&logo=discord&logoColor=white" alt="Discord">
@@ -154,6 +157,27 @@ make build-linux
 ```
 
 This produces a binary plus a `.desktop` launcher in `build/bin/`; copy the binary somewhere on your `PATH`, install the `.desktop` file to `~/.local/share/applications/`, and give it an icon named `pelton` (see `build/icons/`).
+
+## <img src="https://api.iconify.design/tabler/tag.svg?color=white" width="26" style="vertical-align: -4px;"> Versioning
+
+Up to and including **1.0.9**, Pelton used semantic versioning. From the next release onward it uses **Calendar Versioning** in the form:
+
+```
+YYYY.Q.INCR
+```
+
+* **YYYY** — the full calendar year (e.g. `2026`).
+* **Q** — the calendar quarter, `1`–`4` (Q1 = Jan–Mar, Q2 = Apr–Jun, Q3 = Jul–Sep, Q4 = Oct–Dec).
+* **INCR** — the release counter within that quarter. It starts at `0` and resets to `0` at the start of each quarter.
+
+The first release of a quarter (INCR `0`) drops the trailing `.0`, so it reads as just `YYYY.Q`. Examples:
+
+| Release | Version |
+| --- | --- |
+| First release of Q4 2026 (flagship) | `2026.4` |
+| Next release that quarter | `2026.4.1` |
+| The one after | `2026.4.2` |
+| First release of Q1 2027 | `2027.1` |
 
 ## <img src="https://api.iconify.design/tabler/messages.svg?color=white" width="26" style="vertical-align: -4px;"> Contact & Community
 
