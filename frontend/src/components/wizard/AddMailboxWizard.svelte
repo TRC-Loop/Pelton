@@ -40,6 +40,7 @@
     return {
       email: '',
       displayName: '',
+      username: '',
       imapHost: '',
       imapPort: 993,
       smtpHost: '',
@@ -61,6 +62,15 @@
 
   function setTLS(mode: string): void {
     draft.imapPort = mode === 'starttls' ? 143 : 993
+  }
+
+  // the smtp transport, derived the same way: 587 is STARTTLS submission,
+  // anything else (conventionally 465) is implicit TLS. selecting a mode sets
+  // the conventional port, which the backend reads to choose the transport.
+  $: smtpTLS = draft.smtpPort === 587 ? 'starttls' : 'ssl'
+
+  function setSMTPTLS(mode: string): void {
+    draft.smtpPort = mode === 'starttls' ? 587 : 465
   }
 
   function selectPreset(p: ProviderPreset): void {
@@ -114,6 +124,7 @@
     try {
       await testConnection({
         email: draft.email,
+        username: draft.username,
         imapHost: draft.imapHost,
         imapPort: draft.imapPort,
         password: draft.password,
@@ -178,6 +189,7 @@
   // the prior result so a stale "ok" can't wave through a since-changed value.
   $: {
     draft.email
+    draft.username
     draft.imapHost
     draft.imapPort
     draft.password
@@ -248,10 +260,24 @@
         </button>
         {#if showAdvanced}
           <div class="advanced">
+            <label class="field">
+              <span>{$t('wizard.field.username')}</span>
+              <input type="text" bind:value={draft.username} placeholder={draft.email || $t('wizard.field.usernamePlaceholder')} />
+            </label>
+            <p class="adv-hint">
+              {$t('wizard.advanced.usernameHint')}
+            </p>
+
             <span class="adv-label">{$t('wizard.advanced.imapSecurity')}</span>
             <div class="seg" role="radiogroup" aria-label={$t('wizard.advanced.imapSecurity')}>
               <button type="button" class:on={imapTLS === 'ssl'} on:click={() => setTLS('ssl')}>SSL / TLS</button>
               <button type="button" class:on={imapTLS === 'starttls'} on:click={() => setTLS('starttls')}>STARTTLS</button>
+            </div>
+
+            <span class="adv-label">{$t('wizard.advanced.smtpSecurity')}</span>
+            <div class="seg" role="radiogroup" aria-label={$t('wizard.advanced.smtpSecurity')}>
+              <button type="button" class:on={smtpTLS === 'ssl'} on:click={() => setSMTPTLS('ssl')}>SSL / TLS</button>
+              <button type="button" class:on={smtpTLS === 'starttls'} on:click={() => setSMTPTLS('starttls')}>STARTTLS</button>
             </div>
             <p class="adv-hint">
               {$t('wizard.advanced.tlsHint')}
@@ -512,6 +538,12 @@
     font-size: var(--fz-label);
     color: var(--text-tertiary);
     margin-bottom: var(--space-2);
+  }
+
+  /* space the segmented controls from a following label so imap and smtp
+     security read as two distinct rows. */
+  .advanced .seg {
+    margin-bottom: var(--space-3);
   }
 
   /* a small two-option segmented control for the tls mode. */

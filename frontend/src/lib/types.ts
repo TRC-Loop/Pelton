@@ -9,6 +9,8 @@ export interface Account {
   id: number
   email: string
   displayName: string
+  // the login name when it differs from the email; empty logs in with email.
+  username: string
   imapHost: string
   imapPort: number
   smtpHost: string
@@ -407,6 +409,8 @@ export interface Discovered {
 export interface AddAccountRequest {
   email: string
   displayName: string
+  // the login name when it differs from the email; empty logs in with email.
+  username: string
   imapHost: string
   imapPort: number
   smtpHost: string
@@ -421,6 +425,8 @@ export interface AddAccountRequest {
 
 export interface TestConnectionRequest {
   email: string
+  // the login name when it differs from the email; empty logs in with email.
+  username: string
   imapHost: string
   imapPort: number
   password: string

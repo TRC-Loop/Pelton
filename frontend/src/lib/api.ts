@@ -66,6 +66,7 @@ export function listAccounts(): Promise<Account[]> {
 export function updateAccount(req: {
   id: number
   displayName: string
+  username: string
   imapHost: string
   imapPort: number
   smtpHost: string
