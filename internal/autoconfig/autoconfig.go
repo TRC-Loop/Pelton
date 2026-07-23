@@ -39,14 +39,14 @@ type Discovered struct {
 
 // Discover resolves settings for an email address, trying each source in order
 // and returning the first that yields an imap and smtp server.
-func Discover(ctx context.Context, email string) (Discovered, error) {
+func Discover(ctx context.Context, client *http.Client, email string) (Discovered, error) {
 	domain := domainOf(email)
 	if domain == "" {
 		return Discovered{}, fmt.Errorf("autoconfig: invalid email %q", email)
 	}
 
 	for _, attempt := range sources(domain) {
-		cfg, err := fetchAndParse(ctx, attempt.url, attempt.source)
+		cfg, err := fetchAndParse(ctx, client, attempt.url, attempt.source)
 		if err == nil && cfg.IMAPHost != "" && cfg.SMTPHost != "" {
 			return cfg, nil
 		}
@@ -136,8 +136,7 @@ func sources(domain string) []source {
 }
 
 // fetchAndParse retrieves and parses a Thunderbird-format autoconfig document.
-func fetchAndParse(ctx context.Context, url, src string) (Discovered, error) {
-	client := &http.Client{Timeout: httpTimeout}
+func fetchAndParse(ctx context.Context, client *http.Client, url, src string) (Discovered, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return Discovered{}, err

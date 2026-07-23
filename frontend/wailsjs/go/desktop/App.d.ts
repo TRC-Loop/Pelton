@@ -63,6 +63,12 @@ export function GetUserLocale(arg1:string):Promise<desktop.UserLocaleApplyDTO>;
 
 export function GetUIPrefs():Promise<desktop.UIPrefsDTO>;
 
+export function GetProxyConfig():Promise<desktop.ProxyConfigDTO>;
+
+export function SetProxyConfig(arg1:desktop.ProxyConfigDTO):Promise<void>;
+
+export function TestProxy(arg1:desktop.ProxyConfigDTO):Promise<void>;
+
 export function ImportData(arg1:string,arg2:Array<string>,arg3:string):Promise<void>;
 
 export function InspectBackupFile():Promise<desktop.BackupInfoDTO>;

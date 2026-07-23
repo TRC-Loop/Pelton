@@ -392,6 +392,19 @@ export interface AccountSignatures {
   footerId: number
 }
 
+// the outbound proxy preference shown in settings. password is write-only: the
+// backend never sends the stored secret back, only hasPassword so the field can
+// show a placeholder.
+export interface ProxyConfig {
+  mode: string
+  scheme: string
+  host: string
+  port: number
+  username: string
+  password: string
+  hasPassword: boolean
+}
+
 // autodiscovery result for the add-mailbox wizard.
 export interface Discovered {
   imapHost: string

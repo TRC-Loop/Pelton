@@ -21,6 +21,9 @@ const (
 	SettingWindowSize          = "window_size"
 	SettingLastSelectedAccount = "last_selected_account"
 	SettingLastSelectedFolder  = "last_selected_folder"
+	// SettingProxy holds the outbound proxy preference as json (everything but
+	// the password, which lives in the keyring).
+	SettingProxy = "proxy"
 )
 
 // Get returns the raw stored string for key, or ErrSettingNotFound.

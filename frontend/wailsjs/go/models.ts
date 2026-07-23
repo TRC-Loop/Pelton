@@ -1,5 +1,29 @@
 export namespace desktop {
-	
+
+	export class ProxyConfigDTO {
+	    mode: string;
+	    scheme: string;
+	    host: string;
+	    port: number;
+	    username: string;
+	    password: string;
+	    hasPassword: boolean;
+
+	    static createFrom(source: any = {}) {
+	        return new ProxyConfigDTO(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.mode = source["mode"];
+	        this.scheme = source["scheme"];
+	        this.host = source["host"];
+	        this.port = source["port"];
+	        this.username = source["username"];
+	        this.password = source["password"];
+	        this.hasPassword = source["hasPassword"];
+	    }
+	}
 	export class AccountDTO {
 	    id: number;
 	    email: string;

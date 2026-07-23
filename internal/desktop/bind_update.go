@@ -108,7 +108,7 @@ func (a *App) recordUpdateCheck() {
 func (a *App) checkForUpdates(ctx context.Context) UpdateCheckResult {
 	result := UpdateCheckResult{CurrentVersion: a.version}
 
-	release, err := fetchLatestRelease(ctx)
+	release, err := fetchLatestRelease(ctx, a.httpClient(8*time.Second))
 	if err != nil {
 		result.Error = err.Error()
 		return result
@@ -121,7 +121,7 @@ func (a *App) checkForUpdates(ctx context.Context) UpdateCheckResult {
 	return result
 }
 
-func fetchLatestRelease(ctx context.Context) (githubRelease, error) {
+func fetchLatestRelease(ctx context.Context, client *http.Client) (githubRelease, error) {
 	reqCtx, cancel := context.WithTimeout(ctx, 8*time.Second)
 	defer cancel()
 
@@ -131,7 +131,7 @@ func fetchLatestRelease(ctx context.Context) (githubRelease, error) {
 	}
 	req.Header.Set("Accept", "application/vnd.github+json")
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := client.Do(req)
 	if err != nil {
 		return githubRelease{}, err
 	}

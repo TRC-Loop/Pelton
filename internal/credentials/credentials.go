@@ -125,6 +125,45 @@ func Delete(accountID int64) error {
 	return nil
 }
 
+// proxyPasswordKey is the keyring entry for the outbound proxy password. It is a
+// non-numeric name so it can never collide with a per-account entry (those are
+// the decimal account id).
+const proxyPasswordKey = "proxy-password"
+
+// StoreProxyPassword saves the proxy authentication password, or clears it when
+// empty. It is kept out of the settings db like every other secret.
+func StoreProxyPassword(password string) error {
+	if password == "" {
+		return DeleteProxyPassword()
+	}
+	if err := keyring.Set(service, proxyPasswordKey, password); err != nil {
+		return fmt.Errorf("credentials: store proxy password: %w", err)
+	}
+	return nil
+}
+
+// LoadProxyPassword returns the stored proxy password, or "" when none is set.
+func LoadProxyPassword() (string, error) {
+	raw, err := keyring.Get(service, proxyPasswordKey)
+	if errors.Is(err, keyring.ErrNotFound) {
+		return "", nil
+	}
+	if err != nil {
+		return "", fmt.Errorf("credentials: load proxy password: %w", err)
+	}
+	return raw, nil
+}
+
+// DeleteProxyPassword removes the stored proxy password. A missing entry is not
+// an error.
+func DeleteProxyPassword() error {
+	err := keyring.Delete(service, proxyPasswordKey)
+	if err != nil && !errors.Is(err, keyring.ErrNotFound) {
+		return fmt.Errorf("credentials: delete proxy password: %w", err)
+	}
+	return nil
+}
+
 // key is the per-account keyring entry name.
 func key(accountID int64) string {
 	return strconv.FormatInt(accountID, 10)

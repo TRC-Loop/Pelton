@@ -3,6 +3,7 @@
 package imap
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
 	"io"
@@ -13,6 +14,10 @@ import (
 	"github.com/emersion/go-imap/v2"
 	"github.com/emersion/go-imap/v2/imapclient"
 )
+
+// DialFunc opens a raw tcp connection; the proxy layer supplies one to route
+// the connection through a proxy. nil means dial directly.
+type DialFunc func(ctx context.Context, network, addr string) (net.Conn, error)
 
 const (
 	// DefaultPort is IMAP over implicit TLS (RFC 8314).
@@ -57,6 +62,10 @@ type Config struct {
 	InsecureSkipVerify bool
 	// DebugWriter receives the raw protocol stream, including credentials.
 	DebugWriter io.Writer
+
+	// Dial, when set, opens the tcp connection (used to route through a proxy).
+	// nil keeps the default direct dial, leaving the non-proxy path unchanged.
+	Dial DialFunc
 }
 
 // tlsMode resolves the effective TLS mode, deriving it from the port when set to
@@ -123,6 +132,17 @@ func Connect(cfg Config) (*Client, error) {
 	}
 
 	addr := net.JoinHostPort(cfg.Host, strconv.Itoa(port))
+	// with a proxy dialer the connection is opened here and handed to go-imap,
+	// since its Dial* helpers only accept a concrete *net.Dialer. without one the
+	// original direct Dial* path is used unchanged.
+	if cfg.Dial != nil {
+		raw, err := connectVia(cfg, addr, options)
+		if err != nil {
+			return nil, err
+		}
+		return &Client{raw: raw, cfg: cfg, updates: updates}, nil
+	}
+
 	// implicit TLS dials straight into TLS; STARTTLS connects in cleartext and
 	// upgrades. the live connection test in the wizard validates the choice.
 	dial := imapclient.DialTLS
@@ -135,6 +155,31 @@ func Connect(cfg Config) (*Client, error) {
 	}
 
 	return &Client{raw: raw, cfg: cfg, updates: updates}, nil
+}
+
+// connectVia opens the tcp connection through cfg.Dial (a proxy) and builds the
+// go-imap client from it, applying implicit TLS or STARTTLS to match the port.
+func connectVia(cfg Config, addr string, options *imapclient.Options) (*imapclient.Client, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), dialTimeout)
+	defer cancel()
+	conn, err := cfg.Dial(ctx, "tcp", addr)
+	if err != nil {
+		return nil, fmt.Errorf("imap: proxy dial %s: %w", addr, err)
+	}
+	if cfg.tlsMode() == TLSStartTLS {
+		raw, err := imapclient.NewStartTLS(conn, options)
+		if err != nil {
+			_ = conn.Close()
+			return nil, fmt.Errorf("imap: starttls %s: %w", addr, err)
+		}
+		return raw, nil
+	}
+	tlsConn := tls.Client(conn, options.TLSConfig)
+	if err := tlsConn.HandshakeContext(ctx); err != nil {
+		_ = conn.Close()
+		return nil, fmt.Errorf("imap: tls handshake %s: %w", addr, err)
+	}
+	return imapclient.New(tlsConn, options), nil
 }
 
 // sendUpdate never blocks the read loop; drops if the consumer is behind.

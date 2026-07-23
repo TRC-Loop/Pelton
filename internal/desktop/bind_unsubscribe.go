@@ -102,7 +102,7 @@ func (a *App) Unsubscribe(id int64) error {
 	kind, target := parseListUnsubscribe(m.ListUnsubscribe, m.ListUnsubscribePost)
 	switch kind {
 	case unsubKindOneClick:
-		if err := postOneClick(target); err != nil {
+		if err := postOneClick(a.httpClient(15*time.Second), target); err != nil {
 			return err
 		}
 	case unsubKindMailto:
@@ -118,8 +118,7 @@ func (a *App) Unsubscribe(id int64) error {
 
 // postOneClick fires the RFC 8058 one-click POST. The fixed form body is the
 // whole protocol; a 2xx after redirects counts as done.
-func postOneClick(target string) error {
-	client := &http.Client{Timeout: 15 * time.Second}
+func postOneClick(client *http.Client, target string) error {
 	resp, err := client.Post(target, "application/x-www-form-urlencoded",
 		strings.NewReader("List-Unsubscribe=One-Click"))
 	if err != nil {
