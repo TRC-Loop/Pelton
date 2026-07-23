@@ -16,6 +16,7 @@ import (
 	"fmt"
 	"net"
 	"strconv"
+	"time"
 
 	"github.com/emersion/go-sasl"
 	gosmtp "github.com/emersion/go-smtp"
@@ -29,6 +30,10 @@ const (
 
 	defaultLocalName = "localhost"
 	xoauth2Mech      = "XOAUTH2"
+
+	// dialTimeout bounds establishing the tcp connection when dialing through a
+	// proxy (the direct Dial* helpers carry their own timeouts).
+	dialTimeout = 30 * time.Second
 )
 
 // TLSMode selects how TLS is established.
@@ -74,7 +79,15 @@ type Config struct {
 
 	// InsecureSkipVerify disables certificate verification. Debugging only.
 	InsecureSkipVerify bool
+
+	// Dial, when set, opens the tcp connection (used to route through a proxy).
+	// nil keeps the default direct dial, leaving the non-proxy path unchanged.
+	Dial DialFunc
 }
+
+// DialFunc opens a raw tcp connection; the proxy layer supplies one to route
+// the connection through a proxy. nil means dial directly.
+type DialFunc func(ctx context.Context, network, addr string) (net.Conn, error)
 
 // Distinct, clear failure categories so the ui can tell the user whether to fix
 // their network/TLS or their credentials.
@@ -146,6 +159,10 @@ func dial(cfg Config) (*gosmtp.Client, error) {
 		MinVersion:         tls.VersionTLS12,
 	}
 
+	if cfg.Dial != nil {
+		return dialVia(cfg, addr, tlsCfg)
+	}
+
 	switch cfg.tlsMode() {
 	case TLSStartTLS:
 		c, err := gosmtp.DialStartTLS(addr, tlsCfg)
@@ -160,6 +177,31 @@ func dial(cfg Config) (*gosmtp.Client, error) {
 		}
 		return c, nil
 	}
+}
+
+// dialVia opens the tcp connection through cfg.Dial (a proxy) and builds the
+// go-smtp client from it, applying implicit TLS or STARTTLS to match the port.
+func dialVia(cfg Config, addr string, tlsCfg *tls.Config) (*gosmtp.Client, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), dialTimeout)
+	defer cancel()
+	conn, err := cfg.Dial(ctx, "tcp", addr)
+	if err != nil {
+		return nil, fmt.Errorf("%w: proxy dial %s: %v", ErrConnect, addr, err)
+	}
+	if cfg.tlsMode() == TLSStartTLS {
+		c, err := gosmtp.NewClientStartTLS(conn, tlsCfg)
+		if err != nil {
+			_ = conn.Close()
+			return nil, fmt.Errorf("%w: starttls %s: %v", ErrConnect, addr, err)
+		}
+		return c, nil
+	}
+	tlsConn := tls.Client(conn, tlsCfg)
+	if err := tlsConn.HandshakeContext(ctx); err != nil {
+		_ = conn.Close()
+		return nil, fmt.Errorf("%w: tls handshake %s: %v", ErrConnect, addr, err)
+	}
+	return gosmtp.NewClient(tlsConn), nil
 }
 
 // Authenticate runs SASL auth with the configured mechanism.

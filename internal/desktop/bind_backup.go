@@ -62,6 +62,7 @@ type whitelistBackup struct {
 type mailboxBackup struct {
 	Email       string         `json:"email"`
 	DisplayName string         `json:"displayName"`
+	Username    string         `json:"username,omitempty"`
 	IMAPHost    string         `json:"imapHost"`
 	IMAPPort    int            `json:"imapPort"`
 	SMTPHost    string         `json:"smtpHost"`
@@ -190,6 +191,7 @@ func (a *App) exportMailboxes(credentialPassword string) ([]mailboxBackup, error
 		m := mailboxBackup{
 			Email:       acc.Email,
 			DisplayName: acc.DisplayName,
+			Username:    acc.Username,
 			IMAPHost:    acc.IMAPHost,
 			IMAPPort:    acc.IMAPPort,
 			SMTPHost:    acc.SMTPHost,
@@ -421,6 +423,7 @@ func (a *App) importMailboxes(mailboxes []mailboxBackup, credentialPassword stri
 		account := storage.Account{
 			Email:       m.Email,
 			DisplayName: m.DisplayName,
+			Username:    m.Username,
 			IMAPHost:    m.IMAPHost,
 			IMAPPort:    m.IMAPPort,
 			SMTPHost:    m.SMTPHost,

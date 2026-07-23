@@ -126,6 +126,18 @@ export function GetUIPrefs() {
   return window['go']['desktop']['App']['GetUIPrefs']();
 }
 
+export function GetProxyConfig() {
+  return window['go']['desktop']['App']['GetProxyConfig']();
+}
+
+export function SetProxyConfig(arg1) {
+  return window['go']['desktop']['App']['SetProxyConfig'](arg1);
+}
+
+export function TestProxy(arg1) {
+  return window['go']['desktop']['App']['TestProxy'](arg1);
+}
+
 export function ImportData(arg1, arg2, arg3) {
   return window['go']['desktop']['App']['ImportData'](arg1, arg2, arg3);
 }

@@ -62,6 +62,7 @@
       const updated = await updateAccount({
         id: draft.id,
         displayName: draft.displayName,
+        username: draft.username,
         imapHost: draft.imapHost,
         imapPort: draft.imapPort,
         smtpHost: draft.smtpHost,
@@ -114,6 +115,10 @@
             <label class="field">
               <span>{$t('wizard.field.displayName')}</span>
               <input type="text" bind:value={draft.displayName} />
+            </label>
+            <label class="field">
+              <span>{$t('wizard.field.username')}</span>
+              <input type="text" bind:value={draft.username} placeholder={account.email} />
             </label>
             <div class="servers">
               <label class="field"><span>{$t('wizard.field.imapHost')}</span><input type="text" bind:value={draft.imapHost} /></label>

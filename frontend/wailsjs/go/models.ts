@@ -1,23 +1,49 @@
 export namespace desktop {
-	
+
+	export class ProxyConfigDTO {
+	    mode: string;
+	    scheme: string;
+	    host: string;
+	    port: number;
+	    username: string;
+	    password: string;
+	    hasPassword: boolean;
+
+	    static createFrom(source: any = {}) {
+	        return new ProxyConfigDTO(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.mode = source["mode"];
+	        this.scheme = source["scheme"];
+	        this.host = source["host"];
+	        this.port = source["port"];
+	        this.username = source["username"];
+	        this.password = source["password"];
+	        this.hasPassword = source["hasPassword"];
+	    }
+	}
 	export class AccountDTO {
 	    id: number;
 	    email: string;
 	    displayName: string;
+	    username: string;
 	    imapHost: string;
 	    imapPort: number;
 	    smtpHost: string;
 	    smtpPort: number;
-	
+
 	    static createFrom(source: any = {}) {
 	        return new AccountDTO(source);
 	    }
-	
+
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.id = source["id"];
 	        this.email = source["email"];
 	        this.displayName = source["displayName"];
+	        this.username = source["username"];
 	        this.imapHost = source["imapHost"];
 	        this.imapPort = source["imapPort"];
 	        this.smtpHost = source["smtpHost"];
@@ -41,6 +67,7 @@ export namespace desktop {
 	export class AddAccountRequest {
 	    email: string;
 	    displayName: string;
+	    username: string;
 	    imapHost: string;
 	    imapPort: number;
 	    smtpHost: string;
@@ -49,15 +76,16 @@ export namespace desktop {
 	    provider: string;
 	    clientId: string;
 	    clientSecret: string;
-	
+
 	    static createFrom(source: any = {}) {
 	        return new AddAccountRequest(source);
 	    }
-	
+
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.email = source["email"];
 	        this.displayName = source["displayName"];
+	        this.username = source["username"];
 	        this.imapHost = source["imapHost"];
 	        this.imapPort = source["imapPort"];
 	        this.smtpHost = source["smtpHost"];
@@ -669,17 +697,19 @@ export namespace desktop {
 	}
 	export class TestConnectionRequest {
 	    email: string;
+	    username: string;
 	    imapHost: string;
 	    imapPort: number;
 	    password: string;
-	
+
 	    static createFrom(source: any = {}) {
 	        return new TestConnectionRequest(source);
 	    }
-	
+
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.email = source["email"];
+	        this.username = source["username"];
 	        this.imapHost = source["imapHost"];
 	        this.imapPort = source["imapPort"];
 	        this.password = source["password"];
@@ -922,19 +952,21 @@ export namespace desktop {
 	export class UpdateAccountRequest {
 	    id: number;
 	    displayName: string;
+	    username: string;
 	    imapHost: string;
 	    imapPort: number;
 	    smtpHost: string;
 	    smtpPort: number;
-	
+
 	    static createFrom(source: any = {}) {
 	        return new UpdateAccountRequest(source);
 	    }
-	
+
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.id = source["id"];
 	        this.displayName = source["displayName"];
+	        this.username = source["username"];
 	        this.imapHost = source["imapHost"];
 	        this.imapPort = source["imapPort"];
 	        this.smtpHost = source["smtpHost"];

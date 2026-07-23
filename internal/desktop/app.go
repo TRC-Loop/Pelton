@@ -15,6 +15,7 @@ import (
 
 	"github.com/TRC-Loop/Pelton/internal/configsync"
 	"github.com/TRC-Loop/Pelton/internal/outbox"
+	"github.com/TRC-Loop/Pelton/internal/proxy"
 	"github.com/TRC-Loop/Pelton/internal/search"
 	"github.com/TRC-Loop/Pelton/internal/storage"
 	"github.com/wailsapp/wails/v2/pkg/menu"
@@ -66,6 +67,13 @@ type App struct {
 	// flag): the frontend fills the ui with fixed sample data instead of reading
 	// real accounts and mail. It never touches the store or the network.
 	demoMode bool
+
+	// proxyMu guards proxyCfg, the cached outbound proxy preference (with its
+	// password from the keyring). It is loaded at startup and refreshed by
+	// SetProxyConfig, so the mail and http paths read it without touching the
+	// keyring on every connection.
+	proxyMu  sync.RWMutex
+	proxyCfg proxy.Config
 }
 
 // IsDemoMode reports whether the app was launched in the cosmetic demo mode. The
@@ -113,6 +121,7 @@ func (a *App) startup(ctx context.Context) {
 	a.store = store
 	a.dataDir = dataDir
 	a.queue = outbox.NewQueue(store)
+	a.loadProxy()
 	close(a.storeReady)
 
 	// the Windows tray icon (no-op elsewhere). started after the store is up

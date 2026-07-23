@@ -15,6 +15,16 @@ import (
 // matching environment fallback, so it cannot be synced or sent from.
 var errNoCredentials = errors.New("pelton: no credentials for account")
 
+// loginName is the name to authenticate with: the account's explicit username
+// when set, otherwise the email address. Every account created before separate
+// usernames existed has an empty Username and so keeps logging in by email.
+func loginName(account storage.Account) string {
+	if account.Username != "" {
+		return account.Username
+	}
+	return account.Email
+}
+
 // resolveIMAP builds an imap config for an account from its keyring secret,
 // refreshing an oauth access token if needed. It falls back to environment
 // credentials for the legacy cli-created account (matched by email) so existing
@@ -23,7 +33,8 @@ func (a *App) resolveIMAP(account storage.Account) (pimap.Config, error) {
 	cfg := pimap.Config{
 		Host:     account.IMAPHost,
 		Port:     account.IMAPPort,
-		Username: account.Email,
+		Username: loginName(account),
+		Dial:     a.proxyDial(),
 	}
 
 	secret, err := credentials.Load(account.ID)
@@ -53,7 +64,8 @@ func (a *App) resolveSMTP(account storage.Account) (psmtp.Config, error) {
 	cfg := psmtp.Config{
 		Host:     account.SMTPHost,
 		Port:     account.SMTPPort,
-		Username: account.Email,
+		Username: loginName(account),
+		Dial:     a.proxyDial(),
 	}
 
 	secret, err := credentials.Load(account.ID)

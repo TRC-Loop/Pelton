@@ -11,14 +11,6 @@ vendor: "Arne K. and the Pelton contributors"
 homepage: "https://github.com/TRC-Loop/Pelton"
 license: GPL-3.0-or-later
 
-# Fedora ships the webkit2gtk4.1/gtk3 runtime under these package names as of
-# Fedora 39+. If a release build fails to install on a given Fedora version,
-# this is the first place to check (`dnf provides` on the target box) and
-# adjust.
-depends:
-  - gtk3
-  - webkit2gtk4.1
-
 contents:
   - src: ./build/bin/Pelton
     dst: /usr/bin/pelton
@@ -35,5 +27,21 @@ contents:
 
 rpm:
   group: Applications/Internet
-  scripts:
-    posttrans: ./.github/nfpm/posttrans.sh
+
+# The gtk3/webkit2gtk runtime ships under different package names on Fedora and
+# Debian (and Ubuntu 24.04's t64 transition renamed libgtk-3-0 to
+# libgtk-3-0t64), so each packager gets its own dependency list. Both refresh
+# the desktop/icon caches after install via the same hook.
+overrides:
+  rpm:
+    depends:
+      - gtk3
+      - webkit2gtk4.1
+    scripts:
+      posttrans: ./.github/nfpm/posttrans.sh
+  deb:
+    depends:
+      - "libgtk-3-0 | libgtk-3-0t64"
+      - "libwebkit2gtk-4.1-0"
+    scripts:
+      postinstall: ./.github/nfpm/posttrans.sh

@@ -39,6 +39,7 @@ import type {
   SaveThemeRequest,
   UserLocale,
   UserLocaleApply,
+  ProxyConfig,
 } from './types'
 
 // isDemoMode reports whether the app launched in the cosmetic --potatoes-are-nice
@@ -66,6 +67,7 @@ export function listAccounts(): Promise<Account[]> {
 export function updateAccount(req: {
   id: number
   displayName: string
+  username: string
   imapHost: string
   imapPort: number
   smtpHost: string
@@ -685,4 +687,22 @@ export function openLocalesFolder(): Promise<void> {
 // returning the chosen path ('' if cancelled).
 export function saveLocaleTemplate(content: string): Promise<string> {
   return App.SaveLocaleTemplate(content)
+}
+
+// getProxyConfig returns the current outbound proxy preference (without the
+// stored password; hasPassword reports whether one is set).
+export function getProxyConfig(): Promise<ProxyConfig> {
+  return App.GetProxyConfig() as Promise<ProxyConfig>
+}
+
+// setProxyConfig validates, persists and applies a proxy preference. Leave
+// password empty with hasPassword true to keep the stored one.
+export function setProxyConfig(cfg: ProxyConfig): Promise<void> {
+  return App.SetProxyConfig(new desktop.ProxyConfigDTO(cfg))
+}
+
+// testProxy dials a well-known endpoint through the given settings so the ui can
+// confirm the proxy works before saving. Resolves on success.
+export function testProxy(cfg: ProxyConfig): Promise<void> {
+  return App.TestProxy(new desktop.ProxyConfigDTO(cfg))
 }

@@ -11,10 +11,13 @@ import (
 type UpdateAccountRequest struct {
 	ID          int64  `json:"id"`
 	DisplayName string `json:"displayName"`
-	IMAPHost    string `json:"imapHost"`
-	IMAPPort    int    `json:"imapPort"`
-	SMTPHost    string `json:"smtpHost"`
-	SMTPPort    int    `json:"smtpPort"`
+	// Username is the login name when it differs from the email; empty logs in
+	// with the account's email.
+	Username string `json:"username"`
+	IMAPHost string `json:"imapHost"`
+	IMAPPort int    `json:"imapPort"`
+	SMTPHost string `json:"smtpHost"`
+	SMTPPort int    `json:"smtpPort"`
 }
 
 // UpdateAccount persists edits to an account's display name and server settings.
@@ -30,6 +33,7 @@ func (a *App) UpdateAccount(req UpdateAccountRequest) (AccountDTO, error) {
 		return AccountDTO{}, err
 	}
 	account.DisplayName = req.DisplayName
+	account.Username = req.Username
 	account.IMAPHost = req.IMAPHost
 	account.IMAPPort = req.IMAPPort
 	account.SMTPHost = req.SMTPHost
