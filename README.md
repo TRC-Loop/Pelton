@@ -179,8 +179,6 @@ The first release of a quarter (INCR `0`) drops the trailing `.0`, so it reads a
 | The one after | `2026.4.2` |
 | First release of Q1 2027 | `2027.1` |
 
-So **1.0.9 is the last semver release; the next one is `2026.4`.** Git tags keep the `v` prefix (`v2026.4`, `v2026.4.1`).
-
 ## <img src="https://api.iconify.design/tabler/messages.svg?color=white" width="26" style="vertical-align: -4px;"> Contact & Community
 
 * **Discord:** Join the discussion at [arne.sh/discord](https://arne.sh/discord)
