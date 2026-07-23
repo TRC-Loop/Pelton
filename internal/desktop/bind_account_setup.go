@@ -33,7 +33,7 @@ type DiscoveredDTO struct {
 // autoconfig (ISPDB, the domain's well-known/autoconfig, then a guess). The
 // wizard pre-fills the form with this; the user can still edit before testing.
 func (a *App) DiscoverConfig(email string) (DiscoveredDTO, error) {
-	d, err := autoconfig.Discover(a.ctx, email)
+	d, err := autoconfig.Discover(a.ctx, a.httpClient(10*time.Second), email)
 	if err != nil {
 		return DiscoveredDTO{}, err
 	}
@@ -77,6 +77,7 @@ func (a *App) TestConnection(req TestConnectionRequest) error {
 		Port:     req.IMAPPort,
 		Username: username,
 		Password: req.Password,
+		Dial:     a.proxyDial(),
 	})
 	if err != nil {
 		return err

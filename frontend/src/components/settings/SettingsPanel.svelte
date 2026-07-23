@@ -30,6 +30,7 @@
     IconFolderOpen,
     IconFileExport,
     IconRefresh,
+    IconWorld,
   } from '@tabler/icons-svelte'
   import { createEventDispatcher, onMount } from 'svelte'
   import SegmentedSetting from './SegmentedSetting.svelte'
@@ -41,6 +42,7 @@
   import SignaturesSection from './SignaturesSection.svelte'
   import AddressBookSection from './AddressBookSection.svelte'
   import MailboxesSection from './MailboxesSection.svelte'
+  import NetworkSection from './NetworkSection.svelte'
   import ImportExportSection from './ImportExportSection.svelte'
   import ThemesSection from './ThemesSection.svelte'
   import ThemedIcon from '../common/ThemedIcon.svelte'
@@ -164,6 +166,7 @@
     { key: 'offline', label: $t('settingsPanel.category.offline'), icon: IconCloudDownload, iconName: 'cloud-download' },
     { key: 'power', label: $t('settingsPanel.category.power'), icon: IconBatteryEco, iconName: 'battery-eco' },
     { key: 'mailboxes', label: $t('settingsPanel.category.mailboxes'), icon: IconMailbox, iconName: 'mailbox' },
+    { key: 'network', label: $t('settingsPanel.category.network'), icon: IconWorld, iconName: 'world' },
     { key: 'contacts', label: $t('settingsPanel.category.contacts'), icon: IconAddressBook, iconName: 'address-book' },
     { key: 'sync', label: $t('settingsPanel.category.importExport'), icon: IconFileImport, iconName: 'file-import' },
     { key: 'composing', label: $t('settingsPanel.category.composing'), icon: IconWriting, iconName: 'writing' },
@@ -1014,6 +1017,10 @@
       {:else if active === 'mailboxes'}
         <section>
           <MailboxesSection />
+        </section>
+      {:else if active === 'network'}
+        <section>
+          <NetworkSection />
         </section>
       {:else if active === 'contacts'}
         <section>
