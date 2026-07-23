@@ -17,11 +17,14 @@ type Account struct {
 	ID          int64
 	Email       string
 	DisplayName string
-	IMAPHost    string
-	IMAPPort    int
-	SMTPHost    string
-	SMTPPort    int
-	CreatedAt   time.Time
+	// Username is the login name when it differs from the email address. Empty
+	// means authenticate with Email.
+	Username  string
+	IMAPHost  string
+	IMAPPort  int
+	SMTPHost  string
+	SMTPPort  int
+	CreatedAt time.Time
 }
 
 // CreateAccount inserts an account and returns its new id. CreatedAt is set to
@@ -33,10 +36,10 @@ func (d *DB) CreateAccount(ctx context.Context, a *Account) (int64, error) {
 	}
 
 	const query = `
-INSERT INTO accounts (email, display_name, imap_host, imap_port, smtp_host, smtp_port, created_at)
-VALUES (?, ?, ?, ?, ?, ?, ?)`
+INSERT INTO accounts (email, display_name, username, imap_host, imap_port, smtp_host, smtp_port, created_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
 	res, err := d.sql.ExecContext(ctx, query,
-		a.Email, a.DisplayName, a.IMAPHost, a.IMAPPort, a.SMTPHost, a.SMTPPort, formatTime(created))
+		a.Email, a.DisplayName, a.Username, a.IMAPHost, a.IMAPPort, a.SMTPHost, a.SMTPPort, formatTime(created))
 	if err != nil {
 		return 0, fmt.Errorf("storage: insert account %q: %w", a.Email, err)
 	}
@@ -52,7 +55,7 @@ VALUES (?, ?, ?, ?, ?, ?, ?)`
 // GetAccount returns one account by id, or ErrAccountNotFound.
 func (d *DB) GetAccount(ctx context.Context, id int64) (*Account, error) {
 	const query = `
-SELECT id, email, display_name, imap_host, imap_port, smtp_host, smtp_port, created_at
+SELECT id, email, display_name, username, imap_host, imap_port, smtp_host, smtp_port, created_at
 FROM accounts WHERE id = ?`
 	a, err := scanAccount(d.sql.QueryRowContext(ctx, query, id))
 	if errors.Is(err, sql.ErrNoRows) {
@@ -67,7 +70,7 @@ FROM accounts WHERE id = ?`
 // ListAccounts returns all accounts ordered by id.
 func (d *DB) ListAccounts(ctx context.Context) ([]Account, error) {
 	const query = `
-SELECT id, email, display_name, imap_host, imap_port, smtp_host, smtp_port, created_at
+SELECT id, email, display_name, username, imap_host, imap_port, smtp_host, smtp_port, created_at
 FROM accounts ORDER BY id`
 	rows, err := d.sql.QueryContext(ctx, query)
 	if err != nil {
@@ -93,10 +96,10 @@ FROM accounts ORDER BY id`
 func (d *DB) UpdateAccount(ctx context.Context, a *Account) error {
 	const query = `
 UPDATE accounts
-SET email = ?, display_name = ?, imap_host = ?, imap_port = ?, smtp_host = ?, smtp_port = ?
+SET email = ?, display_name = ?, username = ?, imap_host = ?, imap_port = ?, smtp_host = ?, smtp_port = ?
 WHERE id = ?`
 	res, err := d.sql.ExecContext(ctx, query,
-		a.Email, a.DisplayName, a.IMAPHost, a.IMAPPort, a.SMTPHost, a.SMTPPort, a.ID)
+		a.Email, a.DisplayName, a.Username, a.IMAPHost, a.IMAPPort, a.SMTPHost, a.SMTPPort, a.ID)
 	if err != nil {
 		return fmt.Errorf("storage: update account %d: %w", a.ID, err)
 	}
@@ -123,7 +126,7 @@ func scanAccount(row rowScanner) (*Account, error) {
 		a       Account
 		created string
 	)
-	if err := row.Scan(&a.ID, &a.Email, &a.DisplayName, &a.IMAPHost, &a.IMAPPort,
+	if err := row.Scan(&a.ID, &a.Email, &a.DisplayName, &a.Username, &a.IMAPHost, &a.IMAPPort,
 		&a.SMTPHost, &a.SMTPPort, &created); err != nil {
 		return nil, err
 	}

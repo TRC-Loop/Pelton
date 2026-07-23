@@ -18,6 +18,7 @@ type AccountDTO struct {
 	ID          int64  `json:"id"`
 	Email       string `json:"email"`
 	DisplayName string `json:"displayName"`
+	Username    string `json:"username"`
 	IMAPHost    string `json:"imapHost"`
 	IMAPPort    int    `json:"imapPort"`
 	SMTPHost    string `json:"smtpHost"`
@@ -141,6 +142,7 @@ func toAccountDTO(a storage.Account) AccountDTO {
 		ID:          a.ID,
 		Email:       a.Email,
 		DisplayName: a.DisplayName,
+		Username:    a.Username,
 		IMAPHost:    a.IMAPHost,
 		IMAPPort:    a.IMAPPort,
 		SMTPHost:    a.SMTPHost,

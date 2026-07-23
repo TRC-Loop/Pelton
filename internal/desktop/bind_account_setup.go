@@ -56,7 +56,10 @@ func (a *App) ListOAuthProviders() (map[string]string, error) {
 // TestConnectionRequest carries the settings to verify before saving (password
 // auth). OAuth is verified by the sign-in flow itself, so it is not tested here.
 type TestConnectionRequest struct {
-	Email    string `json:"email"`
+	Email string `json:"email"`
+	// Username is the login name when it differs from the email; empty logs in
+	// with Email.
+	Username string `json:"username"`
 	IMAPHost string `json:"imapHost"`
 	IMAPPort int    `json:"imapPort"`
 	Password string `json:"password"`
@@ -65,10 +68,14 @@ type TestConnectionRequest struct {
 // TestConnection verifies imap credentials by connecting and logging in, so the
 // wizard can confirm before creating the account. It returns nil on success.
 func (a *App) TestConnection(req TestConnectionRequest) error {
+	username := req.Username
+	if username == "" {
+		username = req.Email
+	}
 	client, err := pimap.Connect(pimap.Config{
 		Host:     req.IMAPHost,
 		Port:     req.IMAPPort,
-		Username: req.Email,
+		Username: username,
 		Password: req.Password,
 		Dial:     a.proxyDial(),
 	})
@@ -87,6 +94,9 @@ func (a *App) TestConnection(req TestConnectionRequest) error {
 type AddAccountRequest struct {
 	Email       string `json:"email"`
 	DisplayName string `json:"displayName"`
+	// Username is the login name when it differs from the email; empty logs in
+	// with Email.
+	Username    string `json:"username"`
 	IMAPHost    string `json:"imapHost"`
 	IMAPPort    int    `json:"imapPort"`
 	SMTPHost    string `json:"smtpHost"`
@@ -153,6 +163,7 @@ func (a *App) createAccount(req AddAccountRequest, secret credentials.Secret) (A
 	account := &storage.Account{
 		Email:       req.Email,
 		DisplayName: req.DisplayName,
+		Username:    req.Username,
 		IMAPHost:    req.IMAPHost,
 		IMAPPort:    req.IMAPPort,
 		SMTPHost:    req.SMTPHost,
