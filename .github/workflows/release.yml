@@ -200,10 +200,11 @@ jobs:
             --clobber
 
   # ---------------------------------------------------------------------------
-  # Linux: a Fedora .rpm built with nfpm (free, MIT-licensed, no external
-  # signing service). Package metadata lives in .github/nfpm/pelton.yaml.
+  # Linux: the raw amd64 binary plus a .deb (Debian/Ubuntu) and .rpm (Fedora),
+  # both built with nfpm (free, MIT-licensed, no external signing service).
+  # Package metadata lives in .github/nfpm/pelton.yaml.
   # ---------------------------------------------------------------------------
-  linux-fedora:
+  linux:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -242,14 +243,23 @@ jobs:
         run: |
           raw="${GITHUB_REF_NAME:-0.0.0-dev}"
           echo "version=$raw" >> "$GITHUB_OUTPUT"
-          echo "rpm_version=${raw#v}" >> "$GITHUB_OUTPUT"
+          # package managers reject a leading "v", so strip it for .deb/.rpm.
+          echo "pkg_version=${raw#v}" >> "$GITHUB_OUTPUT"
 
       - name: Build
         run: wails build -platform linux/amd64 -tags webkit2_41 -ldflags "-X main.version=${{ steps.version.outputs.version }}"
 
+      - name: Stage raw binary
+        run: cp "build/bin/Pelton" "build/bin/Pelton-${{ steps.version.outputs.version }}-linux-amd64"
+
+      - name: Build .deb
+        env:
+          VERSION: ${{ steps.version.outputs.pkg_version }}
+        run: nfpm package --config .github/nfpm/pelton.yaml --packager deb --target "build/bin/Pelton-${{ steps.version.outputs.version }}-linux-amd64.deb"
+
       - name: Build .rpm
         env:
-          VERSION: ${{ steps.version.outputs.rpm_version }}
+          VERSION: ${{ steps.version.outputs.pkg_version }}
         run: nfpm package --config .github/nfpm/pelton.yaml --packager rpm --target "build/bin/Pelton-${{ steps.version.outputs.version }}-linux-fedora-x86_64.rpm"
 
       - name: Upload to release
@@ -258,6 +268,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release upload "${{ github.event.release.tag_name }}" \
+            "build/bin/Pelton-${{ steps.version.outputs.version }}-linux-amd64" \
+            "build/bin/Pelton-${{ steps.version.outputs.version }}-linux-amd64.deb" \
             "build/bin/Pelton-${{ steps.version.outputs.version }}-linux-fedora-x86_64.rpm" \
             --clobber
 
