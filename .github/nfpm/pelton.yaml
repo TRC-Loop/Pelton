@@ -25,20 +25,23 @@ contents:
   - src: ./build/icons/pelton-default.png
     dst: /usr/share/pixmaps/pelton.png
 
+# Fedora runtime package names; applied to the .rpm. The .deb overrides these
+# below with the Debian/Ubuntu names.
+depends:
+  - gtk3
+  - webkit2gtk4.1
+
 rpm:
   group: Applications/Internet
+  # posttrans is rpm-specific and only valid here, not under overrides.
+  scripts:
+    posttrans: ./.github/nfpm/posttrans.sh
 
-# The gtk3/webkit2gtk runtime ships under different package names on Fedora and
-# Debian (and Ubuntu 24.04's t64 transition renamed libgtk-3-0 to
-# libgtk-3-0t64), so each packager gets its own dependency list. Both refresh
-# the desktop/icon caches after install via the same hook.
+# The gtk3/webkit2gtk runtime ships under different package names on Debian, and
+# Ubuntu 24.04's t64 transition renamed libgtk-3-0 to libgtk-3-0t64, so the .deb
+# gets its own dependency list and a postinstall hook that refreshes the
+# desktop/icon caches (the .rpm does the same via posttrans above).
 overrides:
-  rpm:
-    depends:
-      - gtk3
-      - webkit2gtk4.1
-    scripts:
-      posttrans: ./.github/nfpm/posttrans.sh
   deb:
     depends:
       - "libgtk-3-0 | libgtk-3-0t64"
