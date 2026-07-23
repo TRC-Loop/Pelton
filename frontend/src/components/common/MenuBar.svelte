@@ -4,39 +4,40 @@
   // rebuild), opt-in on macOS. it emits the same action strings the native menu
   // did, so App.svelte handles both through one dispatcher. its structure is the
   // user-customizable layout from stores/menubar.ts, resolved to render-ready
-  // menus; labels come from the frontend i18n (built-ins) or the user's text
-  // (custom entries) and live-update on a language change; item state follows
-  // the open-message selection directly instead of round-tripping the backend.
+  // menus with one level of submenus; labels come from the frontend i18n
+  // (built-ins) or the user's text (custom entries) and live-update on a language
+  // change; item state follows the open-message selection directly. In editor
+  // mode the bar hands off to MenuBarEditor for in-place customization.
   import { createEventDispatcher } from 'svelte'
   import ThemedIcon from './ThemedIcon.svelte'
   import MenuGlyph from './MenuGlyph.svelte'
+  import MenuBarEditor from './MenuBarEditor.svelte'
+  import { IconChevronRight } from '@tabler/icons-svelte'
   import { t, shortcutLabel } from '../../lib/i18n'
   import { prefs } from '../../stores/prefs'
   import { bindings } from '../../stores/shortcuts'
   import { openMessageId } from '../../stores/selection'
-  import { menuBarLayout, resolveBar, type RenderItem } from '../../stores/menubar'
+  import { menuBarLayout, menuBarEditing, resolveBar, type RenderItem } from '../../stores/menubar'
 
   const dispatch = createEventDispatcher<{ action: string }>()
 
-  // the render-ready menus, reactive to layout edits (a customizer change
-  // previews here instantly). i18n labels resolve in the template so a language
-  // switch updates them without rebuilding.
+  // the render-ready menus, reactive to layout edits. i18n labels resolve in the
+  // template so a language switch updates them without rebuilding.
   $: menus = resolveBar($menuBarLayout)
 
   let openKey: string | null = null
+  let openSub: string | null = null
   let barEl: HTMLElement
 
-  // itemLabel is the display text: the raw user label for a custom entry, the
-  // translated catalog label for a built-in item.
   function itemLabel(item: RenderItem, tFn: (key: string) => string): string {
-    if (item.kind === 'custom') {
+    if (item.kind === 'custom' || item.kind === 'submenu') {
       return item.label ?? ''
     }
     return item.labelKey ? tFn(item.labelKey) : ''
   }
 
-  // hintFor resolves an item's shortcut hint: a fixed combo if the item
-  // declares one, otherwise the live (user-rebindable) binding for its action.
+  // hintFor resolves an item's shortcut hint: a fixed combo if the item declares
+  // one, otherwise the live (user-rebindable) binding for its action.
   function hintFor(item: RenderItem, map: Record<string, string>): string {
     const combo = item.hint ?? (item.action ? map[item.action] : undefined) ?? ''
     return combo ? shortcutLabel(combo) : ''
@@ -48,6 +49,7 @@
 
   function toggle(key: string): void {
     openKey = openKey === key ? null : key
+    openSub = null
   }
 
   // while a menu is open, hovering another top-level title switches to it, the
@@ -55,11 +57,13 @@
   function hoverTitle(key: string): void {
     if (openKey !== null) {
       openKey = key
+      openSub = null
     }
   }
 
   function close(): void {
     openKey = null
+    openSub = null
   }
 
   function run(item: RenderItem): void {
@@ -71,9 +75,11 @@
   }
 
   // dropdownItems lists the focusable buttons of the open dropdown for the
-  // arrow-key navigation below.
+  // arrow-key navigation below (submenu triggers included, flyout items excluded
+  // so the top list stays predictable).
   function dropdownItems(): HTMLButtonElement[] {
-    return Array.from(barEl?.querySelectorAll<HTMLButtonElement>('.dropdown .item:not([disabled])') ?? [])
+    return Array.from(barEl?.querySelectorAll<HTMLButtonElement>('.dropdown > .item, .dropdown > .sub-wrap > .item') ?? [])
+      .filter((el) => !el.hasAttribute('disabled'))
   }
 
   function focusItem(delta: number): void {
@@ -93,6 +99,7 @@
     const keys = menus.map((m) => m.id)
     const next = (keys.indexOf(openKey) + delta + keys.length) % keys.length
     openKey = keys[next]
+    openSub = null
   }
 
   function onBarKeydown(event: KeyboardEvent): void {
@@ -123,63 +130,122 @@
   }
 </script>
 
-{#if openKey !== null}
-  <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
-  <div class="scrim" on:click={close} on:contextmenu|preventDefault={close}></div>
-{/if}
+{#if $menuBarEditing}
+  <MenuBarEditor />
+{:else}
+  {#if openKey !== null}
+    <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
+    <div class="scrim" on:click={close} on:contextmenu|preventDefault={close}></div>
+  {/if}
 
-<!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
-<nav class="menubar" class:raised={openKey !== null} aria-label="Pelton" bind:this={barEl} on:keydown={onBarKeydown}>
-  {#each menus as m (m.id)}
-    {@const label = m.labelKey ? $t(m.labelKey) : (m.label ?? '')}
-    <div class="menu-wrap">
-      <button
-        type="button"
-        class="title"
-        class:open={openKey === m.id}
-        role="menuitem"
-        aria-haspopup="menu"
-        aria-expanded={openKey === m.id}
-        on:click={() => toggle(m.id)}
-        on:mouseenter={() => hoverTitle(m.id)}
-      >
-        {label}
-      </button>
-      {#if openKey === m.id}
-        <div class="dropdown" role="menu" aria-label={label}>
-          {#each m.items as item (item.id)}
-            {#if item.kind === 'separator'}
-              <div class="sep" role="separator"></div>
-            {:else}
-              <button
-                type="button"
-                class="item"
-                class:danger={item.danger}
-                role="menuitem"
-                disabled={isDisabled(item, $openMessageId)}
-                on:click={() => run(item)}
-              >
-                {#if $prefs.menuBarIcons}
-                  <span class="icon">
-                    {#if item.kind === 'custom'}
-                      <MenuGlyph iconName={item.iconName} iconNodes={item.iconNodes} size={15} stroke={1.7} />
-                    {:else if item.icon}
-                      <ThemedIcon name={item.iconName ?? ''} icon={item.icon} size={15} stroke={1.7} />
+  <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
+  <nav class="menubar" class:raised={openKey !== null} aria-label="Pelton" bind:this={barEl} on:keydown={onBarKeydown}>
+    {#each menus as m (m.id)}
+      {@const label = m.labelKey ? $t(m.labelKey) : (m.label ?? '')}
+      <div class="menu-wrap">
+        <button
+          type="button"
+          class="title"
+          class:open={openKey === m.id}
+          role="menuitem"
+          aria-haspopup="menu"
+          aria-expanded={openKey === m.id}
+          on:click={() => toggle(m.id)}
+          on:mouseenter={() => hoverTitle(m.id)}
+        >
+          {label}
+        </button>
+        {#if openKey === m.id}
+          <div class="dropdown" role="menu" aria-label={label}>
+            {#each m.items as item (item.id)}
+              {#if item.kind === 'separator'}
+                <div class="sep" role="separator"></div>
+              {:else if item.kind === 'submenu'}
+                <!-- svelte-ignore a11y-no-static-element-interactions -->
+                <div
+                  class="sub-wrap"
+                  on:mouseenter={() => (openSub = item.id)}
+                  on:mouseleave={() => (openSub = null)}
+                >
+                  <button
+                    type="button"
+                    class="item"
+                    role="menuitem"
+                    aria-haspopup="menu"
+                    aria-expanded={openSub === item.id}
+                    on:click={() => (openSub = openSub === item.id ? null : item.id)}
+                    on:focus={() => (openSub = item.id)}
+                  >
+                    {#if $prefs.menuBarIcons}
+                      <span class="icon"><MenuGlyph iconName={item.iconName} iconNodes={item.iconNodes} size={15} stroke={1.7} /></span>
                     {/if}
-                  </span>
-                {/if}
-                <span class="label">{itemLabel(item, $t)}</span>
-                {#if hintFor(item, $bindings)}
-                  <span class="hint">{hintFor(item, $bindings)}</span>
-                {/if}
-              </button>
-            {/if}
-          {/each}
-        </div>
-      {/if}
-    </div>
-  {/each}
-</nav>
+                    <span class="label">{item.label ?? ''}</span>
+                    <span class="chevron"><IconChevronRight size={15} stroke={1.7} /></span>
+                  </button>
+                  {#if openSub === item.id && item.items}
+                    <div class="flyout" role="menu" aria-label={item.label ?? ''}>
+                      {#each item.items as sub (sub.id)}
+                        {#if sub.kind === 'separator'}
+                          <div class="sep" role="separator"></div>
+                        {:else}
+                          <button
+                            type="button"
+                            class="item"
+                            class:danger={sub.danger}
+                            role="menuitem"
+                            disabled={isDisabled(sub, $openMessageId)}
+                            on:click={() => run(sub)}
+                          >
+                            {#if $prefs.menuBarIcons}
+                              <span class="icon">
+                                {#if sub.kind === 'custom'}
+                                  <MenuGlyph iconName={sub.iconName} iconNodes={sub.iconNodes} size={15} stroke={1.7} />
+                                {:else if sub.icon}
+                                  <ThemedIcon name={sub.iconName ?? ''} icon={sub.icon} size={15} stroke={1.7} />
+                                {/if}
+                              </span>
+                            {/if}
+                            <span class="label">{itemLabel(sub, $t)}</span>
+                            {#if hintFor(sub, $bindings)}
+                              <span class="hint">{hintFor(sub, $bindings)}</span>
+                            {/if}
+                          </button>
+                        {/if}
+                      {/each}
+                    </div>
+                  {/if}
+                </div>
+              {:else}
+                <button
+                  type="button"
+                  class="item"
+                  class:danger={item.danger}
+                  role="menuitem"
+                  disabled={isDisabled(item, $openMessageId)}
+                  on:click={() => run(item)}
+                >
+                  {#if $prefs.menuBarIcons}
+                    <span class="icon">
+                      {#if item.kind === 'custom'}
+                        <MenuGlyph iconName={item.iconName} iconNodes={item.iconNodes} size={15} stroke={1.7} />
+                      {:else if item.icon}
+                        <ThemedIcon name={item.iconName ?? ''} icon={item.icon} size={15} stroke={1.7} />
+                      {/if}
+                    </span>
+                  {/if}
+                  <span class="label">{itemLabel(item, $t)}</span>
+                  {#if hintFor(item, $bindings)}
+                    <span class="hint">{hintFor(item, $bindings)}</span>
+                  {/if}
+                </button>
+              {/if}
+            {/each}
+          </div>
+        {/if}
+      </div>
+    {/each}
+  </nav>
+{/if}
 
 <style>
   .menubar {
@@ -241,6 +307,23 @@
     box-shadow: var(--shadow-overlay);
   }
 
+  .sub-wrap {
+    position: relative;
+  }
+
+  .flyout {
+    position: absolute;
+    top: calc(-1 * var(--space-1));
+    left: 100%;
+    z-index: 221;
+    min-width: 200px;
+    padding: var(--space-1);
+    border: var(--hairline) solid var(--border-default);
+    border-radius: var(--radius-card);
+    background: var(--surface-overlay);
+    box-shadow: var(--shadow-overlay);
+  }
+
   .item {
     display: flex;
     align-items: center;
@@ -288,6 +371,12 @@
   .label {
     flex: 1;
     white-space: nowrap;
+  }
+
+  .chevron {
+    display: inline-flex;
+    color: var(--text-tertiary);
+    flex-shrink: 0;
   }
 
   .hint {

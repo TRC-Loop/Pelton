@@ -43,7 +43,7 @@
   import AddressBookSection from './AddressBookSection.svelte'
   import MailboxesSection from './MailboxesSection.svelte'
   import NetworkSection from './NetworkSection.svelte'
-  import MenuBarCustomizer from './MenuBarCustomizer.svelte'
+  import { setEditing as setMenuBarEditing, menuBarNewItems, setNewItemsMode, type NewItemsMode } from '../../stores/menubar'
   import ImportExportSection from './ImportExportSection.svelte'
   import ThemesSection from './ThemesSection.svelte'
   import ThemedIcon from '../common/ThemedIcon.svelte'
@@ -289,6 +289,11 @@
     { key: 'compact', label: $t('onboarding.density.compact') },
     { key: 'medium', label: $t('onboarding.density.medium') },
     { key: 'luxe', label: $t('onboarding.density.luxe') },
+  ]
+
+  $: newItemsOptions = [
+    { key: 'visible', label: $t('menuBar.newItems.visible') },
+    { key: 'hidden', label: $t('menuBar.newItems.hidden') },
   ]
 
   // clock preference for rendered times.
@@ -585,7 +590,24 @@
               />
             </div>
             <p class="hint">{$t('settingsPanel.hint.menuBarIcons')}</p>
-            <MenuBarCustomizer />
+            <button
+              type="button"
+              class="edit-menubar"
+              on:click={() => {
+                setMenuBarEditing(true)
+                dispatch('close')
+              }}
+            >
+              {$t('menuBar.editButton')}
+            </button>
+            <p class="hint">{$t('menuBar.editHint')}</p>
+            <SegmentedSetting
+              label={$t('menuBar.newItems.label')}
+              value={$menuBarNewItems}
+              options={newItemsOptions}
+              on:change={(e) => setNewItemsMode(e.detail as NewItemsMode)}
+            />
+            <p class="hint">{$t('menuBar.newItems.hint')}</p>
           {/if}
           <div class="toggle">
             <span class="row-label">{$t('settingsPanel.toggle.reduceMotion')}</span>
@@ -1271,6 +1293,21 @@
     font-size: var(--fz-label);
     color: var(--text-tertiary);
     line-height: 1.5;
+  }
+
+  .edit-menubar {
+    margin-top: var(--space-3);
+    padding: var(--space-2) var(--space-3);
+    border: var(--hairline) solid var(--border-default);
+    background: var(--surface-raised);
+    color: var(--text-primary);
+    font-size: var(--fz-label);
+    border-radius: var(--radius-control);
+    cursor: pointer;
+  }
+
+  .edit-menubar:hover {
+    background: var(--surface-hover);
   }
 
   /* a small marker for features that are still rough around the edges. */

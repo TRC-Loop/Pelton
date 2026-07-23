@@ -106,24 +106,28 @@ export const catalogByAction: Record<string, MenuActionDef> = Object.fromEntries
 // bar renders it without pulling in the full icon dataset.
 export type IconNode = [string, Record<string, string | number>]
 
-// MenuItemLayout is one entry inside a menu. Built-in 'action' items reference
-// the catalog for their label/icon; 'custom' items carry their own label, icon
-// name and (for a tabler icon) its geometry; 'separator' is a divider.
+// MenuItemLayout is one entry inside a menu or submenu. Built-in 'action' items
+// reference the catalog for their label/icon; 'custom' items carry their own
+// label, icon name and (for a tabler icon) its geometry; 'separator' is a
+// divider; 'submenu' is a nested flyout holding its own items (one level deep,
+// so a submenu never contains another submenu).
 export interface MenuItemLayout {
-  kind: 'action' | 'custom' | 'separator'
+  kind: 'action' | 'custom' | 'separator' | 'submenu'
   // id is stable across reorders: the action id for built-ins, a generated uid
-  // for custom items and separators.
+  // for custom items, separators and submenus.
   id: string
   // action is the dispatched action for built-in and custom items.
   action?: MenuActionId
-  // label is the raw (non-i18n) text of a custom item.
+  // label is the raw (non-i18n) text of a custom item or submenu.
   label?: string
-  // iconName is a custom item's chosen icon: a theme override name or a tabler
-  // name; empty for no icon.
+  // iconName is a custom item's or submenu's chosen icon: a theme override name
+  // or a tabler name; empty for no icon.
   iconName?: string
-  // iconNodes is the geometry of a custom item's chosen tabler icon; unset when
-  // the icon is a theme override (rendered live by name) or there is no icon.
+  // iconNodes is the geometry of a chosen tabler icon; unset when the icon is a
+  // theme override (rendered live by name) or there is no icon.
   iconNodes?: IconNode[]
+  // items holds a submenu's children (action/custom/separator only).
+  items?: MenuItemLayout[]
   // hidden items stay in the layout but are not rendered in the bar.
   hidden?: boolean
 }

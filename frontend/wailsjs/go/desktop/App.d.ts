@@ -52,22 +52,17 @@ export function GetMessage(arg1:number):Promise<desktop.MessageDetailDTO>;
 
 export function GetMessageHTML(arg1:number,arg2:boolean):Promise<string>;
 
-export function ListSystemFonts():Promise<Array<string>>;
 export function GetMessageSource(arg1:number):Promise<string>;
+
+export function GetProxyConfig():Promise<desktop.ProxyConfigDTO>;
 
 export function GetSetting(arg1:string):Promise<desktop.SettingResult>;
 
 export function GetThemeApply(arg1:string):Promise<desktop.ThemeApplyDTO>;
 
-export function GetUserLocale(arg1:string):Promise<desktop.UserLocaleApplyDTO>;
-
 export function GetUIPrefs():Promise<desktop.UIPrefsDTO>;
 
-export function GetProxyConfig():Promise<desktop.ProxyConfigDTO>;
-
-export function SetProxyConfig(arg1:desktop.ProxyConfigDTO):Promise<void>;
-
-export function TestProxy(arg1:desktop.ProxyConfigDTO):Promise<void>;
+export function GetUserLocale(arg1:string):Promise<desktop.UserLocaleApplyDTO>;
 
 export function ImportData(arg1:string,arg2:Array<string>,arg3:string):Promise<void>;
 
@@ -97,13 +92,17 @@ export function ListOutbox():Promise<Array<desktop.OutboxRowDTO>>;
 
 export function ListSignatures():Promise<Array<desktop.SignatureDTO>>;
 
-export function ListThemes():Promise<Array<desktop.ThemeInfoDTO>>;
+export function ListSystemFonts():Promise<Array<string>>;
 
-export function ListUserLocales():Promise<Array<desktop.UserLocaleDTO>>;
+export function ListThemes():Promise<Array<desktop.ThemeInfoDTO>>;
 
 export function ListUnifiedViews():Promise<Array<desktop.UnifiedViewDTO>>;
 
+export function ListUserLocales():Promise<Array<desktop.UserLocaleDTO>>;
+
 export function MoveMessage(arg1:number,arg2:number):Promise<desktop.ArchiveUndoDTO>;
+
+export function OpenLocalesFolder():Promise<void>;
 
 export function OpenThemesFolder():Promise<void>;
 
@@ -120,8 +119,6 @@ export function RemoveImageAllow(arg1:string,arg2:string):Promise<void>;
 export function RemoveOffline(arg1:number):Promise<void>;
 
 export function ResumePendingDownload():Promise<void>;
-
-export function OpenLocalesFolder():Promise<void>;
 
 export function SaveAllAttachments(arg1:number):Promise<string>;
 
@@ -151,6 +148,8 @@ export function SetFlagged(arg1:number,arg2:boolean):Promise<void>;
 
 export function SetMailActionsEnabled(arg1:boolean):Promise<void>;
 
+export function SetProxyConfig(arg1:desktop.ProxyConfigDTO):Promise<void>;
+
 export function SetSeen(arg1:number,arg2:boolean):Promise<void>;
 
 export function SetSetting(arg1:string,arg2:string):Promise<void>;
@@ -164,6 +163,8 @@ export function SnoozeMessage(arg1:number,arg2:string,arg3:boolean):Promise<void
 export function SystemColorScheme():Promise<string>;
 
 export function TestConnection(arg1:desktop.TestConnectionRequest):Promise<void>;
+
+export function TestProxy(arg1:desktop.ProxyConfigDTO):Promise<void>;
 
 export function TriggerSync():Promise<void>;
 

@@ -1,11 +1,12 @@
-// menubar.ts owns the in-app menu bar's customizable layout: the ordered menus
-// and items the user arranges in settings. It loads the layout from the backend
-// settings table (one JSON value), merges it against the current built-in
-// default so newly shipped menus/items are never silently lost, applies edits
-// live, and persists every change. The bar (MenuBar.svelte) and the editor
-// (MenuBarCustomizer.svelte) both render from resolveBar() so an edit previews
-// instantly. Nothing here uses localStorage: the settings table is the source
-// of truth, which also means the layout rides the existing config export/import.
+// menubar.ts owns the in-app menu bar's customizable layout: the ordered menus,
+// items and one-level submenus the user arranges in the bar's editor mode. It
+// loads the layout from the backend settings table (one JSON value), merges it
+// against the current built-in default so newly shipped menus/items are never
+// silently lost, applies edits live, and persists every change. The bar
+// (MenuBar.svelte) renders the resolved layout in normal mode and the raw layout
+// in editor mode, so an edit previews instantly. Nothing here uses localStorage:
+// the settings table is the source of truth, which also means the layout rides
+// the existing config export/import.
 
 import { writable, get } from 'svelte/store'
 import type { ComponentType } from 'svelte'
@@ -32,28 +33,46 @@ export type NewItemsMode = 'visible' | 'hidden'
 export const menuBarLayout = writable<MenuBarLayout>(defaultMenuLayout())
 export const menuBarNewItems = writable<NewItemsMode>('visible')
 
-// uid returns a short unique id for custom menus, items and separators.
+// menuBarEditing toggles the bar's in-place editor mode (entered from settings).
+export const menuBarEditing = writable(false)
+
+export function setEditing(on: boolean): void {
+  menuBarEditing.set(on)
+}
+
+// uid returns a short unique id for custom menus, items, submenus and separators.
 function uid(prefix: string): string {
   return `${prefix}-${Math.random().toString(36).slice(2, 9)}`
 }
 
 // validItem keeps only entries the model understands, dropping built-in action
 // items whose action left the catalog (a removed feature) while always keeping
-// custom items and separators.
+// custom items, separators and submenus (whose children are validated too).
 function validItem(item: MenuItemLayout): boolean {
   if (item.kind === 'separator') {
     return true
   }
-  if (item.kind === 'custom') {
-    return !!item.action && !!catalogByAction[item.action]
+  if (item.kind === 'submenu') {
+    return true
   }
-  return item.kind === 'action' && !!item.action && !!catalogByAction[item.action]
+  return (item.kind === 'action' || item.kind === 'custom') && !!item.action && !!catalogByAction[item.action]
+}
+
+// sanitizeItems filters an items array and recurses one level into submenus.
+function sanitizeItems(items: MenuItemLayout[]): MenuItemLayout[] {
+  return items
+    .filter(validItem)
+    .map((item) =>
+      item.kind === 'submenu'
+        ? { ...item, items: (item.items ?? []).filter((c) => c.kind !== 'submenu' && validItem(c)) }
+        : item,
+    )
 }
 
 // mergeWithDefault reconciles a saved layout with the current built-in default:
 // unknown built-in menus/items are appended (respecting the new-items policy),
-// removed built-ins are dropped, and every custom menu/item is preserved in the
-// user's order. A missing or malformed saved layout falls back to the default.
+// removed built-ins are dropped, and every custom menu/item/submenu is preserved
+// in the user's order. A missing or malformed saved layout falls back to default.
 function mergeWithDefault(saved: MenuBarLayout | null, mode: NewItemsMode): MenuBarLayout {
   const def = defaultMenuLayout()
   if (!saved || !Array.isArray(saved.menus)) {
@@ -62,28 +81,25 @@ function mergeWithDefault(saved: MenuBarLayout | null, mode: NewItemsMode): Menu
   const hideNew = mode === 'hidden'
   const savedMenus = saved.menus.filter((m) => m && Array.isArray(m.items))
 
-  const merged: MenuLayout[] = savedMenus.map((menu) => {
-    const defMenu = menu.builtin ? def.menus.find((d) => d.id === menu.id) : undefined
-    // a saved built-in menu that no longer exists in the default is dropped.
-    if (menu.builtin && !defMenu) {
-      return null
-    }
-    let items = menu.items.filter(validItem)
-    if (defMenu) {
-      const present = new Set(items.map((i) => i.id))
-      for (const di of defMenu.items) {
-        // separators are positional, not identity-bearing; only merge in new
-        // action items the user has never seen.
-        if (di.kind === 'action' && !present.has(di.id)) {
-          items = [...items, hideNew ? { ...di, hidden: true } : di]
+  const merged: MenuLayout[] = savedMenus
+    .map((menu) => {
+      const defMenu = menu.builtin ? def.menus.find((d) => d.id === menu.id) : undefined
+      if (menu.builtin && !defMenu) {
+        return null
+      }
+      let items = sanitizeItems(menu.items)
+      if (defMenu) {
+        const present = new Set(items.map((i) => i.id))
+        for (const di of defMenu.items) {
+          if (di.kind === 'action' && !present.has(di.id)) {
+            items = [...items, hideNew ? { ...di, hidden: true } : di]
+          }
         }
       }
-    }
-    return { ...menu, items }
-  }).filter((m): m is MenuLayout => m !== null)
+      return { ...menu, items }
+    })
+    .filter((m): m is MenuLayout => m !== null)
 
-  // built-in menus present in the default but missing from the saved layout are
-  // appended in default order.
   const haveIds = new Set(merged.map((m) => m.id))
   for (const dm of def.menus) {
     if (!haveIds.has(dm.id)) {
@@ -126,29 +142,55 @@ function persist(layout: MenuBarLayout): void {
   void setSetting(SettingKeys.menuBarLayout, JSON.stringify(layout))
 }
 
-// commit publishes and persists a new layout in one step.
 function commit(layout: MenuBarLayout): void {
   menuBarLayout.set(layout)
   persist(layout)
 }
 
-// setMenus replaces the menu list (used by the editor's drag-and-drop after a
-// reorder) and persists.
+// --- container addressing ---
+//
+// Mutations target a container: a top-level menu (submenuId null) or a submenu
+// within it (submenuId set). mapContainer applies fn to that container's items.
+
+function mapContainer(
+  menus: MenuLayout[],
+  menuId: string,
+  submenuId: string | null,
+  fn: (items: MenuItemLayout[]) => MenuItemLayout[],
+): MenuLayout[] {
+  return menus.map((m) => {
+    if (m.id !== menuId) {
+      return m
+    }
+    if (submenuId === null) {
+      return { ...m, items: fn(m.items) }
+    }
+    return {
+      ...m,
+      items: m.items.map((it) =>
+        it.id === submenuId && it.kind === 'submenu' ? { ...it, items: fn(it.items ?? []) } : it,
+      ),
+    }
+  })
+}
+
+function mutate(
+  menuId: string,
+  submenuId: string | null,
+  fn: (items: MenuItemLayout[]) => MenuItemLayout[],
+): void {
+  const layout = get(menuBarLayout)
+  commit({ ...layout, menus: mapContainer(layout.menus, menuId, submenuId, fn) })
+}
+
+// setMenus replaces the whole menu list (the editor's drag-and-drop commits the
+// full reordered tree here, covering cross-menu and cross-submenu moves).
 export function setMenus(menus: MenuLayout[]): void {
   commit({ version: menuBarLayoutVersion, menus })
 }
 
-// setMenuItems replaces one menu's items (drag-and-drop within a menu) and
-// persists.
-export function setMenuItems(menuId: string, items: MenuItemLayout[]): void {
-  const layout = get(menuBarLayout)
-  commit({
-    ...layout,
-    menus: layout.menus.map((m) => (m.id === menuId ? { ...m, items } : m)),
-  })
-}
+// --- menu-level mutations ---
 
-// toggleMenuHidden shows or hides a whole top-level menu.
 export function toggleMenuHidden(menuId: string): void {
   const layout = get(menuBarLayout)
   commit({
@@ -157,81 +199,13 @@ export function toggleMenuHidden(menuId: string): void {
   })
 }
 
-// toggleItemHidden shows or hides a single item within a menu.
-export function toggleItemHidden(menuId: string, itemId: string): void {
-  const layout = get(menuBarLayout)
-  commit({
-    ...layout,
-    menus: layout.menus.map((m) =>
-      m.id === menuId
-        ? { ...m, items: m.items.map((i) => (i.id === itemId ? { ...i, hidden: !i.hidden } : i)) }
-        : m,
-    ),
-  })
-}
-
-// CustomEntry is the data the editor collects for a new user-defined item.
-export interface CustomEntry {
-  label: string
-  action: MenuActionId
-  iconName?: string
-  iconNodes?: IconNode[]
-}
-
-// addCustomItem appends a user-defined item to a menu.
-export function addCustomItem(menuId: string, entry: CustomEntry): void {
-  const layout = get(menuBarLayout)
-  const item: MenuItemLayout = {
-    kind: 'custom',
-    id: uid('item'),
-    action: entry.action,
-    label: entry.label,
-    iconName: entry.iconName || undefined,
-    iconNodes: entry.iconNodes,
-  }
-  commit({
-    ...layout,
-    menus: layout.menus.map((m) => (m.id === menuId ? { ...m, items: [...m.items, item] } : m)),
-  })
-}
-
-// addSeparator appends a divider to a menu.
-export function addSeparator(menuId: string): void {
-  const layout = get(menuBarLayout)
-  const item: MenuItemLayout = { kind: 'separator', id: uid('sep') }
-  commit({
-    ...layout,
-    menus: layout.menus.map((m) => (m.id === menuId ? { ...m, items: [...m.items, item] } : m)),
-  })
-}
-
-// removeItem deletes a custom item or a separator; built-in action items can
-// only be hidden, never removed, so a reset can always restore them.
-export function removeItem(menuId: string, itemId: string): void {
-  const layout = get(menuBarLayout)
-  commit({
-    ...layout,
-    menus: layout.menus.map((m) =>
-      m.id === menuId
-        ? { ...m, items: m.items.filter((i) => i.id === itemId ? i.kind === 'action' : true) }
-        : m,
-    ),
-  })
-}
-
-// addCustomMenu appends a new empty top-level menu with a user label.
 export function addCustomMenu(label: string): string {
   const layout = get(menuBarLayout)
   const id = uid('menu')
-  commit({
-    ...layout,
-    menus: [...layout.menus, { id, builtin: false, label, items: [] }],
-  })
+  commit({ ...layout, menus: [...layout.menus, { id, builtin: false, label, items: [] }] })
   return id
 }
 
-// renameCustomMenu changes a custom menu's label (built-in menus are not
-// renamed).
 export function renameCustomMenu(menuId: string, label: string): void {
   const layout = get(menuBarLayout)
   commit({
@@ -240,34 +214,99 @@ export function renameCustomMenu(menuId: string, label: string): void {
   })
 }
 
-// removeMenu deletes a custom menu; built-in menus can only be hidden.
 export function removeMenu(menuId: string): void {
   const layout = get(menuBarLayout)
-  commit({
-    ...layout,
-    menus: layout.menus.filter((m) => (m.id === menuId ? m.builtin : true)),
-  })
+  commit({ ...layout, menus: layout.menus.filter((m) => (m.id === menuId ? m.builtin : true)) })
 }
 
-// setNewItemsMode persists the policy for how future built-in items join the
-// layout.
+// --- item-level mutations (container-addressed) ---
+
+export function toggleItemHidden(menuId: string, submenuId: string | null, itemId: string): void {
+  mutate(menuId, submenuId, (items) =>
+    items.map((i) => (i.id === itemId ? { ...i, hidden: !i.hidden } : i)),
+  )
+}
+
+// CustomEntry is the data collected for a new or edited user-defined item.
+export interface CustomEntry {
+  label: string
+  action: MenuActionId
+  iconName?: string
+  iconNodes?: IconNode[]
+}
+
+export function addCustomItem(menuId: string, submenuId: string | null, entry: CustomEntry): string {
+  const id = uid('item')
+  mutate(menuId, submenuId, (items) => [
+    ...items,
+    {
+      kind: 'custom',
+      id,
+      action: entry.action,
+      label: entry.label,
+      iconName: entry.iconName || undefined,
+      iconNodes: entry.iconNodes,
+    },
+  ])
+  return id
+}
+
+export function addSeparator(menuId: string, submenuId: string | null): void {
+  mutate(menuId, submenuId, (items) => [...items, { kind: 'separator', id: uid('sep') }])
+}
+
+// addSubmenu appends an empty submenu to a top-level menu (submenus never nest).
+export function addSubmenu(menuId: string, label: string): string {
+  const id = uid('sub')
+  mutate(menuId, null, (items) => [...items, { kind: 'submenu', id, label, items: [] }])
+  return id
+}
+
+// removeItem deletes a custom item, separator or submenu; built-in action items
+// can only be hidden, never removed, so a reset can always restore them.
+export function removeItem(menuId: string, submenuId: string | null, itemId: string): void {
+  mutate(menuId, submenuId, (items) =>
+    items.filter((i) => (i.id === itemId ? i.kind === 'action' : true)),
+  )
+}
+
+// ItemPatch is the editable subset of an item the popover changes.
+export interface ItemPatch {
+  label?: string
+  action?: MenuActionId
+  iconName?: string | undefined
+  iconNodes?: IconNode[] | undefined
+}
+
+// updateItem applies a popover edit to a custom item or submenu.
+export function updateItem(
+  menuId: string,
+  submenuId: string | null,
+  itemId: string,
+  patch: ItemPatch,
+): void {
+  mutate(menuId, submenuId, (items) =>
+    items.map((i) => (i.id === itemId ? { ...i, ...patch } : i)),
+  )
+}
+
 export function setNewItemsMode(mode: NewItemsMode): void {
   menuBarNewItems.set(mode)
   void setSetting(SettingKeys.menuBarNewItems, mode)
 }
 
-// resetLayout restores the built-in default arrangement.
 export function resetLayout(): void {
   commit(defaultMenuLayout())
 }
 
 // --- render resolution ---
 
-// RenderItem is a menu item resolved for display: built-in items carry their
-// catalog metadata; custom items carry their own label and icon. Labels stay as
-// i18n keys (built-ins) or raw text (custom) so the bar can translate reactively.
+// RenderItem is a menu entry resolved for display: built-in items carry their
+// catalog metadata; custom items and submenus carry their own label and icon;
+// submenus carry their resolved children. Labels stay as i18n keys (built-ins)
+// or raw text (custom) so the bar can translate reactively.
 export interface RenderItem {
-  kind: 'action' | 'custom' | 'separator'
+  kind: 'action' | 'custom' | 'separator' | 'submenu'
   id: string
   action?: MenuActionId
   labelKey?: string
@@ -275,12 +314,12 @@ export interface RenderItem {
   iconName?: string
   icon?: ComponentType
   iconNodes?: IconNode[]
+  items?: RenderItem[]
   needsMessage?: boolean
   danger?: boolean
   hint?: string
 }
 
-// RenderMenu is a top-level menu resolved for display.
 export interface RenderMenu {
   id: string
   labelKey?: string
@@ -288,59 +327,82 @@ export interface RenderMenu {
   items: RenderItem[]
 }
 
-// resolveBar turns a stored layout into the render-ready menus the bar shows:
-// hidden menus/items and platform-inapplicable actions are dropped, and each
-// built-in action item is decorated from the catalog. Empty menus are omitted so
-// a menu the user emptied (or that only holds macOS items off macOS) disappears.
+// resolveItems turns stored items into render-ready ones: hidden and
+// platform-inapplicable entries drop out, built-ins are decorated from the
+// catalog, and submenus resolve their children (empty submenus are dropped).
+function resolveItems(items: MenuItemLayout[], insideSubmenu: boolean): RenderItem[] {
+  const out: RenderItem[] = []
+  for (const item of items) {
+    if (item.hidden) {
+      continue
+    }
+    if (item.kind === 'separator') {
+      out.push({ kind: 'separator', id: item.id })
+      continue
+    }
+    if (item.kind === 'submenu') {
+      if (insideSubmenu) {
+        continue
+      }
+      const children = trimSeparators(resolveItems(item.items ?? [], true))
+      if (children.length === 0) {
+        continue
+      }
+      out.push({
+        kind: 'submenu',
+        id: item.id,
+        label: item.label,
+        iconName: item.iconName,
+        iconNodes: item.iconNodes,
+        items: children,
+      })
+      continue
+    }
+    const def = item.action ? catalogByAction[item.action] : undefined
+    if (!def || (def.macOnly && !isMac)) {
+      continue
+    }
+    if (item.kind === 'custom') {
+      out.push({
+        kind: 'custom',
+        id: item.id,
+        action: item.action,
+        label: item.label,
+        iconName: item.iconName,
+        iconNodes: item.iconNodes,
+        needsMessage: def.needsMessage,
+        danger: def.danger,
+        hint: def.hint,
+      })
+    } else {
+      out.push({
+        kind: 'action',
+        id: item.id,
+        action: item.action,
+        labelKey: def.labelKey,
+        iconName: def.iconName,
+        icon: def.icon,
+        needsMessage: def.needsMessage,
+        danger: def.danger,
+        hint: def.hint,
+      })
+    }
+  }
+  return out
+}
+
+// resolveBar turns a stored layout into the render-ready menus the bar shows in
+// normal mode. Hidden menus and menus left empty (or holding only macOS items
+// off macOS) are omitted.
 export function resolveBar(layout: MenuBarLayout): RenderMenu[] {
   const menus: RenderMenu[] = []
   for (const menu of layout.menus) {
     if (menu.hidden) {
       continue
     }
-    const items: RenderItem[] = []
-    for (const item of menu.items) {
-      if (item.hidden) {
-        continue
-      }
-      if (item.kind === 'separator') {
-        items.push({ kind: 'separator', id: item.id })
-        continue
-      }
-      const def = item.action ? catalogByAction[item.action] : undefined
-      if (!def || (def.macOnly && !isMac)) {
-        continue
-      }
-      if (item.kind === 'custom') {
-        items.push({
-          kind: 'custom',
-          id: item.id,
-          action: item.action,
-          label: item.label,
-          iconName: item.iconName,
-          iconNodes: item.iconNodes,
-          needsMessage: def.needsMessage,
-          danger: def.danger,
-          hint: def.hint,
-        })
-      } else {
-        items.push({
-          kind: 'action',
-          id: item.id,
-          action: item.action,
-          labelKey: def.labelKey,
-          iconName: def.iconName,
-          icon: def.icon,
-          needsMessage: def.needsMessage,
-          danger: def.danger,
-          hint: def.hint,
-        })
-      }
-    }
-    // trim leading/trailing and doubled separators left by hidden neighbors.
-    const trimmed = trimSeparators(items)
-    if (trimmed.some((i) => i.kind !== 'separator')) {
-      menus.push({ id: menu.id, labelKey: menu.labelKey, label: menu.label, items: trimmed })
+    const items = trimSeparators(resolveItems(menu.items, false))
+    if (items.some((i) => i.kind !== 'separator')) {
+      menus.push({ id: menu.id, labelKey: menu.labelKey, label: menu.label, items })
     }
   }
   return menus
