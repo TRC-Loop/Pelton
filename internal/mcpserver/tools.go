@@ -1,7 +1,9 @@
 package mcpserver
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
@@ -128,56 +130,72 @@ type messagesOutput struct {
 	Messages []MessageSummary `json:"messages"`
 }
 
+// jsonResult renders v as pretty JSON in a single text content block. Tools
+// return text only (no structured output schema): it is the widely-supported
+// shape, avoids a second validated copy of the payload, and keeps HTML bodies
+// readable by not escaping angle brackets. The Out type is any so the SDK adds
+// no output schema.
+func jsonResult(v any) (*mcp.CallToolResult, any, error) {
+	var buf bytes.Buffer
+	enc := json.NewEncoder(&buf)
+	enc.SetEscapeHTML(false)
+	enc.SetIndent("", "  ")
+	if err := enc.Encode(v); err != nil {
+		return nil, nil, err
+	}
+	return &mcp.CallToolResult{Content: []mcp.Content{&mcp.TextContent{Text: buf.String()}}}, nil, nil
+}
+
 // registerTools adds the read-only tool set to srv.
 func registerTools(srv *mcp.Server, mb Mailbox) {
 	mcp.AddTool(srv, &mcp.Tool{
 		Name:        "list_accounts",
 		Description: "List the configured mail accounts.",
-	}, func(ctx context.Context, _ *mcp.CallToolRequest, _ struct{}) (*mcp.CallToolResult, accountsOutput, error) {
+	}, func(ctx context.Context, _ *mcp.CallToolRequest, _ struct{}) (*mcp.CallToolResult, any, error) {
 		accts, err := mb.ListAccounts(ctx)
 		if err != nil {
-			return nil, accountsOutput{}, err
+			return nil, nil, err
 		}
-		return nil, accountsOutput{Accounts: accts}, nil
+		return jsonResult(accountsOutput{Accounts: accts})
 	})
 
 	mcp.AddTool(srv, &mcp.Tool{
 		Name:        "list_folders",
 		Description: "List the folders (mailboxes) of one account.",
-	}, func(ctx context.Context, _ *mcp.CallToolRequest, in listFoldersInput) (*mcp.CallToolResult, foldersOutput, error) {
+	}, func(ctx context.Context, _ *mcp.CallToolRequest, in listFoldersInput) (*mcp.CallToolResult, any, error) {
 		folders, err := mb.ListFolders(ctx, in.AccountID)
 		if err != nil {
-			return nil, foldersOutput{}, err
+			return nil, nil, err
 		}
-		return nil, foldersOutput{Folders: folders}, nil
+		return jsonResult(foldersOutput{Folders: folders})
 	})
 
 	mcp.AddTool(srv, &mcp.Tool{
 		Name:        "list_messages",
 		Description: "List messages in a folder, newest first. Returns summaries; use get_message for the body.",
-	}, func(ctx context.Context, _ *mcp.CallToolRequest, in listMessagesInput) (*mcp.CallToolResult, messagesOutput, error) {
+	}, func(ctx context.Context, _ *mcp.CallToolRequest, in listMessagesInput) (*mcp.CallToolResult, any, error) {
 		msgs, err := mb.ListMessages(ctx, in.FolderID, in.Limit)
 		if err != nil {
-			return nil, messagesOutput{}, err
+			return nil, nil, err
 		}
-		return nil, messagesOutput{Messages: msgs}, nil
+		return jsonResult(messagesOutput{Messages: msgs})
 	})
 
 	mcp.AddTool(srv, &mcp.Tool{
 		Name:        "get_message",
 		Description: "Get one full message: headers, plain-text body, HTML body when present, and attachment metadata (never attachment bytes).",
-	}, func(ctx context.Context, _ *mcp.CallToolRequest, in getMessageInput) (*mcp.CallToolResult, Message, error) {
+	}, func(ctx context.Context, _ *mcp.CallToolRequest, in getMessageInput) (*mcp.CallToolResult, any, error) {
 		msg, err := mb.GetMessage(ctx, in.ID)
 		if err != nil {
-			return nil, Message{}, err
+			return nil, nil, err
 		}
-		return nil, *msg, nil
+		return jsonResult(msg)
 	})
 
 	mcp.AddTool(srv, &mcp.Tool{
 		Name:        "search_messages",
 		Description: "Ranked full-text search over cached mail. Combine free text with optional from/to/subject scopes.",
-	}, func(ctx context.Context, _ *mcp.CallToolRequest, in searchInput) (*mcp.CallToolResult, messagesOutput, error) {
+	}, func(ctx context.Context, _ *mcp.CallToolRequest, in searchInput) (*mcp.CallToolResult, any, error) {
 		hits, err := mb.Search(ctx, SearchParams{
 			Query:   in.Query,
 			From:    in.From,
@@ -186,8 +204,8 @@ func registerTools(srv *mcp.Server, mb Mailbox) {
 			Limit:   in.Limit,
 		})
 		if err != nil {
-			return nil, messagesOutput{}, err
+			return nil, nil, err
 		}
-		return nil, messagesOutput{Messages: hits}, nil
+		return jsonResult(messagesOutput{Messages: hits})
 	})
 }

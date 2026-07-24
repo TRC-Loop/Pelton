@@ -123,24 +123,37 @@ func TestToolsExposeReadData(t *testing.T) {
 	}
 }
 
-// TestGetMessageStructuredContent confirms the typed output is also exposed as
-// structured content, not only JSON text, so structured-aware clients work.
-func TestGetMessageStructuredContent(t *testing.T) {
+// TestGetMessageResultShape confirms the result is a single text block of clean
+// JSON: no structured content (so no output-schema validation on the client) and
+// no HTML escaping of the body, so it stays readable.
+func TestGetMessageResultShape(t *testing.T) {
 	mb := &fakeMailbox{message: &Message{
 		MessageSummary: MessageSummary{ID: 5, Subject: "Subj"},
 		BodyText:       "body",
+		BodyHTML:       "<p>hi</p>",
 	}}
 	cs := connect(t, mb)
 	res, err := cs.CallTool(context.Background(), &mcp.CallToolParams{Name: "get_message", Arguments: map[string]any{"id": 5}})
 	if err != nil {
 		t.Fatal(err)
 	}
-	raw, err := json.Marshal(res.StructuredContent)
-	if err != nil {
-		t.Fatal(err)
+	if res.StructuredContent != nil {
+		t.Errorf("expected no structured content, got %v", res.StructuredContent)
 	}
-	if !strings.Contains(string(raw), "\"body_text\":\"body\"") {
-		t.Errorf("structured content missing body_text: %s", raw)
+	if len(res.Content) != 1 {
+		t.Fatalf("expected one content block, got %d", len(res.Content))
+	}
+	text := res.Content[0].(*mcp.TextContent).Text
+	// the body must be parseable back and its html not escaped.
+	if !strings.Contains(text, "<p>hi</p>") {
+		t.Errorf("html body escaped or missing: %s", text)
+	}
+	var got Message
+	if err := json.Unmarshal([]byte(text), &got); err != nil {
+		t.Fatalf("result text is not valid json: %v", err)
+	}
+	if got.BodyText != "body" || got.Subject != "Subj" {
+		t.Errorf("round-trip mismatch: %+v", got)
 	}
 }
 
