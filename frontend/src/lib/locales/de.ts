@@ -627,6 +627,8 @@ const de: Record<string, string> = {
   'themes.create': 'Neues Theme...',
   'themes.openFolder': 'Ordner öffnen',
   'themes.openFolderHint': 'Zeigt den Themes-Ordner. Lege .peltontheme-Dateien hier ab, um sie zu installieren.',
+  'themes.browse': 'Themes durchsuchen',
+  'themes.browseHint': 'Öffnet die Theme-Galerie auf themes.pelton.app im Browser',
   'themes.edit': 'Farben bearbeiten',
   'themeEditor.title': 'Theme-Editor',
   'themeEditor.nameLabel': 'Name',

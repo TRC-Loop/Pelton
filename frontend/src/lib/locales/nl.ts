@@ -627,6 +627,8 @@ const nl: Record<string, string> = {
   'themes.create': 'Nieuw thema...',
   'themes.openFolder': 'Map openen',
   'themes.openFolderHint': 'Toont de themamap. Zet hier .peltontheme-bestanden neer om ze te installeren.',
+  'themes.browse': 'Thema\'s verkennen',
+  'themes.browseHint': 'Opent de themagalerie op themes.pelton.app in je browser',
   'themes.edit': 'Kleuren bewerken',
   'themeEditor.title': 'Thema-editor',
   'themeEditor.nameLabel': 'Naam',
