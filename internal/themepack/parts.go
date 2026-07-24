@@ -67,6 +67,40 @@ func (p *Package) loadCSS() error {
 	return nil
 }
 
+// SelectParts drops the parts of a package the user chose not to import: the
+// referenced files leave the container and the manifest is rewritten so the
+// installed copy is exactly what was picked. Assets the dropped part
+// referenced stay put; they are inert without it.
+func (p *Package) SelectParts(keepTokens, keepCSS bool) error {
+	if keepTokens && keepCSS {
+		return nil
+	}
+	if !keepTokens {
+		paths, _, err := p.Manifest.tokenPaths()
+		if err != nil {
+			return err
+		}
+		for _, ref := range paths {
+			delete(p.Files, normalizePath(ref))
+		}
+		p.Manifest.Tokens = nil
+		p.Tokens = nil
+	}
+	if !keepCSS {
+		for _, ref := range p.Manifest.CSS {
+			delete(p.Files, normalizePath(ref))
+		}
+		p.Manifest.CSS = nil
+		p.CSSFiles = nil
+	}
+	manifest, err := json.MarshalIndent(p.Manifest, "", "  ")
+	if err != nil {
+		return err
+	}
+	p.Files["manifest.json"] = manifest
+	return nil
+}
+
 // loadIcons validates every icon override: well-formed name, safe svg.
 func (p *Package) loadIcons() error {
 	if len(p.Manifest.Icons) == 0 {

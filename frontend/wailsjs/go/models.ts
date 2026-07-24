@@ -1,29 +1,5 @@
 export namespace desktop {
-
-	export class ProxyConfigDTO {
-	    mode: string;
-	    scheme: string;
-	    host: string;
-	    port: number;
-	    username: string;
-	    password: string;
-	    hasPassword: boolean;
-
-	    static createFrom(source: any = {}) {
-	        return new ProxyConfigDTO(source);
-	    }
-
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.mode = source["mode"];
-	        this.scheme = source["scheme"];
-	        this.host = source["host"];
-	        this.port = source["port"];
-	        this.username = source["username"];
-	        this.password = source["password"];
-	        this.hasPassword = source["hasPassword"];
-	    }
-	}
+	
 	export class AccountDTO {
 	    id: number;
 	    email: string;
@@ -33,11 +9,11 @@ export namespace desktop {
 	    imapPort: number;
 	    smtpHost: string;
 	    smtpPort: number;
-
+	
 	    static createFrom(source: any = {}) {
 	        return new AccountDTO(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.id = source["id"];
@@ -76,11 +52,11 @@ export namespace desktop {
 	    provider: string;
 	    clientId: string;
 	    clientSecret: string;
-
+	
 	    static createFrom(source: any = {}) {
 	        return new AddAccountRequest(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.email = source["email"];
@@ -412,6 +388,26 @@ export namespace desktop {
 	        this.offset = source["offset"];
 	    }
 	}
+	export class MCPConfigDTO {
+	    enabled: boolean;
+	    port: number;
+	    token: string;
+	    url: string;
+	    running: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new MCPConfigDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.enabled = source["enabled"];
+	        this.port = source["port"];
+	        this.token = source["token"];
+	        this.url = source["url"];
+	        this.running = source["running"];
+	    }
+	}
 	export class UnsubscribeDTO {
 	    kind: string;
 	    target: string;
@@ -617,11 +613,38 @@ export namespace desktop {
 	        this.createdAt = source["createdAt"];
 	    }
 	}
+	export class ProxyConfigDTO {
+	    mode: string;
+	    scheme: string;
+	    host: string;
+	    port: number;
+	    username: string;
+	    password: string;
+	    hasPassword: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new ProxyConfigDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.mode = source["mode"];
+	        this.scheme = source["scheme"];
+	        this.host = source["host"];
+	        this.port = source["port"];
+	        this.username = source["username"];
+	        this.password = source["password"];
+	        this.hasPassword = source["hasPassword"];
+	    }
+	}
 	export class SaveThemeRequest {
 	    id: string;
 	    name: string;
+	    author: string;
+	    version: string;
 	    base: string;
 	    tokens: Record<string, string>;
+	    css: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new SaveThemeRequest(source);
@@ -631,8 +654,11 @@ export namespace desktop {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.id = source["id"];
 	        this.name = source["name"];
+	        this.author = source["author"];
+	        this.version = source["version"];
 	        this.base = source["base"];
 	        this.tokens = source["tokens"];
+	        this.css = source["css"];
 	    }
 	}
 	export class SearchRequestDTO {
@@ -701,11 +727,11 @@ export namespace desktop {
 	    imapHost: string;
 	    imapPort: number;
 	    password: string;
-
+	
 	    static createFrom(source: any = {}) {
 	        return new TestConnectionRequest(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.email = source["email"];
@@ -733,6 +759,30 @@ export namespace desktop {
 	        this.tokens = source["tokens"];
 	        this.css = source["css"];
 	        this.icons = source["icons"];
+	    }
+	}
+	export class ThemeDraftDTO {
+	    id: string;
+	    name: string;
+	    author: string;
+	    version: string;
+	    base: string;
+	    tokens: Record<string, string>;
+	    css: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new ThemeDraftDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.name = source["name"];
+	        this.author = source["author"];
+	        this.version = source["version"];
+	        this.base = source["base"];
+	        this.tokens = source["tokens"];
+	        this.css = source["css"];
 	    }
 	}
 	export class ThemeInfoDTO {
@@ -772,6 +822,7 @@ export namespace desktop {
 	    path: string;
 	    info: ThemeInfoDTO;
 	    cssFiles: themepack.CSSFile[];
+	    tokenCount: number;
 	    updatesExisting: boolean;
 	    installedVersion: string;
 	
@@ -785,6 +836,7 @@ export namespace desktop {
 	        this.path = source["path"];
 	        this.info = this.convertValues(source["info"], ThemeInfoDTO);
 	        this.cssFiles = this.convertValues(source["cssFiles"], themepack.CSSFile);
+	        this.tokenCount = source["tokenCount"];
 	        this.updatesExisting = source["updatesExisting"];
 	        this.installedVersion = source["installedVersion"];
 	    }
@@ -957,11 +1009,11 @@ export namespace desktop {
 	    imapPort: number;
 	    smtpHost: string;
 	    smtpPort: number;
-
+	
 	    static createFrom(source: any = {}) {
 	        return new UpdateAccountRequest(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.id = source["id"];
@@ -1000,11 +1052,11 @@ export namespace desktop {
 	    name: string;
 	    base: string;
 	    strings: Record<string, string>;
-
+	
 	    static createFrom(source: any = {}) {
 	        return new UserLocaleApplyDTO(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.id = source["id"];
@@ -1019,11 +1071,11 @@ export namespace desktop {
 	    author: string;
 	    base: string;
 	    count: number;
-
+	
 	    static createFrom(source: any = {}) {
 	        return new UserLocaleDTO(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.id = source["id"];

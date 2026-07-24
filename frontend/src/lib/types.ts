@@ -286,8 +286,23 @@ export interface ThemeInfo {
 export interface SaveThemeRequest {
   id: string
   name: string
+  author: string
+  version: string
   base: string
   tokens: Record<string, string>
+  css: string
+}
+
+// an installed theme loaded back into theme-editor form. css is the raw
+// source of the editor's own stylesheet, not the applied one.
+export interface ThemeDraft {
+  id: string
+  name: string
+  author: string
+  version: string
+  base: string
+  tokens: Record<string, string>
+  css: string
 }
 
 // everything needed to apply a custom theme to the document.
@@ -312,6 +327,7 @@ export interface ThemeImportPreview {
   path: string
   info: ThemeInfo
   cssFiles: ThemeCSSFile[]
+  tokenCount: number
   updatesExisting: boolean
   installedVersion: string
 }
@@ -397,6 +413,14 @@ export interface AccountSignatures {
 // the outbound proxy preference shown in settings. password is write-only: the
 // backend never sends the stored secret back, only hasPassword so the field can
 // show a placeholder.
+export interface MCPConfig {
+  enabled: boolean
+  port: number
+  token: string
+  url: string
+  running: boolean
+}
+
 export interface ProxyConfig {
   mode: string
   scheme: string

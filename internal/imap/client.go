@@ -205,11 +205,6 @@ func (c *Client) Login() error {
 	return nil
 }
 
-// Updates returns the channel of server pushes delivered while idling.
-func (c *Client) Updates() <-chan MailboxUpdate {
-	return c.updates
-}
-
 // SupportsIdle reports whether the server advertises IDLE.
 func (c *Client) SupportsIdle() bool {
 	return c.raw.Caps().Has(imap.CapIdle)

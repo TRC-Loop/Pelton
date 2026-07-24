@@ -57,6 +57,7 @@
   import { Quit, WindowHide, WindowIsFullscreen, WindowFullscreen, WindowUnfullscreen } from '../wailsjs/runtime/runtime'
   import { matchShortcut, comboHasModifier, type ShortcutAction } from './lib/shortcuts'
   import { bindings, recording, initShortcuts } from './stores/shortcuts'
+  import { initMenuBar } from './stores/menubar'
   import { triggerUndo } from './stores/undosend'
   import { recordDeleted, triggerUndoDelete } from './stores/undodelete'
   import { triggerUndoArchive } from './stores/undoarchive'
@@ -131,6 +132,7 @@
     await initSidebarState()
     await initComposePrefs()
     void initShortcuts()
+    void initMenuBar()
     void loadSignatures()
     initProgress()
     await loadSidebar()

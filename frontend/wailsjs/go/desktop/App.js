@@ -38,8 +38,8 @@ export function ClearSentOutbox() {
   return window['go']['desktop']['App']['ClearSentOutbox']();
 }
 
-export function ConfirmThemeImport(arg1, arg2) {
-  return window['go']['desktop']['App']['ConfirmThemeImport'](arg1, arg2);
+export function ConfirmThemeImport(arg1, arg2, arg3, arg4) {
+  return window['go']['desktop']['App']['ConfirmThemeImport'](arg1, arg2, arg3, arg4);
 }
 
 export function DeleteAccount(arg1) {
@@ -94,6 +94,10 @@ export function GetAccountSignatures(arg1) {
   return window['go']['desktop']['App']['GetAccountSignatures'](arg1);
 }
 
+export function GetMCPConfig() {
+  return window['go']['desktop']['App']['GetMCPConfig']();
+}
+
 export function GetMessage(arg1) {
   return window['go']['desktop']['App']['GetMessage'](arg1);
 }
@@ -102,12 +106,12 @@ export function GetMessageHTML(arg1, arg2) {
   return window['go']['desktop']['App']['GetMessageHTML'](arg1, arg2);
 }
 
-export function ListSystemFonts() {
-  return window['go']['desktop']['App']['ListSystemFonts']();
-}
-
 export function GetMessageSource(arg1) {
   return window['go']['desktop']['App']['GetMessageSource'](arg1);
+}
+
+export function GetProxyConfig() {
+  return window['go']['desktop']['App']['GetProxyConfig']();
 }
 
 export function GetSetting(arg1) {
@@ -118,24 +122,16 @@ export function GetThemeApply(arg1) {
   return window['go']['desktop']['App']['GetThemeApply'](arg1);
 }
 
-export function GetUserLocale(arg1) {
-  return window['go']['desktop']['App']['GetUserLocale'](arg1);
+export function GetThemeDraft(arg1) {
+  return window['go']['desktop']['App']['GetThemeDraft'](arg1);
 }
 
 export function GetUIPrefs() {
   return window['go']['desktop']['App']['GetUIPrefs']();
 }
 
-export function GetProxyConfig() {
-  return window['go']['desktop']['App']['GetProxyConfig']();
-}
-
-export function SetProxyConfig(arg1) {
-  return window['go']['desktop']['App']['SetProxyConfig'](arg1);
-}
-
-export function TestProxy(arg1) {
-  return window['go']['desktop']['App']['TestProxy'](arg1);
+export function GetUserLocale(arg1) {
+  return window['go']['desktop']['App']['GetUserLocale'](arg1);
 }
 
 export function ImportData(arg1, arg2, arg3) {
@@ -194,20 +190,28 @@ export function ListSignatures() {
   return window['go']['desktop']['App']['ListSignatures']();
 }
 
-export function ListThemes() {
-  return window['go']['desktop']['App']['ListThemes']();
+export function ListSystemFonts() {
+  return window['go']['desktop']['App']['ListSystemFonts']();
 }
 
-export function ListUserLocales() {
-  return window['go']['desktop']['App']['ListUserLocales']();
+export function ListThemes() {
+  return window['go']['desktop']['App']['ListThemes']();
 }
 
 export function ListUnifiedViews() {
   return window['go']['desktop']['App']['ListUnifiedViews']();
 }
 
+export function ListUserLocales() {
+  return window['go']['desktop']['App']['ListUserLocales']();
+}
+
 export function MoveMessage(arg1, arg2) {
   return window['go']['desktop']['App']['MoveMessage'](arg1, arg2);
+}
+
+export function OpenLocalesFolder() {
+  return window['go']['desktop']['App']['OpenLocalesFolder']();
 }
 
 export function OpenThemesFolder() {
@@ -230,6 +234,10 @@ export function RebuildMenu() {
   return window['go']['desktop']['App']['RebuildMenu']();
 }
 
+export function RegenerateMCPToken() {
+  return window['go']['desktop']['App']['RegenerateMCPToken']();
+}
+
 export function RemoveImageAllow(arg1, arg2) {
   return window['go']['desktop']['App']['RemoveImageAllow'](arg1, arg2);
 }
@@ -240,10 +248,6 @@ export function RemoveOffline(arg1) {
 
 export function ResumePendingDownload() {
   return window['go']['desktop']['App']['ResumePendingDownload']();
-}
-
-export function OpenLocalesFolder() {
-  return window['go']['desktop']['App']['OpenLocalesFolder']();
 }
 
 export function SaveAllAttachments(arg1) {
@@ -298,8 +302,20 @@ export function SetFlagged(arg1, arg2) {
   return window['go']['desktop']['App']['SetFlagged'](arg1, arg2);
 }
 
+export function SetMCPEnabled(arg1) {
+  return window['go']['desktop']['App']['SetMCPEnabled'](arg1);
+}
+
+export function SetMCPPort(arg1) {
+  return window['go']['desktop']['App']['SetMCPPort'](arg1);
+}
+
 export function SetMailActionsEnabled(arg1) {
   return window['go']['desktop']['App']['SetMailActionsEnabled'](arg1);
+}
+
+export function SetProxyConfig(arg1) {
+  return window['go']['desktop']['App']['SetProxyConfig'](arg1);
 }
 
 export function SetSeen(arg1, arg2) {
@@ -328,6 +344,10 @@ export function SystemColorScheme() {
 
 export function TestConnection(arg1) {
   return window['go']['desktop']['App']['TestConnection'](arg1);
+}
+
+export function TestProxy(arg1) {
+  return window['go']['desktop']['App']['TestProxy'](arg1);
 }
 
 export function TriggerSync() {

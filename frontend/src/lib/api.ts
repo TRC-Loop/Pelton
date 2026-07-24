@@ -37,9 +37,11 @@ import type {
   ThemeApply,
   ThemeImportPreview,
   SaveThemeRequest,
+  ThemeDraft,
   UserLocale,
   UserLocaleApply,
   ProxyConfig,
+  MCPConfig,
 } from './types'
 
 // isDemoMode reports whether the app launched in the cosmetic --potatoes-are-nice
@@ -602,6 +604,8 @@ export const SettingKeys = {
   menuBarInApp: 'menu_bar_in_app',
   menuBarNativeMinimal: 'menu_bar_native_minimal',
   menuBarIcons: 'menu_bar_icons',
+  menuBarLayout: 'menu_bar_layout',
+  menuBarNewItems: 'menu_bar_new_items',
   timeFormat: 'time_format',
   reduceMotion: 'reduce_motion',
   themeDarkStart: 'theme_dark_start',
@@ -639,8 +643,15 @@ export function previewThemeImport(): Promise<ThemeImportPreview> {
 
 // confirmThemeImport installs a previewed container. allowRemote keeps the
 // css's network references; false strips them before anything hits disk.
-export function confirmThemeImport(path: string, allowRemote: boolean): Promise<ThemeInfo> {
-  return App.ConfirmThemeImport(path, allowRemote) as Promise<ThemeInfo>
+// importTokens and importCSS are the parts choice: a deselected part is
+// dropped from the container before it is written.
+export function confirmThemeImport(
+  path: string,
+  allowRemote: boolean,
+  importTokens: boolean,
+  importCSS: boolean,
+): Promise<ThemeInfo> {
+  return App.ConfirmThemeImport(path, allowRemote, importTokens, importCSS) as Promise<ThemeInfo>
 }
 
 // deleteTheme removes an installed theme (and resets the selection if it was
@@ -658,7 +669,13 @@ export function exportTheme(id: string): Promise<string> {
 // saveCustomTheme validates and writes a palette-editor theme as a
 // .peltontheme file in the themes folder, returning its gallery info.
 export function saveCustomTheme(req: SaveThemeRequest): Promise<ThemeInfo> {
-  return App.SaveCustomTheme(req) as Promise<ThemeInfo>
+  return App.SaveCustomTheme(new desktop.SaveThemeRequest(req)) as Promise<ThemeInfo>
+}
+
+// getThemeDraft loads an installed theme back into editor form: metadata,
+// tokens and the raw source of the editor's own stylesheet.
+export function getThemeDraft(id: string): Promise<ThemeDraft> {
+  return App.GetThemeDraft(id) as Promise<ThemeDraft>
 }
 
 // openThemesFolder shows the themes folder in the system file manager.
@@ -705,4 +722,28 @@ export function setProxyConfig(cfg: ProxyConfig): Promise<void> {
 // confirm the proxy works before saving. Resolves on success.
 export function testProxy(cfg: ProxyConfig): Promise<void> {
   return App.TestProxy(new desktop.ProxyConfigDTO(cfg))
+}
+
+// getMCPConfig returns the read-only MCP server's state: enabled, loopback url,
+// bearer token and whether it is listening.
+export function getMCPConfig(): Promise<MCPConfig> {
+  return App.GetMCPConfig() as Promise<MCPConfig>
+}
+
+// setMCPEnabled turns the MCP server on or off, generating a token on first
+// enable so the endpoint is never unauthenticated.
+export function setMCPEnabled(enabled: boolean): Promise<void> {
+  return App.SetMCPEnabled(enabled)
+}
+
+// setMCPPort changes the loopback port (1024-65535) and restarts the server if
+// it is running.
+export function setMCPPort(port: number): Promise<void> {
+  return App.SetMCPPort(port)
+}
+
+// regenerateMCPToken issues a fresh bearer token, invalidating the old one, and
+// returns it for display.
+export function regenerateMCPToken(): Promise<string> {
+  return App.RegenerateMCPToken()
 }
