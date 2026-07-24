@@ -397,6 +397,14 @@ export interface AccountSignatures {
 // the outbound proxy preference shown in settings. password is write-only: the
 // backend never sends the stored secret back, only hasPassword so the field can
 // show a placeholder.
+export interface MCPConfig {
+  enabled: boolean
+  port: number
+  token: string
+  url: string
+  running: boolean
+}
+
 export interface ProxyConfig {
   mode: string
   scheme: string
