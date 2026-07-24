@@ -312,6 +312,7 @@ export interface ThemeImportPreview {
   path: string
   info: ThemeInfo
   cssFiles: ThemeCSSFile[]
+  tokenCount: number
   updatesExisting: boolean
   installedVersion: string
 }
