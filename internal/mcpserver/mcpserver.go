@@ -93,9 +93,13 @@ func (s *Server) Start(cfg Config) error {
 	}, nil)
 	registerTools(mcpSrv, s.mb)
 
+	// Stateless: every request is self-contained. The read-only tools need no
+	// per-session state, and this makes the server immune to losing a client's
+	// session across a restart (dev hot-reload) - the failure that otherwise
+	// surfaces to the client as "session not found".
 	handler := mcp.NewStreamableHTTPHandler(func(*http.Request) *mcp.Server {
 		return mcpSrv
-	}, nil)
+	}, &mcp.StreamableHTTPOptions{Stateless: true})
 
 	httpSrv := &http.Server{
 		Handler:           withBearerAuth(cfg.Token, handler),
