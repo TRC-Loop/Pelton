@@ -286,8 +286,23 @@ export interface ThemeInfo {
 export interface SaveThemeRequest {
   id: string
   name: string
+  author: string
+  version: string
   base: string
   tokens: Record<string, string>
+  css: string
+}
+
+// an installed theme loaded back into theme-editor form. css is the raw
+// source of the editor's own stylesheet, not the applied one.
+export interface ThemeDraft {
+  id: string
+  name: string
+  author: string
+  version: string
+  base: string
+  tokens: Record<string, string>
+  css: string
 }
 
 // everything needed to apply a custom theme to the document.

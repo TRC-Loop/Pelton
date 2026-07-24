@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/TRC-Loop/Pelton/internal/themepack"
@@ -14,14 +15,64 @@ import (
 // the themes folder, so an edited palette shows up in the gallery, exports
 // and travels with backups exactly like an imported theme.
 
-// SaveThemeRequest is a palette-editor save: name, light/dark base and the
-// token overrides. ID is set when editing an existing installed theme and
-// empty when creating a new one.
+// SaveThemeRequest is a palette-editor save: metadata, light/dark base, the
+// token overrides and the editor's own stylesheet. ID is set when editing an
+// existing installed theme and empty when creating a new one.
 type SaveThemeRequest struct {
-	ID     string            `json:"id"`
-	Name   string            `json:"name"`
-	Base   string            `json:"base"`
-	Tokens map[string]string `json:"tokens"`
+	ID      string            `json:"id"`
+	Name    string            `json:"name"`
+	Author  string            `json:"author"`
+	Version string            `json:"version"`
+	Base    string            `json:"base"`
+	Tokens  map[string]string `json:"tokens"`
+	// CSS is the stylesheet typed in the editor's advanced section. It is
+	// stored as one file the editor owns; stylesheets the theme brought with
+	// it from an import are left alone.
+	CSS string `json:"css"`
+}
+
+// editorCSSPath is the one stylesheet the editor writes. Keeping it to a
+// fixed path means editing a theme that already ships css adds to it instead
+// of overwriting whatever the theme author wrote.
+const editorCSSPath = "css/custom.css"
+
+// maxEditorCSS caps what the editor itself will write, well under the
+// container's own total css limit so a save fails here with a clear message
+// rather than at the read-back.
+const maxEditorCSS = 256 << 10
+
+// ThemeDraftDTO is everything the editor needs to reopen a theme: the same
+// fields it saves. CSS is the raw source of the editor's own stylesheet, not
+// the applied one (GetThemeApply returns that, with assets inlined).
+type ThemeDraftDTO struct {
+	ID      string            `json:"id"`
+	Name    string            `json:"name"`
+	Author  string            `json:"author"`
+	Version string            `json:"version"`
+	Base    string            `json:"base"`
+	Tokens  map[string]string `json:"tokens"`
+	CSS     string            `json:"css"`
+}
+
+// GetThemeDraft loads an installed theme back into editor form.
+func (a *App) GetThemeDraft(id string) (ThemeDraftDTO, error) {
+	if err := a.ready(); err != nil {
+		return ThemeDraftDTO{}, err
+	}
+	t, err := a.findTheme(id)
+	if err != nil {
+		return ThemeDraftDTO{}, err
+	}
+	p := t.pkg
+	return ThemeDraftDTO{
+		ID:      p.Manifest.ID,
+		Name:    p.Manifest.Name,
+		Author:  p.Manifest.Author,
+		Version: p.Manifest.Version,
+		Base:    p.Manifest.Base,
+		Tokens:  p.Tokens,
+		CSS:     string(p.Files[editorCSSPath]),
+	}, nil
 }
 
 // SaveCustomTheme validates and writes a palette-editor theme, returning its
@@ -69,8 +120,13 @@ func (a *App) SaveCustomTheme(req SaveThemeRequest) (ThemeInfoDTO, error) {
 		previousPath = existing.path
 	}
 	manifest.Name = name
+	manifest.Author = strings.TrimSpace(req.Author)
+	manifest.Version = strings.TrimSpace(req.Version)
 	manifest.Base = req.Base
 	if manifest.Tokens, err = json.Marshal(tokens); err != nil {
+		return ThemeInfoDTO{}, err
+	}
+	if err := setEditorCSS(&manifest, files, req.CSS); err != nil {
 		return ThemeInfoDTO{}, err
 	}
 	manifestJSON, err := json.MarshalIndent(manifest, "", "  ")
@@ -95,6 +151,27 @@ func (a *App) SaveCustomTheme(req SaveThemeRequest) (ThemeInfoDTO, error) {
 		return ThemeInfoDTO{}, err
 	}
 	return a.themeInfo(p), nil
+}
+
+// setEditorCSS writes (or clears) the editor's own stylesheet in the package
+// being saved and keeps the manifest's css list in step. Remote references
+// are stripped: css typed or pasted into the editor is held to the same no
+// network rule as an import, and unlike an import there is no author to ask.
+func setEditorCSS(manifest *themepack.Manifest, files map[string][]byte, raw string) error {
+	css := strings.TrimSpace(raw)
+	if css == "" {
+		delete(files, editorCSSPath)
+		manifest.CSS = slices.DeleteFunc(manifest.CSS, func(p string) bool { return p == editorCSSPath })
+		return nil
+	}
+	if len(css) > maxEditorCSS {
+		return fmt.Errorf("the theme's css is larger than %d KB", maxEditorCSS>>10)
+	}
+	files[editorCSSPath] = []byte(themepack.StripRemote(css))
+	if !slices.Contains(manifest.CSS, editorCSSPath) {
+		manifest.CSS = append(manifest.CSS, editorCSSPath)
+	}
+	return nil
 }
 
 // newThemeID derives a fresh theme id from the name, stepping around

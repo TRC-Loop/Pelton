@@ -62,6 +62,8 @@ export function GetSetting(arg1:string):Promise<desktop.SettingResult>;
 
 export function GetThemeApply(arg1:string):Promise<desktop.ThemeApplyDTO>;
 
+export function GetThemeDraft(arg1:string):Promise<desktop.ThemeDraftDTO>;
+
 export function GetUIPrefs():Promise<desktop.UIPrefsDTO>;
 
 export function GetUserLocale(arg1:string):Promise<desktop.UserLocaleApplyDTO>;

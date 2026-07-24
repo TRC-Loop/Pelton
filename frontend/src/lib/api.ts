@@ -37,6 +37,7 @@ import type {
   ThemeApply,
   ThemeImportPreview,
   SaveThemeRequest,
+  ThemeDraft,
   UserLocale,
   UserLocaleApply,
   ProxyConfig,
@@ -668,7 +669,13 @@ export function exportTheme(id: string): Promise<string> {
 // saveCustomTheme validates and writes a palette-editor theme as a
 // .peltontheme file in the themes folder, returning its gallery info.
 export function saveCustomTheme(req: SaveThemeRequest): Promise<ThemeInfo> {
-  return App.SaveCustomTheme(req) as Promise<ThemeInfo>
+  return App.SaveCustomTheme(new desktop.SaveThemeRequest(req)) as Promise<ThemeInfo>
+}
+
+// getThemeDraft loads an installed theme back into editor form: metadata,
+// tokens and the raw source of the editor's own stylesheet.
+export function getThemeDraft(id: string): Promise<ThemeDraft> {
+  return App.GetThemeDraft(id) as Promise<ThemeDraft>
 }
 
 // openThemesFolder shows the themes folder in the system file manager.

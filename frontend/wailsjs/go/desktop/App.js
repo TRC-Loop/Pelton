@@ -122,6 +122,10 @@ export function GetThemeApply(arg1) {
   return window['go']['desktop']['App']['GetThemeApply'](arg1);
 }
 
+export function GetThemeDraft(arg1) {
+  return window['go']['desktop']['App']['GetThemeDraft'](arg1);
+}
+
 export function GetUIPrefs() {
   return window['go']['desktop']['App']['GetUIPrefs']();
 }

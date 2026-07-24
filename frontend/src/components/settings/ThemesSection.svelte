@@ -6,7 +6,7 @@
   import { onMount } from 'svelte'
   import { IconFileImport, IconRefresh, IconTrash, IconUpload, IconAlertTriangle, IconWorld, IconWorldWww, IconPlus, IconPencil, IconFolderOpen } from '@tabler/icons-svelte'
   import { BrowserOpenURL } from '../../../wailsjs/runtime/runtime'
-  import { listThemes, previewThemeImport, deleteTheme, exportTheme, getThemeApply, openThemesFolder } from '../../lib/api'
+  import { listThemes, previewThemeImport, deleteTheme, exportTheme, getThemeApply, getThemeDraft, openThemesFolder } from '../../lib/api'
   import type { ThemeInfo, ThemeImportPreview, ThemePref } from '../../lib/types'
   import { prefs, setThemeId } from '../../stores/prefs'
   import { applyUserTheme } from '../../theme/usertheme'
@@ -19,8 +19,11 @@
   interface EditorSeed {
     id: string
     name: string
+    author: string
+    version: string
     base: 'light' | 'dark'
     tokens: Record<string, string>
+    css: string
   }
 
   let themes: ThemeInfo[] = []
@@ -78,19 +81,22 @@
   // resolved base.
   function createTheme(): void {
     const base = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light'
-    editorSeed = { id: '', name: '', base, tokens: {} }
+    editorSeed = { id: '', name: '', author: '', version: '', base, tokens: {}, css: '' }
   }
 
   // editTheme opens the editor prefilled with a theme's palette; saving
   // updates the theme's file in place.
   async function editTheme(theme: ThemeInfo): Promise<void> {
     try {
-      const apply = await getThemeApply(theme.id)
+      const draft = await getThemeDraft(theme.id)
       editorSeed = {
         id: theme.id,
-        name: theme.name,
-        base: apply.base === 'dark' ? 'dark' : 'light',
-        tokens: apply.tokens ?? {},
+        name: draft.name,
+        author: draft.author,
+        version: draft.version,
+        base: draft.base === 'dark' ? 'dark' : 'light',
+        tokens: draft.tokens ?? {},
+        css: draft.css ?? '',
       }
     } catch (err) {
       toastError(errorMessage(err))
@@ -257,8 +263,11 @@
   <ThemeEditorModal
     id={editorSeed.id}
     name={editorSeed.name}
+    author={editorSeed.author}
+    version={editorSeed.version}
     base={editorSeed.base}
     tokens={editorSeed.tokens}
+    css={editorSeed.css}
     on:saved={onEditorSaved}
     on:close={closeEditor}
   />

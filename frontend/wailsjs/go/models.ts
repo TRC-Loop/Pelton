@@ -640,8 +640,11 @@ export namespace desktop {
 	export class SaveThemeRequest {
 	    id: string;
 	    name: string;
+	    author: string;
+	    version: string;
 	    base: string;
 	    tokens: Record<string, string>;
+	    css: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new SaveThemeRequest(source);
@@ -651,8 +654,11 @@ export namespace desktop {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.id = source["id"];
 	        this.name = source["name"];
+	        this.author = source["author"];
+	        this.version = source["version"];
 	        this.base = source["base"];
 	        this.tokens = source["tokens"];
+	        this.css = source["css"];
 	    }
 	}
 	export class SearchRequestDTO {
@@ -753,6 +759,30 @@ export namespace desktop {
 	        this.tokens = source["tokens"];
 	        this.css = source["css"];
 	        this.icons = source["icons"];
+	    }
+	}
+	export class ThemeDraftDTO {
+	    id: string;
+	    name: string;
+	    author: string;
+	    version: string;
+	    base: string;
+	    tokens: Record<string, string>;
+	    css: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new ThemeDraftDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.name = source["name"];
+	        this.author = source["author"];
+	        this.version = source["version"];
+	        this.base = source["base"];
+	        this.tokens = source["tokens"];
+	        this.css = source["css"];
 	    }
 	}
 	export class ThemeInfoDTO {
