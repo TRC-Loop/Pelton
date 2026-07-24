@@ -9,18 +9,23 @@
   import { saveCustomTheme } from '../../lib/api'
   import type { ThemeInfo } from '../../lib/types'
   import { applyUserTheme } from '../../theme/usertheme'
-  import { isValidHex, normalizeHex } from '../../theme/accent'
   import { toastError, errorMessage } from '../../stores/toast'
   import { t } from '../../lib/i18n'
+  import ColorPicker from './ColorPicker.svelte'
 
   /** id of the installed theme being edited; '' creates a new theme. */
   export let id = ''
   /** prefilled name (empty for a new theme). */
   export let name = ''
+  /** prefilled manifest metadata. */
+  export let author = ''
+  export let version = ''
   /** prefilled base. */
   export let base: 'light' | 'dark' = 'light'
   /** prefilled token map (the seed a preset or installed theme provides). */
   export let tokens: Record<string, string> = {}
+  /** the editor's own stylesheet, as saved last time. */
+  export let css = ''
 
   const dispatch = createEventDispatcher<{ saved: ThemeInfo; close: void }>()
 
@@ -34,6 +39,38 @@
   ]
   const editorTokens = groups.flatMap((g) => g.tokens)
   const statusTokens = groups[3].tokens
+
+  // the rest of the themeable surface, edited raw in the advanced section:
+  // values that are not colors (type, radii, fonts) or that most themes leave
+  // alone. the derived -bg partners of the status colors stay out, since the
+  // save computes those. labelled by token name on purpose - this is the raw
+  // view.
+  const advancedTokens = [
+    'accent',
+    'accent-fg',
+    'link',
+    'text-inverse',
+    'selection-bg',
+    'selection-bg-strong',
+    'hairline',
+    'radius-control',
+    'radius-card',
+    'radius-none',
+    'font-ui',
+    'font-mono',
+    'fz-meta',
+    'fz-label',
+    'fz-list',
+    'fz-body',
+    'fz-heading',
+    'fz-title',
+    'fw-regular',
+    'fw-medium',
+    'fw-semibold',
+    'fw-bold',
+    'shadow-overlay',
+  ]
+  const allTokens = [...editorTokens, ...advancedTokens]
 
   // the built-in palettes from tokens.css, as starting values for a new theme
   // so every field begins on what the base actually looks like.
@@ -75,7 +112,7 @@
   function seedValues(): Record<string, string> {
     const source = Object.keys(tokens).length ? tokens : baseDefaults[base]
     const values: Record<string, string> = {}
-    for (const token of editorTokens) {
+    for (const token of allTokens) {
       values[token] = source[token] ?? ''
     }
     return values
@@ -110,11 +147,11 @@
   function buildTokens(): Record<string, string> {
     const result: Record<string, string> = {}
     for (const [token, value] of Object.entries(tokens)) {
-      if (!editorTokens.includes(token) && !statusTokens.some((s) => token === s + '-bg')) {
+      if (!allTokens.includes(token) && !statusTokens.some((s) => token === s + '-bg')) {
         result[token] = value
       }
     }
-    for (const token of editorTokens) {
+    for (const token of allTokens) {
       const value = values[token].trim()
       if (value && safeValue(value)) {
         result[token] = value
@@ -132,25 +169,18 @@
 
   // live preview: re-inject the draft on every change. the parameters only
   // exist so the reactive statement tracks them.
-  function previewDraft(_values: Record<string, string>, draftBase: string): void {
-    applyUserTheme({ id: 'palette-editor-draft', base: draftBase, tokens: buildTokens(), css: '', icons: {} })
+  function previewDraft(_values: Record<string, string>, draftBase: string, draftCSS: string): void {
+    applyUserTheme({ id: 'palette-editor-draft', base: draftBase, tokens: buildTokens(), css: draftCSS, icons: {} })
   }
-  $: previewDraft(values, base)
+  $: previewDraft(values, base, css)
 
-  // wellColor gives the color well a hex to show; non-hex values (rgba,
-  // color-mix) keep the text input authoritative.
-  function wellColor(value: string): string {
-    return isValidHex(value) ? normalizeHex(value) : '#888888'
-  }
-
-  function onWellInput(token: string, event: Event): void {
-    values = { ...values, [token]: (event.currentTarget as HTMLInputElement).value }
+  function setToken(token: string, next: string): void {
+    values = { ...values, [token]: next }
     touched = true
   }
 
   function onTextInput(token: string, event: Event): void {
-    values = { ...values, [token]: (event.currentTarget as HTMLInputElement).value }
-    touched = true
+    setToken(token, (event.currentTarget as HTMLInputElement).value)
   }
 
   async function save(): Promise<void> {
@@ -160,7 +190,15 @@
     }
     saving = true
     try {
-      const info = await saveCustomTheme({ id, name: name.trim(), base, tokens: buildTokens() })
+      const info = await saveCustomTheme({
+        id,
+        name: name.trim(),
+        author: author.trim(),
+        version: version.trim(),
+        base,
+        tokens: buildTokens(),
+        css,
+      })
       dispatch('saved', info)
     } catch (err) {
       toastError(errorMessage(err))
@@ -202,6 +240,16 @@
           </div>
         </div>
       </div>
+      <div class="top-row">
+        <label class="field name-field">
+          <span class="label">{$t('themeEditor.authorLabel')}</span>
+          <input type="text" bind:value={author} placeholder={$t('themeEditor.authorPlaceholder')} maxlength="60" />
+        </label>
+        <label class="field version-field">
+          <span class="label">{$t('themeEditor.versionLabel')}</span>
+          <input type="text" bind:value={version} placeholder="1.0.0" maxlength="20" />
+        </label>
+      </div>
       <p class="hint">{$t('themeEditor.hint')}</p>
 
       {#each groups as group (group.key)}
@@ -211,12 +259,7 @@
             <label class="token-row">
               <span class="token-label">{$t('themeEditor.token.' + token)}</span>
               <span class="inputs">
-                <input
-                  type="color"
-                  class="well"
-                  value={wellColor(values[token])}
-                  on:input={(e) => onWellInput(token, e)}
-                />
+                <ColorPicker value={values[token]} on:change={(e) => setToken(token, e.detail)} />
                 <input
                   type="text"
                   class="value mono"
@@ -229,6 +272,34 @@
           {/each}
         </div>
       {/each}
+
+      <details class="advanced">
+        <summary>{$t('themeEditor.advanced')}</summary>
+        <p class="hint">{$t('themeEditor.advancedHint')}</p>
+
+        <p class="group-heading">{$t('themeEditor.rawTokens')}</p>
+        <div class="token-grid">
+          {#each advancedTokens as token (token)}
+            <label class="token-row">
+              <span class="token-label mono">--{token}</span>
+              <span class="inputs">
+                <input
+                  type="text"
+                  class="value mono"
+                  value={values[token]}
+                  spellcheck="false"
+                  placeholder={$t('themeEditor.inherit')}
+                  on:input={(e) => onTextInput(token, e)}
+                />
+              </span>
+            </label>
+          {/each}
+        </div>
+
+        <p class="group-heading">{$t('themeEditor.customCss')}</p>
+        <p class="hint">{$t('themeEditor.customCssHint')}</p>
+        <textarea class="css mono" bind:value={css} spellcheck="false" rows="8" placeholder=".menubar &#123; ... &#125;"></textarea>
+      </details>
     </div>
 
     <footer>
@@ -391,14 +462,34 @@
     gap: var(--space-2);
   }
 
-  .well {
-    width: 28px;
-    height: 24px;
-    padding: 0;
+  .version-field {
+    width: 110px;
+  }
+
+  .advanced {
+    margin-top: var(--space-3);
+    border-top: var(--hairline) solid var(--border-subtle);
+    padding-top: var(--space-3);
+  }
+
+  .advanced summary {
+    font-size: var(--fz-label);
+    font-weight: var(--fw-medium);
+    color: var(--text-primary);
+    cursor: pointer;
+  }
+
+  .css {
+    width: 100%;
+    margin-top: var(--space-2);
+    padding: var(--space-2);
     border: var(--hairline) solid var(--border-default);
     border-radius: var(--radius-control);
-    background: transparent;
-    cursor: pointer;
+    background: var(--surface-raised);
+    color: var(--text-primary);
+    font-size: var(--fz-meta);
+    line-height: 1.5;
+    resize: vertical;
   }
 
   .value {
