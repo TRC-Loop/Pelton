@@ -25,9 +25,6 @@
 
 ***
 
-> [!WARNING]
-> **Pelton is currently a Work In Progress (WIP).** Features, APIs, and the user interface are under heavy active development. It is not yet ready for production use or primary email management.
-
 ## <img src="https://api.iconify.design/tabler/info-circle.svg?color=white" width="26" style="vertical-align: -4px;"> About Pelton
 
 Pelton is a modern, Free and Open-Source Software (FOSS) email client written in Go and built using the Wails framework. It is designed from the ground up to respect your data. We believe your inbox belongs to you, which is why Pelton operates with absolute zero telemetry and full privacy. 
@@ -133,6 +130,13 @@ sudo dnf install pelton
 ```
 
 (Fedora's Copr is a community repo host; enabling it adds Pelton's repo to `dnf` so future releases show up as normal updates.)
+
+> [!NOTE]  
+> **Fedora <=42 is not supported**, even if you pin the chroot.
+> 
+> You will get an error like package not available.
+> 
+> Update your System folks! (You have to do it anyway so ig)
 
 **Via the standalone `.rpm`:**
 

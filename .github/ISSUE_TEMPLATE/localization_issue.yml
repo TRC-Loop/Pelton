@@ -1,0 +1,41 @@
+name: Localization issue
+description: Missing, incorrect, or untranslated text in Pelton
+labels: ["area: localization", "needs-triage"]
+body:
+  - type: dropdown
+    id: language
+    attributes:
+      label: Language
+      options:
+        - German (de)
+        - English (en)
+        - Spanish (es)
+        - French (fr)
+        - Dutch (nl)
+        - Other / not listed
+    validations:
+      required: true
+  - type: textarea
+    id: location
+    attributes:
+      label: Where in the app
+      description: Which screen, button, or message shows the problem.
+    validations:
+      required: true
+  - type: textarea
+    id: current
+    attributes:
+      label: Current text
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected or corrected text
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: Additional context
+      description: Screenshots, context on tone/register, or anything else that helps.

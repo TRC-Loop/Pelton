@@ -1,0 +1,73 @@
+# Builds and deploys docs.pelton.app (GitHub Pages) whenever the docs change
+# on main. The site is fully self-hosted: the no-CDN check below fails the
+# build if any external host sneaks into the output (GDPR: visitor IPs must
+# not leak to third parties).
+name: Docs
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "docs/**"
+      - "zensical.toml"
+      - ".github/workflows/docs.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: docs-pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Install zensical
+        run: pip install zensical==0.0.50
+
+      - name: Build
+        run: zensical build --clean
+
+      - name: Publish raw AGENTS.md
+        # /AGENTS.md serves the raw markdown for machines (llms.txt points
+        # here); the rendered copy stays reachable at /AGENTS/ for humans.
+        run: cp docs/AGENTS.md site/AGENTS.md
+
+      - name: Fail on external loads (no-CDN check)
+        # ordinary <a href> links to other sites are fine; what must never
+        # appear is anything the browser fetches on its own: script/img/link
+        # sources in html, url()/@import in css.
+        run: |
+          hits=$(
+            { grep -rEoh '(src|srcset)="https?://[^"]+' site --include='*.html' || true
+              grep -rEoh '<link[^>]+href="https?://[^"]+' site --include='*.html' || true
+              grep -rEoh '(url\(|@import[^;]*)https?://[a-zA-Z0-9.-]+' site --include='*.css' || true
+            } | grep -vE 'https?://(docs\.pelton\.app|www\.w3\.org)' || true
+          )
+          if [ -n "$hits" ]; then
+            echo "$hits"
+            echo "external loads found in the built site, see list above"
+            exit 1
+          fi
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - uses: actions/deploy-pages@v4
+        id: deployment

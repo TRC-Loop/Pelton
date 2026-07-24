@@ -276,3 +276,6 @@ $RECYCLE.BIN/
 .cody/
 .aider*
 !.aider.conf.yml.example
+
+# zensical build output (docs.pelton.app)
+site/
