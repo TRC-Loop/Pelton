@@ -21,6 +21,9 @@ type ThemeImportPreviewDTO struct {
 	Info     ThemeInfoDTO `json:"info"`
 	// CSSFiles carry the raw stylesheet contents for the read-only viewer.
 	CSSFiles []themepack.CSSFile `json:"cssFiles"`
+	// TokenCount is how many color/token values the theme defines, so the
+	// import modal can offer the parts choice only for parts that exist.
+	TokenCount int `json:"tokenCount"`
 	// UpdatesExisting is true when a theme with the same id is installed;
 	// InstalledVersion is that install's version string.
 	UpdatesExisting  bool   `json:"updatesExisting"`
@@ -56,9 +59,10 @@ func (a *App) PreviewThemeImport() (ThemeImportPreviewDTO, error) {
 		cssFiles = []themepack.CSSFile{}
 	}
 	preview := ThemeImportPreviewDTO{
-		Path:     path,
-		Info:     a.themeInfo(p),
-		CSSFiles: cssFiles,
+		Path:       path,
+		Info:       a.themeInfo(p),
+		CSSFiles:   cssFiles,
+		TokenCount: len(p.Tokens),
 	}
 	if installed, err := a.findTheme(p.Manifest.ID); err == nil {
 		preview.UpdatesExisting = true
@@ -71,15 +75,20 @@ func (a *App) PreviewThemeImport() (ThemeImportPreviewDTO, error) {
 // themes folder under its id (the chosen file itself stays where it is).
 // allowRemote is the user's choice from the import warning: false strips
 // every remote reference from the css before it touches disk, so the copy in
-// the folder is exactly what will run. The file is re-read and re-validated
-// here so the preview and the install can never diverge. An existing theme
-// with the same id is replaced, which is how updates work.
-func (a *App) ConfirmThemeImport(path string, allowRemote bool) (ThemeInfoDTO, error) {
+// the folder is exactly what will run. importTokens and importCSS are the
+// user's parts choice; a deselected part is dropped from the container before
+// it is written. The file is re-read and re-validated here so the preview and
+// the install can never diverge. An existing theme with the same id is
+// replaced, which is how updates work.
+func (a *App) ConfirmThemeImport(path string, allowRemote, importTokens, importCSS bool) (ThemeInfoDTO, error) {
 	if err := a.ready(); err != nil {
 		return ThemeInfoDTO{}, err
 	}
 	p, err := a.readContainerFile(path)
 	if err != nil {
+		return ThemeInfoDTO{}, err
+	}
+	if err := p.SelectParts(importTokens, importCSS); err != nil {
 		return ThemeInfoDTO{}, err
 	}
 	root, err := a.themesDir()

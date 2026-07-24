@@ -792,6 +792,7 @@ export namespace desktop {
 	    path: string;
 	    info: ThemeInfoDTO;
 	    cssFiles: themepack.CSSFile[];
+	    tokenCount: number;
 	    updatesExisting: boolean;
 	    installedVersion: string;
 	
@@ -805,6 +806,7 @@ export namespace desktop {
 	        this.path = source["path"];
 	        this.info = this.convertValues(source["info"], ThemeInfoDTO);
 	        this.cssFiles = this.convertValues(source["cssFiles"], themepack.CSSFile);
+	        this.tokenCount = source["tokenCount"];
 	        this.updatesExisting = source["updatesExisting"];
 	        this.installedVersion = source["installedVersion"];
 	    }
