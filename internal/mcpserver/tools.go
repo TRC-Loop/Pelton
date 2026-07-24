@@ -67,9 +67,16 @@ type Attachment struct {
 // plain-text body and attachment metadata.
 type Message struct {
 	MessageSummary
-	To          string       `json:"to,omitempty"`
-	Cc          string       `json:"cc,omitempty"`
-	BodyText    string       `json:"body_text"`
+	To string `json:"to,omitempty"`
+	Cc string `json:"cc,omitempty"`
+	// MessageID is the RFC Message-ID header; SizeBytes is the message size on
+	// the server. Both are metadata an agent may want without the body.
+	MessageID string `json:"message_id,omitempty"`
+	SizeBytes int64  `json:"size_bytes,omitempty"`
+	BodyText  string `json:"body_text"`
+	// BodyHTML is the HTML body when the message has one (most do). Empty for
+	// plain-text-only mail. It is the stored source, not rendered.
+	BodyHTML    string       `json:"body_html,omitempty"`
 	Attachments []Attachment `json:"attachments,omitempty"`
 }
 
@@ -158,7 +165,7 @@ func registerTools(srv *mcp.Server, mb Mailbox) {
 
 	mcp.AddTool(srv, &mcp.Tool{
 		Name:        "get_message",
-		Description: "Get one full message: headers, plain-text body and attachment metadata (never attachment bytes).",
+		Description: "Get one full message: headers, plain-text body, HTML body when present, and attachment metadata (never attachment bytes).",
 	}, func(ctx context.Context, _ *mcp.CallToolRequest, in getMessageInput) (*mcp.CallToolResult, Message, error) {
 		msg, err := mb.GetMessage(ctx, in.ID)
 		if err != nil {

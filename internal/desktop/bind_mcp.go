@@ -240,7 +240,10 @@ func (m *mcpMailbox) GetMessage(ctx context.Context, id int64) (*mcpserver.Messa
 		MessageSummary: mcpSummary(*msg),
 		To:             msg.ToAddresses,
 		Cc:             msg.CcAddresses,
+		MessageID:      msg.MessageID,
+		SizeBytes:      msg.SizeBytes,
 		BodyText:       msg.BodyPlain,
+		BodyHTML:       msg.BodyHTML,
 	}
 	atts, err := m.app.store.ListAttachments(ctx, id)
 	if err != nil {

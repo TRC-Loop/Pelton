@@ -388,6 +388,26 @@ export namespace desktop {
 	        this.offset = source["offset"];
 	    }
 	}
+	export class MCPConfigDTO {
+	    enabled: boolean;
+	    port: number;
+	    token: string;
+	    url: string;
+	    running: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new MCPConfigDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.enabled = source["enabled"];
+	        this.port = source["port"];
+	        this.token = source["token"];
+	        this.url = source["url"];
+	        this.running = source["running"];
+	    }
+	}
 	export class UnsubscribeDTO {
 	    kind: string;
 	    target: string;
@@ -591,26 +611,6 @@ export namespace desktop {
 	        this.lastError = source["lastError"];
 	        this.nextAttemptAt = source["nextAttemptAt"];
 	        this.createdAt = source["createdAt"];
-	    }
-	}
-	export class MCPConfigDTO {
-	    enabled: boolean;
-	    port: number;
-	    token: string;
-	    url: string;
-	    running: boolean;
-
-	    static createFrom(source: any = {}) {
-	        return new MCPConfigDTO(source);
-	    }
-
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.enabled = source["enabled"];
-	        this.port = source["port"];
-	        this.token = source["token"];
-	        this.url = source["url"];
-	        this.running = source["running"];
 	    }
 	}
 	export class ProxyConfigDTO {

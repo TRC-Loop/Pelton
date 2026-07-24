@@ -48,11 +48,11 @@ export function ExportTheme(arg1:string):Promise<string>;
 
 export function GetAccountSignatures(arg1:number):Promise<desktop.AccountSignaturesDTO>;
 
+export function GetMCPConfig():Promise<desktop.MCPConfigDTO>;
+
 export function GetMessage(arg1:number):Promise<desktop.MessageDetailDTO>;
 
 export function GetMessageHTML(arg1:number,arg2:boolean):Promise<string>;
-
-export function GetMCPConfig():Promise<desktop.MCPConfigDTO>;
 
 export function GetMessageSource(arg1:number):Promise<string>;
 
@@ -116,9 +116,9 @@ export function ReadAttachment(arg1:number,arg2:number):Promise<desktop.Attachme
 
 export function RebuildMenu():Promise<void>;
 
-export function RemoveImageAllow(arg1:string,arg2:string):Promise<void>;
-
 export function RegenerateMCPToken():Promise<string>;
+
+export function RemoveImageAllow(arg1:string,arg2:string):Promise<void>;
 
 export function RemoveOffline(arg1:number):Promise<void>;
 

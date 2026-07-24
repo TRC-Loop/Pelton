@@ -94,16 +94,16 @@ export function GetAccountSignatures(arg1) {
   return window['go']['desktop']['App']['GetAccountSignatures'](arg1);
 }
 
+export function GetMCPConfig() {
+  return window['go']['desktop']['App']['GetMCPConfig']();
+}
+
 export function GetMessage(arg1) {
   return window['go']['desktop']['App']['GetMessage'](arg1);
 }
 
 export function GetMessageHTML(arg1, arg2) {
   return window['go']['desktop']['App']['GetMessageHTML'](arg1, arg2);
-}
-
-export function GetMCPConfig() {
-  return window['go']['desktop']['App']['GetMCPConfig']();
 }
 
 export function GetMessageSource(arg1) {
@@ -230,12 +230,12 @@ export function RebuildMenu() {
   return window['go']['desktop']['App']['RebuildMenu']();
 }
 
-export function RemoveImageAllow(arg1, arg2) {
-  return window['go']['desktop']['App']['RemoveImageAllow'](arg1, arg2);
-}
-
 export function RegenerateMCPToken() {
   return window['go']['desktop']['App']['RegenerateMCPToken']();
+}
+
+export function RemoveImageAllow(arg1, arg2) {
+  return window['go']['desktop']['App']['RemoveImageAllow'](arg1, arg2);
 }
 
 export function RemoveOffline(arg1) {

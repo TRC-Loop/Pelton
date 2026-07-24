@@ -85,7 +85,10 @@ func TestToolsExposeReadData(t *testing.T) {
 		},
 		message: &Message{
 			MessageSummary: MessageSummary{ID: 100, Subject: "Hello"},
+			MessageID:      "<abc@example.com>",
+			SizeBytes:      2048,
 			BodyText:       "the body",
+			BodyHTML:       "<p>the body</p>",
 			Attachments:    []Attachment{{Filename: "a.pdf", SizeBytes: 12}},
 		},
 	}
@@ -103,8 +106,13 @@ func TestToolsExposeReadData(t *testing.T) {
 		t.Errorf("list_messages did not honor limit=1: %s", got)
 	}
 
-	if got := callText(t, cs, "get_message", map[string]any{"id": 100}); !strings.Contains(got, "the body") || !strings.Contains(got, "a.pdf") {
-		t.Errorf("get_message missing body or attachment: %s", got)
+	// the JSON text content HTML-escapes angle brackets, so assert on
+	// escape-safe substrings; the structured-content test covers exact values.
+	got = callText(t, cs, "get_message", map[string]any{"id": 100})
+	for _, want := range []string{"the body", "body_html", "a.pdf", "abc@example.com", "2048"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("get_message missing %q: %s", want, got)
+		}
 	}
 
 	if got := callText(t, cs, "search_messages", map[string]any{"query": "hello", "from": "bob"}); !strings.Contains(got, "Hello") {
