@@ -20,7 +20,7 @@ export function CheckForUpdates():Promise<desktop.UpdateCheckResult>;
 
 export function ClearSentOutbox():Promise<void>;
 
-export function ConfirmThemeImport(arg1:string,arg2:boolean):Promise<desktop.ThemeInfoDTO>;
+export function ConfirmThemeImport(arg1:string,arg2:boolean,arg3:boolean,arg4:boolean):Promise<desktop.ThemeInfoDTO>;
 
 export function DeleteAccount(arg1:number):Promise<void>;
 

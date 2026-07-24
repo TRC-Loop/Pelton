@@ -639,8 +639,15 @@ export function previewThemeImport(): Promise<ThemeImportPreview> {
 
 // confirmThemeImport installs a previewed container. allowRemote keeps the
 // css's network references; false strips them before anything hits disk.
-export function confirmThemeImport(path: string, allowRemote: boolean): Promise<ThemeInfo> {
-  return App.ConfirmThemeImport(path, allowRemote) as Promise<ThemeInfo>
+// importTokens and importCSS are the parts choice: a deselected part is
+// dropped from the container before it is written.
+export function confirmThemeImport(
+  path: string,
+  allowRemote: boolean,
+  importTokens: boolean,
+  importCSS: boolean,
+): Promise<ThemeInfo> {
+  return App.ConfirmThemeImport(path, allowRemote, importTokens, importCSS) as Promise<ThemeInfo>
 }
 
 // deleteTheme removes an installed theme (and resets the selection if it was

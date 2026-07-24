@@ -38,8 +38,8 @@ export function ClearSentOutbox() {
   return window['go']['desktop']['App']['ClearSentOutbox']();
 }
 
-export function ConfirmThemeImport(arg1, arg2) {
-  return window['go']['desktop']['App']['ConfirmThemeImport'](arg1, arg2);
+export function ConfirmThemeImport(arg1, arg2, arg3, arg4) {
+  return window['go']['desktop']['App']['ConfirmThemeImport'](arg1, arg2, arg3, arg4);
 }
 
 export function DeleteAccount(arg1) {
