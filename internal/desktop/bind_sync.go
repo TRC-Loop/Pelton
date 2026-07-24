@@ -29,6 +29,7 @@ func (a *App) startBackgroundServices() {
 	go a.runSnoozePoller()
 	go a.harvestAddressBook()
 	go a.runAutoSyncLoop()
+	a.startMCPIfEnabled()
 }
 
 // runAutoSyncLoop periodically runs a full sync pass across every account, on

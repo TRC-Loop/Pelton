@@ -593,6 +593,26 @@ export namespace desktop {
 	        this.createdAt = source["createdAt"];
 	    }
 	}
+	export class MCPConfigDTO {
+	    enabled: boolean;
+	    port: number;
+	    token: string;
+	    url: string;
+	    running: boolean;
+
+	    static createFrom(source: any = {}) {
+	        return new MCPConfigDTO(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.enabled = source["enabled"];
+	        this.port = source["port"];
+	        this.token = source["token"];
+	        this.url = source["url"];
+	        this.running = source["running"];
+	    }
+	}
 	export class ProxyConfigDTO {
 	    mode: string;
 	    scheme: string;
