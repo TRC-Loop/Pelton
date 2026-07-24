@@ -209,25 +209,15 @@ func idleDemo(client *pimap.Client) error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	go func() {
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case u := <-client.Updates():
-				switch {
-				case u.NumMessages != nil:
-					fmt.Printf("** new mail: mailbox now has %d messages\n", *u.NumMessages)
-				case u.ExpungedSeqNum != nil:
-					fmt.Printf("** message expunged: seq %d\n", *u.ExpungedSeqNum)
-				}
-			}
+	for {
+		gotUpdate, err := client.IdleUntil(ctx)
+		if err != nil {
+			return err
 		}
-	}()
-
-	if err := client.Idle(ctx); err != nil {
-		return err
+		if !gotUpdate {
+			fmt.Println("idle stopped cleanly")
+			return nil
+		}
+		fmt.Println("** server pushed an update (new or expunged mail)")
 	}
-	fmt.Println("idle stopped cleanly")
-	return nil
 }

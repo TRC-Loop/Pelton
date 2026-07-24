@@ -38,8 +38,8 @@ export function ClearSentOutbox() {
   return window['go']['desktop']['App']['ClearSentOutbox']();
 }
 
-export function ConfirmThemeImport(arg1, arg2) {
-  return window['go']['desktop']['App']['ConfirmThemeImport'](arg1, arg2);
+export function ConfirmThemeImport(arg1, arg2, arg3, arg4) {
+  return window['go']['desktop']['App']['ConfirmThemeImport'](arg1, arg2, arg3, arg4);
 }
 
 export function DeleteAccount(arg1) {
@@ -92,6 +92,10 @@ export function ExportTheme(arg1) {
 
 export function GetAccountSignatures(arg1) {
   return window['go']['desktop']['App']['GetAccountSignatures'](arg1);
+}
+
+export function GetMCPConfig() {
+  return window['go']['desktop']['App']['GetMCPConfig']();
 }
 
 export function GetMessage(arg1) {
@@ -230,6 +234,10 @@ export function RebuildMenu() {
   return window['go']['desktop']['App']['RebuildMenu']();
 }
 
+export function RegenerateMCPToken() {
+  return window['go']['desktop']['App']['RegenerateMCPToken']();
+}
+
 export function RemoveImageAllow(arg1, arg2) {
   return window['go']['desktop']['App']['RemoveImageAllow'](arg1, arg2);
 }
@@ -292,6 +300,14 @@ export function SetFlagColor(arg1, arg2) {
 
 export function SetFlagged(arg1, arg2) {
   return window['go']['desktop']['App']['SetFlagged'](arg1, arg2);
+}
+
+export function SetMCPEnabled(arg1) {
+  return window['go']['desktop']['App']['SetMCPEnabled'](arg1);
+}
+
+export function SetMCPPort(arg1) {
+  return window['go']['desktop']['App']['SetMCPPort'](arg1);
 }
 
 export function SetMailActionsEnabled(arg1) {
