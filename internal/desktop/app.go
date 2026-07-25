@@ -82,6 +82,10 @@ type App struct {
 	// never races.
 	mcpMu sync.Mutex
 	mcp   *mcpserver.Server
+
+	// mailto holds a mailto: draft the app was launched with (or received from a
+	// second launch) until the frontend consumes it. See mailto.go.
+	mailto mailtoState
 }
 
 // IsDemoMode reports whether the app was launched in the cosmetic demo mode. The

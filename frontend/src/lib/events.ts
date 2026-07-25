@@ -14,6 +14,7 @@ export const EventNames = {
   downloadProgress: 'download:progress',
   attachmentProgress: 'attachment:progress',
   updateAvailable: 'update:available',
+  mailtoCompose: 'mailto:compose',
 } as const
 
 // payloads, mirroring the go event structs.
@@ -67,6 +68,16 @@ export interface UpdateAvailableEvent {
   error: string
 }
 
+// MailtoDraft mirrors the go MailtoDraft: a compose prefill parsed from a
+// mailto: link. Address fields are comma-joined for the raw recipient inputs.
+export interface MailtoDraft {
+  to: string
+  cc: string
+  bcc: string
+  subject: string
+  body: string
+}
+
 // Unsubscribe removes an event listener.
 export type Unsubscribe = () => void
 
@@ -111,4 +122,10 @@ export function onAttachmentProgress(cb: (e: AttachmentProgressEvent) => void): 
 // for a manual "check now", which gets its result directly instead).
 export function onUpdateAvailable(cb: (e: UpdateAvailableEvent) => void): Unsubscribe {
   return EventsOn(EventNames.updateAvailable, (e: UpdateAvailableEvent) => cb(e))
+}
+
+// onMailtoCompose fires when a mailto: link is opened while the app is already
+// running. A mailto that launched the app is delivered via consumePendingMailto.
+export function onMailtoCompose(cb: (e: MailtoDraft) => void): Unsubscribe {
+  return EventsOn(EventNames.mailtoCompose, (e: MailtoDraft) => cb(e))
 }

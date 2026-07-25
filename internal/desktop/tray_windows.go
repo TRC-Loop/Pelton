@@ -64,12 +64,3 @@ func (a *App) trayReady() {
 		_ = m.ShowMenu()
 	})
 }
-
-// showWindow restores and focuses the main window from the tray.
-func (a *App) showWindow() {
-	if a.ctx == nil {
-		return
-	}
-	wailsruntime.WindowUnminimise(a.ctx)
-	wailsruntime.WindowShow(a.ctx)
-}

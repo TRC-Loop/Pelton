@@ -57,6 +57,12 @@ export function isDevMode(): Promise<boolean> {
   return App.IsDevMode()
 }
 
+// consumePendingMailto returns the mailto: draft the app was launched with (if
+// any) and clears it, so a reload does not reopen the same compose.
+export function consumePendingMailto(): Promise<desktop.PendingMailtoDTO> {
+  return App.ConsumePendingMailto()
+}
+
 // listAccounts returns every configured account.
 export function listAccounts(): Promise<Account[]> {
   if (isDemoActive()) {
