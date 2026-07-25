@@ -37,9 +37,12 @@ import type {
   ThemeApply,
   ThemeImportPreview,
   SaveThemeRequest,
+  ThemeDraft,
   UserLocale,
   UserLocaleApply,
   ProxyConfig,
+  MCPConfig,
+  View,
 } from './types'
 
 // isDemoMode reports whether the app launched in the cosmetic --potatoes-are-nice
@@ -53,6 +56,26 @@ export function isDemoMode(): Promise<boolean> {
 // isn't pointed at a real install.
 export function isDevMode(): Promise<boolean> {
   return App.IsDevMode()
+}
+
+// consumePendingMailto returns the mailto: draft the app was launched with (if
+// any) and clears it, so a reload does not reopen the same compose.
+export function consumePendingMailto(): Promise<desktop.PendingMailtoDTO> {
+  return App.ConsumePendingMailto()
+}
+
+// defaultMailClientStatus reports whether Pelton is the default mailto handler.
+// known is false where the platform cannot answer reliably; the ui then shows
+// nothing rather than guessing.
+export function defaultMailClientStatus(): Promise<desktop.DefaultMailStatusDTO> {
+  return App.DefaultMailClientStatus()
+}
+
+// setDefaultMailClient asks the OS to make Pelton the default mailto handler
+// (a system sheet on macOS, the xdg association on Linux, the Settings page on
+// Windows).
+export function setDefaultMailClient(): Promise<void> {
+  return App.SetDefaultMailClient()
 }
 
 // listAccounts returns every configured account.
@@ -123,6 +146,43 @@ export function listViewMessages(
   return App.ListMessages(
     new desktop.ListMessagesRequest({ kind: 'view', folderId: 0, view, limit, offset }),
   )
+}
+
+// listSavedViewMessages reads a page of a saved View (preset search).
+export function listSavedViewMessages(
+  viewId: number,
+  limit: number,
+  offset: number,
+): Promise<MessageList> {
+  if (isDemoActive()) {
+    return Promise.resolve(demoList())
+  }
+  return App.ListMessages(
+    new desktop.ListMessagesRequest({ kind: 'savedView', folderId: 0, view: '', viewId, limit, offset }),
+  )
+}
+
+// listViews returns every saved View with its eager-run counts.
+export function listViews(): Promise<View[]> {
+  if (isDemoActive()) {
+    return Promise.resolve([])
+  }
+  return App.ListViews() as unknown as Promise<View[]>
+}
+
+// saveView creates (id 0) or updates a saved View and returns it with fresh counts.
+export function saveView(view: View): Promise<View> {
+  return App.SaveView(new desktop.ViewDTO(view)) as unknown as Promise<View>
+}
+
+// deleteView removes a saved View.
+export function deleteView(id: number): Promise<void> {
+  return App.DeleteView(id)
+}
+
+// reorderViews persists a new sidebar order for the given view ids.
+export function reorderViews(orderedIds: number[]): Promise<void> {
+  return App.ReorderViews(orderedIds)
 }
 
 // getMessage returns the full message with sanitized body and attachments.
@@ -308,6 +368,32 @@ export function listImageAllowlist(): Promise<ImageAllowEntry[]> {
 // removeImageAllow removes a trusted sender or domain from the allowlist.
 export function removeImageAllow(kind: 'sender' | 'domain', value: string): Promise<void> {
   return App.RemoveImageAllow(kind, value)
+}
+
+// listVIPSenders returns the addresses the user has marked as VIP (#126).
+export function listVIPSenders(): Promise<string[]> {
+  return App.ListVIPSenders()
+}
+
+// addVIPSender marks an address as VIP. The backend normalizes it to the bare
+// lowercased address.
+export function addVIPSender(address: string): Promise<void> {
+  return App.AddVIPSender(address)
+}
+
+// removeVIPSender drops an address from the VIP list.
+export function removeVIPSender(address: string): Promise<void> {
+  return App.RemoveVIPSender(address)
+}
+
+// markSenderVIP adds a message's sender to the VIP list.
+export function markSenderVIP(messageId: number): Promise<void> {
+  return App.MarkSenderVIP(messageId)
+}
+
+// unmarkSenderVIP removes a message's sender from the VIP list.
+export function unmarkSenderVIP(messageId: number): Promise<void> {
+  return App.UnmarkSenderVIP(messageId)
 }
 
 // senderPhotos resolves the ordered list of remote photo candidates for a sender
@@ -532,9 +618,11 @@ export function setMailActionsEnabled(enabled: boolean): void {
   void App.SetMailActionsEnabled(enabled)
 }
 
-// getUIPrefs returns all ui preferences with defaults applied server-side.
+// getUIPrefs returns all ui preferences with defaults applied server-side. The
+// backend types viewsPlacement as a plain string; it only ever emits the
+// ViewsPlacement values, so the cast is safe.
 export function getUIPrefs(): Promise<UIPrefs> {
-  return App.GetUIPrefs()
+  return App.GetUIPrefs() as unknown as Promise<UIPrefs>
 }
 
 // setSetting writes a single preference by key.
@@ -581,6 +669,7 @@ export const SettingKeys = {
   uiScale: 'ui_scale',
   messageFontSize: 'message_font_size',
   showFlaggedCount: 'show_flagged_count',
+  viewsPlacement: 'views_placement',
   flagColorSync: 'flag_color_sync',
   showOfflineIndicator: 'show_offline_indicator',
   swipeEnabled: 'swipe_enabled',
@@ -602,6 +691,8 @@ export const SettingKeys = {
   menuBarInApp: 'menu_bar_in_app',
   menuBarNativeMinimal: 'menu_bar_native_minimal',
   menuBarIcons: 'menu_bar_icons',
+  menuBarLayout: 'menu_bar_layout',
+  menuBarNewItems: 'menu_bar_new_items',
   timeFormat: 'time_format',
   reduceMotion: 'reduce_motion',
   themeDarkStart: 'theme_dark_start',
@@ -609,6 +700,8 @@ export const SettingKeys = {
   bodyFont: 'body_font',
   uiFont: 'ui_font',
   monoFont: 'mono_font',
+  notifyNewMail: 'notify_new_mail',
+  verboseSync: 'verbose_sync',
 } as const
 
 // listSystemFonts returns the installed font family names for the body font
@@ -639,8 +732,15 @@ export function previewThemeImport(): Promise<ThemeImportPreview> {
 
 // confirmThemeImport installs a previewed container. allowRemote keeps the
 // css's network references; false strips them before anything hits disk.
-export function confirmThemeImport(path: string, allowRemote: boolean): Promise<ThemeInfo> {
-  return App.ConfirmThemeImport(path, allowRemote) as Promise<ThemeInfo>
+// importTokens and importCSS are the parts choice: a deselected part is
+// dropped from the container before it is written.
+export function confirmThemeImport(
+  path: string,
+  allowRemote: boolean,
+  importTokens: boolean,
+  importCSS: boolean,
+): Promise<ThemeInfo> {
+  return App.ConfirmThemeImport(path, allowRemote, importTokens, importCSS) as Promise<ThemeInfo>
 }
 
 // deleteTheme removes an installed theme (and resets the selection if it was
@@ -658,7 +758,13 @@ export function exportTheme(id: string): Promise<string> {
 // saveCustomTheme validates and writes a palette-editor theme as a
 // .peltontheme file in the themes folder, returning its gallery info.
 export function saveCustomTheme(req: SaveThemeRequest): Promise<ThemeInfo> {
-  return App.SaveCustomTheme(req) as Promise<ThemeInfo>
+  return App.SaveCustomTheme(new desktop.SaveThemeRequest(req)) as Promise<ThemeInfo>
+}
+
+// getThemeDraft loads an installed theme back into editor form: metadata,
+// tokens and the raw source of the editor's own stylesheet.
+export function getThemeDraft(id: string): Promise<ThemeDraft> {
+  return App.GetThemeDraft(id) as Promise<ThemeDraft>
 }
 
 // openThemesFolder shows the themes folder in the system file manager.
@@ -705,4 +811,28 @@ export function setProxyConfig(cfg: ProxyConfig): Promise<void> {
 // confirm the proxy works before saving. Resolves on success.
 export function testProxy(cfg: ProxyConfig): Promise<void> {
   return App.TestProxy(new desktop.ProxyConfigDTO(cfg))
+}
+
+// getMCPConfig returns the read-only MCP server's state: enabled, loopback url,
+// bearer token and whether it is listening.
+export function getMCPConfig(): Promise<MCPConfig> {
+  return App.GetMCPConfig() as Promise<MCPConfig>
+}
+
+// setMCPEnabled turns the MCP server on or off, generating a token on first
+// enable so the endpoint is never unauthenticated.
+export function setMCPEnabled(enabled: boolean): Promise<void> {
+  return App.SetMCPEnabled(enabled)
+}
+
+// setMCPPort changes the loopback port (1024-65535) and restarts the server if
+// it is running.
+export function setMCPPort(port: number): Promise<void> {
+  return App.SetMCPPort(port)
+}
+
+// regenerateMCPToken issues a fresh bearer token, invalidating the old one, and
+// returns it for display.
+export function regenerateMCPToken(): Promise<string> {
+  return App.RegenerateMCPToken()
 }

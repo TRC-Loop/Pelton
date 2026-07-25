@@ -60,6 +60,9 @@ export interface MessageSummary {
   flagColor: number
   offline: boolean
   snoozeUntil: string
+  // senderVip is true when the from-address is on the VIP list, so the row can
+  // show a star.
+  senderVip: boolean
 }
 
 export interface MessageDetail extends MessageSummary {
@@ -195,6 +198,9 @@ export interface UIPrefs {
   messageFontSize: number
   // showFlaggedCount shows the count and bold styling on the sidebar Flagged view.
   showFlaggedCount: boolean
+  // viewsPlacement controls how saved Views (preset searches) are surfaced:
+  // hidden (off), sidebar (group in the mailbox sidebar), or tab (separate rail).
+  viewsPlacement: ViewsPlacement
   // flagColorSync pushes color labels to the server as imap keywords.
   flagColorSync: boolean
   // showOfflineIndicator shows the little downloaded badge on pinned messages.
@@ -257,6 +263,11 @@ export interface UIPrefs {
   // curated key or 'sys:<family>'; 'default' keeps the built-in fonts).
   uiFont: string
   monoFont: string
+  // notifyNewMail raises a native OS notification for new inbox mail. VIP
+  // senders notify regardless of this (see stores/vip.ts).
+  notifyNewMail: boolean
+  // verboseSync shows which mailbox is currently syncing in the status line.
+  verboseSync: boolean
 }
 
 // an installed custom theme, as shown in the settings gallery.
@@ -286,8 +297,23 @@ export interface ThemeInfo {
 export interface SaveThemeRequest {
   id: string
   name: string
+  author: string
+  version: string
   base: string
   tokens: Record<string, string>
+  css: string
+}
+
+// an installed theme loaded back into theme-editor form. css is the raw
+// source of the editor's own stylesheet, not the applied one.
+export interface ThemeDraft {
+  id: string
+  name: string
+  author: string
+  version: string
+  base: string
+  tokens: Record<string, string>
+  css: string
 }
 
 // everything needed to apply a custom theme to the document.
@@ -312,6 +338,7 @@ export interface ThemeImportPreview {
   path: string
   info: ThemeInfo
   cssFiles: ThemeCSSFile[]
+  tokenCount: number
   updatesExisting: boolean
   installedVersion: string
 }
@@ -397,6 +424,14 @@ export interface AccountSignatures {
 // the outbound proxy preference shown in settings. password is write-only: the
 // backend never sends the stored secret back, only hasPassword so the field can
 // show a placeholder.
+export interface MCPConfig {
+  enabled: boolean
+  port: number
+  token: string
+  url: string
+  running: boolean
+}
+
 export interface ProxyConfig {
   mode: string
   scheme: string
@@ -472,8 +507,37 @@ export type EditorMode = 'plaintext' | 'markdown' | 'wysiwyg'
 export type ThemePref = 'system' | 'light' | 'dark' | 'schedule'
 export type DensityPref = 'compact' | 'medium' | 'luxe'
 
-// Selection identifies what the message list is currently showing: either a
-// unified cross-account view or a single account folder.
+// Selection identifies what the message list is currently showing: a unified
+// cross-account view, a single account folder, or a user-defined saved View
+// (preset search).
 export type Selection =
   | { kind: 'view'; view: ViewKey; label: string }
   | { kind: 'folder'; folderId: number; accountId: number; label: string }
+  | { kind: 'savedView'; viewId: number; label: string }
+
+// View is a user-defined saved search ("preset search"), mirroring the backend
+// ViewDTO. accountId 0 means all accounts; withinDays 0 means no date bound. The
+// count fields are the eager-run results shown as a sidebar badge.
+export interface View {
+  id: number
+  name: string
+  icon: string
+  color: string
+  queryText: string
+  queryFrom: string
+  queryTo: string
+  querySubject: string
+  withinDays: number
+  unreadOnly: boolean
+  flaggedOnly: boolean
+  hasAttachment: boolean
+  accountId: number
+  position: number
+  unreadCount: number
+  totalCount: number
+}
+
+// how the Views group is surfaced in the ui. 'hidden' keeps the feature off,
+// 'sidebar' shows it as a group in the mailbox sidebar, 'tab' shows it in a
+// separate Views tab/rail.
+export type ViewsPlacement = 'hidden' | 'sidebar' | 'tab'

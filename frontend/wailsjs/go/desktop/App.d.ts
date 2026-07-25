@@ -6,6 +6,8 @@ export function AddOAuthAccount(arg1:desktop.AddAccountRequest):Promise<desktop.
 
 export function AddPasswordAccount(arg1:desktop.AddAccountRequest):Promise<desktop.AccountDTO>;
 
+export function AddVIPSender(arg1:string):Promise<void>;
+
 export function AllowDomainImages(arg1:number):Promise<void>;
 
 export function AppVersion():Promise<string>;
@@ -20,7 +22,11 @@ export function CheckForUpdates():Promise<desktop.UpdateCheckResult>;
 
 export function ClearSentOutbox():Promise<void>;
 
-export function ConfirmThemeImport(arg1:string,arg2:boolean):Promise<desktop.ThemeInfoDTO>;
+export function ConfirmThemeImport(arg1:string,arg2:boolean,arg3:boolean,arg4:boolean):Promise<desktop.ThemeInfoDTO>;
+
+export function ConsumePendingMailto():Promise<desktop.PendingMailtoDTO>;
+
+export function DefaultMailClientStatus():Promise<desktop.DefaultMailStatusDTO>;
 
 export function DeleteAccount(arg1:number):Promise<void>;
 
@@ -33,6 +39,8 @@ export function DeleteMessage(arg1:number):Promise<void>;
 export function DeleteSignature(arg1:number):Promise<void>;
 
 export function DeleteTheme(arg1:string):Promise<void>;
+
+export function DeleteView(arg1:number):Promise<void>;
 
 export function DiscoverConfig(arg1:string):Promise<desktop.DiscoveredDTO>;
 
@@ -48,26 +56,25 @@ export function ExportTheme(arg1:string):Promise<string>;
 
 export function GetAccountSignatures(arg1:number):Promise<desktop.AccountSignaturesDTO>;
 
+export function GetMCPConfig():Promise<desktop.MCPConfigDTO>;
+
 export function GetMessage(arg1:number):Promise<desktop.MessageDetailDTO>;
 
 export function GetMessageHTML(arg1:number,arg2:boolean):Promise<string>;
 
-export function ListSystemFonts():Promise<Array<string>>;
 export function GetMessageSource(arg1:number):Promise<string>;
+
+export function GetProxyConfig():Promise<desktop.ProxyConfigDTO>;
 
 export function GetSetting(arg1:string):Promise<desktop.SettingResult>;
 
 export function GetThemeApply(arg1:string):Promise<desktop.ThemeApplyDTO>;
 
-export function GetUserLocale(arg1:string):Promise<desktop.UserLocaleApplyDTO>;
+export function GetThemeDraft(arg1:string):Promise<desktop.ThemeDraftDTO>;
 
 export function GetUIPrefs():Promise<desktop.UIPrefsDTO>;
 
-export function GetProxyConfig():Promise<desktop.ProxyConfigDTO>;
-
-export function SetProxyConfig(arg1:desktop.ProxyConfigDTO):Promise<void>;
-
-export function TestProxy(arg1:desktop.ProxyConfigDTO):Promise<void>;
+export function GetUserLocale(arg1:string):Promise<desktop.UserLocaleApplyDTO>;
 
 export function ImportData(arg1:string,arg2:Array<string>,arg3:string):Promise<void>;
 
@@ -97,13 +104,23 @@ export function ListOutbox():Promise<Array<desktop.OutboxRowDTO>>;
 
 export function ListSignatures():Promise<Array<desktop.SignatureDTO>>;
 
-export function ListThemes():Promise<Array<desktop.ThemeInfoDTO>>;
+export function ListSystemFonts():Promise<Array<string>>;
 
-export function ListUserLocales():Promise<Array<desktop.UserLocaleDTO>>;
+export function ListThemes():Promise<Array<desktop.ThemeInfoDTO>>;
 
 export function ListUnifiedViews():Promise<Array<desktop.UnifiedViewDTO>>;
 
+export function ListUserLocales():Promise<Array<desktop.UserLocaleDTO>>;
+
+export function ListVIPSenders():Promise<Array<string>>;
+
+export function ListViews():Promise<Array<desktop.ViewDTO>>;
+
+export function MarkSenderVIP(arg1:number):Promise<void>;
+
 export function MoveMessage(arg1:number,arg2:number):Promise<desktop.ArchiveUndoDTO>;
+
+export function OpenLocalesFolder():Promise<void>;
 
 export function OpenThemesFolder():Promise<void>;
 
@@ -115,13 +132,17 @@ export function ReadAttachment(arg1:number,arg2:number):Promise<desktop.Attachme
 
 export function RebuildMenu():Promise<void>;
 
+export function RegenerateMCPToken():Promise<string>;
+
 export function RemoveImageAllow(arg1:string,arg2:string):Promise<void>;
 
 export function RemoveOffline(arg1:number):Promise<void>;
 
-export function ResumePendingDownload():Promise<void>;
+export function RemoveVIPSender(arg1:string):Promise<void>;
 
-export function OpenLocalesFolder():Promise<void>;
+export function ReorderViews(arg1:Array<number>):Promise<void>;
+
+export function ResumePendingDownload():Promise<void>;
 
 export function SaveAllAttachments(arg1:number):Promise<string>;
 
@@ -135,6 +156,8 @@ export function SaveLocaleTemplate(arg1:string):Promise<string>;
 
 export function SaveSignature(arg1:desktop.SignatureDTO):Promise<desktop.SignatureDTO>;
 
+export function SaveView(arg1:desktop.ViewDTO):Promise<desktop.ViewDTO>;
+
 export function Search(arg1:desktop.SearchRequestDTO):Promise<Array<desktop.MessageSummaryDTO>>;
 
 export function SearchAddresses(arg1:string,arg2:number):Promise<Array<desktop.AddressBookEntryDTO>>;
@@ -145,11 +168,19 @@ export function SenderPhotos(arg1:string):Promise<Array<string>>;
 
 export function SetAccountSignatures(arg1:number,arg2:number,arg3:number):Promise<void>;
 
+export function SetDefaultMailClient():Promise<void>;
+
 export function SetFlagColor(arg1:number,arg2:number):Promise<void>;
 
 export function SetFlagged(arg1:number,arg2:boolean):Promise<void>;
 
+export function SetMCPEnabled(arg1:boolean):Promise<void>;
+
+export function SetMCPPort(arg1:number):Promise<void>;
+
 export function SetMailActionsEnabled(arg1:boolean):Promise<void>;
+
+export function SetProxyConfig(arg1:desktop.ProxyConfigDTO):Promise<void>;
 
 export function SetSeen(arg1:number,arg2:boolean):Promise<void>;
 
@@ -165,6 +196,8 @@ export function SystemColorScheme():Promise<string>;
 
 export function TestConnection(arg1:desktop.TestConnectionRequest):Promise<void>;
 
+export function TestProxy(arg1:desktop.ProxyConfigDTO):Promise<void>;
+
 export function TriggerSync():Promise<void>;
 
 export function TrustSenderImages(arg1:number):Promise<void>;
@@ -172,6 +205,8 @@ export function TrustSenderImages(arg1:number):Promise<void>;
 export function UnarchiveMessage(arg1:string,arg2:number):Promise<void>;
 
 export function UndoDelete(arg1:number):Promise<void>;
+
+export function UnmarkSenderVIP(arg1:number):Promise<void>;
 
 export function UnsnoozeMessage(arg1:number):Promise<void>;
 

@@ -95,6 +95,35 @@ export function openCompose(accountId: number, mode: EditorMode): number {
   return session.id
 }
 
+// MailtoPrefill is the compose seed parsed from a mailto: link (see events.ts).
+export interface MailtoPrefill {
+  to: string
+  cc: string
+  bcc: string
+  subject: string
+  body: string
+}
+
+// openComposeWith starts a compose session seeded from a mailto: link. Empty
+// fields fall back to the blank session, and cc/bcc reveal their rows only when
+// they carry a value.
+export function openComposeWith(accountId: number, mode: EditorMode, prefill: MailtoPrefill): number {
+  const session = blankSession(accountId, mode)
+  session.to = prefill.to
+  session.subject = prefill.subject
+  session.body = prefill.body
+  if (prefill.cc) {
+    session.cc = prefill.cc
+    session.showCc = true
+  }
+  if (prefill.bcc) {
+    session.bcc = prefill.bcc
+    session.showBcc = true
+  }
+  composeSessions.update((list) => [...list, session])
+  return session.id
+}
+
 // openReply prefills a reply. replyAll also carries the cc recipients. the quoted
 // body and threading references come from the original message.
 export function openReply(detail: MessageDetail, mode: EditorMode, replyAll: boolean): number {

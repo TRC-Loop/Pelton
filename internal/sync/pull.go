@@ -47,10 +47,10 @@ func storageFlagsToImap(f storage.Flag) []imap.Flag {
 // fetchAndStore pulls a full message by uid and inserts it with its
 // attachments. body and attachments are fetched with BODY.PEEK so caching does
 // not set \Seen on the server.
-func (e *Engine) fetchAndStore(ctx context.Context, folder storage.Folder, uid uint32) error {
+func (e *Engine) fetchAndStore(ctx context.Context, folder storage.Folder, uid uint32) (int64, error) {
 	msg, err := e.client.FetchMessage(imap.UID(uid))
 	if err != nil {
-		return fmt.Errorf("sync: fetch message uid %d: %w", uid, err)
+		return 0, fmt.Errorf("sync: fetch message uid %d: %w", uid, err)
 	}
 
 	stored := &storage.Message{
@@ -84,10 +84,11 @@ func (e *Engine) fetchAndStore(ctx context.Context, folder storage.Folder, uid u
 		})
 	}
 
-	if _, err := e.store.InsertMessageWithAttachments(ctx, stored, atts); err != nil {
-		return fmt.Errorf("sync: store message uid %d: %w", uid, err)
+	id, err := e.store.InsertMessageWithAttachments(ctx, stored, atts)
+	if err != nil {
+		return 0, fmt.Errorf("sync: store message uid %d: %w", uid, err)
 	}
-	return nil
+	return id, nil
 }
 
 // deleteLocal removes a cached message that the server no longer has, including

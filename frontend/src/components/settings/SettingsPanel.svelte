@@ -31,6 +31,7 @@
     IconFileExport,
     IconRefresh,
     IconWorld,
+    IconPlugConnected,
   } from '@tabler/icons-svelte'
   import { createEventDispatcher, onMount } from 'svelte'
   import SegmentedSetting from './SegmentedSetting.svelte'
@@ -43,6 +44,8 @@
   import AddressBookSection from './AddressBookSection.svelte'
   import MailboxesSection from './MailboxesSection.svelte'
   import NetworkSection from './NetworkSection.svelte'
+  import ExternalSection from './ExternalSection.svelte'
+  import { setEditing as setMenuBarEditing, menuBarNewItems, setNewItemsMode, type NewItemsMode } from '../../stores/menubar'
   import ImportExportSection from './ImportExportSection.svelte'
   import ThemesSection from './ThemesSection.svelte'
   import ThemedIcon from '../common/ThemedIcon.svelte'
@@ -61,6 +64,7 @@
     setUIScale,
     setMessageFontSize,
     setToastPosition,
+    setNotifyNewMail,
     setPaneLocked,
     setSendDelay,
     setFlagHighlight,
@@ -73,6 +77,7 @@
     setShowSelectedCount,
     setSidebarIndentGuides,
     setShowFlaggedCount,
+    setViewsPlacement,
     setRowTemplate,
     setRowShowAvatar,
     setRowShowSnippet,
@@ -88,6 +93,7 @@
     setLanguage,
     setLowPowerMode,
     setAutoSyncInterval,
+    setVerboseSync,
     setDefaultEditorMode,
     setComposeAutocomplete,
     setComposeChips,
@@ -109,7 +115,7 @@
   import { downloadProgress } from '../../stores/progress'
   import { toastInfo, toastError, errorMessage } from '../../stores/toast'
   import { t } from '../../lib/i18n'
-  import type { ThemePref, DensityPref, EditorMode } from '../../lib/types'
+  import type { ThemePref, DensityPref, EditorMode, ViewsPlacement } from '../../lib/types'
 
   let editorModeOptions: { key: EditorMode; label: string }[] = []
   $: editorModeOptions = [
@@ -167,6 +173,7 @@
     { key: 'power', label: $t('settingsPanel.category.power'), icon: IconBatteryEco, iconName: 'battery-eco' },
     { key: 'mailboxes', label: $t('settingsPanel.category.mailboxes'), icon: IconMailbox, iconName: 'mailbox' },
     { key: 'network', label: $t('settingsPanel.category.network'), icon: IconWorld, iconName: 'world' },
+    { key: 'external', label: $t('settingsPanel.category.external'), icon: IconPlugConnected, iconName: 'plug-connected' },
     { key: 'contacts', label: $t('settingsPanel.category.contacts'), icon: IconAddressBook, iconName: 'address-book' },
     { key: 'sync', label: $t('settingsPanel.category.importExport'), icon: IconFileImport, iconName: 'file-import' },
     { key: 'composing', label: $t('settingsPanel.category.composing'), icon: IconWriting, iconName: 'writing' },
@@ -290,6 +297,11 @@
     { key: 'luxe', label: $t('onboarding.density.luxe') },
   ]
 
+  $: newItemsOptions = [
+    { key: 'visible', label: $t('menuBar.newItems.visible') },
+    { key: 'hidden', label: $t('menuBar.newItems.hidden') },
+  ]
+
   // clock preference for rendered times.
   $: timeFormatOptions = [
     { key: 'auto', label: $t('settingsPanel.timeFormat.auto') },
@@ -350,6 +362,7 @@
 
   // the remote-image allowlist manager (trusted senders/domains) opens in a modal.
   let allowlistOpen = false
+  let vipOpen = false
 
   // the reading-pane empty-state image is picked from a local file and stored as
   // a data uri. anything past the hard cap is refused; between the soft and hard
@@ -392,6 +405,12 @@
   }
 
   // sender-photo fallback chain. "Generated" never touches the network.
+  $: viewsPlacementOptions = [
+    { key: 'hidden', label: $t('views.setting.hidden') },
+    { key: 'sidebar', label: $t('views.setting.sidebar') },
+    { key: 'tab', label: $t('views.setting.tab') },
+  ]
+
   $: avatarSourceOptions = [
     { key: 'bimi_gravatar', label: $t('settingsPanel.avatarSource.bimiGravatar') },
     { key: 'gravatar_bimi', label: $t('settingsPanel.avatarSource.gravatarBimi') },
@@ -584,6 +603,24 @@
               />
             </div>
             <p class="hint">{$t('settingsPanel.hint.menuBarIcons')}</p>
+            <button
+              type="button"
+              class="edit-menubar"
+              on:click={() => {
+                setMenuBarEditing(true)
+                dispatch('close')
+              }}
+            >
+              {$t('menuBar.editButton')}
+            </button>
+            <p class="hint">{$t('menuBar.editHint')}</p>
+            <SegmentedSetting
+              label={$t('menuBar.newItems.label')}
+              value={$menuBarNewItems}
+              options={newItemsOptions}
+              on:change={(e) => setNewItemsMode(e.detail as NewItemsMode)}
+            />
+            <p class="hint">{$t('menuBar.newItems.hint')}</p>
           {/if}
           <div class="toggle">
             <span class="row-label">{$t('settingsPanel.toggle.reduceMotion')}</span>
@@ -758,6 +795,13 @@
               on:change={(e) => setShowFlaggedCount(e.detail)}
             />
           </div>
+          <SegmentedSetting
+            label={$t('views.setting.label')}
+            value={$prefs.viewsPlacement}
+            options={viewsPlacementOptions}
+            on:change={(e) => setViewsPlacement(e.detail as ViewsPlacement)}
+          />
+          <p class="hint">{$t('views.setting.hint')}</p>
         </section>
       {:else if active === 'avatars'}
         <section>
@@ -846,6 +890,21 @@
               value={$prefs.toastPosition}
               on:change={(e) => setToastPosition(e.detail)}
             />
+          </div>
+          <div class="toggle" title={$t('vip.notifyNewMailHint')}>
+            <span class="row-label">{$t('vip.notifyNewMail')}</span>
+            <ToggleSwitch
+              checked={$prefs.notifyNewMail}
+              label={$t('vip.notifyNewMail')}
+              on:change={(e) => setNotifyNewMail(e.detail)}
+            />
+          </div>
+          <div class="field">
+            <span class="row-label">{$t('vip.manageLabel')}</span>
+            <p class="hint">{$t('vip.manageHint')}</p>
+            <button type="button" class="action-btn" on:click={() => (vipOpen = true)}>
+              {$t('vip.manage')}
+            </button>
           </div>
         </section>
       {:else if active === 'panes'}
@@ -959,6 +1018,17 @@
           <p class="hint">
             {$t('settingsPanel.hint.autoSyncDetail')}
           </p>
+          <div class="toggle" title={$t('settingsPanel.hint.verboseSync')}>
+            <span class="row-label">{$t('settingsPanel.toggle.verboseSync')}</span>
+            <ToggleSwitch
+              checked={$prefs.verboseSync}
+              label={$t('settingsPanel.toggle.verboseSync')}
+              on:change={(e) => setVerboseSync(e.detail)}
+            />
+          </div>
+          <p class="hint">
+            {$t('settingsPanel.hint.verboseSyncDetail')}
+          </p>
         </section>
       {:else if active === 'offline'}
         <section>
@@ -1021,6 +1091,10 @@
       {:else if active === 'network'}
         <section>
           <NetworkSection />
+        </section>
+      {:else if active === 'external'}
+        <section>
+          <ExternalSection />
         </section>
       {:else if active === 'contacts'}
         <section>
@@ -1113,6 +1187,12 @@
         dispatch('close')
       }}
     />
+  {/await}
+{/if}
+
+{#if vipOpen}
+  {#await import('./VIPSendersModal.svelte') then m}
+    <svelte:component this={m.default} on:close={() => (vipOpen = false)} />
   {/await}
 {/if}
 
@@ -1269,6 +1349,21 @@
     font-size: var(--fz-label);
     color: var(--text-tertiary);
     line-height: 1.5;
+  }
+
+  .edit-menubar {
+    margin-top: var(--space-3);
+    padding: var(--space-2) var(--space-3);
+    border: var(--hairline) solid var(--border-default);
+    background: var(--surface-raised);
+    color: var(--text-primary);
+    font-size: var(--fz-label);
+    border-radius: var(--radius-control);
+    cursor: pointer;
+  }
+
+  .edit-menubar:hover {
+    background: var(--surface-hover);
   }
 
   /* a small marker for features that are still rough around the edges. */

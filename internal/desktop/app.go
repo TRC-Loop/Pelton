@@ -14,6 +14,7 @@ import (
 	"sync"
 
 	"github.com/TRC-Loop/Pelton/internal/configsync"
+	"github.com/TRC-Loop/Pelton/internal/mcpserver"
 	"github.com/TRC-Loop/Pelton/internal/outbox"
 	"github.com/TRC-Loop/Pelton/internal/proxy"
 	"github.com/TRC-Loop/Pelton/internal/search"
@@ -74,6 +75,17 @@ type App struct {
 	// keyring on every connection.
 	proxyMu  sync.RWMutex
 	proxyCfg proxy.Config
+
+	// mcpMu guards mcp, the read-only Model Context Protocol server. It is off by
+	// default; the External settings section starts and stops it, and a settings
+	// change (enable, port, token) restarts it under this lock so the lifecycle
+	// never races.
+	mcpMu sync.Mutex
+	mcp   *mcpserver.Server
+
+	// mailto holds a mailto: draft the app was launched with (or received from a
+	// second launch) until the frontend consumes it. See mailto.go.
+	mailto mailtoState
 }
 
 // IsDemoMode reports whether the app was launched in the cosmetic demo mode. The
@@ -185,6 +197,7 @@ func (a *App) domReady(ctx context.Context) {
 // is checkpointed cleanly.
 func (a *App) shutdown(ctx context.Context) {
 	a.stopTray()
+	a.stopMCP()
 	if a.index != nil {
 		if err := a.index.Close(); err != nil {
 			a.log.Error("close search index", "err", err)

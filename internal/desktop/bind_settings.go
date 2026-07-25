@@ -12,33 +12,34 @@ import (
 // ui-only and defined here. raw strings keep the contract in one place next to
 // the defaults.
 const (
-	settingAccent        = "accent"
-	settingDensity       = "density"
-	settingShowBadge     = "show_mailbox_badge"
-	settingShowDateTime  = "show_datetime"
-	settingShowPGP       = "show_pgp"
-	settingShowAuth      = "show_auth"
-	settingToastPosition = "toast_position"
-	settingPaneLocked    = "pane_locked"
-	settingSidebarWidth  = "sidebar_width"
-	settingListWidth     = "list_width"
-	settingSendDelay     = "send_delay_seconds"
-	settingFlagHighlight = "flag_highlight"
-	settingShortcutHints = "show_shortcut_hints"
-	settingAccountEmail  = "show_account_email"
-	settingRemoteAlways  = "remote_images_always"
-	settingAvatarSource  = "avatar_source"
-	settingAvatarStyle   = "avatar_style"
-	settingMultiSelect   = "multi_select_enabled"
-	settingSelectedCount = "show_selected_count"
-	settingIndentGuides  = "sidebar_indent_guides"
-	settingRowTemplate   = "row_template"
-	settingRowAvatar     = "row_show_avatar"
-	settingRowSnippet    = "row_show_snippet"
-	settingPreviewLines  = "preview_lines"
-	settingUIScale       = "ui_scale"
-	settingMessageFont   = "message_font_size"
-	settingFlaggedCount  = "show_flagged_count"
+	settingAccent         = "accent"
+	settingDensity        = "density"
+	settingShowBadge      = "show_mailbox_badge"
+	settingShowDateTime   = "show_datetime"
+	settingShowPGP        = "show_pgp"
+	settingShowAuth       = "show_auth"
+	settingToastPosition  = "toast_position"
+	settingPaneLocked     = "pane_locked"
+	settingSidebarWidth   = "sidebar_width"
+	settingListWidth      = "list_width"
+	settingSendDelay      = "send_delay_seconds"
+	settingFlagHighlight  = "flag_highlight"
+	settingShortcutHints  = "show_shortcut_hints"
+	settingAccountEmail   = "show_account_email"
+	settingRemoteAlways   = "remote_images_always"
+	settingAvatarSource   = "avatar_source"
+	settingAvatarStyle    = "avatar_style"
+	settingMultiSelect    = "multi_select_enabled"
+	settingSelectedCount  = "show_selected_count"
+	settingIndentGuides   = "sidebar_indent_guides"
+	settingRowTemplate    = "row_template"
+	settingRowAvatar      = "row_show_avatar"
+	settingRowSnippet     = "row_show_snippet"
+	settingPreviewLines   = "preview_lines"
+	settingUIScale        = "ui_scale"
+	settingMessageFont    = "message_font_size"
+	settingFlaggedCount   = "show_flagged_count"
+	settingViewsPlacement = "views_placement"
 	// newer feature settings.
 	settingFlagColorSync       = "flag_color_sync"
 	settingShowOffline         = "show_offline_indicator"
@@ -81,6 +82,12 @@ const (
 	settingMonoFont = "mono_font"
 	// corner style for controls and cards: default, square, or round (#60).
 	settingCornerStyle = "corner_style"
+	// general new-mail OS notifications (#126). VIP senders are stored
+	// separately in bind_vip.go and notify even when this is off.
+	settingNotifyNewMail = "notify_new_mail"
+	// verbose sync surfaces the mailbox currently being synced in the status
+	// line instead of a plain "Syncing" (#128). Off by default.
+	settingVerboseSync = "verbose_sync"
 )
 
 // settingUpdateCheckFreq, settingLastUpdateCheck and defaultUpdateCheckFrequency
@@ -168,6 +175,10 @@ type UIPrefsDTO struct {
 	// MessageFontSize sets the base font size in px for rendered email content.
 	UIScale         string `json:"uiScale"`
 	MessageFontSize int    `json:"messageFontSize"`
+	// ViewsPlacement controls how saved Views (preset searches) are surfaced:
+	// "hidden" (default, feature off), "sidebar" (a group in the mailbox
+	// sidebar), or "tab" (a separate Views tab/rail).
+	ViewsPlacement string `json:"viewsPlacement"`
 	// ShowFlaggedCount shows the count and bold styling on the sidebar Flagged
 	// view. Off keeps the entry but renders it plain.
 	ShowFlaggedCount bool `json:"showFlaggedCount"`
@@ -241,6 +252,12 @@ type UIPrefsDTO struct {
 	// UIFont and MonoFont override the interface and monospace font tokens.
 	UIFont   string `json:"uiFont"`
 	MonoFont string `json:"monoFont"`
+	// NotifyNewMail raises a native OS notification when new mail lands in an
+	// inbox. Off by default. VIP-sender notifications fire regardless of this
+	// (see bind_vip.go), so important senders cut through when it is off.
+	NotifyNewMail bool `json:"notifyNewMail"`
+	// VerboseSync shows which mailbox is currently syncing in the status line.
+	VerboseSync bool `json:"verboseSync"`
 }
 
 // GetUIPrefs returns all ui preferences with defaults filled in, so startup is a
@@ -278,6 +295,7 @@ func (a *App) GetUIPrefs() (UIPrefsDTO, error) {
 		UIScale:             a.stringSetting(settingUIScale, defaultUIScale),
 		MessageFontSize:     a.intSetting(settingMessageFont, defaultMessageFont),
 		ShowFlaggedCount:    a.boolSetting(settingFlaggedCount, true),
+		ViewsPlacement:      a.stringSetting(settingViewsPlacement, "hidden"),
 
 		FlagColorSync:              a.boolSetting(settingFlagColorSync, false),
 		ShowOfflineIndicator:       a.boolSetting(settingShowOffline, true),
@@ -307,6 +325,8 @@ func (a *App) GetUIPrefs() (UIPrefsDTO, error) {
 		BodyFont:                   a.stringSetting(settingBodyFont, "default"),
 		UIFont:                     a.stringSetting(settingUIFont, "default"),
 		MonoFont:                   a.stringSetting(settingMonoFont, "default"),
+		NotifyNewMail:              a.boolSetting(settingNotifyNewMail, false),
+		VerboseSync:                a.boolSetting(settingVerboseSync, false),
 	}, nil
 }
 

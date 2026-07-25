@@ -1,29 +1,5 @@
 export namespace desktop {
-
-	export class ProxyConfigDTO {
-	    mode: string;
-	    scheme: string;
-	    host: string;
-	    port: number;
-	    username: string;
-	    password: string;
-	    hasPassword: boolean;
-
-	    static createFrom(source: any = {}) {
-	        return new ProxyConfigDTO(source);
-	    }
-
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.mode = source["mode"];
-	        this.scheme = source["scheme"];
-	        this.host = source["host"];
-	        this.port = source["port"];
-	        this.username = source["username"];
-	        this.password = source["password"];
-	        this.hasPassword = source["hasPassword"];
-	    }
-	}
+	
 	export class AccountDTO {
 	    id: number;
 	    email: string;
@@ -33,11 +9,11 @@ export namespace desktop {
 	    imapPort: number;
 	    smtpHost: string;
 	    smtpPort: number;
-
+	
 	    static createFrom(source: any = {}) {
 	        return new AccountDTO(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.id = source["id"];
@@ -76,11 +52,11 @@ export namespace desktop {
 	    provider: string;
 	    clientId: string;
 	    clientSecret: string;
-
+	
 	    static createFrom(source: any = {}) {
 	        return new AddAccountRequest(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.email = source["email"];
@@ -286,6 +262,20 @@ export namespace desktop {
 		    return a;
 		}
 	}
+	export class DefaultMailStatusDTO {
+	    known: boolean;
+	    isDefault: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new DefaultMailStatusDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.known = source["known"];
+	        this.isDefault = source["isDefault"];
+	    }
+	}
 	export class DiscoveredDTO {
 	    imapHost: string;
 	    imapPort: number;
@@ -396,6 +386,7 @@ export namespace desktop {
 	    kind: string;
 	    folderId: number;
 	    view: string;
+	    viewId: number;
 	    limit: number;
 	    offset: number;
 	
@@ -408,8 +399,49 @@ export namespace desktop {
 	        this.kind = source["kind"];
 	        this.folderId = source["folderId"];
 	        this.view = source["view"];
+	        this.viewId = source["viewId"];
 	        this.limit = source["limit"];
 	        this.offset = source["offset"];
+	    }
+	}
+	export class MCPConfigDTO {
+	    enabled: boolean;
+	    port: number;
+	    token: string;
+	    url: string;
+	    running: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new MCPConfigDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.enabled = source["enabled"];
+	        this.port = source["port"];
+	        this.token = source["token"];
+	        this.url = source["url"];
+	        this.running = source["running"];
+	    }
+	}
+	export class MailtoDraft {
+	    to: string;
+	    cc: string;
+	    bcc: string;
+	    subject: string;
+	    body: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new MailtoDraft(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.to = source["to"];
+	        this.cc = source["cc"];
+	        this.bcc = source["bcc"];
+	        this.subject = source["subject"];
+	        this.body = source["body"];
 	    }
 	}
 	export class UnsubscribeDTO {
@@ -447,6 +479,7 @@ export namespace desktop {
 	    flagColor: number;
 	    offline: boolean;
 	    snoozeUntil: string;
+	    senderVip: boolean;
 	    toAddresses: string;
 	    ccAddresses: string;
 	    bodyPlain: string;
@@ -482,6 +515,7 @@ export namespace desktop {
 	        this.flagColor = source["flagColor"];
 	        this.offline = source["offline"];
 	        this.snoozeUntil = source["snoozeUntil"];
+	        this.senderVip = source["senderVip"];
 	        this.toAddresses = source["toAddresses"];
 	        this.ccAddresses = source["ccAddresses"];
 	        this.bodyPlain = source["bodyPlain"];
@@ -531,6 +565,7 @@ export namespace desktop {
 	    flagColor: number;
 	    offline: boolean;
 	    snoozeUntil: string;
+	    senderVip: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new MessageSummaryDTO(source);
@@ -556,6 +591,7 @@ export namespace desktop {
 	        this.flagColor = source["flagColor"];
 	        this.offline = source["offline"];
 	        this.snoozeUntil = source["snoozeUntil"];
+	        this.senderVip = source["senderVip"];
 	    }
 	}
 	export class MessageListDTO {
@@ -617,11 +653,70 @@ export namespace desktop {
 	        this.createdAt = source["createdAt"];
 	    }
 	}
+	export class PendingMailtoDTO {
+	    present: boolean;
+	    draft: MailtoDraft;
+	
+	    static createFrom(source: any = {}) {
+	        return new PendingMailtoDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.present = source["present"];
+	        this.draft = this.convertValues(source["draft"], MailtoDraft);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class ProxyConfigDTO {
+	    mode: string;
+	    scheme: string;
+	    host: string;
+	    port: number;
+	    username: string;
+	    password: string;
+	    hasPassword: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new ProxyConfigDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.mode = source["mode"];
+	        this.scheme = source["scheme"];
+	        this.host = source["host"];
+	        this.port = source["port"];
+	        this.username = source["username"];
+	        this.password = source["password"];
+	        this.hasPassword = source["hasPassword"];
+	    }
+	}
 	export class SaveThemeRequest {
 	    id: string;
 	    name: string;
+	    author: string;
+	    version: string;
 	    base: string;
 	    tokens: Record<string, string>;
+	    css: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new SaveThemeRequest(source);
@@ -631,8 +726,11 @@ export namespace desktop {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.id = source["id"];
 	        this.name = source["name"];
+	        this.author = source["author"];
+	        this.version = source["version"];
 	        this.base = source["base"];
 	        this.tokens = source["tokens"];
+	        this.css = source["css"];
 	    }
 	}
 	export class SearchRequestDTO {
@@ -701,11 +799,11 @@ export namespace desktop {
 	    imapHost: string;
 	    imapPort: number;
 	    password: string;
-
+	
 	    static createFrom(source: any = {}) {
 	        return new TestConnectionRequest(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.email = source["email"];
@@ -733,6 +831,30 @@ export namespace desktop {
 	        this.tokens = source["tokens"];
 	        this.css = source["css"];
 	        this.icons = source["icons"];
+	    }
+	}
+	export class ThemeDraftDTO {
+	    id: string;
+	    name: string;
+	    author: string;
+	    version: string;
+	    base: string;
+	    tokens: Record<string, string>;
+	    css: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new ThemeDraftDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.name = source["name"];
+	        this.author = source["author"];
+	        this.version = source["version"];
+	        this.base = source["base"];
+	        this.tokens = source["tokens"];
+	        this.css = source["css"];
 	    }
 	}
 	export class ThemeInfoDTO {
@@ -772,6 +894,7 @@ export namespace desktop {
 	    path: string;
 	    info: ThemeInfoDTO;
 	    cssFiles: themepack.CSSFile[];
+	    tokenCount: number;
 	    updatesExisting: boolean;
 	    installedVersion: string;
 	
@@ -785,6 +908,7 @@ export namespace desktop {
 	        this.path = source["path"];
 	        this.info = this.convertValues(source["info"], ThemeInfoDTO);
 	        this.cssFiles = this.convertValues(source["cssFiles"], themepack.CSSFile);
+	        this.tokenCount = source["tokenCount"];
 	        this.updatesExisting = source["updatesExisting"];
 	        this.installedVersion = source["installedVersion"];
 	    }
@@ -836,6 +960,7 @@ export namespace desktop {
 	    previewLines: number;
 	    uiScale: string;
 	    messageFontSize: number;
+	    viewsPlacement: string;
 	    showFlaggedCount: boolean;
 	    flagColorSync: boolean;
 	    showOfflineIndicator: boolean;
@@ -865,6 +990,8 @@ export namespace desktop {
 	    bodyFont: string;
 	    uiFont: string;
 	    monoFont: string;
+	    notifyNewMail: boolean;
+	    verboseSync: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new UIPrefsDTO(source);
@@ -899,6 +1026,7 @@ export namespace desktop {
 	        this.previewLines = source["previewLines"];
 	        this.uiScale = source["uiScale"];
 	        this.messageFontSize = source["messageFontSize"];
+	        this.viewsPlacement = source["viewsPlacement"];
 	        this.showFlaggedCount = source["showFlaggedCount"];
 	        this.flagColorSync = source["flagColorSync"];
 	        this.showOfflineIndicator = source["showOfflineIndicator"];
@@ -928,6 +1056,8 @@ export namespace desktop {
 	        this.bodyFont = source["bodyFont"];
 	        this.uiFont = source["uiFont"];
 	        this.monoFont = source["monoFont"];
+	        this.notifyNewMail = source["notifyNewMail"];
+	        this.verboseSync = source["verboseSync"];
 	    }
 	}
 	export class UnifiedViewDTO {
@@ -957,11 +1087,11 @@ export namespace desktop {
 	    imapPort: number;
 	    smtpHost: string;
 	    smtpPort: number;
-
+	
 	    static createFrom(source: any = {}) {
 	        return new UpdateAccountRequest(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.id = source["id"];
@@ -1000,11 +1130,11 @@ export namespace desktop {
 	    name: string;
 	    base: string;
 	    strings: Record<string, string>;
-
+	
 	    static createFrom(source: any = {}) {
 	        return new UserLocaleApplyDTO(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.id = source["id"];
@@ -1019,11 +1149,11 @@ export namespace desktop {
 	    author: string;
 	    base: string;
 	    count: number;
-
+	
 	    static createFrom(source: any = {}) {
 	        return new UserLocaleDTO(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.id = source["id"];
@@ -1031,6 +1161,48 @@ export namespace desktop {
 	        this.author = source["author"];
 	        this.base = source["base"];
 	        this.count = source["count"];
+	    }
+	}
+	export class ViewDTO {
+	    id: number;
+	    name: string;
+	    icon: string;
+	    color: string;
+	    queryText: string;
+	    queryFrom: string;
+	    queryTo: string;
+	    querySubject: string;
+	    withinDays: number;
+	    unreadOnly: boolean;
+	    flaggedOnly: boolean;
+	    hasAttachment: boolean;
+	    accountId: number;
+	    position: number;
+	    unreadCount: number;
+	    totalCount: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new ViewDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.name = source["name"];
+	        this.icon = source["icon"];
+	        this.color = source["color"];
+	        this.queryText = source["queryText"];
+	        this.queryFrom = source["queryFrom"];
+	        this.queryTo = source["queryTo"];
+	        this.querySubject = source["querySubject"];
+	        this.withinDays = source["withinDays"];
+	        this.unreadOnly = source["unreadOnly"];
+	        this.flaggedOnly = source["flaggedOnly"];
+	        this.hasAttachment = source["hasAttachment"];
+	        this.accountId = source["accountId"];
+	        this.position = source["position"];
+	        this.unreadCount = source["unreadCount"];
+	        this.totalCount = source["totalCount"];
 	    }
 	}
 

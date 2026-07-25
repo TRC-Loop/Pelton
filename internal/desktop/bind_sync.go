@@ -29,6 +29,8 @@ func (a *App) startBackgroundServices() {
 	go a.runSnoozePoller()
 	go a.harvestAddressBook()
 	go a.runAutoSyncLoop()
+	a.startMCPIfEnabled()
+	go a.refreshViewCounts()
 }
 
 // runAutoSyncLoop periodically runs a full sync pass across every account, on
@@ -204,6 +206,7 @@ func (a *App) syncFolders(client *pimap.Client, accountID int64) error {
 		if res.New > 0 {
 			newTotal += res.New
 			a.emit(EventMailNew, MailNewEvent{AccountID: accountID, FolderID: f.ID, Count: res.New})
+			go a.notifyNewMail(f, res.NewIDs)
 		}
 	}
 	a.emit(EventSyncProgress, SyncProgressEvent{
@@ -214,6 +217,7 @@ func (a *App) syncFolders(client *pimap.Client, accountID int64) error {
 	// path so the search backfill never holds up the next sync.
 	if newTotal > 0 {
 		go a.indexNewMessages()
+		go a.refreshViewCounts()
 		if !a.lowPowerMode() {
 			go a.harvestAddressBook()
 		}
@@ -250,7 +254,9 @@ func (a *App) syncOneFolder(client *pimap.Client, folder storage.Folder) error {
 	}
 	if res.New > 0 {
 		a.emit(EventMailNew, MailNewEvent{AccountID: folder.AccountID, FolderID: folder.ID, Count: res.New})
+		go a.notifyNewMail(folder, res.NewIDs)
 		go a.indexNewMessages()
+		go a.refreshViewCounts()
 		if !a.lowPowerMode() {
 			go a.harvestAddressBook()
 		}
@@ -310,35 +316,27 @@ func (a *App) idleSession(account storage.Account) error {
 		return fmt.Errorf("select inbox for idle: %w", err)
 	}
 
-	// client.Updates() is never closed, so without this the listener goroutine
-	// below would leak on every reconnect (idleLoop calls idleSession again on
-	// error, each time with a fresh client and channel). sessionCtx ties the
-	// goroutine's lifetime to this call.
-	sessionCtx, cancel := context.WithCancel(a.ctx)
-	defer cancel()
-
-	go func() {
-		for {
-			select {
-			case <-sessionCtx.Done():
-				return
-			case _, ok := <-client.Updates():
-				if !ok {
-					return
-				}
-				syncMu.Lock()
-				// idle only watches INBOX, so only resync INBOX here; a full
-				// resync of every folder would make each push wait on folders
-				// that did not change, delaying the new mail this update is
-				// actually about. other folders still get picked up by the
-				// periodic full sync (runAutoSyncLoop).
-				if err := a.syncOneFolder(client, *inbox); err != nil {
-					a.log.Error("idle resync", "err", err)
-				}
-				syncMu.Unlock()
-			}
+	// Park on IDLE; when the server pushes activity, IdleUntil stops IDLE and
+	// returns, freeing the connection so the resync FETCH can run on it. Doing
+	// the FETCH while IDLE was still held is what made new mail take minutes to
+	// arrive. Only INBOX is resynced here (idle watches only INBOX); other
+	// folders are covered by the periodic full sync (runAutoSyncLoop). syncMu is
+	// held only for the brief resync so manual and background syncs are not
+	// blocked while idling.
+	for a.ctx.Err() == nil {
+		gotUpdate, err := client.IdleUntil(a.ctx)
+		if err != nil {
+			return err
 		}
-	}()
-
-	return client.Idle(a.ctx)
+		if !gotUpdate {
+			return nil
+		}
+		syncMu.Lock()
+		err = a.syncOneFolder(client, *inbox)
+		syncMu.Unlock()
+		if err != nil {
+			a.log.Error("idle resync", "err", err)
+		}
+	}
+	return nil
 }

@@ -25,6 +25,8 @@
     IconDownload,
     IconDownloadOff,
     IconFolderSymlink,
+    IconStar,
+    IconStarFilled,
   } from '@tabler/icons-svelte'
   import { selection, searchQuery, openMessageId, openMessage } from '../../stores/selection'
   import {
@@ -63,6 +65,7 @@
   import { recordArchived } from '../../stores/undoarchive'
   import { openContextMenu, type MenuEntry } from '../../stores/contextmenu'
   import { errorMessage, toastError, toastSuccess } from '../../stores/toast'
+  import { isVIPAddress, addVIP, removeVIP } from '../../stores/vip'
   import type { Selection, MessageSummary, SwipeAction, EditorMode } from '../../lib/types'
   import { t } from '../../lib/i18n'
 
@@ -114,7 +117,13 @@
   // selectionKey identifies a selection so we reload only when it actually
   // changes, not on unrelated store updates.
   function selectionKey(sel: Selection): string {
-    return sel.kind === 'view' ? `view:${sel.view}` : `folder:${sel.folderId}`
+    if (sel.kind === 'view') {
+      return `view:${sel.view}`
+    }
+    if (sel.kind === 'savedView') {
+      return `savedView:${sel.viewId}`
+    }
+    return `folder:${sel.folderId}`
   }
 
   let lastKey = ''
@@ -277,6 +286,20 @@
     patchInList(item.id, { flagged: !item.flagged })
     try {
       await setFlagged(item.id, !item.flagged)
+    } catch (err) {
+      toastError(errorMessage(err))
+    }
+  }
+
+  // toggleVIP stars or unstars a row's sender from the context menu; the vip
+  // store drives the live star on every row from that sender.
+  async function toggleVIP(item: MessageSummary): Promise<void> {
+    try {
+      if (isVIPAddress(item.fromAddress)) {
+        await removeVIP(item.fromAddress)
+      } else {
+        await addVIP(item.fromAddress)
+      }
     } catch (err) {
       toastError(errorMessage(err))
     }
@@ -464,6 +487,9 @@
         ? { label: $t('messageList.unflag'), icon: IconFlag, action: () => void toggleFlag(item) }
         : { label: $t('messageList.flag'), icon: IconFlagFilled, action: () => void toggleFlag(item) },
       { kind: 'colors', current: item.flagColor, onPick: (color) => void setColor(item, color) },
+      isVIPAddress(item.fromAddress)
+        ? { label: $t('vip.unmark'), icon: IconStar, action: () => void toggleVIP(item) }
+        : { label: $t('vip.mark'), icon: IconStarFilled, action: () => void toggleVIP(item) },
       'separator',
       { label: $t('messageList.menu.snooze'), icon: IconClockPause, action: () => openSnooze(item.id, item.subject) },
       { label: $t('messageList.menu.moveTo'), icon: IconFolderSymlink, action: () => openMove(item) },

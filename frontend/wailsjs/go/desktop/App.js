@@ -10,6 +10,10 @@ export function AddPasswordAccount(arg1) {
   return window['go']['desktop']['App']['AddPasswordAccount'](arg1);
 }
 
+export function AddVIPSender(arg1) {
+  return window['go']['desktop']['App']['AddVIPSender'](arg1);
+}
+
 export function AllowDomainImages(arg1) {
   return window['go']['desktop']['App']['AllowDomainImages'](arg1);
 }
@@ -38,8 +42,16 @@ export function ClearSentOutbox() {
   return window['go']['desktop']['App']['ClearSentOutbox']();
 }
 
-export function ConfirmThemeImport(arg1, arg2) {
-  return window['go']['desktop']['App']['ConfirmThemeImport'](arg1, arg2);
+export function ConfirmThemeImport(arg1, arg2, arg3, arg4) {
+  return window['go']['desktop']['App']['ConfirmThemeImport'](arg1, arg2, arg3, arg4);
+}
+
+export function ConsumePendingMailto() {
+  return window['go']['desktop']['App']['ConsumePendingMailto']();
+}
+
+export function DefaultMailClientStatus() {
+  return window['go']['desktop']['App']['DefaultMailClientStatus']();
 }
 
 export function DeleteAccount(arg1) {
@@ -64,6 +76,10 @@ export function DeleteSignature(arg1) {
 
 export function DeleteTheme(arg1) {
   return window['go']['desktop']['App']['DeleteTheme'](arg1);
+}
+
+export function DeleteView(arg1) {
+  return window['go']['desktop']['App']['DeleteView'](arg1);
 }
 
 export function DiscoverConfig(arg1) {
@@ -94,6 +110,10 @@ export function GetAccountSignatures(arg1) {
   return window['go']['desktop']['App']['GetAccountSignatures'](arg1);
 }
 
+export function GetMCPConfig() {
+  return window['go']['desktop']['App']['GetMCPConfig']();
+}
+
 export function GetMessage(arg1) {
   return window['go']['desktop']['App']['GetMessage'](arg1);
 }
@@ -102,12 +122,12 @@ export function GetMessageHTML(arg1, arg2) {
   return window['go']['desktop']['App']['GetMessageHTML'](arg1, arg2);
 }
 
-export function ListSystemFonts() {
-  return window['go']['desktop']['App']['ListSystemFonts']();
-}
-
 export function GetMessageSource(arg1) {
   return window['go']['desktop']['App']['GetMessageSource'](arg1);
+}
+
+export function GetProxyConfig() {
+  return window['go']['desktop']['App']['GetProxyConfig']();
 }
 
 export function GetSetting(arg1) {
@@ -118,24 +138,16 @@ export function GetThemeApply(arg1) {
   return window['go']['desktop']['App']['GetThemeApply'](arg1);
 }
 
-export function GetUserLocale(arg1) {
-  return window['go']['desktop']['App']['GetUserLocale'](arg1);
+export function GetThemeDraft(arg1) {
+  return window['go']['desktop']['App']['GetThemeDraft'](arg1);
 }
 
 export function GetUIPrefs() {
   return window['go']['desktop']['App']['GetUIPrefs']();
 }
 
-export function GetProxyConfig() {
-  return window['go']['desktop']['App']['GetProxyConfig']();
-}
-
-export function SetProxyConfig(arg1) {
-  return window['go']['desktop']['App']['SetProxyConfig'](arg1);
-}
-
-export function TestProxy(arg1) {
-  return window['go']['desktop']['App']['TestProxy'](arg1);
+export function GetUserLocale(arg1) {
+  return window['go']['desktop']['App']['GetUserLocale'](arg1);
 }
 
 export function ImportData(arg1, arg2, arg3) {
@@ -194,20 +206,40 @@ export function ListSignatures() {
   return window['go']['desktop']['App']['ListSignatures']();
 }
 
-export function ListThemes() {
-  return window['go']['desktop']['App']['ListThemes']();
+export function ListSystemFonts() {
+  return window['go']['desktop']['App']['ListSystemFonts']();
 }
 
-export function ListUserLocales() {
-  return window['go']['desktop']['App']['ListUserLocales']();
+export function ListThemes() {
+  return window['go']['desktop']['App']['ListThemes']();
 }
 
 export function ListUnifiedViews() {
   return window['go']['desktop']['App']['ListUnifiedViews']();
 }
 
+export function ListUserLocales() {
+  return window['go']['desktop']['App']['ListUserLocales']();
+}
+
+export function ListVIPSenders() {
+  return window['go']['desktop']['App']['ListVIPSenders']();
+}
+
+export function ListViews() {
+  return window['go']['desktop']['App']['ListViews']();
+}
+
+export function MarkSenderVIP(arg1) {
+  return window['go']['desktop']['App']['MarkSenderVIP'](arg1);
+}
+
 export function MoveMessage(arg1, arg2) {
   return window['go']['desktop']['App']['MoveMessage'](arg1, arg2);
+}
+
+export function OpenLocalesFolder() {
+  return window['go']['desktop']['App']['OpenLocalesFolder']();
 }
 
 export function OpenThemesFolder() {
@@ -230,6 +262,10 @@ export function RebuildMenu() {
   return window['go']['desktop']['App']['RebuildMenu']();
 }
 
+export function RegenerateMCPToken() {
+  return window['go']['desktop']['App']['RegenerateMCPToken']();
+}
+
 export function RemoveImageAllow(arg1, arg2) {
   return window['go']['desktop']['App']['RemoveImageAllow'](arg1, arg2);
 }
@@ -238,12 +274,16 @@ export function RemoveOffline(arg1) {
   return window['go']['desktop']['App']['RemoveOffline'](arg1);
 }
 
-export function ResumePendingDownload() {
-  return window['go']['desktop']['App']['ResumePendingDownload']();
+export function RemoveVIPSender(arg1) {
+  return window['go']['desktop']['App']['RemoveVIPSender'](arg1);
 }
 
-export function OpenLocalesFolder() {
-  return window['go']['desktop']['App']['OpenLocalesFolder']();
+export function ReorderViews(arg1) {
+  return window['go']['desktop']['App']['ReorderViews'](arg1);
+}
+
+export function ResumePendingDownload() {
+  return window['go']['desktop']['App']['ResumePendingDownload']();
 }
 
 export function SaveAllAttachments(arg1) {
@@ -270,6 +310,10 @@ export function SaveSignature(arg1) {
   return window['go']['desktop']['App']['SaveSignature'](arg1);
 }
 
+export function SaveView(arg1) {
+  return window['go']['desktop']['App']['SaveView'](arg1);
+}
+
 export function Search(arg1) {
   return window['go']['desktop']['App']['Search'](arg1);
 }
@@ -290,6 +334,10 @@ export function SetAccountSignatures(arg1, arg2, arg3) {
   return window['go']['desktop']['App']['SetAccountSignatures'](arg1, arg2, arg3);
 }
 
+export function SetDefaultMailClient() {
+  return window['go']['desktop']['App']['SetDefaultMailClient']();
+}
+
 export function SetFlagColor(arg1, arg2) {
   return window['go']['desktop']['App']['SetFlagColor'](arg1, arg2);
 }
@@ -298,8 +346,20 @@ export function SetFlagged(arg1, arg2) {
   return window['go']['desktop']['App']['SetFlagged'](arg1, arg2);
 }
 
+export function SetMCPEnabled(arg1) {
+  return window['go']['desktop']['App']['SetMCPEnabled'](arg1);
+}
+
+export function SetMCPPort(arg1) {
+  return window['go']['desktop']['App']['SetMCPPort'](arg1);
+}
+
 export function SetMailActionsEnabled(arg1) {
   return window['go']['desktop']['App']['SetMailActionsEnabled'](arg1);
+}
+
+export function SetProxyConfig(arg1) {
+  return window['go']['desktop']['App']['SetProxyConfig'](arg1);
 }
 
 export function SetSeen(arg1, arg2) {
@@ -330,6 +390,10 @@ export function TestConnection(arg1) {
   return window['go']['desktop']['App']['TestConnection'](arg1);
 }
 
+export function TestProxy(arg1) {
+  return window['go']['desktop']['App']['TestProxy'](arg1);
+}
+
 export function TriggerSync() {
   return window['go']['desktop']['App']['TriggerSync']();
 }
@@ -344,6 +408,10 @@ export function UnarchiveMessage(arg1, arg2) {
 
 export function UndoDelete(arg1) {
   return window['go']['desktop']['App']['UndoDelete'](arg1);
+}
+
+export function UnmarkSenderVIP(arg1) {
+  return window['go']['desktop']['App']['UnmarkSenderVIP'](arg1);
 }
 
 export function UnsnoozeMessage(arg1) {

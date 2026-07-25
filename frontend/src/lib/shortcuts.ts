@@ -32,6 +32,9 @@ export type ShortcutAction =
   | 'delete-message'
   | 'archive'
   | 'unsubscribe'
+  | 'new-view'
+  | 'next-view'
+  | 'prev-view'
 
 // Shortcut pairs an action with its default combo and the label key for display.
 export interface Shortcut {
@@ -65,6 +68,10 @@ export const shortcuts: Shortcut[] = [
   { action: 'delete-message', combo: '', labelKey: 'shortcut.deleteMessage' },
   { action: 'archive', combo: '', labelKey: 'shortcut.archive' },
   { action: 'unsubscribe', combo: '', labelKey: 'shortcut.unsubscribe' },
+  // saved views (preset searches), unbound by default so the user opts in.
+  { action: 'new-view', combo: '', labelKey: 'shortcut.newView' },
+  { action: 'next-view', combo: '', labelKey: 'shortcut.nextView' },
+  { action: 'prev-view', combo: '', labelKey: 'shortcut.prevView' },
 ]
 
 // ParsedCombo is a combo broken into its modifier flags and final key.

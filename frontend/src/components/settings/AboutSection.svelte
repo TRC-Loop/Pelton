@@ -8,9 +8,10 @@
   import { IconBrandGithub, IconBug, IconLicense, IconX, IconRefresh, IconUsers, IconWorld, IconBook2 } from '@tabler/icons-svelte'
   import { BrowserOpenURL } from '../../../wailsjs/runtime/runtime'
   import { APP } from '../../lib/app-info'
-  import { appVersion, checkForUpdates, type UpdateCheckResult } from '../../lib/api'
+  import { appVersion, checkForUpdates, defaultMailClientStatus, setDefaultMailClient, type UpdateCheckResult } from '../../lib/api'
   import { onUpdateAvailable } from '../../lib/events'
   import { prefs, setUpdateCheckFrequency } from '../../stores/prefs'
+  import { toastError, errorMessage } from '../../stores/toast'
   import SegmentedSetting from './SegmentedSetting.svelte'
   import { t } from '../../lib/i18n'
 
@@ -28,7 +29,38 @@
     } catch {
       // keep the static fallback.
     }
+    void refreshMailDefault()
   })
+
+  // whether Pelton is the default mailto handler. null until checked; known is
+  // false where the platform cannot answer, in which case the passive line
+  // below stays hidden rather than guessing wrong.
+  let mailDefault: { known: boolean; isDefault: boolean } | null = null
+  let settingDefault = false
+  $: showSetDefault = mailDefault?.known === true && mailDefault.isDefault === false
+
+  async function refreshMailDefault(): Promise<void> {
+    try {
+      mailDefault = await defaultMailClientStatus()
+    } catch {
+      mailDefault = null
+    }
+  }
+
+  async function makeDefaultMail(): Promise<void> {
+    settingDefault = true
+    try {
+      await setDefaultMailClient()
+      // macOS shows a confirmation sheet, so the change may land after this
+      // resolves; re-checking keeps the line accurate on the platforms that
+      // apply it synchronously and is harmless where it does not.
+      await refreshMailDefault()
+    } catch (err) {
+      toastError(errorMessage(err))
+    } finally {
+      settingDefault = false
+    }
+  }
 
   // update checking is off by default; it only ever talks to GitHub's public
   // releases api (no telemetry, no other endpoint) to compare tags.
@@ -142,6 +174,15 @@
       {$t('about.licenses')}
     </button>
   </div>
+
+  {#if showSetDefault}
+    <div class="row">
+      <span class="row-label">{$t('about.defaultMail.label')}</span>
+      <button type="button" class="action-btn" disabled={settingDefault} on:click={makeDefaultMail}>
+        {$t('about.defaultMail.setButton')}
+      </button>
+    </div>
+  {/if}
 
   <div class="row">
     <span class="row-label">{$t('about.rerunTourLabel')}</span>

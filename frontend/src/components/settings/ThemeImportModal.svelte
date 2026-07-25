@@ -15,7 +15,16 @@
 
   const dispatch = createEventDispatcher<{ installed: ThemeInfo; close: void }>()
 
-  $: remoteRefs = (preview.cssFiles ?? []).flatMap((f) => f.remoteRefs ?? [])
+  // the parts choice: both on by default, so a plain import stays one click.
+  // it is only offered when the theme actually carries both parts.
+  let importTokens = true
+  let importCSS = true
+  $: hasTokens = preview.tokenCount > 0
+  $: hasCSS = (preview.cssFiles?.length ?? 0) > 0
+  $: showParts = hasTokens && hasCSS
+  $: nothingPicked = showParts && !importTokens && !importCSS
+
+  $: remoteRefs = importCSS ? (preview.cssFiles ?? []).flatMap((f) => f.remoteRefs ?? []) : []
   // the remote choice: strip network references by default; allowing them is
   // the explicit opt-in.
   let allowRemote = false
@@ -24,7 +33,7 @@
   async function install(): Promise<void> {
     installing = true
     try {
-      const info = await confirmThemeImport(preview.path, allowRemote)
+      const info = await confirmThemeImport(preview.path, allowRemote, importTokens, importCSS)
       dispatch('installed', info)
     } catch (err) {
       toastError(errorMessage(err))
@@ -78,6 +87,27 @@
         </div>
       {/if}
 
+      {#if showParts}
+        <div class="parts">
+          <p class="parts-heading">{$t('themes.partsHeading')}</p>
+          <label class="choice">
+            <input type="checkbox" bind:checked={importTokens} />
+            <span>
+              {$t('themes.partColors')}
+              <span class="sub">{$t('themes.partColorsDetail').replace('{count}', String(preview.tokenCount))}</span>
+            </span>
+          </label>
+          <label class="choice">
+            <input type="checkbox" bind:checked={importCSS} />
+            <span>
+              {$t('themes.partCss')}
+              <span class="sub">{$t('themes.partCssDetail').replace('{count}', String(preview.cssFiles.length))}</span>
+            </span>
+          </label>
+          <p class="hint">{$t('themes.partsHint')}</p>
+        </div>
+      {/if}
+
       {#if preview.cssFiles?.length}
         <p class="css-heading">{$t('themes.cssHeading')}</p>
         <p class="hint">{$t('themes.cssHint')}</p>
@@ -120,7 +150,7 @@
 
     <footer>
       <button type="button" class="ghost-btn" on:click={() => dispatch('close')}>{$t('themes.importCancel')}</button>
-      <button type="button" class="primary-btn" disabled={installing} on:click={install}>
+      <button type="button" class="primary-btn" disabled={installing || nothingPicked} on:click={install}>
         {preview.updatesExisting ? $t('themes.importUpdate') : $t('themes.importInstall')}
       </button>
     </footer>
@@ -319,6 +349,27 @@
     font-size: var(--fz-label);
     color: var(--text-primary);
     cursor: pointer;
+  }
+
+  .parts {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    padding: var(--space-3);
+    border: var(--hairline) solid var(--border-subtle);
+    border-radius: var(--radius-control);
+    background: var(--surface-sunken);
+  }
+
+  .parts-heading {
+    margin: 0 0 var(--space-1);
+    font-size: var(--fz-label);
+    font-weight: var(--fw-medium);
+    color: var(--text-primary);
+  }
+
+  .choice .sub {
+    display: block;
   }
 
   footer {

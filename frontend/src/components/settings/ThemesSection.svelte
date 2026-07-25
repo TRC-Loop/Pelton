@@ -4,8 +4,9 @@
   // card applies immediately; the import flow goes through ThemeImportModal
   // (read-before-import, remote-reference choice).
   import { onMount } from 'svelte'
-  import { IconFileImport, IconRefresh, IconTrash, IconUpload, IconAlertTriangle, IconWorld, IconPlus, IconPencil, IconFolderOpen } from '@tabler/icons-svelte'
-  import { listThemes, previewThemeImport, deleteTheme, exportTheme, getThemeApply, openThemesFolder } from '../../lib/api'
+  import { IconFileImport, IconRefresh, IconTrash, IconUpload, IconAlertTriangle, IconWorld, IconWorldWww, IconPlus, IconPencil, IconFolderOpen } from '@tabler/icons-svelte'
+  import { BrowserOpenURL } from '../../../wailsjs/runtime/runtime'
+  import { listThemes, previewThemeImport, deleteTheme, exportTheme, getThemeApply, getThemeDraft, openThemesFolder } from '../../lib/api'
   import type { ThemeInfo, ThemeImportPreview, ThemePref } from '../../lib/types'
   import { prefs, setThemeId } from '../../stores/prefs'
   import { applyUserTheme } from '../../theme/usertheme'
@@ -18,8 +19,11 @@
   interface EditorSeed {
     id: string
     name: string
+    author: string
+    version: string
     base: 'light' | 'dark'
     tokens: Record<string, string>
+    css: string
   }
 
   let themes: ThemeInfo[] = []
@@ -77,19 +81,22 @@
   // resolved base.
   function createTheme(): void {
     const base = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light'
-    editorSeed = { id: '', name: '', base, tokens: {} }
+    editorSeed = { id: '', name: '', author: '', version: '', base, tokens: {}, css: '' }
   }
 
   // editTheme opens the editor prefilled with a theme's palette; saving
   // updates the theme's file in place.
   async function editTheme(theme: ThemeInfo): Promise<void> {
     try {
-      const apply = await getThemeApply(theme.id)
+      const draft = await getThemeDraft(theme.id)
       editorSeed = {
         id: theme.id,
-        name: theme.name,
-        base: apply.base === 'dark' ? 'dark' : 'light',
-        tokens: apply.tokens ?? {},
+        name: draft.name,
+        author: draft.author,
+        version: draft.version,
+        base: draft.base === 'dark' ? 'dark' : 'light',
+        tokens: draft.tokens ?? {},
+        css: draft.css ?? '',
       }
     } catch (err) {
       toastError(errorMessage(err))
@@ -103,6 +110,10 @@
       toastError(errorMessage(err))
     }
   }
+
+  // the gallery opens in the user's browser; nothing from it is fetched into
+  // the webview. downloads come back in through the normal import flow.
+  const galleryURL = 'https://themes.pelton.app'
 
   // closeEditor drops the draft preview and restores whatever theme was
   // active before the editor opened.
@@ -159,6 +170,10 @@
   <button type="button" class="action-btn" on:click={startImport}>
     <IconFileImport size={15} stroke={1.6} />
     {$t('themes.import')}
+  </button>
+  <button type="button" class="action-btn" on:click={() => BrowserOpenURL(galleryURL)} title={$t('themes.browseHint')}>
+    <IconWorldWww size={15} stroke={1.6} />
+    {$t('themes.browse')}
   </button>
   <button type="button" class="action-btn" on:click={openFolder} title={$t('themes.openFolderHint')}>
     <IconFolderOpen size={15} stroke={1.6} />
@@ -248,8 +263,11 @@
   <ThemeEditorModal
     id={editorSeed.id}
     name={editorSeed.name}
+    author={editorSeed.author}
+    version={editorSeed.version}
     base={editorSeed.base}
     tokens={editorSeed.tokens}
+    css={editorSeed.css}
     on:saved={onEditorSaved}
     on:close={closeEditor}
   />
