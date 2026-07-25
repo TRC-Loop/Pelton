@@ -29,7 +29,7 @@
   import { selection } from './stores/selection'
   import { loadList, messageList } from './stores/messages'
   import { initProgress } from './stores/progress'
-  import { composeSessions, openCompose, initComposePrefs, openReply, openForward } from './stores/compose'
+  import { composeSessions, openCompose, openComposeWith, initComposePrefs, openReply, openForward } from './stores/compose'
   import { openSnooze } from './stores/snooze'
   import { patchInList, removeFromList } from './stores/messages'
   import {
@@ -48,11 +48,12 @@
     setMailActionsEnabled,
     isDemoMode,
     unsubscribeMessage,
+    consumePendingMailto,
   } from './lib/api'
   import { BrowserOpenURL } from '../wailsjs/runtime/runtime'
   import { setDemoActive } from './lib/demo'
   import { recordArchived } from './stores/undoarchive'
-  import { onMailNew, onSyncState, onSyncProgress, onOutboxChanged, onMenu, onViewsChanged, type Unsubscribe } from './lib/events'
+  import { onMailNew, onSyncState, onSyncProgress, onOutboxChanged, onMenu, onViewsChanged, onMailtoCompose, type Unsubscribe, type MailtoDraft } from './lib/events'
   import { loadViews, editingView, closeViewEditor, openViewEditor, views as savedViews } from './stores/views'
   import { selectSavedView } from './stores/selection'
   import { isMac } from './lib/i18n'
@@ -182,6 +183,22 @@
     unsubscribers.push(onOutboxChanged(() => void loadOutbox()))
     unsubscribers.push(onViewsChanged(() => void loadViews()))
     unsubscribers.push(onMenu(handleMenu))
+    // a mailto: link opened while the app is already running.
+    unsubscribers.push(onMailtoCompose((draft) => openMailtoDraft(draft)))
+
+    // a mailto: link that launched the app: the backend stashed it, so pick it
+    // up now that the sidebar (and any accounts) have loaded. onboarding, if
+    // shown, holds it until a mailbox exists.
+    if (!demo) {
+      try {
+        const pending = await consumePendingMailto()
+        if (pending.present) {
+          openMailtoDraft(pending.draft)
+        }
+      } catch {
+        // a failed lookup just means no prefilled compose; not worth surfacing.
+      }
+    }
 
     // WebKitGTK (Linux) has a known quirk where maximizing the window - a
     // resize driven by the window manager rather than the user dragging an
@@ -236,6 +253,31 @@
     openCompose(accountId, editorMode)
   }
 
+  // a mailto: link waiting for a mailbox to exist. onboarding-first: if the link
+  // arrives before any account is set up, it is held here and opened once
+  // onboarding finishes, rather than being dropped.
+  let pendingMailto: MailtoDraft | null = null
+
+  // openMailtoDraft opens a prefilled compose from a mailto: link, or defers it
+  // until a mailbox exists (see pendingMailto).
+  function openMailtoDraft(draft: MailtoDraft): void {
+    const accountId = composeAccountId()
+    if (accountId === null) {
+      pendingMailto = draft
+      return
+    }
+    openComposeWith(accountId, editorMode, draft)
+  }
+
+  // flushPendingMailto opens a held mailto draft once a mailbox is available.
+  function flushPendingMailto(): void {
+    if (pendingMailto && composeAccountId() !== null) {
+      const draft = pendingMailto
+      pendingMailto = null
+      openComposeWith(composeAccountId() as number, editorMode, draft)
+    }
+  }
+
   async function runSync(): Promise<void> {
     syncing.set(true)
     try {
@@ -258,7 +300,7 @@
 
   function onMailboxAdded(): void {
     wizardOpen = false
-    void refreshSidebar()
+    void refreshSidebar().then(flushPendingMailto)
     toastInfo(get(t)('app.toast.mailboxAdded'))
   }
 
@@ -267,6 +309,7 @@
   function finishOnboarding(): void {
     onboardingOpen = false
     void setSetting(SettingKeys.onboarded, 'true')
+    flushPendingMailto()
   }
 
   function rerunOnboarding(): void {
@@ -275,7 +318,7 @@
   }
 
   function onboardingAddedMailbox(): void {
-    void refreshSidebar()
+    void refreshSidebar().then(flushPendingMailto)
   }
 
   function focusSearch(): void {

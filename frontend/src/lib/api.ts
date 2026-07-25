@@ -58,6 +58,12 @@ export function isDevMode(): Promise<boolean> {
   return App.IsDevMode()
 }
 
+// consumePendingMailto returns the mailto: draft the app was launched with (if
+// any) and clears it, so a reload does not reopen the same compose.
+export function consumePendingMailto(): Promise<desktop.PendingMailtoDTO> {
+  return App.ConsumePendingMailto()
+}
+
 // defaultMailClientStatus reports whether Pelton is the default mailto handler.
 // known is false where the platform cannot answer reliably; the ui then shows
 // nothing rather than guessing.

@@ -40,6 +40,11 @@ const (
 	// It is not fired for a manual "check now" call, which returns its result
 	// directly to the caller instead.
 	EventUpdateAvailable = "update:available"
+	// EventMailtoCompose fires when a mailto: link is opened while the app is
+	// already running. The payload is a MailtoDraft the frontend opens as a
+	// prefilled compose. A mailto that launched the app is delivered through
+	// ConsumePendingMailto instead.
+	EventMailtoCompose = "mailto:compose"
 	// EventViewsChanged fires when saved views or their eager-run counts change,
 	// so the sidebar can refresh view rows and badges without polling.
 	EventViewsChanged = "views:changed"
