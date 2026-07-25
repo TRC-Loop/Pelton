@@ -175,11 +175,21 @@ jobs:
 
       # Stamp info.productVersion into the exe's version resources and the
       # NSIS installer metadata, same reasoning as the macOS job (#83).
+      # NSIS VIProductVersion/VIFileVersion and the exe manifest require a
+      # 4-part numeric version; the bundled Windows templates append ".0" to
+      # info.productVersion, so pad it to exactly 3 numeric parts here. That
+      # keeps SemVer tags working ("1.0.9" -> "1.0.9.0") and fixes CalVer tags
+      # with fewer parts ("2026.3" -> "2026.3.0" -> "2026.3.0.0").
       - name: Stamp product version
         shell: bash
         run: |
           ver="${{ steps.version.outputs.version }}"
-          jq --arg v "${ver#v}" '.info.productVersion = $v' wails.json > wails.json.tmp
+          v="${ver#v}"
+          num="${v%%-*}"
+          IFS='.' read -ra parts <<< "$num"
+          while [ "${#parts[@]}" -lt 3 ]; do parts+=("0"); done
+          pv="${parts[0]}.${parts[1]}.${parts[2]}"
+          jq --arg v "$pv" '.info.productVersion = $v' wails.json > wails.json.tmp
           mv wails.json.tmp wails.json
 
       - name: Build + NSIS installer
