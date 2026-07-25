@@ -46,9 +46,11 @@
 
   // flag highlight styles. "both" shows the flag icon and a left edge bar.
   $: flagStyle = $prefs.flagHighlight
-  // a sender is VIP per the backend flag or the live store (so the star updates
-  // the instant a sender is marked, before any refetch).
-  $: isVip = message.senderVip || $vipSenders.has(bareAddress(message.fromAddress))
+  // the vip store (loaded at startup, updated on every toggle) is the single
+  // source of truth for the star, so marking and un-marking both reflect at
+  // once. The backend senderVip flag only seeds the store; OR-ing it in here
+  // would keep a removed sender starred.
+  $: isVip = $vipSenders.has(bareAddress(message.fromAddress))
   $: showFlagIcon = message.flagged && (flagStyle === 'flag' || flagStyle === 'both')
   $: barLeft = message.flagged && (flagStyle === 'left' || flagStyle === 'both')
 

@@ -17,9 +17,11 @@
 
   export let detail: MessageDetail
 
-  // a sender is VIP per the backend flag or the live store, so the star reflects
-  // a toggle immediately.
-  $: isVip = detail.senderVip || $vipSenders.has(bareAddress(detail.fromAddress))
+  // the vip store (loaded at startup, updated on every toggle) is the single
+  // source of truth, so un-starring reflects immediately. The backend
+  // senderVip flag only seeds the store, it must not be OR'd in here or a
+  // removed sender would stay lit.
+  $: isVip = $vipSenders.has(bareAddress(detail.fromAddress))
 
   // toggleVip stars or unstars the sender; failures surface as a toast and the
   // store reverts via the reload path.
