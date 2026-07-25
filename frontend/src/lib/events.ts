@@ -15,6 +15,7 @@ export const EventNames = {
   attachmentProgress: 'attachment:progress',
   updateAvailable: 'update:available',
   mailtoCompose: 'mailto:compose',
+  viewsChanged: 'views:changed',
 } as const
 
 // payloads, mirroring the go event structs.
@@ -128,4 +129,10 @@ export function onUpdateAvailable(cb: (e: UpdateAvailableEvent) => void): Unsubs
 // running. A mailto that launched the app is delivered via consumePendingMailto.
 export function onMailtoCompose(cb: (e: MailtoDraft) => void): Unsubscribe {
   return EventsOn(EventNames.mailtoCompose, (e: MailtoDraft) => cb(e))
+}
+
+// onViewsChanged fires when saved views or their eager-run counts change. it
+// carries no payload; subscribers reload the views store.
+export function onViewsChanged(cb: () => void): Unsubscribe {
+  return EventsOn(EventNames.viewsChanged, () => cb())
 }

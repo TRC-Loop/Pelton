@@ -45,6 +45,9 @@ const (
 	// prefilled compose. A mailto that launched the app is delivered through
 	// ConsumePendingMailto instead.
 	EventMailtoCompose = "mailto:compose"
+	// EventViewsChanged fires when saved views or their eager-run counts change,
+	// so the sidebar can refresh view rows and badges without polling.
+	EventViewsChanged = "views:changed"
 )
 
 // DownloadProgressEvent is the payload for EventDownloadProgress. Running is

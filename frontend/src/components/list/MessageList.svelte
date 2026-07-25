@@ -114,7 +114,13 @@
   // selectionKey identifies a selection so we reload only when it actually
   // changes, not on unrelated store updates.
   function selectionKey(sel: Selection): string {
-    return sel.kind === 'view' ? `view:${sel.view}` : `folder:${sel.folderId}`
+    if (sel.kind === 'view') {
+      return `view:${sel.view}`
+    }
+    if (sel.kind === 'savedView') {
+      return `savedView:${sel.viewId}`
+    }
+    return `folder:${sel.folderId}`
   }
 
   let lastKey = ''

@@ -30,6 +30,7 @@ import {
   IconDownload,
   IconMailX,
   IconSearch,
+  IconBookmarkPlus,
 } from '@tabler/icons-svelte'
 import type { ShortcutAction } from './shortcuts'
 import { isMac } from './i18n'
@@ -92,6 +93,7 @@ export const menuActionCatalog: MenuActionDef[] = [
   { action: 'archive', labelKey: 'menu.archive', iconName: 'archive', icon: IconArchive, needsMessage: true },
   { action: 'delete-message', labelKey: 'menu.deleteMessage', iconName: 'trash', icon: IconTrash, needsMessage: true, danger: true },
   { action: 'unsubscribe', labelKey: 'shortcut.unsubscribe', iconName: 'mail-x', icon: IconMailX, needsMessage: true },
+  { action: 'new-view', labelKey: 'views.new', iconName: 'bookmark-plus', icon: IconBookmarkPlus },
   { action: 'toggle-fullscreen', labelKey: 'menu.toggleFullscreen', iconName: 'maximize', icon: IconMaximize },
   { action: 'toggle-low-power', labelKey: 'menu.lowPower', iconName: 'battery-eco', icon: IconBatteryEco },
 ]

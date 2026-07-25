@@ -5,7 +5,7 @@
 // source of truth.
 
 import { writable } from 'svelte/store'
-import type { UIPrefs, ThemePref, DensityPref, EditorMode } from '../lib/types'
+import type { UIPrefs, ThemePref, DensityPref, EditorMode, ViewsPlacement } from '../lib/types'
 import { getUIPrefs, setSetting, SettingKeys, systemColorScheme, setWindowTheme, getThemeApply } from '../lib/api'
 import { applyTheme, applyDensity, applyAccent, applyScale, applyReduceMotion, setThemeSchedule, applyUIFont, applyMonoFont, applyCorners, watchSystemTheme, setSystemSchemeOverride, resolveTheme } from '../theme/theme'
 import { applyUserTheme } from '../theme/usertheme'
@@ -43,6 +43,7 @@ const defaults: UIPrefs = {
   uiScale: '1',
   messageFontSize: 14,
   showFlaggedCount: true,
+  viewsPlacement: 'hidden',
   flagColorSync: false,
   showOfflineIndicator: true,
   swipeEnabled: true,
@@ -71,6 +72,7 @@ const defaults: UIPrefs = {
   bodyFont: 'default',
   uiFont: 'default',
   monoFont: 'default',
+  verboseSync: false,
 }
 
 export const prefs = writable<UIPrefs>(defaults)
@@ -218,6 +220,12 @@ export function setMessageFontSize(size: number): void {
 export function setShowFlaggedCount(value: boolean): void {
   prefs.update((p) => ({ ...p, showFlaggedCount: value }))
   void setSetting(SettingKeys.showFlaggedCount, String(value))
+}
+
+// setViewsPlacement controls how saved Views are surfaced: hidden, sidebar or tab.
+export function setViewsPlacement(value: ViewsPlacement): void {
+  prefs.update((p) => ({ ...p, viewsPlacement: value }))
+  void setSetting(SettingKeys.viewsPlacement, value)
 }
 
 // setFlagColorSync toggles pushing color labels to the server as imap keywords.
@@ -394,6 +402,13 @@ export function setMonoFont(value: string): void {
   prefs.update((p) => ({ ...p, monoFont: value }))
   applyMonoFont(monoFontStack(value))
   void setSetting(SettingKeys.monoFont, value)
+}
+
+// setVerboseSync toggles surfacing the currently-syncing mailbox in the status
+// line.
+export function setVerboseSync(value: boolean): void {
+  prefs.update((p) => ({ ...p, verboseSync: value }))
+  void setSetting(SettingKeys.verboseSync, String(value))
 }
 
 // toggle keys map a boolean preference to its setting key so setToggle stays

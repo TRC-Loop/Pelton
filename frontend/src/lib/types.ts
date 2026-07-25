@@ -195,6 +195,9 @@ export interface UIPrefs {
   messageFontSize: number
   // showFlaggedCount shows the count and bold styling on the sidebar Flagged view.
   showFlaggedCount: boolean
+  // viewsPlacement controls how saved Views (preset searches) are surfaced:
+  // hidden (off), sidebar (group in the mailbox sidebar), or tab (separate rail).
+  viewsPlacement: ViewsPlacement
   // flagColorSync pushes color labels to the server as imap keywords.
   flagColorSync: boolean
   // showOfflineIndicator shows the little downloaded badge on pinned messages.
@@ -257,6 +260,8 @@ export interface UIPrefs {
   // curated key or 'sys:<family>'; 'default' keeps the built-in fonts).
   uiFont: string
   monoFont: string
+  // verboseSync shows which mailbox is currently syncing in the status line.
+  verboseSync: boolean
 }
 
 // an installed custom theme, as shown in the settings gallery.
@@ -496,8 +501,37 @@ export type EditorMode = 'plaintext' | 'markdown' | 'wysiwyg'
 export type ThemePref = 'system' | 'light' | 'dark' | 'schedule'
 export type DensityPref = 'compact' | 'medium' | 'luxe'
 
-// Selection identifies what the message list is currently showing: either a
-// unified cross-account view or a single account folder.
+// Selection identifies what the message list is currently showing: a unified
+// cross-account view, a single account folder, or a user-defined saved View
+// (preset search).
 export type Selection =
   | { kind: 'view'; view: ViewKey; label: string }
   | { kind: 'folder'; folderId: number; accountId: number; label: string }
+  | { kind: 'savedView'; viewId: number; label: string }
+
+// View is a user-defined saved search ("preset search"), mirroring the backend
+// ViewDTO. accountId 0 means all accounts; withinDays 0 means no date bound. The
+// count fields are the eager-run results shown as a sidebar badge.
+export interface View {
+  id: number
+  name: string
+  icon: string
+  color: string
+  queryText: string
+  queryFrom: string
+  queryTo: string
+  querySubject: string
+  withinDays: number
+  unreadOnly: boolean
+  flaggedOnly: boolean
+  hasAttachment: boolean
+  accountId: number
+  position: number
+  unreadCount: number
+  totalCount: number
+}
+
+// how the Views group is surfaced in the ui. 'hidden' keeps the feature off,
+// 'sidebar' shows it as a group in the mailbox sidebar, 'tab' shows it in a
+// separate Views tab/rail.
+export type ViewsPlacement = 'hidden' | 'sidebar' | 'tab'

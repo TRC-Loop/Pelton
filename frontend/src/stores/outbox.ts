@@ -16,6 +16,11 @@ export const syncing = writable<boolean>(false)
 // this session. the status bar renders it as a relative time.
 export const lastSynced = writable<number | null>(null)
 
+// syncFolder holds the name of the mailbox currently being synced, for the
+// verbose-sync status line (#128). empty when idle or between folders. it is
+// fed by sync:progress events and cleared when a sync ends.
+export const syncFolder = writable<string>('')
+
 // loadOutbox refetches the queue. it swallows errors into an empty list since the
 // outbox view is secondary; a transient failure should not break the app. when
 // the refetch reveals freshly-sent messages it shows a brief confirmation and

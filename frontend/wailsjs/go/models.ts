@@ -262,6 +262,20 @@ export namespace desktop {
 		    return a;
 		}
 	}
+	export class DefaultMailStatusDTO {
+	    known: boolean;
+	    isDefault: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new DefaultMailStatusDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.known = source["known"];
+	        this.isDefault = source["isDefault"];
+	    }
+	}
 	export class DiscoveredDTO {
 	    imapHost: string;
 	    imapPort: number;
@@ -372,6 +386,7 @@ export namespace desktop {
 	    kind: string;
 	    folderId: number;
 	    view: string;
+	    viewId: number;
 	    limit: number;
 	    offset: number;
 	
@@ -384,6 +399,7 @@ export namespace desktop {
 	        this.kind = source["kind"];
 	        this.folderId = source["folderId"];
 	        this.view = source["view"];
+	        this.viewId = source["viewId"];
 	        this.limit = source["limit"];
 	        this.offset = source["offset"];
 	    }
@@ -940,6 +956,7 @@ export namespace desktop {
 	    previewLines: number;
 	    uiScale: string;
 	    messageFontSize: number;
+	    viewsPlacement: string;
 	    showFlaggedCount: boolean;
 	    flagColorSync: boolean;
 	    showOfflineIndicator: boolean;
@@ -969,6 +986,7 @@ export namespace desktop {
 	    bodyFont: string;
 	    uiFont: string;
 	    monoFont: string;
+	    verboseSync: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new UIPrefsDTO(source);
@@ -1003,6 +1021,7 @@ export namespace desktop {
 	        this.previewLines = source["previewLines"];
 	        this.uiScale = source["uiScale"];
 	        this.messageFontSize = source["messageFontSize"];
+	        this.viewsPlacement = source["viewsPlacement"];
 	        this.showFlaggedCount = source["showFlaggedCount"];
 	        this.flagColorSync = source["flagColorSync"];
 	        this.showOfflineIndicator = source["showOfflineIndicator"];
@@ -1032,6 +1051,7 @@ export namespace desktop {
 	        this.bodyFont = source["bodyFont"];
 	        this.uiFont = source["uiFont"];
 	        this.monoFont = source["monoFont"];
+	        this.verboseSync = source["verboseSync"];
 	    }
 	}
 	export class UnifiedViewDTO {
@@ -1135,6 +1155,48 @@ export namespace desktop {
 	        this.author = source["author"];
 	        this.base = source["base"];
 	        this.count = source["count"];
+	    }
+	}
+	export class ViewDTO {
+	    id: number;
+	    name: string;
+	    icon: string;
+	    color: string;
+	    queryText: string;
+	    queryFrom: string;
+	    queryTo: string;
+	    querySubject: string;
+	    withinDays: number;
+	    unreadOnly: boolean;
+	    flaggedOnly: boolean;
+	    hasAttachment: boolean;
+	    accountId: number;
+	    position: number;
+	    unreadCount: number;
+	    totalCount: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new ViewDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.name = source["name"];
+	        this.icon = source["icon"];
+	        this.color = source["color"];
+	        this.queryText = source["queryText"];
+	        this.queryFrom = source["queryFrom"];
+	        this.queryTo = source["queryTo"];
+	        this.querySubject = source["querySubject"];
+	        this.withinDays = source["withinDays"];
+	        this.unreadOnly = source["unreadOnly"];
+	        this.flaggedOnly = source["flaggedOnly"];
+	        this.hasAttachment = source["hasAttachment"];
+	        this.accountId = source["accountId"];
+	        this.position = source["position"];
+	        this.unreadCount = source["unreadCount"];
+	        this.totalCount = source["totalCount"];
 	    }
 	}
 

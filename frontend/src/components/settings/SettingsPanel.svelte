@@ -76,6 +76,7 @@
     setShowSelectedCount,
     setSidebarIndentGuides,
     setShowFlaggedCount,
+    setViewsPlacement,
     setRowTemplate,
     setRowShowAvatar,
     setRowShowSnippet,
@@ -91,6 +92,7 @@
     setLanguage,
     setLowPowerMode,
     setAutoSyncInterval,
+    setVerboseSync,
     setDefaultEditorMode,
     setComposeAutocomplete,
     setComposeChips,
@@ -112,7 +114,7 @@
   import { downloadProgress } from '../../stores/progress'
   import { toastInfo, toastError, errorMessage } from '../../stores/toast'
   import { t } from '../../lib/i18n'
-  import type { ThemePref, DensityPref, EditorMode } from '../../lib/types'
+  import type { ThemePref, DensityPref, EditorMode, ViewsPlacement } from '../../lib/types'
 
   let editorModeOptions: { key: EditorMode; label: string }[] = []
   $: editorModeOptions = [
@@ -401,6 +403,12 @@
   }
 
   // sender-photo fallback chain. "Generated" never touches the network.
+  $: viewsPlacementOptions = [
+    { key: 'hidden', label: $t('views.setting.hidden') },
+    { key: 'sidebar', label: $t('views.setting.sidebar') },
+    { key: 'tab', label: $t('views.setting.tab') },
+  ]
+
   $: avatarSourceOptions = [
     { key: 'bimi_gravatar', label: $t('settingsPanel.avatarSource.bimiGravatar') },
     { key: 'gravatar_bimi', label: $t('settingsPanel.avatarSource.gravatarBimi') },
@@ -785,6 +793,13 @@
               on:change={(e) => setShowFlaggedCount(e.detail)}
             />
           </div>
+          <SegmentedSetting
+            label={$t('views.setting.label')}
+            value={$prefs.viewsPlacement}
+            options={viewsPlacementOptions}
+            on:change={(e) => setViewsPlacement(e.detail as ViewsPlacement)}
+          />
+          <p class="hint">{$t('views.setting.hint')}</p>
         </section>
       {:else if active === 'avatars'}
         <section>
@@ -985,6 +1000,17 @@
           />
           <p class="hint">
             {$t('settingsPanel.hint.autoSyncDetail')}
+          </p>
+          <div class="toggle" title={$t('settingsPanel.hint.verboseSync')}>
+            <span class="row-label">{$t('settingsPanel.toggle.verboseSync')}</span>
+            <ToggleSwitch
+              checked={$prefs.verboseSync}
+              label={$t('settingsPanel.toggle.verboseSync')}
+              on:change={(e) => setVerboseSync(e.detail)}
+            />
+          </div>
+          <p class="hint">
+            {$t('settingsPanel.hint.verboseSyncDetail')}
           </p>
         </section>
       {:else if active === 'offline'}
