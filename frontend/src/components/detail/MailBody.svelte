@@ -143,8 +143,18 @@
     if (!body) {
       return
     }
-    const h = body.getBoundingClientRect().height
-    frameHeight = Math.max(40, Math.ceil(h))
+    const h = Math.max(40, Math.ceil(body.getBoundingClientRect().height))
+    // hysteresis: on fractional display scaling (125%/150%, common on Fedora's
+    // WebKitGTK) the applied iframe height rounds to a device pixel differently
+    // from how getBoundingClientRect measures it back, so writing every reading
+    // to frameHeight makes the body flip between two adjacent pixel heights
+    // forever, which reads as continuous shaking. only apply a change that moves
+    // the height by more than a pixel, which settles the loop while still
+    // tracking real content growth and shrink.
+    if (Math.abs(h - frameHeight) <= 1) {
+      return
+    }
+    frameHeight = h
   }
 
   // readyBody returns the iframe's body only once it's our own rendered
