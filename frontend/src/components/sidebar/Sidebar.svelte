@@ -7,12 +7,11 @@
   import UnifiedViews from './UnifiedViews.svelte'
   import AccountTree from './AccountTree.svelte'
   import SavedViews from './SavedViews.svelte'
-  import ViewEditorModal from '../settings/ViewEditorModal.svelte'
   import Spinner from '../common/Spinner.svelte'
   import ErrorState from '../common/ErrorState.svelte'
   import EmptyState from '../common/EmptyState.svelte'
   import { sidebar, loadSidebar } from '../../stores/accounts'
-  import { views, blankView } from '../../stores/views'
+  import { views, openViewEditor, editViewInEditor } from '../../stores/views'
   import { syncing } from '../../stores/outbox'
   import { prefs } from '../../stores/prefs'
   import type { View } from '../../lib/types'
@@ -26,14 +25,11 @@
   // in tab mode, which pane the sidebar body shows.
   let tab: 'mail' | 'views' = 'mail'
 
-  // the view editor overlay: null when closed, else the working view.
-  let editing: View | null = null
-
   function openNew(): void {
-    editing = blankView()
+    openViewEditor()
   }
   function openEdit(v: View): void {
-    editing = { ...v }
+    editViewInEditor(v)
   }
 </script>
 
@@ -103,15 +99,6 @@
     {/if}
   </div>
 </aside>
-
-{#if editing}
-  <ViewEditorModal
-    value={editing}
-    accounts={$sidebar.data?.accounts ?? []}
-    on:close={() => (editing = null)}
-    on:saved={() => (editing = null)}
-  />
-{/if}
 
 <style>
   .sidebar {

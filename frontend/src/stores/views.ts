@@ -8,6 +8,27 @@ import { listViews } from '../lib/api'
 
 export const views = writable<View[]>([])
 
+// editingView holds the view currently open in the editor overlay, or null when
+// it is closed. Hosting it in a store lets any surface (sidebar, search bar,
+// menu) open the editor, with the overlay rendered once at the app root.
+export const editingView = writable<View | null>(null)
+
+// openViewEditor opens the editor to create a new view, optionally seeded (used
+// by "save this search as a view").
+export function openViewEditor(seed: Partial<View> = {}): void {
+  editingView.set(blankView(seed))
+}
+
+// editViewInEditor opens the editor to edit an existing view.
+export function editViewInEditor(v: View): void {
+  editingView.set({ ...v })
+}
+
+// closeViewEditor dismisses the editor overlay.
+export function closeViewEditor(): void {
+  editingView.set(null)
+}
+
 // loadViews fetches the saved views with fresh counts. failures are swallowed to
 // an empty list so a broken view never blanks the sidebar; the backend logs the
 // underlying error.
