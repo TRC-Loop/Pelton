@@ -14,6 +14,7 @@ export const EventNames = {
   downloadProgress: 'download:progress',
   attachmentProgress: 'attachment:progress',
   updateAvailable: 'update:available',
+  viewsChanged: 'views:changed',
 } as const
 
 // payloads, mirroring the go event structs.
@@ -111,4 +112,10 @@ export function onAttachmentProgress(cb: (e: AttachmentProgressEvent) => void): 
 // for a manual "check now", which gets its result directly instead).
 export function onUpdateAvailable(cb: (e: UpdateAvailableEvent) => void): Unsubscribe {
   return EventsOn(EventNames.updateAvailable, (e: UpdateAvailableEvent) => cb(e))
+}
+
+// onViewsChanged fires when saved views or their eager-run counts change. it
+// carries no payload; subscribers reload the views store.
+export function onViewsChanged(cb: () => void): Unsubscribe {
+  return EventsOn(EventNames.viewsChanged, () => cb())
 }

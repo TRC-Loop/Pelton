@@ -6,11 +6,12 @@
   // button inserts before/after date chips. everything is emitted as free text
   // plus a structured SearchFilter so the list re-runs the ranked search.
   import { createEventDispatcher, tick } from 'svelte'
-  import { IconSearch, IconX, IconCalendar } from '@tabler/icons-svelte'
+  import { IconSearch, IconX, IconCalendar, IconBookmarkPlus } from '@tabler/icons-svelte'
   import { prefs } from '../../stores/prefs'
   import { shortcutLabel, t } from '../../lib/i18n'
   import { emptyFilter, type SearchFilter } from '../../stores/messages'
   import { selection } from '../../stores/selection'
+  import { openViewEditor } from '../../stores/views'
   import DateTimePicker from '../common/DateTimePicker.svelte'
 
   export let value: string = ''
@@ -214,6 +215,21 @@
   }
 
   $: hasContent = text !== '' || chips.length > 0
+
+  // saveAsView opens the view editor seeded from the current query and chips, so
+  // a search the user just ran becomes a saved View. The relative date window is
+  // left for the editor since the chips carry absolute dates.
+  function saveAsView(): void {
+    const f = buildFilter()
+    openViewEditor({
+      name: text.trim(),
+      queryText: text.trim(),
+      queryFrom: f.from,
+      queryTo: f.to,
+      querySubject: f.subject,
+      hasAttachment: f.hasAttachment,
+    })
+  }
 </script>
 
 <div class="bar">
@@ -257,6 +273,18 @@
       </div>
     {/if}
   </div>
+
+  {#if hasContent && $prefs.viewsPlacement !== 'hidden'}
+    <button
+      type="button"
+      class="filter-btn"
+      aria-label={$t('views.saveAsView')}
+      title={$t('views.saveAsView')}
+      on:click={saveAsView}
+    >
+      <IconBookmarkPlus size={16} stroke={1.7} />
+    </button>
+  {/if}
 
   <div class="filter-wrap">
     <button
