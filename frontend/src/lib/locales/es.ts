@@ -584,7 +584,7 @@ const es: Record<string, string> = {
   'settingsPanel.category.power': 'Sincronización y energía',
   'settingsPanel.category.contacts': 'Contactos',
   'settingsPanel.category.mailboxes': 'Buzones',
-  'settingsPanel.category.network': 'Red',
+  'settingsPanel.category.network': 'Proxy',
   'network.proxy.hint': 'Enruta todas las conexiones de Pelton (correo y web) a través de un proxy.',
   'network.proxy.mode': 'Proxy',
   'network.proxy.mode.off': 'Desactivado',
