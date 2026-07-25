@@ -189,7 +189,13 @@ func (a *App) updateFlag(id int64, flag storage.Flag, on bool) error {
 	} else {
 		flags &^= flag
 	}
-	return a.store.MarkFlagsPending(a.ctx, id, flags)
+	if err := a.store.MarkFlagsPending(a.ctx, id, flags); err != nil {
+		return err
+	}
+	// read/flag changes move messages in and out of unread-only and flagged-only
+	// views, so refresh the view badges without waiting for the next sync.
+	go a.refreshViewCounts()
+	return nil
 }
 
 // DeleteMessage marks a message for deletion. The row is kept and hidden from
@@ -199,7 +205,11 @@ func (a *App) DeleteMessage(id int64) error {
 	if err := a.ready(); err != nil {
 		return err
 	}
-	return a.store.MarkDeletePending(a.ctx, id)
+	if err := a.store.MarkDeletePending(a.ctx, id); err != nil {
+		return err
+	}
+	go a.refreshViewCounts()
+	return nil
 }
 
 // UndoDelete reverses a pending delete while the message is still cached (before
@@ -208,7 +218,11 @@ func (a *App) UndoDelete(id int64) error {
 	if err := a.ready(); err != nil {
 		return err
 	}
-	return a.store.ClearDeletePending(a.ctx, id)
+	if err := a.store.ClearDeletePending(a.ctx, id); err != nil {
+		return err
+	}
+	go a.refreshViewCounts()
+	return nil
 }
 
 // SaveAttachment prompts for a destination and writes the attachment file there,
