@@ -14,13 +14,15 @@ import (
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
-// ListMessagesRequest selects the page to read. Kind is "folder" or "view".
-// FolderID applies to "folder"; View (an inbox/flagged/sent/drafts key) applies
-// to "view". Limit and Offset drive pagination.
+// ListMessagesRequest selects the page to read. Kind is "folder", "view" or
+// "savedView". FolderID applies to "folder"; View (an inbox/flagged/sent/drafts
+// key) applies to "view"; ViewID (a saved-search id) applies to "savedView".
+// Limit and Offset drive pagination.
 type ListMessagesRequest struct {
 	Kind     string `json:"kind"`
 	FolderID int64  `json:"folderId"`
 	View     string `json:"view"`
+	ViewID   int64  `json:"viewId"`
 	Limit    int    `json:"limit"`
 	Offset   int    `json:"offset"`
 }
@@ -30,6 +32,10 @@ type ListMessagesRequest struct {
 func (a *App) ListMessages(req ListMessagesRequest) (MessageListDTO, error) {
 	if err := a.ready(); err != nil {
 		return MessageListDTO{}, err
+	}
+
+	if req.Kind == "savedView" {
+		return a.listSavedView(a.ctx, req.ViewID, req.Limit, req.Offset)
 	}
 
 	q, err := a.requestQuery(a.ctx, req)

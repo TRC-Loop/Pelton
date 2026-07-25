@@ -372,6 +372,7 @@ export namespace desktop {
 	    kind: string;
 	    folderId: number;
 	    view: string;
+	    viewId: number;
 	    limit: number;
 	    offset: number;
 	
@@ -384,6 +385,7 @@ export namespace desktop {
 	        this.kind = source["kind"];
 	        this.folderId = source["folderId"];
 	        this.view = source["view"];
+	        this.viewId = source["viewId"];
 	        this.limit = source["limit"];
 	        this.offset = source["offset"];
 	    }
@@ -1083,6 +1085,48 @@ export namespace desktop {
 	        this.author = source["author"];
 	        this.base = source["base"];
 	        this.count = source["count"];
+	    }
+	}
+	export class ViewDTO {
+	    id: number;
+	    name: string;
+	    icon: string;
+	    color: string;
+	    queryText: string;
+	    queryFrom: string;
+	    queryTo: string;
+	    querySubject: string;
+	    withinDays: number;
+	    unreadOnly: boolean;
+	    flaggedOnly: boolean;
+	    hasAttachment: boolean;
+	    accountId: number;
+	    position: number;
+	    unreadCount: number;
+	    totalCount: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new ViewDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.name = source["name"];
+	        this.icon = source["icon"];
+	        this.color = source["color"];
+	        this.queryText = source["queryText"];
+	        this.queryFrom = source["queryFrom"];
+	        this.queryTo = source["queryTo"];
+	        this.querySubject = source["querySubject"];
+	        this.withinDays = source["withinDays"];
+	        this.unreadOnly = source["unreadOnly"];
+	        this.flaggedOnly = source["flaggedOnly"];
+	        this.hasAttachment = source["hasAttachment"];
+	        this.accountId = source["accountId"];
+	        this.position = source["position"];
+	        this.unreadCount = source["unreadCount"];
+	        this.totalCount = source["totalCount"];
 	    }
 	}
 

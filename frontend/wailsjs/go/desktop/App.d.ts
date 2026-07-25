@@ -34,6 +34,8 @@ export function DeleteSignature(arg1:number):Promise<void>;
 
 export function DeleteTheme(arg1:string):Promise<void>;
 
+export function DeleteView(arg1:number):Promise<void>;
+
 export function DiscoverConfig(arg1:string):Promise<desktop.DiscoveredDTO>;
 
 export function DownloadMessageOffline(arg1:number):Promise<void>;
@@ -104,6 +106,8 @@ export function ListUnifiedViews():Promise<Array<desktop.UnifiedViewDTO>>;
 
 export function ListUserLocales():Promise<Array<desktop.UserLocaleDTO>>;
 
+export function ListViews():Promise<Array<desktop.ViewDTO>>;
+
 export function MoveMessage(arg1:number,arg2:number):Promise<desktop.ArchiveUndoDTO>;
 
 export function OpenLocalesFolder():Promise<void>;
@@ -124,6 +128,8 @@ export function RemoveImageAllow(arg1:string,arg2:string):Promise<void>;
 
 export function RemoveOffline(arg1:number):Promise<void>;
 
+export function ReorderViews(arg1:Array<number>):Promise<void>;
+
 export function ResumePendingDownload():Promise<void>;
 
 export function SaveAllAttachments(arg1:number):Promise<string>;
@@ -137,6 +143,8 @@ export function SaveDraft(arg1:number,arg2:desktop.ComposeRequest):Promise<numbe
 export function SaveLocaleTemplate(arg1:string):Promise<string>;
 
 export function SaveSignature(arg1:desktop.SignatureDTO):Promise<desktop.SignatureDTO>;
+
+export function SaveView(arg1:desktop.ViewDTO):Promise<desktop.ViewDTO>;
 
 export function Search(arg1:desktop.SearchRequestDTO):Promise<Array<desktop.MessageSummaryDTO>>;
 

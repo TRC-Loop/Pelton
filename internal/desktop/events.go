@@ -40,6 +40,9 @@ const (
 	// It is not fired for a manual "check now" call, which returns its result
 	// directly to the caller instead.
 	EventUpdateAvailable = "update:available"
+	// EventViewsChanged fires when saved views or their eager-run counts change,
+	// so the sidebar can refresh view rows and badges without polling.
+	EventViewsChanged = "views:changed"
 )
 
 // DownloadProgressEvent is the payload for EventDownloadProgress. Running is
