@@ -260,6 +260,8 @@ export interface UIPrefs {
   // curated key or 'sys:<family>'; 'default' keeps the built-in fonts).
   uiFont: string
   monoFont: string
+  // verboseSync shows which mailbox is currently syncing in the status line.
+  verboseSync: boolean
 }
 
 // an installed custom theme, as shown in the settings gallery.

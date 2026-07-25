@@ -25,7 +25,7 @@
   import { loadSidebar, refreshSidebar, sidebar } from './stores/accounts'
   import { initSidebarState } from './stores/sidebarstate'
   import { loadSignatures } from './stores/signatures'
-  import { loadOutbox, syncing, lastSynced } from './stores/outbox'
+  import { loadOutbox, syncing, lastSynced, syncFolder } from './stores/outbox'
   import { selection } from './stores/selection'
   import { loadList, messageList } from './stores/messages'
   import { initProgress } from './stores/progress'
@@ -52,7 +52,7 @@
   import { BrowserOpenURL } from '../wailsjs/runtime/runtime'
   import { setDemoActive } from './lib/demo'
   import { recordArchived } from './stores/undoarchive'
-  import { onMailNew, onSyncState, onOutboxChanged, onMenu, onViewsChanged, type Unsubscribe } from './lib/events'
+  import { onMailNew, onSyncState, onSyncProgress, onOutboxChanged, onMenu, onViewsChanged, type Unsubscribe } from './lib/events'
   import { loadViews, editingView, closeViewEditor, openViewEditor, views as savedViews } from './stores/views'
   import { selectSavedView } from './stores/selection'
   import { isMac } from './lib/i18n'
@@ -168,7 +168,15 @@
         // record the moment a sync finishes for the status bar's last-synced time.
         if (!e.running) {
           lastSynced.set(Date.now())
+          syncFolder.set('')
         }
+      }),
+    )
+    unsubscribers.push(
+      onSyncProgress((e) => {
+        // the trailing done==total event carries no folder; treat it as a clear
+        // so the verbose line does not linger on the last mailbox.
+        syncFolder.set(e.done < e.total ? e.folder : '')
       }),
     )
     unsubscribers.push(onOutboxChanged(() => void loadOutbox()))
