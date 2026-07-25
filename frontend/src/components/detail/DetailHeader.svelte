@@ -3,7 +3,7 @@
   // full date, the technical-info badges the list rows show, and the
   // unsubscribe button when the message advertises a mechanism (or, failing
   // that, contains an unsubscribe link in its body).
-  import { IconMailOff, IconCheck } from '@tabler/icons-svelte'
+  import { IconMailOff, IconCheck, IconStar, IconStarFilled } from '@tabler/icons-svelte'
   import Avatar from '../common/Avatar.svelte'
   import TechBadges from '../common/TechBadges.svelte'
   import { prefs } from '../../stores/prefs'
@@ -12,9 +12,30 @@
   import { BrowserOpenURL } from '../../../wailsjs/runtime/runtime'
   import { errorMessage, toastError, toastSuccess } from '../../stores/toast'
   import { t } from '../../lib/i18n'
+  import { vipSenders, bareAddress, addVIP, removeVIP } from '../../stores/vip'
   import type { MessageDetail, UnsubscribeInfo } from '../../lib/types'
 
   export let detail: MessageDetail
+
+  // a sender is VIP per the backend flag or the live store, so the star reflects
+  // a toggle immediately.
+  $: isVip = detail.senderVip || $vipSenders.has(bareAddress(detail.fromAddress))
+
+  // toggleVip stars or unstars the sender; failures surface as a toast and the
+  // store reverts via the reload path.
+  async function toggleVip(): Promise<void> {
+    try {
+      if (isVip) {
+        await removeVIP(detail.fromAddress)
+        toastSuccess($t('vip.removed').replace('{who}', displayName(detail.fromName, detail.fromAddress)))
+      } else {
+        await addVIP(detail.fromAddress)
+        toastSuccess($t('vip.added').replace('{who}', displayName(detail.fromName, detail.fromAddress)))
+      }
+    } catch (err) {
+      toastError(errorMessage(err))
+    }
+  }
 
   // unsub resolves the mechanism: the stored List-Unsubscribe headers first,
   // otherwise an unsubscribe-looking link scraped from the (already
@@ -89,6 +110,20 @@
     <Avatar name={detail.fromName} email={detail.fromAddress} size={36} />
     <div class="from-info">
       <div class="from-line">
+        <button
+          type="button"
+          class="vip-toggle"
+          class:active={isVip}
+          on:click={toggleVip}
+          title={isVip ? $t('vip.unmark') : $t('vip.mark')}
+          aria-pressed={isVip}
+        >
+          {#if isVip}
+            <IconStarFilled size={15} />
+          {:else}
+            <IconStar size={15} stroke={1.6} />
+          {/if}
+        </button>
         <span class="from-name">{displayName(detail.fromName, detail.fromAddress)}</span>
         {#if detail.fromName}
           <span class="from-addr">&lt;{detail.fromAddress}&gt;</span>
@@ -161,6 +196,28 @@
     align-items: baseline;
     gap: var(--space-2);
     flex-wrap: wrap;
+  }
+
+  .vip-toggle {
+    align-self: center;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2px;
+    border: none;
+    background: none;
+    border-radius: var(--radius-sm);
+    color: var(--text-tertiary);
+    cursor: pointer;
+  }
+
+  .vip-toggle:hover {
+    background: var(--surface-hover);
+    color: var(--text-secondary);
+  }
+
+  .vip-toggle.active {
+    color: var(--warning);
   }
 
   .from-name {

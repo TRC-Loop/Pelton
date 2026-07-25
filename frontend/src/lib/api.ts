@@ -312,6 +312,32 @@ export function removeImageAllow(kind: 'sender' | 'domain', value: string): Prom
   return App.RemoveImageAllow(kind, value)
 }
 
+// listVIPSenders returns the addresses the user has marked as VIP (#126).
+export function listVIPSenders(): Promise<string[]> {
+  return App.ListVIPSenders()
+}
+
+// addVIPSender marks an address as VIP. The backend normalizes it to the bare
+// lowercased address.
+export function addVIPSender(address: string): Promise<void> {
+  return App.AddVIPSender(address)
+}
+
+// removeVIPSender drops an address from the VIP list.
+export function removeVIPSender(address: string): Promise<void> {
+  return App.RemoveVIPSender(address)
+}
+
+// markSenderVIP adds a message's sender to the VIP list.
+export function markSenderVIP(messageId: number): Promise<void> {
+  return App.MarkSenderVIP(messageId)
+}
+
+// unmarkSenderVIP removes a message's sender from the VIP list.
+export function unmarkSenderVIP(messageId: number): Promise<void> {
+  return App.UnmarkSenderVIP(messageId)
+}
+
 // senderPhotos resolves the ordered list of remote photo candidates for a sender
 // under the configured fallback chain. empty means "no network source"; the ui
 // then draws a generated placeholder.
@@ -613,6 +639,7 @@ export const SettingKeys = {
   bodyFont: 'body_font',
   uiFont: 'ui_font',
   monoFont: 'mono_font',
+  notifyNewMail: 'notify_new_mail',
 } as const
 
 // listSystemFonts returns the installed font family names for the body font

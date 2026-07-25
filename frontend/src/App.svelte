@@ -25,6 +25,7 @@
   import { loadSidebar, refreshSidebar, sidebar } from './stores/accounts'
   import { initSidebarState } from './stores/sidebarstate'
   import { loadSignatures } from './stores/signatures'
+  import { loadVIPSenders } from './stores/vip'
   import { loadOutbox, syncing, lastSynced } from './stores/outbox'
   import { selection } from './stores/selection'
   import { loadList, messageList } from './stores/messages'
@@ -134,6 +135,7 @@
     void initShortcuts()
     void initMenuBar()
     void loadSignatures()
+    void loadVIPSenders()
     initProgress()
     await loadSidebar()
     await loadOutbox()

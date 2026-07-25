@@ -75,6 +75,9 @@ type MessageSummaryDTO struct {
 	FlagColor   int    `json:"flagColor"`
 	Offline     bool   `json:"offline"`
 	SnoozeUntil string `json:"snoozeUntil"`
+	// SenderVIP is true when this message's from-address is on the VIP list, so
+	// the ui can mark it with a star (#126).
+	SenderVIP bool `json:"senderVip"`
 }
 
 // MessageListDTO is a page of summaries plus the unfiltered total for paging.

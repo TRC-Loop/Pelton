@@ -46,12 +46,13 @@ func NewEngine(client mailClient, store *storage.DB, log *slog.Logger) *Engine {
 
 // FolderSyncResult summarises one folder sync for logging and the cli.
 type FolderSyncResult struct {
-	New              int  // fetched from server into the cache
-	Deleted          int  // removed from the cache (server side or pushed delete)
-	FlagUpdated      int  // server flag changes adopted locally
-	Conflicts        int  // messages changed on both sides
-	Pushed           int  // local flag or delete operations sent to the server
-	UIDValidityReset bool // the cache for the folder was dropped and refetched
+	New              int     // fetched from server into the cache
+	NewIDs           []int64 // storage ids of the messages fetched this sync
+	Deleted          int     // removed from the cache (server side or pushed delete)
+	FlagUpdated      int     // server flag changes adopted locally
+	Conflicts        int     // messages changed on both sides
+	Pushed           int     // local flag or delete operations sent to the server
+	UIDValidityReset bool    // the cache for the folder was dropped and refetched
 }
 
 // SyncAccount syncs every cached folder for an account. A failure on one folder
@@ -207,11 +208,13 @@ func (e *Engine) executePlan(ctx context.Context, folder storage.Folder, plan []
 			// already in agreement
 
 		case ActionFetchNew:
-			if err := e.fetchAndStore(ctx, folder, d.UID); err != nil {
+			id, err := e.fetchAndStore(ctx, folder, d.UID)
+			if err != nil {
 				e.log.Error("fetch new message failed", "uid", d.UID, "err", err)
 				continue
 			}
 			res.New++
+			res.NewIDs = append(res.NewIDs, id)
 
 		case ActionDeleteLocal:
 			if err := e.deleteLocal(ctx, folder, localByUID[d.UID]); err != nil {

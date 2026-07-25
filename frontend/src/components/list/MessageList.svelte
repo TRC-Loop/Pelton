@@ -25,6 +25,8 @@
     IconDownload,
     IconDownloadOff,
     IconFolderSymlink,
+    IconStar,
+    IconStarFilled,
   } from '@tabler/icons-svelte'
   import { selection, searchQuery, openMessageId, openMessage } from '../../stores/selection'
   import {
@@ -63,6 +65,7 @@
   import { recordArchived } from '../../stores/undoarchive'
   import { openContextMenu, type MenuEntry } from '../../stores/contextmenu'
   import { errorMessage, toastError, toastSuccess } from '../../stores/toast'
+  import { isVIPAddress, addVIP, removeVIP } from '../../stores/vip'
   import type { Selection, MessageSummary, SwipeAction, EditorMode } from '../../lib/types'
   import { t } from '../../lib/i18n'
 
@@ -282,6 +285,20 @@
     }
   }
 
+  // toggleVIP stars or unstars a row's sender from the context menu; the vip
+  // store drives the live star on every row from that sender.
+  async function toggleVIP(item: MessageSummary): Promise<void> {
+    try {
+      if (isVIPAddress(item.fromAddress)) {
+        await removeVIP(item.fromAddress)
+      } else {
+        await addVIP(item.fromAddress)
+      }
+    } catch (err) {
+      toastError(errorMessage(err))
+    }
+  }
+
   async function remove(item: MessageSummary): Promise<void> {
     try {
       await deleteMessage(item.id)
@@ -464,6 +481,9 @@
         ? { label: $t('messageList.unflag'), icon: IconFlag, action: () => void toggleFlag(item) }
         : { label: $t('messageList.flag'), icon: IconFlagFilled, action: () => void toggleFlag(item) },
       { kind: 'colors', current: item.flagColor, onPick: (color) => void setColor(item, color) },
+      isVIPAddress(item.fromAddress)
+        ? { label: $t('vip.unmark'), icon: IconStar, action: () => void toggleVIP(item) }
+        : { label: $t('vip.mark'), icon: IconStarFilled, action: () => void toggleVIP(item) },
       'separator',
       { label: $t('messageList.menu.snooze'), icon: IconClockPause, action: () => openSnooze(item.id, item.subject) },
       { label: $t('messageList.menu.moveTo'), icon: IconFolderSymlink, action: () => openMove(item) },

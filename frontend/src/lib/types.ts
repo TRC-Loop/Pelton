@@ -60,6 +60,9 @@ export interface MessageSummary {
   flagColor: number
   offline: boolean
   snoozeUntil: string
+  // senderVip is true when the from-address is on the VIP list, so the row can
+  // show a star.
+  senderVip: boolean
 }
 
 export interface MessageDetail extends MessageSummary {
@@ -257,6 +260,9 @@ export interface UIPrefs {
   // curated key or 'sys:<family>'; 'default' keeps the built-in fonts).
   uiFont: string
   monoFont: string
+  // notifyNewMail raises a native OS notification for new inbox mail. VIP
+  // senders notify regardless of this (see stores/vip.ts).
+  notifyNewMail: boolean
 }
 
 // an installed custom theme, as shown in the settings gallery.
