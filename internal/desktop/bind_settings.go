@@ -82,6 +82,9 @@ const (
 	settingMonoFont = "mono_font"
 	// corner style for controls and cards: default, square, or round (#60).
 	settingCornerStyle = "corner_style"
+	// general new-mail OS notifications (#126). VIP senders are stored
+	// separately in bind_vip.go and notify even when this is off.
+	settingNotifyNewMail = "notify_new_mail"
 	// verbose sync surfaces the mailbox currently being synced in the status
 	// line instead of a plain "Syncing" (#128). Off by default.
 	settingVerboseSync = "verbose_sync"
@@ -249,6 +252,10 @@ type UIPrefsDTO struct {
 	// UIFont and MonoFont override the interface and monospace font tokens.
 	UIFont   string `json:"uiFont"`
 	MonoFont string `json:"monoFont"`
+	// NotifyNewMail raises a native OS notification when new mail lands in an
+	// inbox. Off by default. VIP-sender notifications fire regardless of this
+	// (see bind_vip.go), so important senders cut through when it is off.
+	NotifyNewMail bool `json:"notifyNewMail"`
 	// VerboseSync shows which mailbox is currently syncing in the status line.
 	VerboseSync bool `json:"verboseSync"`
 }
@@ -318,6 +325,7 @@ func (a *App) GetUIPrefs() (UIPrefsDTO, error) {
 		BodyFont:                   a.stringSetting(settingBodyFont, "default"),
 		UIFont:                     a.stringSetting(settingUIFont, "default"),
 		MonoFont:                   a.stringSetting(settingMonoFont, "default"),
+		NotifyNewMail:              a.boolSetting(settingNotifyNewMail, false),
 		VerboseSync:                a.boolSetting(settingVerboseSync, false),
 	}, nil
 }

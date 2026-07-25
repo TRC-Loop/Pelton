@@ -156,6 +156,7 @@ func (a *App) Search(req SearchRequestDTO) ([]MessageSummaryDTO, error) {
 	// also covers stale index entries without a separate cleanup pass. the
 	// has:attachment chip is applied here since attachment presence is a stored
 	// message field, not an indexed one.
+	vips := a.vipSet()
 	out := make([]MessageSummaryDTO, 0, len(hits))
 	for _, h := range hits {
 		m, err := a.store.GetMessage(a.ctx, h.ID)
@@ -166,7 +167,9 @@ func (a *App) Search(req SearchRequestDTO) ([]MessageSummaryDTO, error) {
 			continue
 		}
 		email, folderName := a.lookupContext(a.ctx, m.AccountID, m.FolderID)
-		out = append(out, toSummaryDTO(*m, email, folderName))
+		dto := toSummaryDTO(*m, email, folderName)
+		dto.SenderVIP = vips[bareAddress(m.FromAddress)]
+		out = append(out, dto)
 	}
 	return out, nil
 }

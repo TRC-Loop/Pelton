@@ -10,6 +10,10 @@ export function AddPasswordAccount(arg1) {
   return window['go']['desktop']['App']['AddPasswordAccount'](arg1);
 }
 
+export function AddVIPSender(arg1) {
+  return window['go']['desktop']['App']['AddVIPSender'](arg1);
+}
+
 export function AllowDomainImages(arg1) {
   return window['go']['desktop']['App']['AllowDomainImages'](arg1);
 }
@@ -218,8 +222,16 @@ export function ListUserLocales() {
   return window['go']['desktop']['App']['ListUserLocales']();
 }
 
+export function ListVIPSenders() {
+  return window['go']['desktop']['App']['ListVIPSenders']();
+}
+
 export function ListViews() {
   return window['go']['desktop']['App']['ListViews']();
+}
+
+export function MarkSenderVIP(arg1) {
+  return window['go']['desktop']['App']['MarkSenderVIP'](arg1);
 }
 
 export function MoveMessage(arg1, arg2) {
@@ -260,6 +272,10 @@ export function RemoveImageAllow(arg1, arg2) {
 
 export function RemoveOffline(arg1) {
   return window['go']['desktop']['App']['RemoveOffline'](arg1);
+}
+
+export function RemoveVIPSender(arg1) {
+  return window['go']['desktop']['App']['RemoveVIPSender'](arg1);
 }
 
 export function ReorderViews(arg1) {
@@ -392,6 +408,10 @@ export function UnarchiveMessage(arg1, arg2) {
 
 export function UndoDelete(arg1) {
   return window['go']['desktop']['App']['UndoDelete'](arg1);
+}
+
+export function UnmarkSenderVIP(arg1) {
+  return window['go']['desktop']['App']['UnmarkSenderVIP'](arg1);
 }
 
 export function UnsnoozeMessage(arg1) {

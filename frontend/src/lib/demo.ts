@@ -123,6 +123,7 @@ function msg(
     flagColor: 0,
     offline: false,
     snoozeUntil: '',
+    senderVip: false,
     ...opts,
   }
 }

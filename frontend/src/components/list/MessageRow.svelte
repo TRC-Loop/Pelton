@@ -8,6 +8,7 @@
   // trackpad swipes (horizontal wheel) reveal a configurable action.
   import { createEventDispatcher } from 'svelte'
   import {
+    IconStarFilled,
     IconPaperclip,
     IconFlagFilled,
     IconFlag,
@@ -25,6 +26,7 @@
   import { flagColorHex } from '../../theme/flagcolors'
   import type { MessageSummary, RowTemplate, SwipeAction } from '../../lib/types'
   import { t } from '../../lib/i18n'
+  import { vipSenders, bareAddress } from '../../stores/vip'
 
   export let message: MessageSummary
   export let selected: boolean = false
@@ -44,6 +46,11 @@
 
   // flag highlight styles. "both" shows the flag icon and a left edge bar.
   $: flagStyle = $prefs.flagHighlight
+  // the vip store (loaded at startup, updated on every toggle) is the single
+  // source of truth for the star, so marking and un-marking both reflect at
+  // once. The backend senderVip flag only seeds the store; OR-ing it in here
+  // would keep a removed sender starred.
+  $: isVip = $vipSenders.has(bareAddress(message.fromAddress))
   $: showFlagIcon = message.flagged && (flagStyle === 'flag' || flagStyle === 'both')
   $: barLeft = message.flagged && (flagStyle === 'left' || flagStyle === 'both')
 
@@ -216,6 +223,9 @@
     <div class="content">
       <div class="line top">
         <span class="dot" class:show={unread} aria-hidden="true"></span>
+        {#if isVip}
+          <IconStarFilled size={12} class="vip-star" aria-label={$t('vip.star')} />
+        {/if}
         <span class="sender">{displayName(message.fromName, message.fromAddress)}</span>
         {#if template === 'single'}
           <span class="subject inline">{message.subject || $t('messageList.noSubject')}</span>
@@ -391,6 +401,12 @@
   }
 
   .meta :global(.flag) {
+    color: var(--warning);
+  }
+
+  .top :global(.vip-star) {
+    flex-shrink: 0;
+    margin-right: 2px;
     color: var(--warning);
   }
 

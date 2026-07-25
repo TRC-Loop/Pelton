@@ -84,6 +84,7 @@ func (a *App) GetMessage(id int64) (MessageDetailDTO, error) {
 
 	email, folderName := a.lookupContext(a.ctx, m.AccountID, m.FolderID)
 	summary := toSummaryDTO(*m, email, folderName)
+	summary.SenderVIP = a.isVIP(m.FromAddress)
 
 	atts, err := a.store.ListAttachments(a.ctx, id)
 	if err != nil {
@@ -289,6 +290,7 @@ func (a *App) copyAttachment(diskPath, dest string) error {
 func (a *App) buildSummaries(ctx context.Context, messages []storage.Message) ([]MessageSummaryDTO, error) {
 	emailCache := make(map[int64]string)
 	folderCache := make(map[int64]string)
+	vips := a.vipSet()
 
 	out := make([]MessageSummaryDTO, 0, len(messages))
 	for _, m := range messages {
@@ -306,7 +308,9 @@ func (a *App) buildSummaries(ctx context.Context, messages []storage.Message) ([
 			}
 			folderCache[m.FolderID] = folderName
 		}
-		out = append(out, toSummaryDTO(m, email, folderName))
+		dto := toSummaryDTO(m, email, folderName)
+		dto.SenderVIP = vips[bareAddress(m.FromAddress)]
+		out = append(out, dto)
 	}
 	return out, nil
 }

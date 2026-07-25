@@ -64,6 +64,7 @@
     setUIScale,
     setMessageFontSize,
     setToastPosition,
+    setNotifyNewMail,
     setPaneLocked,
     setSendDelay,
     setFlagHighlight,
@@ -361,6 +362,7 @@
 
   // the remote-image allowlist manager (trusted senders/domains) opens in a modal.
   let allowlistOpen = false
+  let vipOpen = false
 
   // the reading-pane empty-state image is picked from a local file and stored as
   // a data uri. anything past the hard cap is refused; between the soft and hard
@@ -889,6 +891,21 @@
               on:change={(e) => setToastPosition(e.detail)}
             />
           </div>
+          <div class="toggle" title={$t('vip.notifyNewMailHint')}>
+            <span class="row-label">{$t('vip.notifyNewMail')}</span>
+            <ToggleSwitch
+              checked={$prefs.notifyNewMail}
+              label={$t('vip.notifyNewMail')}
+              on:change={(e) => setNotifyNewMail(e.detail)}
+            />
+          </div>
+          <div class="field">
+            <span class="row-label">{$t('vip.manageLabel')}</span>
+            <p class="hint">{$t('vip.manageHint')}</p>
+            <button type="button" class="action-btn" on:click={() => (vipOpen = true)}>
+              {$t('vip.manage')}
+            </button>
+          </div>
         </section>
       {:else if active === 'panes'}
         <section>
@@ -1170,6 +1187,12 @@
         dispatch('close')
       }}
     />
+  {/await}
+{/if}
+
+{#if vipOpen}
+  {#await import('./VIPSendersModal.svelte') then m}
+    <svelte:component this={m.default} on:close={() => (vipOpen = false)} />
   {/await}
 {/if}
 

@@ -72,6 +72,7 @@ const defaults: UIPrefs = {
   bodyFont: 'default',
   uiFont: 'default',
   monoFont: 'default',
+  notifyNewMail: false,
   verboseSync: false,
 }
 
@@ -232,6 +233,13 @@ export function setViewsPlacement(value: ViewsPlacement): void {
 export function setFlagColorSync(value: boolean): void {
   prefs.update((p) => ({ ...p, flagColorSync: value }))
   void setSetting(SettingKeys.flagColorSync, String(value))
+}
+
+// setNotifyNewMail toggles native OS notifications for new inbox mail. VIP
+// senders still notify when this is off.
+export function setNotifyNewMail(value: boolean): void {
+  prefs.update((p) => ({ ...p, notifyNewMail: value }))
+  void setSetting(SettingKeys.notifyNewMail, String(value))
 }
 
 // setShowOfflineIndicator toggles the little downloaded badge on pinned messages.

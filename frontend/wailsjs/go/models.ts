@@ -479,6 +479,7 @@ export namespace desktop {
 	    flagColor: number;
 	    offline: boolean;
 	    snoozeUntil: string;
+	    senderVip: boolean;
 	    toAddresses: string;
 	    ccAddresses: string;
 	    bodyPlain: string;
@@ -514,6 +515,7 @@ export namespace desktop {
 	        this.flagColor = source["flagColor"];
 	        this.offline = source["offline"];
 	        this.snoozeUntil = source["snoozeUntil"];
+	        this.senderVip = source["senderVip"];
 	        this.toAddresses = source["toAddresses"];
 	        this.ccAddresses = source["ccAddresses"];
 	        this.bodyPlain = source["bodyPlain"];
@@ -563,6 +565,7 @@ export namespace desktop {
 	    flagColor: number;
 	    offline: boolean;
 	    snoozeUntil: string;
+	    senderVip: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new MessageSummaryDTO(source);
@@ -588,6 +591,7 @@ export namespace desktop {
 	        this.flagColor = source["flagColor"];
 	        this.offline = source["offline"];
 	        this.snoozeUntil = source["snoozeUntil"];
+	        this.senderVip = source["senderVip"];
 	    }
 	}
 	export class MessageListDTO {
@@ -986,6 +990,7 @@ export namespace desktop {
 	    bodyFont: string;
 	    uiFont: string;
 	    monoFont: string;
+	    notifyNewMail: boolean;
 	    verboseSync: boolean;
 	
 	    static createFrom(source: any = {}) {
@@ -1051,6 +1056,7 @@ export namespace desktop {
 	        this.bodyFont = source["bodyFont"];
 	        this.uiFont = source["uiFont"];
 	        this.monoFont = source["monoFont"];
+	        this.notifyNewMail = source["notifyNewMail"];
 	        this.verboseSync = source["verboseSync"];
 	    }
 	}

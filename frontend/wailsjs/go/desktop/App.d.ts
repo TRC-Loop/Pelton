@@ -6,6 +6,8 @@ export function AddOAuthAccount(arg1:desktop.AddAccountRequest):Promise<desktop.
 
 export function AddPasswordAccount(arg1:desktop.AddAccountRequest):Promise<desktop.AccountDTO>;
 
+export function AddVIPSender(arg1:string):Promise<void>;
+
 export function AllowDomainImages(arg1:number):Promise<void>;
 
 export function AppVersion():Promise<string>;
@@ -110,7 +112,11 @@ export function ListUnifiedViews():Promise<Array<desktop.UnifiedViewDTO>>;
 
 export function ListUserLocales():Promise<Array<desktop.UserLocaleDTO>>;
 
+export function ListVIPSenders():Promise<Array<string>>;
+
 export function ListViews():Promise<Array<desktop.ViewDTO>>;
+
+export function MarkSenderVIP(arg1:number):Promise<void>;
 
 export function MoveMessage(arg1:number,arg2:number):Promise<desktop.ArchiveUndoDTO>;
 
@@ -131,6 +137,8 @@ export function RegenerateMCPToken():Promise<string>;
 export function RemoveImageAllow(arg1:string,arg2:string):Promise<void>;
 
 export function RemoveOffline(arg1:number):Promise<void>;
+
+export function RemoveVIPSender(arg1:string):Promise<void>;
 
 export function ReorderViews(arg1:Array<number>):Promise<void>;
 
@@ -197,6 +205,8 @@ export function TrustSenderImages(arg1:number):Promise<void>;
 export function UnarchiveMessage(arg1:string,arg2:number):Promise<void>;
 
 export function UndoDelete(arg1:number):Promise<void>;
+
+export function UnmarkSenderVIP(arg1:number):Promise<void>;
 
 export function UnsnoozeMessage(arg1:number):Promise<void>;
 

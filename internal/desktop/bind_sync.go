@@ -206,6 +206,7 @@ func (a *App) syncFolders(client *pimap.Client, accountID int64) error {
 		if res.New > 0 {
 			newTotal += res.New
 			a.emit(EventMailNew, MailNewEvent{AccountID: accountID, FolderID: f.ID, Count: res.New})
+			go a.notifyNewMail(f, res.NewIDs)
 		}
 	}
 	a.emit(EventSyncProgress, SyncProgressEvent{
@@ -253,6 +254,7 @@ func (a *App) syncOneFolder(client *pimap.Client, folder storage.Folder) error {
 	}
 	if res.New > 0 {
 		a.emit(EventMailNew, MailNewEvent{AccountID: folder.AccountID, FolderID: folder.ID, Count: res.New})
+		go a.notifyNewMail(folder, res.NewIDs)
 		go a.indexNewMessages()
 		go a.refreshViewCounts()
 		if !a.lowPowerMode() {
