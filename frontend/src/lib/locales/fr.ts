@@ -581,7 +581,7 @@ const fr: Record<string, string> = {
   'settingsPanel.category.power': 'Synchro et énergie',
   'settingsPanel.category.contacts': 'Contacts',
   'settingsPanel.category.mailboxes': 'Boîtes mail',
-  'settingsPanel.category.network': 'Réseau',
+  'settingsPanel.category.network': 'Proxy',
   'network.proxy.hint': 'Faire passer toutes les connexions de Pelton (mail et web) par un proxy.',
   'network.proxy.mode': 'Proxy',
   'network.proxy.mode.off': 'Désactivé',
