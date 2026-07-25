@@ -5,7 +5,7 @@
   // honest, always-visible window into background activity.
   import { onDestroy, onMount } from 'svelte'
   import { IconSend, IconAlertTriangle, IconRefresh, IconCheck, IconDownload, IconBatteryEco, IconX, IconBug } from '@tabler/icons-svelte'
-  import { outbox, syncing, lastSynced } from '../../stores/outbox'
+  import { outbox, syncing, lastSynced, syncFolder } from '../../stores/outbox'
   import { downloadProgress, attachmentProgress } from '../../stores/progress'
   import { formatRelative } from '../../lib/format'
   import { cancelDownload, isDevMode } from '../../lib/api'
@@ -146,7 +146,11 @@
     {#if $syncing}
       <span class="sync syncing">
         <IconRefresh size={13} stroke={1.7} class="spin" />
-        {$t('common.statusBar.syncing')}
+        {#if $prefs.verboseSync && $syncFolder}
+          {$t('common.statusBar.syncingMailbox').replace('{mailbox}', $syncFolder)}
+        {:else}
+          {$t('common.statusBar.syncing')}
+        {/if}
       </span>
     {:else if $lastSynced}
       <span class="sync">

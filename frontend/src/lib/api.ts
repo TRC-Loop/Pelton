@@ -42,6 +42,7 @@ import type {
   UserLocaleApply,
   ProxyConfig,
   MCPConfig,
+  View,
 } from './types'
 
 // isDemoMode reports whether the app launched in the cosmetic --potatoes-are-nice
@@ -55,6 +56,26 @@ export function isDemoMode(): Promise<boolean> {
 // isn't pointed at a real install.
 export function isDevMode(): Promise<boolean> {
   return App.IsDevMode()
+}
+
+// consumePendingMailto returns the mailto: draft the app was launched with (if
+// any) and clears it, so a reload does not reopen the same compose.
+export function consumePendingMailto(): Promise<desktop.PendingMailtoDTO> {
+  return App.ConsumePendingMailto()
+}
+
+// defaultMailClientStatus reports whether Pelton is the default mailto handler.
+// known is false where the platform cannot answer reliably; the ui then shows
+// nothing rather than guessing.
+export function defaultMailClientStatus(): Promise<desktop.DefaultMailStatusDTO> {
+  return App.DefaultMailClientStatus()
+}
+
+// setDefaultMailClient asks the OS to make Pelton the default mailto handler
+// (a system sheet on macOS, the xdg association on Linux, the Settings page on
+// Windows).
+export function setDefaultMailClient(): Promise<void> {
+  return App.SetDefaultMailClient()
 }
 
 // listAccounts returns every configured account.
@@ -125,6 +146,43 @@ export function listViewMessages(
   return App.ListMessages(
     new desktop.ListMessagesRequest({ kind: 'view', folderId: 0, view, limit, offset }),
   )
+}
+
+// listSavedViewMessages reads a page of a saved View (preset search).
+export function listSavedViewMessages(
+  viewId: number,
+  limit: number,
+  offset: number,
+): Promise<MessageList> {
+  if (isDemoActive()) {
+    return Promise.resolve(demoList())
+  }
+  return App.ListMessages(
+    new desktop.ListMessagesRequest({ kind: 'savedView', folderId: 0, view: '', viewId, limit, offset }),
+  )
+}
+
+// listViews returns every saved View with its eager-run counts.
+export function listViews(): Promise<View[]> {
+  if (isDemoActive()) {
+    return Promise.resolve([])
+  }
+  return App.ListViews() as unknown as Promise<View[]>
+}
+
+// saveView creates (id 0) or updates a saved View and returns it with fresh counts.
+export function saveView(view: View): Promise<View> {
+  return App.SaveView(new desktop.ViewDTO(view)) as unknown as Promise<View>
+}
+
+// deleteView removes a saved View.
+export function deleteView(id: number): Promise<void> {
+  return App.DeleteView(id)
+}
+
+// reorderViews persists a new sidebar order for the given view ids.
+export function reorderViews(orderedIds: number[]): Promise<void> {
+  return App.ReorderViews(orderedIds)
 }
 
 // getMessage returns the full message with sanitized body and attachments.
@@ -560,9 +618,11 @@ export function setMailActionsEnabled(enabled: boolean): void {
   void App.SetMailActionsEnabled(enabled)
 }
 
-// getUIPrefs returns all ui preferences with defaults applied server-side.
+// getUIPrefs returns all ui preferences with defaults applied server-side. The
+// backend types viewsPlacement as a plain string; it only ever emits the
+// ViewsPlacement values, so the cast is safe.
 export function getUIPrefs(): Promise<UIPrefs> {
-  return App.GetUIPrefs()
+  return App.GetUIPrefs() as unknown as Promise<UIPrefs>
 }
 
 // setSetting writes a single preference by key.
@@ -609,6 +669,7 @@ export const SettingKeys = {
   uiScale: 'ui_scale',
   messageFontSize: 'message_font_size',
   showFlaggedCount: 'show_flagged_count',
+  viewsPlacement: 'views_placement',
   flagColorSync: 'flag_color_sync',
   showOfflineIndicator: 'show_offline_indicator',
   swipeEnabled: 'swipe_enabled',
@@ -640,6 +701,7 @@ export const SettingKeys = {
   uiFont: 'ui_font',
   monoFont: 'mono_font',
   notifyNewMail: 'notify_new_mail',
+  verboseSync: 'verbose_sync',
 } as const
 
 // listSystemFonts returns the installed font family names for the body font

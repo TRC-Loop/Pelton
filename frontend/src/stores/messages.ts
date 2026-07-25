@@ -5,7 +5,7 @@
 
 import { writable, get } from 'svelte/store'
 import type { MessageSummary, Selection } from '../lib/types'
-import { listFolderMessages, listViewMessages, search } from '../lib/api'
+import { listFolderMessages, listViewMessages, listSavedViewMessages, search } from '../lib/api'
 import { type AsyncState, idle, loading, ready, failed } from '../lib/async'
 import { errorMessage } from './toast'
 
@@ -33,6 +33,10 @@ let loadGeneration = 0
 async function fetchPage(sel: Selection, offset: number): Promise<{ items: MessageSummary[]; total: number }> {
   if (sel.kind === 'view') {
     const page = await listViewMessages(sel.view, PAGE_SIZE, offset)
+    return { items: page.messages ?? [], total: page.total }
+  }
+  if (sel.kind === 'savedView') {
+    const page = await listSavedViewMessages(sel.viewId, PAGE_SIZE, offset)
     return { items: page.messages ?? [], total: page.total }
   }
   const page = await listFolderMessages(sel.folderId, PAGE_SIZE, offset)

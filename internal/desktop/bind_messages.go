@@ -14,13 +14,15 @@ import (
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
-// ListMessagesRequest selects the page to read. Kind is "folder" or "view".
-// FolderID applies to "folder"; View (an inbox/flagged/sent/drafts key) applies
-// to "view". Limit and Offset drive pagination.
+// ListMessagesRequest selects the page to read. Kind is "folder", "view" or
+// "savedView". FolderID applies to "folder"; View (an inbox/flagged/sent/drafts
+// key) applies to "view"; ViewID (a saved-search id) applies to "savedView".
+// Limit and Offset drive pagination.
 type ListMessagesRequest struct {
 	Kind     string `json:"kind"`
 	FolderID int64  `json:"folderId"`
 	View     string `json:"view"`
+	ViewID   int64  `json:"viewId"`
 	Limit    int    `json:"limit"`
 	Offset   int    `json:"offset"`
 }
@@ -30,6 +32,10 @@ type ListMessagesRequest struct {
 func (a *App) ListMessages(req ListMessagesRequest) (MessageListDTO, error) {
 	if err := a.ready(); err != nil {
 		return MessageListDTO{}, err
+	}
+
+	if req.Kind == "savedView" {
+		return a.listSavedView(a.ctx, req.ViewID, req.Limit, req.Offset)
 	}
 
 	q, err := a.requestQuery(a.ctx, req)
@@ -184,7 +190,13 @@ func (a *App) updateFlag(id int64, flag storage.Flag, on bool) error {
 	} else {
 		flags &^= flag
 	}
-	return a.store.MarkFlagsPending(a.ctx, id, flags)
+	if err := a.store.MarkFlagsPending(a.ctx, id, flags); err != nil {
+		return err
+	}
+	// read/flag changes move messages in and out of unread-only and flagged-only
+	// views, so refresh the view badges without waiting for the next sync.
+	go a.refreshViewCounts()
+	return nil
 }
 
 // DeleteMessage marks a message for deletion. The row is kept and hidden from
@@ -194,7 +206,11 @@ func (a *App) DeleteMessage(id int64) error {
 	if err := a.ready(); err != nil {
 		return err
 	}
-	return a.store.MarkDeletePending(a.ctx, id)
+	if err := a.store.MarkDeletePending(a.ctx, id); err != nil {
+		return err
+	}
+	go a.refreshViewCounts()
+	return nil
 }
 
 // UndoDelete reverses a pending delete while the message is still cached (before
@@ -203,7 +219,11 @@ func (a *App) UndoDelete(id int64) error {
 	if err := a.ready(); err != nil {
 		return err
 	}
-	return a.store.ClearDeletePending(a.ctx, id)
+	if err := a.store.ClearDeletePending(a.ctx, id); err != nil {
+		return err
+	}
+	go a.refreshViewCounts()
+	return nil
 }
 
 // SaveAttachment prompts for a destination and writes the attachment file there,
