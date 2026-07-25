@@ -30,6 +30,7 @@ func (a *App) startBackgroundServices() {
 	go a.harvestAddressBook()
 	go a.runAutoSyncLoop()
 	a.startMCPIfEnabled()
+	go a.refreshViewCounts()
 }
 
 // runAutoSyncLoop periodically runs a full sync pass across every account, on
@@ -215,6 +216,7 @@ func (a *App) syncFolders(client *pimap.Client, accountID int64) error {
 	// path so the search backfill never holds up the next sync.
 	if newTotal > 0 {
 		go a.indexNewMessages()
+		go a.refreshViewCounts()
 		if !a.lowPowerMode() {
 			go a.harvestAddressBook()
 		}
@@ -252,6 +254,7 @@ func (a *App) syncOneFolder(client *pimap.Client, folder storage.Folder) error {
 	if res.New > 0 {
 		a.emit(EventMailNew, MailNewEvent{AccountID: folder.AccountID, FolderID: folder.ID, Count: res.New})
 		go a.indexNewMessages()
+		go a.refreshViewCounts()
 		if !a.lowPowerMode() {
 			go a.harvestAddressBook()
 		}

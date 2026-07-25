@@ -22,6 +22,8 @@ export function ClearSentOutbox():Promise<void>;
 
 export function ConfirmThemeImport(arg1:string,arg2:boolean,arg3:boolean,arg4:boolean):Promise<desktop.ThemeInfoDTO>;
 
+export function DefaultMailClientStatus():Promise<desktop.DefaultMailStatusDTO>;
+
 export function DeleteAccount(arg1:number):Promise<void>;
 
 export function DeleteAddress(arg1:string):Promise<void>;
@@ -33,6 +35,8 @@ export function DeleteMessage(arg1:number):Promise<void>;
 export function DeleteSignature(arg1:number):Promise<void>;
 
 export function DeleteTheme(arg1:string):Promise<void>;
+
+export function DeleteView(arg1:number):Promise<void>;
 
 export function DiscoverConfig(arg1:string):Promise<desktop.DiscoveredDTO>;
 
@@ -104,6 +108,8 @@ export function ListUnifiedViews():Promise<Array<desktop.UnifiedViewDTO>>;
 
 export function ListUserLocales():Promise<Array<desktop.UserLocaleDTO>>;
 
+export function ListViews():Promise<Array<desktop.ViewDTO>>;
+
 export function MoveMessage(arg1:number,arg2:number):Promise<desktop.ArchiveUndoDTO>;
 
 export function OpenLocalesFolder():Promise<void>;
@@ -124,6 +130,8 @@ export function RemoveImageAllow(arg1:string,arg2:string):Promise<void>;
 
 export function RemoveOffline(arg1:number):Promise<void>;
 
+export function ReorderViews(arg1:Array<number>):Promise<void>;
+
 export function ResumePendingDownload():Promise<void>;
 
 export function SaveAllAttachments(arg1:number):Promise<string>;
@@ -138,6 +146,8 @@ export function SaveLocaleTemplate(arg1:string):Promise<string>;
 
 export function SaveSignature(arg1:desktop.SignatureDTO):Promise<desktop.SignatureDTO>;
 
+export function SaveView(arg1:desktop.ViewDTO):Promise<desktop.ViewDTO>;
+
 export function Search(arg1:desktop.SearchRequestDTO):Promise<Array<desktop.MessageSummaryDTO>>;
 
 export function SearchAddresses(arg1:string,arg2:number):Promise<Array<desktop.AddressBookEntryDTO>>;
@@ -147,6 +157,8 @@ export function SendMessage(arg1:desktop.ComposeRequest):Promise<number>;
 export function SenderPhotos(arg1:string):Promise<Array<string>>;
 
 export function SetAccountSignatures(arg1:number,arg2:number,arg3:number):Promise<void>;
+
+export function SetDefaultMailClient():Promise<void>;
 
 export function SetFlagColor(arg1:number,arg2:number):Promise<void>;
 

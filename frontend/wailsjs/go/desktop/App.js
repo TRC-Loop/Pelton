@@ -42,6 +42,10 @@ export function ConfirmThemeImport(arg1, arg2, arg3, arg4) {
   return window['go']['desktop']['App']['ConfirmThemeImport'](arg1, arg2, arg3, arg4);
 }
 
+export function DefaultMailClientStatus() {
+  return window['go']['desktop']['App']['DefaultMailClientStatus']();
+}
+
 export function DeleteAccount(arg1) {
   return window['go']['desktop']['App']['DeleteAccount'](arg1);
 }
@@ -64,6 +68,10 @@ export function DeleteSignature(arg1) {
 
 export function DeleteTheme(arg1) {
   return window['go']['desktop']['App']['DeleteTheme'](arg1);
+}
+
+export function DeleteView(arg1) {
+  return window['go']['desktop']['App']['DeleteView'](arg1);
 }
 
 export function DiscoverConfig(arg1) {
@@ -206,6 +214,10 @@ export function ListUserLocales() {
   return window['go']['desktop']['App']['ListUserLocales']();
 }
 
+export function ListViews() {
+  return window['go']['desktop']['App']['ListViews']();
+}
+
 export function MoveMessage(arg1, arg2) {
   return window['go']['desktop']['App']['MoveMessage'](arg1, arg2);
 }
@@ -246,6 +258,10 @@ export function RemoveOffline(arg1) {
   return window['go']['desktop']['App']['RemoveOffline'](arg1);
 }
 
+export function ReorderViews(arg1) {
+  return window['go']['desktop']['App']['ReorderViews'](arg1);
+}
+
 export function ResumePendingDownload() {
   return window['go']['desktop']['App']['ResumePendingDownload']();
 }
@@ -274,6 +290,10 @@ export function SaveSignature(arg1) {
   return window['go']['desktop']['App']['SaveSignature'](arg1);
 }
 
+export function SaveView(arg1) {
+  return window['go']['desktop']['App']['SaveView'](arg1);
+}
+
 export function Search(arg1) {
   return window['go']['desktop']['App']['Search'](arg1);
 }
@@ -292,6 +312,10 @@ export function SenderPhotos(arg1) {
 
 export function SetAccountSignatures(arg1, arg2, arg3) {
   return window['go']['desktop']['App']['SetAccountSignatures'](arg1, arg2, arg3);
+}
+
+export function SetDefaultMailClient() {
+  return window['go']['desktop']['App']['SetDefaultMailClient']();
 }
 
 export function SetFlagColor(arg1, arg2) {
