@@ -71,6 +71,7 @@ const defaults: UIPrefs = {
   bodyFont: 'default',
   uiFont: 'default',
   monoFont: 'default',
+  verboseSync: false,
 }
 
 export const prefs = writable<UIPrefs>(defaults)
@@ -394,6 +395,13 @@ export function setMonoFont(value: string): void {
   prefs.update((p) => ({ ...p, monoFont: value }))
   applyMonoFont(monoFontStack(value))
   void setSetting(SettingKeys.monoFont, value)
+}
+
+// setVerboseSync toggles surfacing the currently-syncing mailbox in the status
+// line.
+export function setVerboseSync(value: boolean): void {
+  prefs.update((p) => ({ ...p, verboseSync: value }))
+  void setSetting(SettingKeys.verboseSync, String(value))
 }
 
 // toggle keys map a boolean preference to its setting key so setToggle stays

@@ -81,6 +81,9 @@ const (
 	settingMonoFont = "mono_font"
 	// corner style for controls and cards: default, square, or round (#60).
 	settingCornerStyle = "corner_style"
+	// verbose sync surfaces the mailbox currently being synced in the status
+	// line instead of a plain "Syncing" (#128). Off by default.
+	settingVerboseSync = "verbose_sync"
 )
 
 // settingUpdateCheckFreq, settingLastUpdateCheck and defaultUpdateCheckFrequency
@@ -241,6 +244,8 @@ type UIPrefsDTO struct {
 	// UIFont and MonoFont override the interface and monospace font tokens.
 	UIFont   string `json:"uiFont"`
 	MonoFont string `json:"monoFont"`
+	// VerboseSync shows which mailbox is currently syncing in the status line.
+	VerboseSync bool `json:"verboseSync"`
 }
 
 // GetUIPrefs returns all ui preferences with defaults filled in, so startup is a
@@ -307,6 +312,7 @@ func (a *App) GetUIPrefs() (UIPrefsDTO, error) {
 		BodyFont:                   a.stringSetting(settingBodyFont, "default"),
 		UIFont:                     a.stringSetting(settingUIFont, "default"),
 		MonoFont:                   a.stringSetting(settingMonoFont, "default"),
+		VerboseSync:                a.boolSetting(settingVerboseSync, false),
 	}, nil
 }
 

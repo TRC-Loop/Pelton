@@ -917,6 +917,7 @@ export namespace desktop {
 	    bodyFont: string;
 	    uiFont: string;
 	    monoFont: string;
+	    verboseSync: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new UIPrefsDTO(source);
@@ -980,6 +981,7 @@ export namespace desktop {
 	        this.bodyFont = source["bodyFont"];
 	        this.uiFont = source["uiFont"];
 	        this.monoFont = source["monoFont"];
+	        this.verboseSync = source["verboseSync"];
 	    }
 	}
 	export class UnifiedViewDTO {

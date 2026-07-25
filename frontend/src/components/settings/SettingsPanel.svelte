@@ -91,6 +91,7 @@
     setLanguage,
     setLowPowerMode,
     setAutoSyncInterval,
+    setVerboseSync,
     setDefaultEditorMode,
     setComposeAutocomplete,
     setComposeChips,
@@ -985,6 +986,17 @@
           />
           <p class="hint">
             {$t('settingsPanel.hint.autoSyncDetail')}
+          </p>
+          <div class="toggle" title={$t('settingsPanel.hint.verboseSync')}>
+            <span class="row-label">{$t('settingsPanel.toggle.verboseSync')}</span>
+            <ToggleSwitch
+              checked={$prefs.verboseSync}
+              label={$t('settingsPanel.toggle.verboseSync')}
+              on:change={(e) => setVerboseSync(e.detail)}
+            />
+          </div>
+          <p class="hint">
+            {$t('settingsPanel.hint.verboseSyncDetail')}
           </p>
         </section>
       {:else if active === 'offline'}
