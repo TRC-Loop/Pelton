@@ -52,7 +52,8 @@
   import { BrowserOpenURL } from '../wailsjs/runtime/runtime'
   import { setDemoActive } from './lib/demo'
   import { recordArchived } from './stores/undoarchive'
-  import { onMailNew, onSyncState, onOutboxChanged, onMenu, type Unsubscribe } from './lib/events'
+  import { onMailNew, onSyncState, onOutboxChanged, onMenu, onViewsChanged, type Unsubscribe } from './lib/events'
+  import { loadViews } from './stores/views'
   import { isMac } from './lib/i18n'
   import { Quit, WindowHide, WindowIsFullscreen, WindowFullscreen, WindowUnfullscreen } from '../wailsjs/runtime/runtime'
   import { matchShortcut, comboHasModifier, type ShortcutAction } from './lib/shortcuts'
@@ -136,6 +137,7 @@
     void loadSignatures()
     initProgress()
     await loadSidebar()
+    void loadViews()
     await loadOutbox()
 
     // in demo mode, skip onboarding and show a sync in progress for the screenshot.
@@ -169,6 +171,7 @@
       }),
     )
     unsubscribers.push(onOutboxChanged(() => void loadOutbox()))
+    unsubscribers.push(onViewsChanged(() => void loadViews()))
     unsubscribers.push(onMenu(handleMenu))
 
     // WebKitGTK (Linux) has a known quirk where maximizing the window - a

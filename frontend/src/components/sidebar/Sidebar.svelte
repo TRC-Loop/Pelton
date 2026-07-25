@@ -6,14 +6,35 @@
   import { IconPencil, IconRefresh, IconMailbox, IconPlus } from '@tabler/icons-svelte'
   import UnifiedViews from './UnifiedViews.svelte'
   import AccountTree from './AccountTree.svelte'
+  import SavedViews from './SavedViews.svelte'
+  import ViewEditorModal from '../settings/ViewEditorModal.svelte'
   import Spinner from '../common/Spinner.svelte'
   import ErrorState from '../common/ErrorState.svelte'
   import EmptyState from '../common/EmptyState.svelte'
   import { sidebar, loadSidebar } from '../../stores/accounts'
+  import { views, blankView } from '../../stores/views'
   import { syncing } from '../../stores/outbox'
+  import { prefs } from '../../stores/prefs'
+  import type { View } from '../../lib/types'
   import { t } from '../../lib/i18n'
 
   const dispatch = createEventDispatcher<{ compose: void; sync: void; addMailbox: void }>()
+
+  // saved-Views placement: 'hidden' (off), 'sidebar' (a group), or 'tab' (a
+  // Mail/Views toggle swapping the sidebar body).
+  $: placement = $prefs.viewsPlacement
+  // in tab mode, which pane the sidebar body shows.
+  let tab: 'mail' | 'views' = 'mail'
+
+  // the view editor overlay: null when closed, else the working view.
+  let editing: View | null = null
+
+  function openNew(): void {
+    editing = blankView()
+  }
+  function openEdit(v: View): void {
+    editing = { ...v }
+  }
 </script>
 
 <aside class="sidebar">
@@ -52,14 +73,45 @@
           </button>
         </EmptyState>
       {:else}
-        <UnifiedViews views={$sidebar.data.views} />
-        {#each $sidebar.data.accounts as account (account.id)}
-          <AccountTree {account} folders={$sidebar.data.foldersByAccount[account.id] ?? []} />
-        {/each}
+        {#if placement === 'tab'}
+          <div class="tabs" role="tablist">
+            <button type="button" role="tab" class:on={tab === 'mail'} aria-selected={tab === 'mail'} on:click={() => (tab = 'mail')}>
+              {$t('views.tab.mail')}
+            </button>
+            <button type="button" role="tab" class:on={tab === 'views'} aria-selected={tab === 'views'} on:click={() => (tab = 'views')}>
+              {$t('views.tab.views')}
+            </button>
+          </div>
+          {#if tab === 'views'}
+            <SavedViews views={$views} on:new={openNew} on:edit={(e) => openEdit(e.detail)} />
+          {:else}
+            <UnifiedViews views={$sidebar.data.views} />
+            {#each $sidebar.data.accounts as account (account.id)}
+              <AccountTree {account} folders={$sidebar.data.foldersByAccount[account.id] ?? []} />
+            {/each}
+          {/if}
+        {:else}
+          <UnifiedViews views={$sidebar.data.views} />
+          {#if placement === 'sidebar'}
+            <SavedViews views={$views} on:new={openNew} on:edit={(e) => openEdit(e.detail)} />
+          {/if}
+          {#each $sidebar.data.accounts as account (account.id)}
+            <AccountTree {account} folders={$sidebar.data.foldersByAccount[account.id] ?? []} />
+          {/each}
+        {/if}
       {/if}
     {/if}
   </div>
 </aside>
+
+{#if editing}
+  <ViewEditorModal
+    value={editing}
+    accounts={$sidebar.data?.accounts ?? []}
+    on:close={() => (editing = null)}
+    on:saved={() => (editing = null)}
+  />
+{/if}
 
 <style>
   .sidebar {
@@ -138,6 +190,35 @@
     min-height: 0;
     overflow-y: auto;
     padding: var(--space-3) var(--space-2);
+  }
+
+  .tabs {
+    display: flex;
+    gap: var(--space-1);
+    padding: 0 var(--space-2) var(--space-2);
+    margin-bottom: var(--space-1);
+  }
+
+  .tabs button {
+    flex: 1;
+    padding: var(--space-2);
+    border: var(--hairline) solid transparent;
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: var(--fz-label);
+    font-weight: var(--fw-medium);
+    border-radius: var(--radius-control);
+    cursor: pointer;
+  }
+
+  .tabs button:hover {
+    background: var(--surface-hover);
+    color: var(--text-primary);
+  }
+
+  .tabs button.on {
+    background: var(--selection-bg);
+    color: var(--text-primary);
   }
 
   .add-mailbox {

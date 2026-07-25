@@ -23,6 +23,13 @@ export function selectView(view: ViewKey, label: string): void {
   searchQuery.set('')
 }
 
+// selectSavedView switches the list to a user-defined saved View (preset search).
+export function selectSavedView(viewId: number, label: string): void {
+  selection.set({ kind: 'savedView', viewId, label })
+  openMessageId.set(null)
+  searchQuery.set('')
+}
+
 // selectFolder switches the list to a single account folder.
 export function selectFolder(folder: Folder): void {
   selection.set({

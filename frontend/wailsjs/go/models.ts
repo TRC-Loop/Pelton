@@ -890,6 +890,7 @@ export namespace desktop {
 	    previewLines: number;
 	    uiScale: string;
 	    messageFontSize: number;
+	    viewsPlacement: string;
 	    showFlaggedCount: boolean;
 	    flagColorSync: boolean;
 	    showOfflineIndicator: boolean;
@@ -953,6 +954,7 @@ export namespace desktop {
 	        this.previewLines = source["previewLines"];
 	        this.uiScale = source["uiScale"];
 	        this.messageFontSize = source["messageFontSize"];
+	        this.viewsPlacement = source["viewsPlacement"];
 	        this.showFlaggedCount = source["showFlaggedCount"];
 	        this.flagColorSync = source["flagColorSync"];
 	        this.showOfflineIndicator = source["showOfflineIndicator"];
