@@ -42,6 +42,10 @@ export function ConfirmThemeImport(arg1, arg2, arg3, arg4) {
   return window['go']['desktop']['App']['ConfirmThemeImport'](arg1, arg2, arg3, arg4);
 }
 
+export function DefaultMailClientStatus() {
+  return window['go']['desktop']['App']['DefaultMailClientStatus']();
+}
+
 export function DeleteAccount(arg1) {
   return window['go']['desktop']['App']['DeleteAccount'](arg1);
 }
@@ -308,6 +312,10 @@ export function SenderPhotos(arg1) {
 
 export function SetAccountSignatures(arg1, arg2, arg3) {
   return window['go']['desktop']['App']['SetAccountSignatures'](arg1, arg2, arg3);
+}
+
+export function SetDefaultMailClient() {
+  return window['go']['desktop']['App']['SetDefaultMailClient']();
 }
 
 export function SetFlagColor(arg1, arg2) {

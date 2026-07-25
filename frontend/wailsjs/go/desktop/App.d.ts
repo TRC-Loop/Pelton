@@ -22,6 +22,8 @@ export function ClearSentOutbox():Promise<void>;
 
 export function ConfirmThemeImport(arg1:string,arg2:boolean,arg3:boolean,arg4:boolean):Promise<desktop.ThemeInfoDTO>;
 
+export function DefaultMailClientStatus():Promise<desktop.DefaultMailStatusDTO>;
+
 export function DeleteAccount(arg1:number):Promise<void>;
 
 export function DeleteAddress(arg1:string):Promise<void>;
@@ -155,6 +157,8 @@ export function SendMessage(arg1:desktop.ComposeRequest):Promise<number>;
 export function SenderPhotos(arg1:string):Promise<Array<string>>;
 
 export function SetAccountSignatures(arg1:number,arg2:number,arg3:number):Promise<void>;
+
+export function SetDefaultMailClient():Promise<void>;
 
 export function SetFlagColor(arg1:number,arg2:number):Promise<void>;
 

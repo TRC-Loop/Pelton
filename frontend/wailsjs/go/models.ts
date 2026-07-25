@@ -262,6 +262,20 @@ export namespace desktop {
 		    return a;
 		}
 	}
+	export class DefaultMailStatusDTO {
+	    known: boolean;
+	    isDefault: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new DefaultMailStatusDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.known = source["known"];
+	        this.isDefault = source["isDefault"];
+	    }
+	}
 	export class DiscoveredDTO {
 	    imapHost: string;
 	    imapPort: number;

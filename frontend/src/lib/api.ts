@@ -58,6 +58,20 @@ export function isDevMode(): Promise<boolean> {
   return App.IsDevMode()
 }
 
+// defaultMailClientStatus reports whether Pelton is the default mailto handler.
+// known is false where the platform cannot answer reliably; the ui then shows
+// nothing rather than guessing.
+export function defaultMailClientStatus(): Promise<desktop.DefaultMailStatusDTO> {
+  return App.DefaultMailClientStatus()
+}
+
+// setDefaultMailClient asks the OS to make Pelton the default mailto handler
+// (a system sheet on macOS, the xdg association on Linux, the Settings page on
+// Windows).
+export function setDefaultMailClient(): Promise<void> {
+  return App.SetDefaultMailClient()
+}
+
 // listAccounts returns every configured account.
 export function listAccounts(): Promise<Account[]> {
   if (isDemoActive()) {

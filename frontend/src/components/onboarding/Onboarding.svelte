@@ -5,7 +5,7 @@
   // adding a mailbox or skipping, and finally a celebratory "all set". a skip
   // affordance is always available. completion is persisted by the parent so this
   // only ever shows once, with a settings action to run it again.
-  import { createEventDispatcher } from 'svelte'
+  import { createEventDispatcher, onMount } from 'svelte'
   import { fly, fade, scale } from 'svelte/transition'
   import { quintOut, backOut } from 'svelte/easing'
   import {
@@ -27,6 +27,7 @@
     IconDots,
     IconPalette,
     IconWorld,
+    IconMail,
   } from '@tabler/icons-svelte'
   import Confetti from '../common/Confetti.svelte'
   import AppSkeleton from './AppSkeleton.svelte'
@@ -55,6 +56,8 @@
     setLowPowerMode,
   } from '../../stores/prefs'
   import { ACCENT_PRESETS } from '../../theme/accent'
+  import { defaultMailClientStatus, setDefaultMailClient } from '../../lib/api'
+  import { toastError, errorMessage } from '../../stores/toast'
   import { pfpDataUri, type PfpStyle } from '../../lib/pfp'
   import { initials } from '../../lib/format'
   import { shortcutLabel, t } from '../../lib/i18n'
@@ -158,9 +161,10 @@
     | 'scale'
     | 'layout'
     | 'extras'
+    | 'defaultmail'
     | 'mailbox'
     | 'done'
-  const order: Step[] = [
+  const baseOrder: Step[] = [
     'welcome',
     'language',
     'features',
@@ -171,11 +175,42 @@
     'scale',
     'layout',
     'extras',
+    'defaultmail',
     'mailbox',
     'done',
   ]
+  // whether Pelton is already the default mail client. the offer step is dropped
+  // when it is (nothing to offer) or where the platform cannot answer at all,
+  // matching the quiet-by-design intent. resolved once at mount, before the user
+  // advances, so reordering never shifts a step out from under them.
+  let offerDefaultMail = false
+  $: order = offerDefaultMail ? baseOrder : baseOrder.filter((s) => s !== 'defaultmail')
   let index = 0
   $: step = order[index]
+
+  onMount(async () => {
+    try {
+      const s = await defaultMailClientStatus()
+      offerDefaultMail = s.known && !s.isDefault
+    } catch {
+      offerDefaultMail = false
+    }
+  })
+
+  // makeDefault takes the offer, then advances. macOS shows its own
+  // confirmation sheet; a failure surfaces quietly and does not block the flow.
+  let settingDefault = false
+  async function makeDefault(): Promise<void> {
+    settingDefault = true
+    try {
+      await setDefaultMailClient()
+    } catch (err) {
+      toastError(errorMessage(err))
+    } finally {
+      settingDefault = false
+      next()
+    }
+  }
   // direction drives the slide of the step transition (forward vs back).
   let dir = 1
 
@@ -562,6 +597,21 @@
             <div class="nav">
               <button class="ghost" on:click={back}><IconArrowLeft size={16} stroke={1.8} /> {$t('onboarding.back')}</button>
               <button class="primary" on:click={next}>{$t('onboarding.continue')} <IconArrowRight size={16} stroke={1.8} /></button>
+            </div>
+          </div>
+        {:else if step === 'defaultmail'}
+          <div class="choose">
+            <h2>{$t('onboarding.defaultMailTitle')}</h2>
+            <p class="sub">{$t('onboarding.defaultMailSub')}</p>
+            <div class="default-mail">
+              <span class="dm-icon"><IconMail size={40} stroke={1.4} /></span>
+              <button type="button" class="dm-cta" disabled={settingDefault} on:click={makeDefault}>
+                {$t('onboarding.defaultMailSet')}
+              </button>
+            </div>
+            <div class="nav">
+              <button class="ghost" on:click={back}><IconArrowLeft size={16} stroke={1.8} /> {$t('onboarding.back')}</button>
+              <button class="primary" on:click={next}>{$t('onboarding.skipForNow')}</button>
             </div>
           </div>
         {:else if step === 'mailbox'}
@@ -1176,6 +1226,50 @@
     display: flex;
     justify-content: center;
     margin-bottom: var(--space-6);
+  }
+
+  /* default-mail-client offer step. */
+  .default-mail {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-5);
+    margin-bottom: var(--space-6);
+  }
+
+  .dm-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 84px;
+    height: 84px;
+    border-radius: 999px;
+    background: var(--surface-sunken);
+    color: var(--accent);
+    border: var(--hairline) solid var(--border-subtle);
+  }
+
+  .dm-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-4) var(--space-6);
+    border-radius: var(--radius-control);
+    border: none;
+    background: var(--accent);
+    color: var(--accent-fg);
+    font-size: var(--fz-body);
+    font-weight: var(--fw-medium);
+    cursor: pointer;
+  }
+
+  .dm-cta:hover {
+    filter: brightness(1.05);
+  }
+
+  .dm-cta:disabled {
+    opacity: 0.6;
+    cursor: default;
   }
 
   /* mailbox provider cards. */
