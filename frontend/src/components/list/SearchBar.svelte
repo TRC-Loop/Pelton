@@ -224,8 +224,8 @@
     openViewEditor({
       name: text.trim(),
       queryText: text.trim(),
-      queryFrom: f.from,
-      queryTo: f.to,
+      queryFrom: f.from ? [f.from] : [],
+      queryTo: f.to ? [f.to] : [],
       querySubject: f.subject,
       hasAttachment: f.hasAttachment,
     })

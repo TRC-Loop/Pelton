@@ -20,11 +20,17 @@ type View struct {
 	Icon  string
 	Color string
 
+	// QueryFrom and QueryTo may hold several addresses, one per line, matched as
+	// OR within the field. QueryText and QuerySubject stay single criteria.
 	QueryText    string
 	QueryFrom    string
 	QueryTo      string
 	QuerySubject string
 	WithinDays   int
+
+	// UseRegex treats the text criteria as regular expressions instead of plain
+	// substrings.
+	UseRegex bool
 
 	UnreadOnly    bool
 	FlaggedOnly   bool
@@ -38,7 +44,7 @@ type View struct {
 
 const selectViewColumns = `
 SELECT id, name, icon, color,
-       query_text, query_from, query_to, query_subject, within_days,
+       query_text, query_from, query_to, query_subject, within_days, use_regex,
        unread_only, flagged_only, has_attachment, account_id,
        position, created_at, updated_at
 FROM views`
@@ -90,12 +96,12 @@ func (d *DB) CreateView(ctx context.Context, v *View) (int64, error) {
 	}
 	const query = `
 INSERT INTO views (name, icon, color, query_text, query_from, query_to, query_subject,
-                   within_days, unread_only, flagged_only, has_attachment, account_id,
+                   within_days, use_regex, unread_only, flagged_only, has_attachment, account_id,
                    position, created_at, updated_at)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 	res, err := d.sql.ExecContext(ctx, query,
 		v.Name, v.Icon, v.Color, v.QueryText, v.QueryFrom, v.QueryTo, v.QuerySubject,
-		v.WithinDays, boolToInt(v.UnreadOnly), boolToInt(v.FlaggedOnly), boolToInt(v.HasAttachment),
+		v.WithinDays, boolToInt(v.UseRegex), boolToInt(v.UnreadOnly), boolToInt(v.FlaggedOnly), boolToInt(v.HasAttachment),
 		zeroAsNull(v.AccountID), v.Position, formatTime(now), formatTime(now))
 	if err != nil {
 		return 0, fmt.Errorf("storage: insert view: %w", err)
@@ -116,12 +122,12 @@ func (d *DB) UpdateView(ctx context.Context, v *View) error {
 	const query = `
 UPDATE views SET name = ?, icon = ?, color = ?,
                  query_text = ?, query_from = ?, query_to = ?, query_subject = ?,
-                 within_days = ?, unread_only = ?, flagged_only = ?, has_attachment = ?,
+                 within_days = ?, use_regex = ?, unread_only = ?, flagged_only = ?, has_attachment = ?,
                  account_id = ?, position = ?, updated_at = ?
 WHERE id = ?`
 	res, err := d.sql.ExecContext(ctx, query,
 		v.Name, v.Icon, v.Color, v.QueryText, v.QueryFrom, v.QueryTo, v.QuerySubject,
-		v.WithinDays, boolToInt(v.UnreadOnly), boolToInt(v.FlaggedOnly), boolToInt(v.HasAttachment),
+		v.WithinDays, boolToInt(v.UseRegex), boolToInt(v.UnreadOnly), boolToInt(v.FlaggedOnly), boolToInt(v.HasAttachment),
 		zeroAsNull(v.AccountID), v.Position, formatTime(now), v.ID)
 	if err != nil {
 		return fmt.Errorf("storage: update view %d: %w", v.ID, err)
@@ -163,17 +169,18 @@ func (d *DB) SetViewPositions(ctx context.Context, orderedIDs []int64) error {
 
 func scanView(row rowScanner) (*View, error) {
 	var (
-		v                       View
-		accountID               sql.NullInt64
-		unread, flagged, hasAtt int
-		created, updated        string
+		v                                 View
+		accountID                         sql.NullInt64
+		useRegex, unread, flagged, hasAtt int
+		created, updated                  string
 	)
 	if err := row.Scan(&v.ID, &v.Name, &v.Icon, &v.Color,
-		&v.QueryText, &v.QueryFrom, &v.QueryTo, &v.QuerySubject, &v.WithinDays,
+		&v.QueryText, &v.QueryFrom, &v.QueryTo, &v.QuerySubject, &v.WithinDays, &useRegex,
 		&unread, &flagged, &hasAtt, &accountID,
 		&v.Position, &created, &updated); err != nil {
 		return nil, err
 	}
+	v.UseRegex = useRegex != 0
 	v.UnreadOnly = unread != 0
 	v.FlaggedOnly = flagged != 0
 	v.HasAttachment = hasAtt != 0
