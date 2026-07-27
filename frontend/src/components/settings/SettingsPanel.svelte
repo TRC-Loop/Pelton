@@ -92,6 +92,7 @@
     setComposeAutocomplete,
     setComposeChips,
     setEmptyStateImage,
+    setEmptyStateFullscreen,
     setMenuBarInApp,
     setMenuBarNativeMinimal,
     setMenuBarIcons,
@@ -760,6 +761,16 @@
                 </div>
               </div>
             {/if}
+            <div class="toggle" class:disabled={!$prefs.emptyStateImage} title={$t('settingsPanel.hint.emptyStateFullscreen')}>
+              <span class="row-label">{$t('settingsPanel.toggle.emptyStateFullscreen')}</span>
+              <ToggleSwitch
+                checked={$prefs.emptyStateFullscreen}
+                disabled={!$prefs.emptyStateImage}
+                label={$t('settingsPanel.toggle.emptyStateFullscreen')}
+                on:change={(e) => setEmptyStateFullscreen(e.detail)}
+              />
+            </div>
+            <p class="hint">{$t('settingsPanel.hint.emptyStateFullscreen')}</p>
           </div>
         </section>
       {:else if active === 'menubar'}

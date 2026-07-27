@@ -692,6 +692,7 @@ export const SettingKeys = {
   composeChips: 'compose_chips',
   updateCheckFrequency: 'update_check_frequency',
   emptyStateImage: 'empty_state_image',
+  emptyStateFullscreen: 'empty_state_fullscreen',
   cornerStyle: 'corner_style',
   themeId: 'theme_id',
   menuBarInApp: 'menu_bar_in_app',

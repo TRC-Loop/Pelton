@@ -874,6 +874,8 @@ const en: Record<string, string> = {
   'settingsPanel.label.interfaceScale': 'Interface scale',
   'settingsPanel.hint.interfaceScale': 'Zooms the whole interface. Make everything a bit bigger or smaller.',
   'settingsPanel.label.emptyStateImage': 'Reading pane image',
+  'settingsPanel.toggle.emptyStateFullscreen': 'Fill the pane with the image',
+  'settingsPanel.hint.emptyStateFullscreen': 'Show your image as a full-bleed background instead of a small centered mark. Needs a selected image.',
   'settingsPanel.hint.emptyStateImage': 'The image shown in the reading pane when no message is open.',
   'settingsPanel.button.selectImage': 'Select image',
   'settingsPanel.button.resetImage': 'Reset to default',

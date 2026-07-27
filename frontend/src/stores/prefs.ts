@@ -60,6 +60,7 @@ const defaults: UIPrefs = {
   composeChips: true,
   updateCheckFrequency: 'off',
   emptyStateImage: '',
+  emptyStateFullscreen: false,
   cornerStyle: 'default',
   themeId: '',
   menuBarInApp: false,
@@ -330,6 +331,13 @@ export function setUpdateCheckFrequency(value: string): void {
 export function setEmptyStateImage(value: string): void {
   prefs.update((p) => ({ ...p, emptyStateImage: value }))
   void setSetting(SettingKeys.emptyStateImage, value)
+}
+
+// setEmptyStateFullscreen toggles showing the empty-state image as a full-bleed
+// cover background instead of a small centered mark.
+export function setEmptyStateFullscreen(value: boolean): void {
+  prefs.update((p) => ({ ...p, emptyStateFullscreen: value }))
+  void setSetting(SettingKeys.emptyStateFullscreen, String(value))
 }
 
 // setAutoSyncInterval persists how often a full sync pass runs, in seconds (0

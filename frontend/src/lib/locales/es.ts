@@ -874,6 +874,8 @@ const es: Record<string, string> = {
   'settingsPanel.label.interfaceScale': 'Escala de la interfaz',
   'settingsPanel.hint.interfaceScale': 'Amplía toda la interfaz. Haz que todo sea un poco más grande o más pequeño.',
   'settingsPanel.label.emptyStateImage': 'Imagen del panel de lectura',
+  'settingsPanel.toggle.emptyStateFullscreen': 'Rellenar el panel con la imagen',
+  'settingsPanel.hint.emptyStateFullscreen': 'Muestra tu imagen como fondo a sangre completa en lugar de una pequeña marca centrada. Requiere una imagen seleccionada.',
   'settingsPanel.hint.emptyStateImage': 'La imagen que se muestra en el panel de lectura cuando no hay ningún mensaje abierto.',
   'settingsPanel.button.selectImage': 'Elegir imagen',
   'settingsPanel.button.resetImage': 'Restablecer',

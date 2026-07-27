@@ -978,6 +978,7 @@ export namespace desktop {
 	    composeChips: boolean;
 	    updateCheckFrequency: string;
 	    emptyStateImage: string;
+	    emptyStateFullscreen: boolean;
 	    cornerStyle: string;
 	    themeId: string;
 	    menuBarInApp: boolean;
@@ -1044,6 +1045,7 @@ export namespace desktop {
 	        this.composeChips = source["composeChips"];
 	        this.updateCheckFrequency = source["updateCheckFrequency"];
 	        this.emptyStateImage = source["emptyStateImage"];
+	        this.emptyStateFullscreen = source["emptyStateFullscreen"];
 	        this.cornerStyle = source["cornerStyle"];
 	        this.themeId = source["themeId"];
 	        this.menuBarInApp = source["menuBarInApp"];

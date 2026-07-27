@@ -874,6 +874,8 @@ const nl: Record<string, string> = {
   'settingsPanel.label.interfaceScale': 'Interfacegrootte',
   'settingsPanel.hint.interfaceScale': 'Zoomt de hele interface. Maak alles een beetje groter of kleiner.',
   'settingsPanel.label.emptyStateImage': 'Afbeelding leesvenster',
+  'settingsPanel.toggle.emptyStateFullscreen': 'Venster vullen met de afbeelding',
+  'settingsPanel.hint.emptyStateFullscreen': 'Toont je afbeelding als volledige achtergrond in plaats van een klein gecentreerd merk. Vereist een geselecteerde afbeelding.',
   'settingsPanel.hint.emptyStateImage': 'De afbeelding in het leesvenster wanneer er geen bericht open is.',
   'settingsPanel.button.selectImage': 'Afbeelding kiezen',
   'settingsPanel.button.resetImage': 'Terug naar standaard',
