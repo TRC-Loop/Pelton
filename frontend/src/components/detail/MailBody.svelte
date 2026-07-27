@@ -9,9 +9,9 @@
   // asks the backend to re-render with remote content allowed.
   import { onDestroy } from 'svelte'
   import { BrowserOpenURL } from '../../../wailsjs/runtime/runtime'
-  import { IconPhoto, IconUserCheck, IconWorldCheck } from '@tabler/icons-svelte'
+  import { IconPhoto, IconUserCheck, IconWorldCheck, IconMailCheck } from '@tabler/icons-svelte'
   import { prefs } from '../../stores/prefs'
-  import { getMessageHtml, trustSenderImages, allowDomainImages } from '../../lib/api'
+  import { getMessageHtml, trustSenderImages, allowDomainImages, allowRemoteForMessage } from '../../lib/api'
   import { setBodyHtml } from '../../stores/message'
   import { errorMessage, toastError, toastSuccess } from '../../stores/toast'
   import { displayName, linkifySegments } from '../../lib/format'
@@ -274,6 +274,17 @@
       toastError(errorMessage(err))
     }
   }
+
+  // allow remote content for this one message only (persists), then show it now.
+  // nothing else from the sender or domain is trusted.
+  async function trustThisEmail(): Promise<void> {
+    try {
+      await allowRemoteForMessage(detail.id)
+      await loadRemote()
+    } catch (err) {
+      toastError(errorMessage(err))
+    }
+  }
 </script>
 
 {#if detail.hasRemoteContent && !remoteLoaded}
@@ -290,6 +301,10 @@
       <button type="button" class="remote-btn" on:click={loadRemote}>
         <IconPhoto size={14} stroke={1.6} />
         {$t('detail.mailBody.loadOnce')}
+      </button>
+      <button type="button" class="remote-btn" on:click={trustThisEmail} title={$t('detail.mailBody.thisEmailTitle')}>
+        <IconMailCheck size={14} stroke={1.6} />
+        {$t('detail.mailBody.thisEmail')}
       </button>
       <button type="button" class="remote-btn" on:click={trustSender} title={$t('detail.mailBody.alwaysLoadFrom').replace('{who}', senderLabel)}>
         <IconUserCheck size={14} stroke={1.6} />

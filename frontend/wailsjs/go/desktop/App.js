@@ -18,6 +18,10 @@ export function AllowDomainImages(arg1) {
   return window['go']['desktop']['App']['AllowDomainImages'](arg1);
 }
 
+export function AllowRemoteForMessage(arg1) {
+  return window['go']['desktop']['App']['AllowRemoteForMessage'](arg1);
+}
+
 export function AppVersion() {
   return window['go']['desktop']['App']['AppVersion']();
 }

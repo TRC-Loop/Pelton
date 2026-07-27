@@ -355,6 +355,12 @@ export function allowDomainImages(messageId: number): Promise<void> {
   return App.AllowDomainImages(messageId)
 }
 
+// allowRemoteForMessage permanently allows remote content for this one message,
+// without trusting the whole sender or domain.
+export function allowRemoteForMessage(messageId: number): Promise<void> {
+  return App.AllowRemoteForMessage(messageId)
+}
+
 // ImageAllowEntry is one trusted sender or domain in the remote-image
 // allowlist, with an example cached message when one exists.
 export type ImageAllowEntry = desktop.ImageAllowEntryDTO

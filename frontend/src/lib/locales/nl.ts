@@ -494,6 +494,8 @@ const nl: Record<string, string> = {
   'detail.mailBody.more': '+{count} meer',
   'detail.mailBody.loadOnce': 'Eén keer laden',
   'detail.mailBody.alwaysLoadFrom': 'Altijd afbeeldingen laden van {who}',
+  'detail.mailBody.thisEmail': 'Deze e-mail',
+  'detail.mailBody.thisEmailTitle': 'Externe inhoud altijd laden voor alleen deze e-mail',
   'detail.mailBody.thisSender': 'Deze afzender',
   'detail.mailBody.thisDomain': 'Dit domein',
   'detail.mailBody.iframeTitle': 'Berichtinhoud',

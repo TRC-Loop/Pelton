@@ -92,8 +92,9 @@ func (a *App) GetMessage(id int64) (MessageDetailDTO, error) {
 	}
 
 	// trusted senders/domains (or the global setting) render remote content with
-	// no prompt; everyone else is blocked until the user asks.
-	autoAllow := a.remoteAutoAllow(m.FromAddress)
+	// no prompt; a per-message allow does the same for this one message; everyone
+	// else is blocked until the user asks.
+	autoAllow := a.remoteAutoAllow(m.FromAddress) || a.remoteMessageAllowed(m)
 
 	detail := MessageDetailDTO{
 		MessageSummaryDTO: summary,
