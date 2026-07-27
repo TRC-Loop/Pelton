@@ -28,7 +28,7 @@ const localeStringsCap = 20000
 // builtinLocales are the bundled languages a user locale may use as its
 // fallback base.
 var builtinLocales = map[string]bool{
-	"en": true, "de": true, "fr": true, "nl": true, "es": true,
+	"en": true, "de": true, "fr": true, "nl": true, "es": true, "pl": true,
 }
 
 // localeIDPattern is the shape of a user locale id (its file name without
