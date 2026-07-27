@@ -6,22 +6,17 @@
   // reorganization — they are only grouped.
   import {
     IconX,
+    IconSearch,
+    IconMenu2,
     IconPalette,
     IconList,
-    IconLayoutSidebar,
-    IconUserCircle,
     IconSignature,
-    IconSend2,
     IconShieldLock,
     IconBell,
-    IconLayoutColumns,
     IconEye,
     IconKeyboard,
     IconInfoCircle,
     IconHandMove,
-    IconCloudDownload,
-    IconFileImport,
-    IconAddressBook,
     IconMailbox,
     IconWriting,
     IconLanguage,
@@ -30,7 +25,6 @@
     IconFolderOpen,
     IconFileExport,
     IconRefresh,
-    IconWorld,
     IconPlugConnected,
   } from '@tabler/icons-svelte'
   import { createEventDispatcher, onMount } from 'svelte'
@@ -155,31 +149,136 @@
 
   // left-nav categories. each maps to a block rendered on the right. iconName
   // is the themeable icon slot (the tabler name in kebab, see ThemedIcon).
+  // group places the category under a top-level heading in the nav; keywords is
+  // localized search text (synonyms and notable sub-settings) so the search box
+  // can find a category by the toggles it holds, not just its title. Nothing is
+  // removed here, only grouped and made searchable.
   $: categories = [
-    { key: 'appearance', label: $t('settingsPanel.category.appearance'), icon: IconPalette, iconName: 'palette' },
-    { key: 'themes', label: $t('settingsPanel.category.themes'), icon: IconBrush, iconName: 'brush' },
-    { key: 'language', label: $t('settings.language'), icon: IconLanguage, iconName: 'language' },
-    { key: 'list', label: $t('settingsPanel.category.list'), icon: IconList, iconName: 'list' },
-    { key: 'sidebar', label: $t('settingsPanel.category.sidebar'), icon: IconLayoutSidebar, iconName: 'layout-sidebar' },
-    { key: 'avatars', label: $t('settingsPanel.category.avatars'), icon: IconUserCircle, iconName: 'user-circle' },
-    { key: 'signatures', label: $t('settingsPanel.category.signatures'), icon: IconSignature, iconName: 'signature' },
-    { key: 'sending', label: $t('settingsPanel.category.sending'), icon: IconSend2, iconName: 'send-2' },
-    { key: 'privacy', label: $t('settingsPanel.category.privacy'), icon: IconShieldLock, iconName: 'shield-lock' },
-    { key: 'notifications', label: $t('settingsPanel.category.notifications'), icon: IconBell, iconName: 'bell' },
-    { key: 'panes', label: $t('settings.panes'), icon: IconLayoutColumns, iconName: 'layout-columns' },
-    { key: 'display', label: $t('settingsPanel.category.display'), icon: IconEye, iconName: 'eye' },
-    { key: 'gestures', label: $t('settingsPanel.category.gestures'), icon: IconHandMove, iconName: 'hand-move' },
-    { key: 'offline', label: $t('settingsPanel.category.offline'), icon: IconCloudDownload, iconName: 'cloud-download' },
-    { key: 'power', label: $t('settingsPanel.category.power'), icon: IconBatteryEco, iconName: 'battery-eco' },
-    { key: 'mailboxes', label: $t('settingsPanel.category.mailboxes'), icon: IconMailbox, iconName: 'mailbox' },
-    { key: 'network', label: $t('settingsPanel.category.network'), icon: IconWorld, iconName: 'world' },
-    { key: 'external', label: $t('settingsPanel.category.external'), icon: IconPlugConnected, iconName: 'plug-connected' },
-    { key: 'contacts', label: $t('settingsPanel.category.contacts'), icon: IconAddressBook, iconName: 'address-book' },
-    { key: 'sync', label: $t('settingsPanel.category.importExport'), icon: IconFileImport, iconName: 'file-import' },
-    { key: 'composing', label: $t('settingsPanel.category.composing'), icon: IconWriting, iconName: 'writing' },
-    { key: 'shortcuts', label: $t('settingsPanel.category.shortcuts'), icon: IconKeyboard, iconName: 'keyboard' },
-    { key: 'about', label: $t('settingsPanel.category.about'), icon: IconInfoCircle, iconName: 'info-circle' },
+    { key: 'appearance', group: 'appearance', label: $t('settingsPanel.category.appearance'), keywords: $t('settingsPanel.keywords.appearance'), icon: IconPalette, iconName: 'palette' },
+    { key: 'themes', group: 'appearance', label: $t('settingsPanel.category.themes'), keywords: $t('settingsPanel.keywords.themes'), icon: IconBrush, iconName: 'brush' },
+    { key: 'menubar', group: 'appearance', label: $t('settingsPanel.category.menubar'), keywords: $t('settingsPanel.keywords.menubar'), icon: IconMenu2, iconName: 'menu-2' },
+    { key: 'language', group: 'appearance', label: $t('settings.language'), keywords: $t('settingsPanel.keywords.language'), icon: IconLanguage, iconName: 'language' },
+    { key: 'list', group: 'mail', label: $t('settingsPanel.category.messageList'), keywords: $t('settingsPanel.keywords.list') + ' ' + $t('settingsPanel.keywords.sidebar') + ' ' + $t('settingsPanel.keywords.avatars'), icon: IconList, iconName: 'list' },
+    { key: 'display', group: 'mail', label: $t('settingsPanel.category.reading'), keywords: $t('settingsPanel.keywords.display') + ' ' + $t('settingsPanel.keywords.panes'), icon: IconEye, iconName: 'eye' },
+    { key: 'composing', group: 'mail', label: $t('settingsPanel.category.composingSending'), keywords: $t('settingsPanel.keywords.composing') + ' ' + $t('settingsPanel.keywords.sending'), icon: IconWriting, iconName: 'writing' },
+    { key: 'signatures', group: 'mail', label: $t('settingsPanel.category.signatures'), keywords: $t('settingsPanel.keywords.signatures'), icon: IconSignature, iconName: 'signature' },
+    { key: 'notifications', group: 'mail', label: $t('settingsPanel.category.notifications'), keywords: $t('settingsPanel.keywords.notifications'), icon: IconBell, iconName: 'bell' },
+    { key: 'gestures', group: 'mail', label: $t('settingsPanel.category.gestures'), keywords: $t('settingsPanel.keywords.gestures'), icon: IconHandMove, iconName: 'hand-move' },
+    { key: 'privacy', group: 'privacy', label: $t('settingsPanel.category.privacyNetwork'), keywords: $t('settingsPanel.keywords.privacy') + ' ' + $t('settingsPanel.keywords.network'), icon: IconShieldLock, iconName: 'shield-lock' },
+    { key: 'mailboxes', group: 'accounts', label: $t('settingsPanel.category.accounts'), keywords: $t('settingsPanel.keywords.mailboxes') + ' ' + $t('settingsPanel.keywords.contacts'), icon: IconMailbox, iconName: 'mailbox' },
+    { key: 'external', group: 'accounts', label: $t('settingsPanel.category.integrations'), keywords: $t('settingsPanel.keywords.external') + ' ' + $t('settingsPanel.keywords.sync'), icon: IconPlugConnected, iconName: 'plug-connected' },
+    { key: 'power', group: 'advanced', label: $t('settingsPanel.category.powerSync'), keywords: $t('settingsPanel.keywords.power') + ' ' + $t('settingsPanel.keywords.offline'), icon: IconBatteryEco, iconName: 'battery-eco' },
+    { key: 'shortcuts', group: 'advanced', label: $t('settingsPanel.category.shortcuts'), keywords: $t('settingsPanel.keywords.shortcuts'), icon: IconKeyboard, iconName: 'keyboard' },
+    { key: 'about', group: 'about', label: $t('settingsPanel.category.about'), keywords: $t('settingsPanel.keywords.about'), icon: IconInfoCircle, iconName: 'info-circle' },
   ]
+
+  // top-level nav groups, in display order. Every category belongs to one.
+  $: navGroups = [
+    { key: 'appearance', label: $t('settingsPanel.group.appearance') },
+    { key: 'mail', label: $t('settingsPanel.group.mail') },
+    { key: 'privacy', label: $t('settingsPanel.group.privacy') },
+    { key: 'accounts', label: $t('settingsPanel.group.accounts') },
+    { key: 'advanced', label: $t('settingsPanel.group.advanced') },
+    { key: 'about', label: $t('settingsPanel.group.about') },
+  ]
+
+  // per-setting search index: each entry is one individual setting, mapped to the
+  // category that now holds it. `label` is the control's own localized label, so
+  // search finds a setting by name, not just its category. `kw` adds synonyms.
+  $: settingsIndex = [
+    { cat: 'appearance', label: $t('settingsPanel.label.theme'), kw: 'dark light schedule' },
+    { cat: 'appearance', label: $t('onboarding.accentTitle'), kw: 'accent color' },
+    { cat: 'appearance', label: $t('settingsPanel.label.density'), kw: '' },
+    { cat: 'appearance', label: $t('settingsPanel.label.corners'), kw: 'rounded square' },
+    { cat: 'appearance', label: $t('settingsPanel.label.interfaceScale'), kw: 'zoom scale size' },
+    { cat: 'appearance', label: $t('settingsPanel.toggle.reduceMotion'), kw: 'animation' },
+    { cat: 'appearance', label: $t('settingsPanel.label.emptyStateImage'), kw: 'background image empty' },
+    { cat: 'menubar', label: $t('settingsPanel.toggle.menuBarInApp'), kw: 'menu bar' },
+    { cat: 'menubar', label: $t('settingsPanel.toggle.menuBarNativeMinimal'), kw: 'menu bar native' },
+    { cat: 'menubar', label: $t('settingsPanel.toggle.menuBarIcons'), kw: 'menu bar icons' },
+    { cat: 'menubar', label: $t('menuBar.editButton'), kw: 'menu bar edit' },
+    { cat: 'menubar', label: $t('menuBar.newItems.label'), kw: 'menu bar new items' },
+    { cat: 'themes', label: $t('settingsPanel.category.themes'), kw: 'theme pack import' },
+    { cat: 'language', label: $t('settings.language'), kw: 'locale translation' },
+    { cat: 'list', label: $t('settingsPanel.label.rowLayout'), kw: 'rows layout' },
+    { cat: 'list', label: $t('settingsPanel.toggle.showSenderAvatar'), kw: 'avatar' },
+    { cat: 'list', label: $t('settingsPanel.toggle.showMessagePreview'), kw: 'preview snippet' },
+    { cat: 'list', label: $t('settingsPanel.label.previewLines'), kw: 'preview lines' },
+    { cat: 'list', label: $t('settingsPanel.label.flaggedHighlight'), kw: 'flag highlight' },
+    { cat: 'list', label: $t('settingsPanel.toggle.showMailboxEmail'), kw: 'account email' },
+    { cat: 'list', label: $t('settingsPanel.toggle.multiSelect'), kw: 'select multiple' },
+    { cat: 'list', label: $t('settingsPanel.toggle.indentGuides'), kw: 'sidebar folders' },
+    { cat: 'list', label: $t('settingsPanel.toggle.flaggedCount'), kw: 'sidebar flagged count' },
+    { cat: 'list', label: $t('views.setting.label'), kw: 'views saved searches' },
+    { cat: 'list', label: $t('settingsPanel.label.senderPhotos'), kw: 'avatar gravatar' },
+    { cat: 'list', label: $t('settingsPanel.label.generatedStyle'), kw: 'avatar style' },
+    { cat: 'display', label: $t('onboarding.extras.fontSize'), kw: 'message font size' },
+    { cat: 'display', label: $t('settingsPanel.label.timeFormat'), kw: 'clock 24 hour' },
+    { cat: 'display', label: $t('settingsPanel.label.bodyFont'), kw: 'font' },
+    { cat: 'display', label: $t('settingsPanel.label.uiFont'), kw: 'font interface' },
+    { cat: 'display', label: $t('settingsPanel.label.monoFont'), kw: 'font monospace code' },
+    { cat: 'display', label: $t('settings.lockPanes'), kw: 'panes layout lock' },
+    { cat: 'composing', label: $t('settingsPanel.label.defaultEditor'), kw: 'editor html plain markdown' },
+    { cat: 'composing', label: $t('settingsPanel.toggle.autocomplete'), kw: 'autocomplete recipients' },
+    { cat: 'composing', label: $t('settingsPanel.toggle.chipRecipients'), kw: 'chips recipients' },
+    { cat: 'composing', label: $t('onboarding.extras.vimEditor'), kw: 'vim' },
+    { cat: 'composing', label: $t('settingsPanel.label.undoSendWindow'), kw: 'undo send delay' },
+    { cat: 'signatures', label: $t('settingsPanel.category.signatures'), kw: 'signature footer' },
+    { cat: 'notifications', label: $t('settings.toastPosition'), kw: 'notification position' },
+    { cat: 'notifications', label: $t('vip.notifyNewMail'), kw: 'new mail notification' },
+    { cat: 'notifications', label: $t('vip.manageLabel'), kw: 'vip senders' },
+    { cat: 'gestures', label: $t('settingsPanel.toggle.swipeEnabled'), kw: 'swipe gesture' },
+    { cat: 'gestures', label: $t('settingsPanel.label.swipeLeft'), kw: 'swipe left' },
+    { cat: 'gestures', label: $t('settingsPanel.label.swipeRight'), kw: 'swipe right' },
+    { cat: 'privacy', label: $t('settingsPanel.toggle.alwaysLoadImages'), kw: 'remote images tracking' },
+    { cat: 'privacy', label: $t('settingsPanel.label.manageWhitelist'), kw: 'trusted senders allowlist' },
+    { cat: 'privacy', label: $t('settingsPanel.category.network'), kw: 'proxy connection tls socks' },
+    { cat: 'mailboxes', label: $t('settingsPanel.category.mailboxes'), kw: 'accounts imap smtp servers' },
+    { cat: 'mailboxes', label: $t('settingsPanel.category.contacts'), kw: 'address book people' },
+    { cat: 'external', label: $t('settingsPanel.category.external'), kw: 'default mail client links browser' },
+    { cat: 'external', label: $t('settingsPanel.category.importExport'), kw: 'backup restore transfer' },
+    { cat: 'power', label: $t('settingsPanel.toggle.lowPowerMode'), kw: 'battery energy' },
+    { cat: 'power', label: $t('settingsPanel.label.autoSyncInterval'), kw: 'sync interval' },
+    { cat: 'power', label: $t('settingsPanel.toggle.verboseSync'), kw: 'sync status' },
+    { cat: 'power', label: $t('settingsPanel.toggle.offlineIndicator'), kw: 'offline' },
+    { cat: 'power', label: $t('settingsPanel.toggle.flagColorSync'), kw: 'flag color sync' },
+    { cat: 'power', label: $t('settingsPanel.label.downloadOffline'), kw: 'download offline cache' },
+    { cat: 'shortcuts', label: $t('settingsPanel.toggle.shortcutHints'), kw: 'keyboard hints' },
+    { cat: 'shortcuts', label: $t('onboarding.extras.appVim'), kw: 'vim navigation' },
+    { cat: 'shortcuts', label: $t('settings.shortcuts'), kw: 'keyboard keys hotkeys' },
+    { cat: 'about', label: $t('settingsPanel.category.about'), kw: 'version license update' },
+  ]
+
+  // settings search: filter the nav by title, group name or keywords, and build a
+  // flat list of individual settings that match, so the user can jump straight to
+  // a specific toggle without knowing its category.
+  let settingsQuery = ''
+  $: settingsQ = settingsQuery.trim().toLowerCase()
+  function catLabel(key: string): string {
+    return categories.find((c) => c.key === key)?.label ?? key
+  }
+  $: matchedCategories =
+    settingsQ === ''
+      ? categories
+      : categories.filter(
+          (c) =>
+            c.label.toLowerCase().includes(settingsQ) ||
+            c.keywords.toLowerCase().includes(settingsQ) ||
+            (navGroups.find((g) => g.key === c.group)?.label ?? '').toLowerCase().includes(settingsQ),
+        )
+  $: searchResults =
+    settingsQ === ''
+      ? []
+      : settingsIndex.filter(
+          (s) =>
+            s.label.toLowerCase().includes(settingsQ) ||
+            s.kw.toLowerCase().includes(settingsQ) ||
+            catLabel(s.cat).toLowerCase().includes(settingsQ),
+        )
+  function openResult(cat: string): void {
+    active = cat
+    settingsQuery = ''
+  }
 
   // auto-sync interval presets, in seconds (0 = off).
   $: autoSyncOptions = [
@@ -481,22 +580,66 @@
 
   <div class="body">
     <nav class="nav" aria-label={$t('settingsPanel.navAria')}>
-      {#each categories as cat (cat.key)}
-        <button
-          type="button"
-          class="nav-item"
-          class:active={active === cat.key}
-          aria-current={active === cat.key}
-          on:click={() => (active = cat.key)}
-        >
-          <span class="nav-icon"><ThemedIcon name={cat.iconName} icon={cat.icon} size={17} stroke={1.6} /></span>
-          <span>{cat.label}</span>
-        </button>
+      <div class="nav-search">
+        <IconSearch size={15} stroke={1.7} />
+        <input
+          type="text"
+          bind:value={settingsQuery}
+          placeholder={$t('settings.search')}
+          aria-label={$t('settings.search')}
+        />
+        {#if settingsQuery}
+          <button type="button" class="nav-search-clear" aria-label={$t('settingsPanel.closeAria')} on:click={() => (settingsQuery = '')}>
+            <IconX size={14} stroke={1.8} />
+          </button>
+        {/if}
+      </div>
+
+      {#each navGroups as g (g.key)}
+        {@const items = matchedCategories.filter((c) => c.group === g.key)}
+        {#if items.length}
+          <div class="nav-group">{g.label}</div>
+          {#each items as cat (cat.key)}
+            <button
+              type="button"
+              class="nav-item"
+              class:active={active === cat.key}
+              aria-current={active === cat.key}
+              on:click={() => {
+                active = cat.key
+                settingsQuery = ''
+              }}
+            >
+              <span class="nav-icon"><ThemedIcon name={cat.iconName} icon={cat.icon} size={17} stroke={1.6} /></span>
+              <span>{cat.label}</span>
+            </button>
+          {/each}
+        {/if}
       {/each}
+
+      {#if matchedCategories.length === 0}
+        <p class="nav-empty">{$t('settings.searchEmpty')}</p>
+      {/if}
     </nav>
 
     <div class="content">
-      {#if active === 'language'}
+      {#if settingsQ !== ''}
+        <section>
+          <h3>{$t('settings.search')}</h3>
+          {#if searchResults.length === 0}
+            <p class="hint">{$t('settings.searchEmpty')}</p>
+          {:else}
+            <div class="search-results">
+              {#each searchResults as r (r.cat + r.label)}
+                <button type="button" class="result" on:click={() => openResult(r.cat)}>
+                  <span class="result-label">{r.label}</span>
+                  <span class="result-cat">{catLabel(r.cat)}</span>
+                </button>
+              {/each}
+            </div>
+          {/if}
+        </section>
+      {:else if active === 'language'}
         <section>
           <h3>{$t('settings.language')}</h3>
           <p class="hint">{$t('settings.languageHint')}</p>
@@ -570,7 +713,58 @@
             on:change={(e) => setUIScale(e.detail)}
           />
           <p class="hint">{$t('settingsPanel.hint.interfaceScale')}</p>
+          <div class="toggle">
+            <span class="row-label">{$t('settingsPanel.toggle.reduceMotion')}</span>
+            <ToggleSwitch
+              checked={$prefs.reduceMotion}
+              label={$t('settingsPanel.toggle.reduceMotion')}
+              on:change={(e) => setReduceMotion(e.detail)}
+            />
+          </div>
+          <p class="hint">{$t('settingsPanel.hint.reduceMotion')}</p>
 
+          <div class="field">
+            <span class="row-label">{$t('settingsPanel.label.emptyStateImage')}</span>
+            <p class="hint">{$t('settingsPanel.hint.emptyStateImage')}</p>
+            <div class="empty-image-row">
+              <div class="empty-image-preview">
+                <img src={$prefs.emptyStateImage || peltonLogo} alt="" draggable="false" />
+              </div>
+              <div class="empty-image-actions">
+                <button type="button" class="action-btn" on:click={() => emptyImageInput?.click()}>
+                  {$t('settingsPanel.button.selectImage')}
+                </button>
+                <button
+                  type="button"
+                  class="action-btn"
+                  disabled={!$prefs.emptyStateImage}
+                  on:click={() => setEmptyStateImage('')}
+                >
+                  {$t('settingsPanel.button.resetImage')}
+                </button>
+              </div>
+            </div>
+            <input
+              class="hidden-file"
+              type="file"
+              accept="image/*"
+              bind:this={emptyImageInput}
+              on:change={onPickEmptyImage}
+            />
+            {#if dragonsPending}
+              <div class="warn">
+                <p>{$t('settingsPanel.warn.imageLarge')}</p>
+                <div class="warn-actions">
+                  <button type="button" class="ghost-btn" on:click={() => (dragonsPending = null)}>{$t('settingsPanel.button.cancel')}</button>
+                  <button type="button" class="danger-btn" on:click={confirmDragons}>{$t('settingsPanel.button.useAnyway')}</button>
+                </div>
+              </div>
+            {/if}
+          </div>
+        </section>
+      {:else if active === 'menubar'}
+        <section>
+          <h3>{$t('settingsPanel.category.menubar')}</h3>
           {#if isMac}
             <div class="toggle">
               <span class="row-label">{$t('settingsPanel.toggle.menuBarInApp')}</span>
@@ -622,94 +816,10 @@
             />
             <p class="hint">{$t('menuBar.newItems.hint')}</p>
           {/if}
-          <div class="toggle">
-            <span class="row-label">{$t('settingsPanel.toggle.reduceMotion')}</span>
-            <ToggleSwitch
-              checked={$prefs.reduceMotion}
-              label={$t('settingsPanel.toggle.reduceMotion')}
-              on:change={(e) => setReduceMotion(e.detail)}
-            />
-          </div>
-          <p class="hint">{$t('settingsPanel.hint.reduceMotion')}</p>
-          <div class="row">
-            <span class="row-label">{$t('settingsPanel.label.uiFont')}</span>
-            <select class="select" value={$prefs.uiFont} on:change={onUIFont}>
-              <optgroup label={$t('settingsPanel.bodyFont.groupCurated')}>
-                {#each uiFontOptions as opt}
-                  <option value={opt.key}>{opt.label}</option>
-                {/each}
-              </optgroup>
-              {#if systemFonts.length > 0}
-                <optgroup label={$t('settingsPanel.bodyFont.groupSystem')}>
-                  {#each systemFonts as family}
-                    <option value={`sys:${family}`}>{family}</option>
-                  {/each}
-                </optgroup>
-              {/if}
-            </select>
-          </div>
-          <p class="hint">{$t('settingsPanel.hint.uiFont')}</p>
-          <div class="row">
-            <span class="row-label">{$t('settingsPanel.label.monoFont')}</span>
-            <select class="select" value={$prefs.monoFont} on:change={onMonoFont}>
-              <optgroup label={$t('settingsPanel.bodyFont.groupCurated')}>
-                {#each monoFontOptions as opt}
-                  <option value={opt.key}>{opt.label}</option>
-                {/each}
-              </optgroup>
-              {#if systemFonts.length > 0}
-                <optgroup label={$t('settingsPanel.bodyFont.groupSystem')}>
-                  {#each systemFonts as family}
-                    <option value={`sys:${family}`}>{family}</option>
-                  {/each}
-                </optgroup>
-              {/if}
-            </select>
-          </div>
-          <p class="hint">{$t('settingsPanel.hint.monoFont')}</p>
-
-          <div class="field">
-            <span class="row-label">{$t('settingsPanel.label.emptyStateImage')}</span>
-            <p class="hint">{$t('settingsPanel.hint.emptyStateImage')}</p>
-            <div class="empty-image-row">
-              <div class="empty-image-preview">
-                <img src={$prefs.emptyStateImage || peltonLogo} alt="" draggable="false" />
-              </div>
-              <div class="empty-image-actions">
-                <button type="button" class="action-btn" on:click={() => emptyImageInput?.click()}>
-                  {$t('settingsPanel.button.selectImage')}
-                </button>
-                <button
-                  type="button"
-                  class="action-btn"
-                  disabled={!$prefs.emptyStateImage}
-                  on:click={() => setEmptyStateImage('')}
-                >
-                  {$t('settingsPanel.button.resetImage')}
-                </button>
-              </div>
-            </div>
-            <input
-              class="hidden-file"
-              type="file"
-              accept="image/*"
-              bind:this={emptyImageInput}
-              on:change={onPickEmptyImage}
-            />
-            {#if dragonsPending}
-              <div class="warn">
-                <p>{$t('settingsPanel.warn.imageLarge')}</p>
-                <div class="warn-actions">
-                  <button type="button" class="ghost-btn" on:click={() => (dragonsPending = null)}>{$t('settingsPanel.button.cancel')}</button>
-                  <button type="button" class="danger-btn" on:click={confirmDragons}>{$t('settingsPanel.button.useAnyway')}</button>
-                </div>
-              </div>
-            {/if}
-          </div>
         </section>
       {:else if active === 'list'}
         <section>
-          <h3>{$t('settingsPanel.category.list')}</h3>
+          <h3>{$t('settingsPanel.category.messageList')}</h3>
           <SegmentedSetting
             label={$t('settingsPanel.label.rowLayout')}
             value={$prefs.rowTemplate}
@@ -775,10 +885,8 @@
               on:change={(e) => setShowSelectedCount(e.detail)}
             />
           </div>
-        </section>
-      {:else if active === 'sidebar'}
-        <section>
-          <h3>{$t('settingsPanel.category.sidebar')}</h3>
+
+          <h4 class="subhead">{$t('settingsPanel.category.sidebar')}</h4>
           <div class="toggle" title={$t('settingsPanel.hint.indentGuides')}>
             <span class="row-label">{$t('settingsPanel.toggle.indentGuides')}</span>
             <ToggleSwitch
@@ -802,10 +910,8 @@
             on:change={(e) => setViewsPlacement(e.detail as ViewsPlacement)}
           />
           <p class="hint">{$t('views.setting.hint')}</p>
-        </section>
-      {:else if active === 'avatars'}
-        <section>
-          <h3>{$t('settingsPanel.category.avatars')}</h3>
+
+          <h4 class="subhead">{$t('settingsPanel.category.avatars')}</h4>
           <SegmentedSetting
             label={$t('settingsPanel.label.senderPhotos')}
             value={$prefs.avatarSource}
@@ -839,17 +945,6 @@
         <section>
           <SignaturesSection />
         </section>
-      {:else if active === 'sending'}
-        <section>
-          <h3>{$t('settingsPanel.category.sending')}</h3>
-          <SegmentedSetting
-            label={$t('settingsPanel.label.undoSendWindow')}
-            value={String($prefs.sendDelaySeconds)}
-            options={sendDelayOptions}
-            on:change={onSendDelay}
-          />
-          <p class="hint">{$t('settingsPanel.hint.undoSend')}</p>
-        </section>
       {:else if active === 'privacy'}
         <section>
           <h3>{$t('settingsPanel.category.privacy')}</h3>
@@ -880,6 +975,10 @@
               {$t('settingsPanel.button.manageWhitelist')}
             </button>
           </div>
+
+          <div class="merged-block">
+            <NetworkSection />
+          </div>
         </section>
       {:else if active === 'notifications'}
         <section>
@@ -907,21 +1006,9 @@
             </button>
           </div>
         </section>
-      {:else if active === 'panes'}
-        <section>
-          <h3>{$t('settings.panes')}</h3>
-          <div class="toggle" title={$t('settingsPanel.hint.lockPanes')}>
-            <span class="row-label">{$t('settings.lockPanes')}</span>
-            <ToggleSwitch
-              checked={$prefs.paneLocked}
-              label={$t('settings.lockPanes')}
-              on:change={(e) => setPaneLocked(e.detail)}
-            />
-          </div>
-        </section>
       {:else if active === 'display'}
         <section>
-          <h3>{$t('settingsPanel.category.display')}</h3>
+          <h3>{$t('settingsPanel.category.reading')}</h3>
           <SegmentedSetting
             label={$t('onboarding.extras.fontSize')}
             value={String($prefs.messageFontSize)}
@@ -954,7 +1041,53 @@
             </select>
           </div>
           <p class="hint">{$t('settingsPanel.hint.bodyFont')}</p>
+          <div class="row">
+            <span class="row-label">{$t('settingsPanel.label.uiFont')}</span>
+            <select class="select" value={$prefs.uiFont} on:change={onUIFont}>
+              <optgroup label={$t('settingsPanel.bodyFont.groupCurated')}>
+                {#each uiFontOptions as opt}
+                  <option value={opt.key}>{opt.label}</option>
+                {/each}
+              </optgroup>
+              {#if systemFonts.length > 0}
+                <optgroup label={$t('settingsPanel.bodyFont.groupSystem')}>
+                  {#each systemFonts as family}
+                    <option value={`sys:${family}`}>{family}</option>
+                  {/each}
+                </optgroup>
+              {/if}
+            </select>
+          </div>
+          <p class="hint">{$t('settingsPanel.hint.uiFont')}</p>
+          <div class="row">
+            <span class="row-label">{$t('settingsPanel.label.monoFont')}</span>
+            <select class="select" value={$prefs.monoFont} on:change={onMonoFont}>
+              <optgroup label={$t('settingsPanel.bodyFont.groupCurated')}>
+                {#each monoFontOptions as opt}
+                  <option value={opt.key}>{opt.label}</option>
+                {/each}
+              </optgroup>
+              {#if systemFonts.length > 0}
+                <optgroup label={$t('settingsPanel.bodyFont.groupSystem')}>
+                  {#each systemFonts as family}
+                    <option value={`sys:${family}`}>{family}</option>
+                  {/each}
+                </optgroup>
+              {/if}
+            </select>
+          </div>
+          <p class="hint">{$t('settingsPanel.hint.monoFont')}</p>
           <TechToggles />
+
+          <h4 class="subhead">{$t('settings.panes')}</h4>
+          <div class="toggle" title={$t('settingsPanel.hint.lockPanes')}>
+            <span class="row-label">{$t('settings.lockPanes')}</span>
+            <ToggleSwitch
+              checked={$prefs.paneLocked}
+              label={$t('settings.lockPanes')}
+              on:change={(e) => setPaneLocked(e.detail)}
+            />
+          </div>
         </section>
       {:else if active === 'gestures'}
         <section>
@@ -997,7 +1130,7 @@
         </section>
       {:else if active === 'power'}
         <section>
-          <h3>{$t('settingsPanel.category.power')}</h3>
+          <h3>{$t('settingsPanel.category.powerSync')}</h3>
           <div class="toggle" title={$t('settingsPanel.hint.lowPowerToggle')}>
             <span class="row-label">{$t('settingsPanel.toggle.lowPowerMode')}</span>
             <ToggleSwitch
@@ -1029,10 +1162,8 @@
           <p class="hint">
             {$t('settingsPanel.hint.verboseSyncDetail')}
           </p>
-        </section>
-      {:else if active === 'offline'}
-        <section>
-          <h3>{$t('settingsPanel.category.offline')}</h3>
+
+          <h4 class="subhead">{$t('settingsPanel.category.offline')}</h4>
           <div class="toggle" title={$t('settingsPanel.hint.offlineIndicator')}>
             <span class="row-label">{$t('settingsPanel.toggle.offlineIndicator')}</span>
             <ToggleSwitch
@@ -1087,27 +1218,19 @@
       {:else if active === 'mailboxes'}
         <section>
           <MailboxesSection />
-        </section>
-      {:else if active === 'network'}
-        <section>
-          <NetworkSection />
+          <div class="merged-block">
+            <AddressBookSection />
+          </div>
         </section>
       {:else if active === 'external'}
         <section>
           <ExternalSection />
-        </section>
-      {:else if active === 'contacts'}
-        <section>
-          <AddressBookSection />
-        </section>
-      {:else if active === 'sync'}
-        <section>
-          <h3>{$t('settingsPanel.category.importExport')}</h3>
+          <h4 class="subhead">{$t('settingsPanel.category.importExport')}</h4>
           <ImportExportSection />
         </section>
       {:else if active === 'composing'}
         <section>
-          <h3>{$t('settingsPanel.category.composing')}</h3>
+          <h3>{$t('settingsPanel.category.composingSending')}</h3>
           <SegmentedSetting
             label={$t('settingsPanel.label.defaultEditor')}
             value={$prefs.defaultEditorMode}
@@ -1143,6 +1266,15 @@
             />
           </div>
           <p class="hint">{$t('settingsPanel.hint.vimEditorDetail')}</p>
+
+          <h4 class="subhead">{$t('settingsPanel.category.sending')}</h4>
+          <SegmentedSetting
+            label={$t('settingsPanel.label.undoSendWindow')}
+            value={String($prefs.sendDelaySeconds)}
+            options={sendDelayOptions}
+            on:change={onSendDelay}
+          />
+          <p class="hint">{$t('settingsPanel.hint.undoSend')}</p>
         </section>
       {:else if active === 'shortcuts'}
         <section>
@@ -1253,6 +1385,67 @@
     gap: 2px;
   }
 
+  .nav-search {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    margin-bottom: var(--space-2);
+    border: var(--hairline) solid var(--border-default);
+    border-radius: var(--radius-control);
+    background: var(--surface-sunken);
+    color: var(--text-tertiary);
+    position: sticky;
+    top: 0;
+    z-index: 1;
+  }
+
+  .nav-search:focus-within {
+    border-color: var(--accent);
+  }
+
+  .nav-search input {
+    flex: 1;
+    min-width: 0;
+    border: none;
+    outline: none;
+    background: transparent;
+    color: var(--text-primary);
+    font-size: var(--fz-list);
+  }
+
+  .nav-search-clear {
+    display: inline-flex;
+    border: none;
+    background: transparent;
+    color: var(--text-tertiary);
+    cursor: pointer;
+    padding: 0;
+  }
+
+  .nav-search-clear:hover {
+    color: var(--text-primary);
+  }
+
+  .nav-group {
+    padding: var(--space-3) var(--space-3) var(--space-1);
+    font-size: var(--fz-meta);
+    font-weight: var(--fw-semibold);
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .nav-group:first-of-type {
+    padding-top: var(--space-1);
+  }
+
+  .nav-empty {
+    padding: var(--space-3);
+    font-size: var(--fz-meta);
+    color: var(--text-tertiary);
+  }
+
   .nav-item {
     display: flex;
     align-items: center;
@@ -1294,7 +1487,7 @@
   }
 
   section {
-    max-width: 560px;
+    max-width: 720px;
   }
 
   h3 {
@@ -1302,6 +1495,26 @@
     font-size: var(--fz-heading);
     font-weight: var(--fw-semibold);
     color: var(--text-primary);
+  }
+
+  /* subheading for a merged sub-group inside a category. */
+  .subhead {
+    margin: var(--space-5) 0 var(--space-2);
+    padding-top: var(--space-4);
+    border-top: var(--hairline) solid var(--border-subtle);
+    font-size: var(--fz-label);
+    font-weight: var(--fw-semibold);
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  /* a merged component sub-section (e.g. Contacts under Accounts) gets a divider
+     and its own top spacing since it renders its own heading. */
+  .merged-block {
+    margin-top: var(--space-5);
+    padding-top: var(--space-4);
+    border-top: var(--hairline) solid var(--border-subtle);
   }
 
   .row {
@@ -1344,11 +1557,50 @@
     font-size: var(--fz-label);
   }
 
+  /* a hint hugs the control it describes (small gap above) and leaves a clear
+     gap below so it reads as part of that setting, not the next one. */
   .hint {
-    margin: var(--space-2) 0 0;
+    margin: 2px 0 var(--space-4);
     font-size: var(--fz-label);
     color: var(--text-tertiary);
     line-height: 1.5;
+  }
+
+  /* flat list of individual settings that match the search query. */
+  .search-results {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+
+  .result {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-4);
+    width: 100%;
+    padding: var(--space-2) var(--space-3);
+    border: var(--hairline) solid var(--border-subtle);
+    background: var(--surface-raised);
+    border-radius: var(--radius-control);
+    color: var(--text-primary);
+    cursor: pointer;
+    text-align: left;
+  }
+
+  .result:hover {
+    background: var(--surface-hover);
+    border-color: var(--border-default);
+  }
+
+  .result-label {
+    font-size: var(--fz-body);
+  }
+
+  .result-cat {
+    flex-shrink: 0;
+    font-size: var(--fz-meta);
+    color: var(--text-tertiary);
   }
 
   .edit-menubar {
