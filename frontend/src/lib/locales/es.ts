@@ -1031,6 +1031,17 @@ const es: Record<string, string> = {
   'menuBar.icon.narrow': 'Sigue escribiendo para acotar los resultados.',
   'settingsPanel.hint.appVim': 'Usa h/j/k/l para moverte por la aplicación, fuera del área de redacción.',
   'settingsPanel.hint.appVimDetail': 'j/k recorre la lista de mensajes, l/Intro lo abre, h/Esc vuelve atrás, gg/G salta al principio/final. Desactivado mientras escribes, en la barra lateral, o mientras un diálogo está abierto.',
+  'common.network.offline': 'Sin conexión',
+  'common.network.offlineTitle': 'Sin conexión a Internet',
+  'common.network.offlineError': 'Sin conexión a Internet. Comprueba tu Wi-Fi e inténtalo de nuevo.',
+  'sidebar.unifiedInbox': 'Bandeja de entrada unificada',
+  'sidebar.view.inbox': 'Bandeja de entrada',
+  'sidebar.view.flagged': 'Destacados',
+  'sidebar.view.drafts': 'Borradores',
+  'sidebar.view.sent': 'Enviados',
+  'sidebar.view.archive': 'Archivo',
+  'sidebar.view.junk': 'No deseado',
+  'sidebar.view.trash': 'Papelera',
 }
 
 export default es

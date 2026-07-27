@@ -1031,6 +1031,17 @@ const nl: Record<string, string> = {
   'menuBar.icon.narrow': 'Blijf typen om de resultaten te verfijnen.',
   'settingsPanel.hint.appVim': 'Gebruik h/j/k/l om door de app zelf te navigeren, buiten het opstellen.',
   'settingsPanel.hint.appVimDetail': 'j/k beweegt door de berichtenlijst, l/Enter opent, h/Escape gaat terug, gg/G springt naar het begin/einde. Uitgeschakeld tijdens typen, in de zijbalk, of wanneer een dialoogvenster open is.',
+  'common.network.offline': 'Offline',
+  'common.network.offlineTitle': 'Geen internetverbinding',
+  'common.network.offlineError': 'Geen internetverbinding. Controleer je wifi en probeer het opnieuw.',
+  'sidebar.unifiedInbox': 'Gecombineerd Postvak IN',
+  'sidebar.view.inbox': 'Postvak IN',
+  'sidebar.view.flagged': 'Met vlag',
+  'sidebar.view.drafts': 'Concepten',
+  'sidebar.view.sent': 'Verzonden',
+  'sidebar.view.archive': 'Archief',
+  'sidebar.view.junk': 'Ongewenst',
+  'sidebar.view.trash': 'Prullenbak',
 }
 
 export default nl

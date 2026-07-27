@@ -1031,6 +1031,17 @@ const en: Record<string, string> = {
   'menuBar.icon.narrow': 'Keep typing to narrow the results.',
   'settingsPanel.hint.appVim': 'Use h/j/k/l to move around the app itself, outside of compose.',
   'settingsPanel.hint.appVimDetail': 'j/k move through the message list, l/Enter opens, h/Escape goes back, gg/G jump to the top/bottom. Disabled while typing, in the sidebar, or while a dialog is open.',
+  'common.network.offline': 'Offline',
+  'common.network.offlineTitle': 'No internet connection',
+  'common.network.offlineError': 'No internet connection. Check your Wi-Fi and try again.',
+  'sidebar.unifiedInbox': 'Unified Inbox',
+  'sidebar.view.inbox': 'Inbox',
+  'sidebar.view.flagged': 'Flagged',
+  'sidebar.view.drafts': 'Drafts',
+  'sidebar.view.sent': 'Sent',
+  'sidebar.view.archive': 'Archive',
+  'sidebar.view.junk': 'Junk',
+  'sidebar.view.trash': 'Bin',
 }
 
 export default en

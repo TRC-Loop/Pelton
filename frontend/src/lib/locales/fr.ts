@@ -1031,6 +1031,17 @@ const fr: Record<string, string> = {
   'menuBar.icon.narrow': 'Continuez à taper pour affiner les résultats.',
   'settingsPanel.hint.appVim': 'Utilise h/j/k/l pour te déplacer dans l\'application elle-même, en dehors de la rédaction.',
   'settingsPanel.hint.appVimDetail': 'j/k parcourt la liste des messages, l/Entrée ouvre, h/Échap revient en arrière, gg/G va au début/à la fin. Désactivé pendant la saisie, dans la barre latérale, ou quand une boîte de dialogue est ouverte.',
+  'common.network.offline': 'Hors ligne',
+  'common.network.offlineTitle': 'Pas de connexion Internet',
+  'common.network.offlineError': 'Pas de connexion Internet. Vérifiez votre Wi-Fi et réessayez.',
+  'sidebar.unifiedInbox': 'Boîte de réception unifiée',
+  'sidebar.view.inbox': 'Boîte de réception',
+  'sidebar.view.flagged': 'Suivis',
+  'sidebar.view.drafts': 'Brouillons',
+  'sidebar.view.sent': 'Envoyés',
+  'sidebar.view.archive': 'Archives',
+  'sidebar.view.junk': 'Indésirables',
+  'sidebar.view.trash': 'Corbeille',
 }
 
 export default fr

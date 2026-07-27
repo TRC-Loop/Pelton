@@ -1031,6 +1031,17 @@ const de: Record<string, string> = {
   'menuBar.icon.narrow': 'Weiter tippen, um die Ergebnisse einzugrenzen.',
   'settingsPanel.hint.appVim': 'Nutze h/j/k/l, um dich außerhalb des Verfassens durch die App zu bewegen.',
   'settingsPanel.hint.appVimDetail': 'j/k bewegt durch die Nachrichtenliste, l/Enter öffnet, h/Escape geht zurück, gg/G springt an Anfang/Ende. Deaktiviert während der Eingabe, in der Seitenleiste oder wenn ein Dialog geöffnet ist.',
+  'common.network.offline': 'Offline',
+  'common.network.offlineTitle': 'Keine Internetverbindung',
+  'common.network.offlineError': 'Keine Internetverbindung. Überprüfe dein WLAN und versuche es erneut.',
+  'sidebar.unifiedInbox': 'Vereinter Posteingang',
+  'sidebar.view.inbox': 'Posteingang',
+  'sidebar.view.flagged': 'Markiert',
+  'sidebar.view.drafts': 'Entwürfe',
+  'sidebar.view.sent': 'Gesendet',
+  'sidebar.view.archive': 'Archiv',
+  'sidebar.view.junk': 'Spam',
+  'sidebar.view.trash': 'Papierkorb',
 }
 
 export default de
