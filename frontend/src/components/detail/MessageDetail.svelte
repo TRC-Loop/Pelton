@@ -143,9 +143,18 @@ ${bodyHtml}
 
 <section class="detail">
   {#if $openMessageId === null}
-    <div class="placeholder">
-      <img class="placeholder-logo" src={$prefs.emptyStateImage || peltonLogo} alt="Pelton" draggable="false" />
-    </div>
+    {#if $prefs.emptyStateFullscreen && $prefs.emptyStateImage}
+      <div
+        class="placeholder placeholder-full"
+        style={`background-image: url("${$prefs.emptyStateImage}")`}
+        role="img"
+        aria-label="Pelton"
+      ></div>
+    {:else}
+      <div class="placeholder">
+        <img class="placeholder-logo" src={$prefs.emptyStateImage || peltonLogo} alt="Pelton" draggable="false" />
+      </div>
+    {/if}
   {:else if $messageDetail.status === 'loading' && !$messageDetail.data}
     <Spinner label={$t('detail.loadingMessage')} />
   {:else if $messageDetail.status === 'error'}
@@ -212,6 +221,13 @@ ${bodyHtml}
     filter: grayscale(1);
     user-select: none;
     -webkit-user-select: none;
+  }
+
+  /* full-bleed variant: the chosen image covers the whole empty pane. */
+  .placeholder-full {
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
   }
 
   .toolbar-bar {

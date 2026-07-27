@@ -57,6 +57,7 @@ const (
 	settingComposeAutocomplete = "compose_autocomplete"
 	settingComposeChips        = "compose_chips"
 	settingEmptyStateImage     = "empty_state_image"
+	settingEmptyStateFull      = "empty_state_fullscreen"
 	// menu bar settings only matter on macOS: Windows/Linux always use the
 	// in-app bar (no native menu is created there at all).
 	settingMenuBarInApp         = "menu_bar_in_app"
@@ -227,6 +228,9 @@ type UIPrefsDTO struct {
 	// EmptyStateImage is a data-uri image shown in the reading pane when no
 	// message is open. Empty means the bundled Pelton logo.
 	EmptyStateImage string `json:"emptyStateImage"`
+	// EmptyStateFullscreen shows the empty-state image as a full-bleed cover
+	// background instead of a small centered mark. Off by default.
+	EmptyStateFullscreen bool `json:"emptyStateFullscreen"`
 	// CornerStyle picks the corner radius look: default, square, or round.
 	CornerStyle string `json:"cornerStyle"`
 	// ThemeID selects an installed custom theme (see bind_themes.go). Empty
@@ -313,6 +317,7 @@ func (a *App) GetUIPrefs() (UIPrefsDTO, error) {
 		ComposeChips:               a.boolSetting(settingComposeChips, true),
 		UpdateCheckFrequency:       a.stringSetting(settingUpdateCheckFreq, defaultUpdateCheckFrequency),
 		EmptyStateImage:            a.stringSetting(settingEmptyStateImage, ""),
+		EmptyStateFullscreen:       a.boolSetting(settingEmptyStateFull, false),
 		CornerStyle:                a.stringSetting(settingCornerStyle, "default"),
 		ThemeID:                    a.stringSetting(settingThemeID, ""),
 		MenuBarInApp:               a.boolSetting(settingMenuBarInApp, false),

@@ -829,6 +829,8 @@ const fr: Record<string, string> = {
   'settingsPanel.label.interfaceScale': 'Échelle de l\'interface',
   'settingsPanel.hint.interfaceScale': 'Zoome sur toute l\'interface. Rend tout un peu plus grand ou plus petit.',
   'settingsPanel.label.emptyStateImage': 'Image du volet de lecture',
+  'settingsPanel.toggle.emptyStateFullscreen': 'Remplir le volet avec l’image',
+  'settingsPanel.hint.emptyStateFullscreen': 'Affiche votre image en fond plein écran au lieu d’une petite marque centrée. Nécessite une image sélectionnée.',
   'settingsPanel.hint.emptyStateImage': 'L\'image affichée dans le volet de lecture quand aucun message n\'est ouvert.',
   'settingsPanel.button.selectImage': 'Choisir une image',
   'settingsPanel.button.resetImage': 'Réinitialiser',

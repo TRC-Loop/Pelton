@@ -829,6 +829,8 @@ const de: Record<string, string> = {
   'settingsPanel.label.interfaceScale': 'Oberflächengröße',
   'settingsPanel.hint.interfaceScale': 'Zoomt die gesamte Oberfläche. Mach alles etwas größer oder kleiner.',
   'settingsPanel.label.emptyStateImage': 'Bild im Lesebereich',
+  'settingsPanel.toggle.emptyStateFullscreen': 'Bereich mit dem Bild füllen',
+  'settingsPanel.hint.emptyStateFullscreen': 'Zeigt dein Bild als vollflächigen Hintergrund statt als kleine, zentrierte Marke. Erfordert ein ausgewähltes Bild.',
   'settingsPanel.hint.emptyStateImage': 'Das Bild, das im Lesebereich erscheint, wenn keine Nachricht geöffnet ist.',
   'settingsPanel.button.selectImage': 'Bild auswählen',
   'settingsPanel.button.resetImage': 'Auf Standard zurücksetzen',
