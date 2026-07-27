@@ -69,6 +69,18 @@
   import type { Selection, MessageSummary, SwipeAction, EditorMode } from '../../lib/types'
   import { t } from '../../lib/i18n'
 
+  // the meta-bar title. built-in unified views are localized by key (matching the
+  // sidebar), so it stays correct after a language switch; folders and saved
+  // views keep their own stored name.
+  function viewTitle(sel: Selection): string {
+    if (sel.kind !== 'view') {
+      return sel.label
+    }
+    const key = sel.view === 'inbox' ? 'sidebar.unifiedInbox' : `sidebar.view.${sel.view}`
+    const translated = $t(key)
+    return translated === key ? sel.label : translated
+  }
+
   let listEl: HTMLDivElement
   let activeIndex = -1
 
@@ -564,7 +576,7 @@
     </div>
   {:else}
     <div class="meta-bar">
-      <span class="title">{$selection.label}</span>
+      <span class="title">{viewTitle($selection)}</span>
       {#if $messageList.data}
         <span class="count">
           {#if $messageList.data.searching}

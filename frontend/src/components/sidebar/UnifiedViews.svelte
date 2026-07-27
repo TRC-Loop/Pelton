@@ -40,9 +40,18 @@
     return view.key === 'drafts' ? view.totalCount : view.unreadCount
   }
 
+  // the built-in view names are localized here by key; the backend's English
+  // label is only a fallback for an unexpected key. inbox reads "Unified Inbox"
+  // to match its role as the merged, cross-account default.
+  function viewLabel(view: UnifiedView): string {
+    const key = view.key === 'inbox' ? 'sidebar.unifiedInbox' : `sidebar.view.${view.key}`
+    const translated = $t(key)
+    return translated === key ? view.label : translated
+  }
+
   // the cast lives in script; inline ts casts in markup confuse the parser.
   function choose(view: UnifiedView): void {
-    selectView(view.key as ViewKey, view.label)
+    selectView(view.key as ViewKey, viewLabel(view))
   }
 </script>
 
@@ -50,7 +59,7 @@
   <header class="group-head">{$t('sidebar.unifiedViews.heading')}</header>
   {#each views as view (view.key)}
     <SidebarRow
-      label={view.label}
+      label={viewLabel(view)}
       count={badgeCount(view, $prefs.showFlaggedCount)}
       active={$selection.kind === 'view' && $selection.view === view.key}
       on:select={() => choose(view)}
