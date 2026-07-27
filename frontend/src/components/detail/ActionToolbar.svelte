@@ -17,6 +17,7 @@
   } from '@tabler/icons-svelte'
   import IconButton from '../common/IconButton.svelte'
   import { t } from '../../lib/i18n'
+  import { online } from '../../stores/network'
 
   export let flagged: boolean = false
 
@@ -70,7 +71,12 @@
   <IconButton label={$t('detail.toolbar.messageInfo')} on:click={() => dispatch('info')}>
     <IconInfoCircle size={18} stroke={1.6} />
   </IconButton>
-  <IconButton label={$t('detail.toolbar.viewSource')} on:click={() => dispatch('source')}>
+  <IconButton
+    label={$t('detail.toolbar.viewSource')}
+    title={$online ? $t('detail.toolbar.viewSource') : $t('common.network.offlineTitle')}
+    disabled={!$online}
+    on:click={() => dispatch('source')}
+  >
     <IconCode size={18} stroke={1.6} />
   </IconButton>
 </div>

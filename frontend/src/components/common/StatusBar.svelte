@@ -4,8 +4,9 @@
   // right side shows live sync state and the last-synced relative time. it is the
   // honest, always-visible window into background activity.
   import { onDestroy, onMount } from 'svelte'
-  import { IconSend, IconAlertTriangle, IconRefresh, IconCheck, IconDownload, IconBatteryEco, IconX, IconBug } from '@tabler/icons-svelte'
+  import { IconSend, IconAlertTriangle, IconRefresh, IconCheck, IconDownload, IconBatteryEco, IconX, IconBug, IconWifiOff } from '@tabler/icons-svelte'
   import { outbox, syncing, lastSynced, syncFolder } from '../../stores/outbox'
+  import { online } from '../../stores/network'
   import { downloadProgress, attachmentProgress } from '../../stores/progress'
   import { formatRelative } from '../../lib/format'
   import { cancelDownload, isDevMode } from '../../lib/api'
@@ -132,6 +133,12 @@
   </div>
 
   <div class="right">
+    {#if !$online}
+      <span class="offline" title={$t('common.network.offlineTitle')}>
+        <IconWifiOff size={13} stroke={1.7} />
+        {$t('common.network.offline')}
+      </span>
+    {/if}
     {#if $prefs.lowPowerMode}
       <button
         type="button"
@@ -285,6 +292,14 @@
     position: fixed;
     inset: 0;
     z-index: 80;
+  }
+
+  .offline {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    color: var(--danger, var(--text-secondary));
+    font-weight: var(--fw-semibold);
   }
 
   .low-power {

@@ -6,7 +6,8 @@
   import { IconX, IconCopy } from '@tabler/icons-svelte'
   import Spinner from '../common/Spinner.svelte'
   import { getMessageSource } from '../../lib/api'
-  import { errorMessage, toastError, toastSuccess } from '../../stores/toast'
+  import { toastError, toastSuccess } from '../../stores/toast'
+  import { friendlyError } from '../../lib/errors'
   import { t } from '../../lib/i18n'
 
   export let messageId: number
@@ -21,7 +22,7 @@
     try {
       source = await getMessageSource(messageId)
     } catch (err) {
-      error = errorMessage(err)
+      error = friendlyError(err)
     } finally {
       loading = false
     }

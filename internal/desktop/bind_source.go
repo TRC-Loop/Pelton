@@ -36,20 +36,20 @@ func (a *App) GetMessageSource(id int64) (string, error) {
 
 	client, err := pimap.Connect(cfg)
 	if err != nil {
-		return "", err
+		return "", offlineOrErr(err)
 	}
 	defer client.Close()
 	if err := client.Login(); err != nil {
-		return "", err
+		return "", offlineOrErr(err)
 	}
 	defer client.Logout()
 	if _, err := client.Select(folder.IMAPPath); err != nil {
-		return "", err
+		return "", offlineOrErr(err)
 	}
 
 	raw, err := client.FetchRawMessage(imap.UID(m.UID))
 	if err != nil {
-		return "", err
+		return "", offlineOrErr(err)
 	}
 	return string(raw), nil
 }

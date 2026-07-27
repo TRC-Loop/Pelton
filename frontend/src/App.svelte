@@ -67,6 +67,8 @@
   import { triggerUndoArchive } from './stores/undoarchive'
   import { openMessageId } from './stores/selection'
   import { errorMessage, toastError, toastInfo } from './stores/toast'
+  import { friendlyError } from './lib/errors'
+  import { setOnline } from './stores/network'
   import { moveTarget } from './stores/move'
   import { snoozeTarget } from './stores/snooze'
   import { previewTarget } from './stores/preview'
@@ -287,8 +289,9 @@
       await refreshSidebar()
       await loadList(get(selection))
       lastSynced.set(Date.now())
+      setOnline(true)
     } catch (err) {
-      toastError(errorMessage(err))
+      toastError(friendlyError(err))
     } finally {
       syncing.set(false)
     }

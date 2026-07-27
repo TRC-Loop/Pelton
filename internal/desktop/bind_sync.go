@@ -132,10 +132,14 @@ func (a *App) TriggerSync() error {
 	}
 
 	synced := 0
+	netFailed := false
 	for _, account := range accounts {
 		if err := a.syncAccount(account); err != nil {
 			if errors.Is(err, errNoCredentials) {
 				continue
+			}
+			if isNetworkError(err) {
+				netFailed = true
 			}
 			a.log.Error("sync account", "account", account.Email, "err", err)
 			continue
@@ -143,6 +147,11 @@ func (a *App) TriggerSync() error {
 		synced++
 	}
 	if synced == 0 && len(accounts) > 0 {
+		// a dropped connection must not masquerade as a credentials problem: if
+		// nothing synced and any account failed for the network, report offline.
+		if netFailed {
+			return errOffline
+		}
 		return errNoCredentials
 	}
 	return nil
