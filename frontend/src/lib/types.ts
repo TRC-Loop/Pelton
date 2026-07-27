@@ -524,9 +524,10 @@ export interface View {
   icon: string
   color: string
   queryText: string
-  queryFrom: string
-  queryTo: string
+  queryFrom: string[]
+  queryTo: string[]
   querySubject: string
+  useRegex: boolean
   withinDays: number
   unreadOnly: boolean
   flaggedOnly: boolean

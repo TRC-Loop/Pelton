@@ -3,6 +3,7 @@ package desktop
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"sort"
 	"strings"
 	"time"
@@ -24,11 +25,15 @@ type ViewDTO struct {
 	Icon  string `json:"icon"`
 	Color string `json:"color"`
 
-	QueryText    string `json:"queryText"`
-	QueryFrom    string `json:"queryFrom"`
-	QueryTo      string `json:"queryTo"`
-	QuerySubject string `json:"querySubject"`
-	WithinDays   int    `json:"withinDays"`
+	// QueryFrom and QueryTo are address chips, matched as OR within the field.
+	QueryText    string   `json:"queryText"`
+	QueryFrom    []string `json:"queryFrom"`
+	QueryTo      []string `json:"queryTo"`
+	QuerySubject string   `json:"querySubject"`
+	WithinDays   int      `json:"withinDays"`
+
+	// UseRegex treats the text criteria as regular expressions.
+	UseRegex bool `json:"useRegex"`
 
 	UnreadOnly    bool  `json:"unreadOnly"`
 	FlaggedOnly   bool  `json:"flaggedOnly"`
@@ -71,6 +76,9 @@ func (a *App) SaveView(dto ViewDTO) (ViewDTO, error) {
 		return ViewDTO{}, fmt.Errorf("view name is required")
 	}
 	v := dtoToView(dto)
+	if _, err := buildViewFilter(v); err != nil {
+		return ViewDTO{}, fmt.Errorf("invalid regular expression: %w", err)
+	}
 	if v.ID == 0 {
 		if _, err := a.store.CreateView(a.ctx, &v); err != nil {
 			return ViewDTO{}, err
@@ -145,27 +153,41 @@ func (a *App) viewCounts(ctx context.Context, v storage.View) (total, unread int
 	return len(matches), unread
 }
 
-// runViewMatches resolves a view to its matching messages, newest first. Text
-// criteria go through the full-text index; a pure scope view reads the store
-// directly. Scope, date and hygiene filters are then applied in Go, since flags
-// are not indexed.
+// maxViewScan bounds how many recent messages the scan-and-filter path reads
+// per run. Regex and multi-address views cannot use the full-text index, so they
+// scan the newest messages in scope and match in Go. Matches are still capped at
+// maxViewMatches; this only bounds how far back the scan looks.
+const maxViewScan = 2000
+
+// runViewMatches resolves a view to its matching messages, newest first. Plain
+// single-address text criteria go through the full-text index. Regex or
+// multi-address criteria scan the newest messages in scope and match in Go. A
+// pure scope view reads the store directly. Scope, date and hygiene filters are
+// then applied in Go, since flags are not indexed.
 func (a *App) runViewMatches(ctx context.Context, v storage.View) ([]storage.Message, error) {
 	var after time.Time
 	if v.WithinDays > 0 {
 		after = time.Now().Add(-time.Duration(v.WithinDays) * 24 * time.Hour)
 	}
 
-	hasText := v.QueryText != "" || v.QueryFrom != "" || v.QueryTo != "" || v.QuerySubject != ""
+	froms := splitAddrs(v.QueryFrom)
+	tos := splitAddrs(v.QueryTo)
+	hasText := v.QueryText != "" || len(froms) > 0 || len(tos) > 0 || v.QuerySubject != ""
+	canUseIndex := hasText && !v.UseRegex && len(froms) <= 1 && len(tos) <= 1
 
-	var candidates []storage.Message
-	if hasText {
+	var (
+		candidates []storage.Message
+		filter     *viewFilter
+	)
+	switch {
+	case canUseIndex:
 		if a.index == nil {
 			return nil, errSearchUnavailable
 		}
 		hits, err := a.index.Search(search.Query{
 			Text:    v.QueryText,
-			From:    v.QueryFrom,
-			To:      v.QueryTo,
+			From:    firstOrEmpty(froms),
+			To:      firstOrEmpty(tos),
 			Subject: v.QuerySubject,
 			After:   after,
 			Limit:   maxViewMatches,
@@ -180,7 +202,27 @@ func (a *App) runViewMatches(ctx context.Context, v storage.View) ([]storage.Mes
 			}
 			candidates = append(candidates, *m)
 		}
-	} else {
+	case hasText:
+		// regex or multiple from/to addresses: the index cannot express these, so
+		// scan the newest messages in scope and match in Go.
+		f, err := buildViewFilter(v)
+		if err != nil {
+			// a view whose regex no longer compiles matches nothing rather than
+			// breaking the sidebar.
+			a.log.Error("compile view filter", "view", v.Name, "err", err)
+			return nil, nil
+		}
+		filter = f
+		folderIDs, err := a.viewScopeFolderIDs(ctx, v.AccountID)
+		if err != nil {
+			return nil, err
+		}
+		msgs, err := a.store.QueryMessages(ctx, storage.MessageQuery{FolderIDs: folderIDs, Limit: maxViewScan})
+		if err != nil {
+			return nil, err
+		}
+		candidates = msgs
+	default:
 		folderIDs, err := a.viewScopeFolderIDs(ctx, v.AccountID)
 		if err != nil {
 			return nil, err
@@ -194,6 +236,9 @@ func (a *App) runViewMatches(ctx context.Context, v storage.View) ([]storage.Mes
 
 	out := make([]storage.Message, 0, len(candidates))
 	for _, m := range candidates {
+		if filter != nil && !filter.matches(m) {
+			continue
+		}
 		if m.SnoozeHidden {
 			continue
 		}
@@ -287,10 +332,11 @@ func viewToDTO(v storage.View) ViewDTO {
 		Icon:          v.Icon,
 		Color:         v.Color,
 		QueryText:     v.QueryText,
-		QueryFrom:     v.QueryFrom,
-		QueryTo:       v.QueryTo,
+		QueryFrom:     splitAddrs(v.QueryFrom),
+		QueryTo:       splitAddrs(v.QueryTo),
 		QuerySubject:  v.QuerySubject,
 		WithinDays:    v.WithinDays,
+		UseRegex:      v.UseRegex,
 		UnreadOnly:    v.UnreadOnly,
 		FlaggedOnly:   v.FlaggedOnly,
 		HasAttachment: v.HasAttachment,
@@ -306,14 +352,146 @@ func dtoToView(d ViewDTO) storage.View {
 		Icon:          d.Icon,
 		Color:         d.Color,
 		QueryText:     strings.TrimSpace(d.QueryText),
-		QueryFrom:     strings.TrimSpace(d.QueryFrom),
-		QueryTo:       strings.TrimSpace(d.QueryTo),
+		QueryFrom:     joinAddrs(d.QueryFrom),
+		QueryTo:       joinAddrs(d.QueryTo),
 		QuerySubject:  strings.TrimSpace(d.QuerySubject),
 		WithinDays:    d.WithinDays,
+		UseRegex:      d.UseRegex,
 		UnreadOnly:    d.UnreadOnly,
 		FlaggedOnly:   d.FlaggedOnly,
 		HasAttachment: d.HasAttachment,
 		AccountID:     d.AccountID,
 		Position:      d.Position,
 	}
+}
+
+// addrSep separates the addresses stored in a view's from/to field.
+const addrSep = "\n"
+
+// splitAddrs turns a stored newline list into trimmed, non-empty entries.
+func splitAddrs(s string) []string {
+	var out []string
+	for _, line := range strings.Split(s, addrSep) {
+		if t := strings.TrimSpace(line); t != "" {
+			out = append(out, t)
+		}
+	}
+	return out
+}
+
+// joinAddrs stores a chip list back as a newline-separated string, dropping
+// blanks so an empty field stays truly empty.
+func joinAddrs(list []string) string {
+	cleaned := make([]string, 0, len(list))
+	for _, a := range list {
+		if t := strings.TrimSpace(a); t != "" {
+			cleaned = append(cleaned, t)
+		}
+	}
+	return strings.Join(cleaned, addrSep)
+}
+
+func firstOrEmpty(list []string) string {
+	if len(list) == 0 {
+		return ""
+	}
+	return list[0]
+}
+
+// matcher tests one criterion against a haystack: a compiled regexp when the
+// view uses regex, otherwise a case-insensitive substring.
+type matcher struct {
+	re     *regexp.Regexp
+	needle string
+}
+
+func newMatcher(pattern string, regex bool) (matcher, error) {
+	if regex {
+		re, err := regexp.Compile(pattern)
+		if err != nil {
+			return matcher{}, err
+		}
+		return matcher{re: re}, nil
+	}
+	return matcher{needle: strings.ToLower(pattern)}, nil
+}
+
+func (m matcher) match(s string) bool {
+	if m.re != nil {
+		return m.re.MatchString(s)
+	}
+	return strings.Contains(strings.ToLower(s), m.needle)
+}
+
+// viewFilter is the compiled text criteria of a view for the scan-and-filter
+// path. Fields present are ANDed; the from/to chip lists are ORed within their
+// field. A message matches when every present field matches.
+type viewFilter struct {
+	text    *matcher
+	subject *matcher
+	from    []matcher
+	to      []matcher
+}
+
+// buildViewFilter compiles a view's text criteria, returning an error only when
+// a regex fails to compile.
+func buildViewFilter(v storage.View) (*viewFilter, error) {
+	f := &viewFilter{}
+	if v.QueryText != "" {
+		m, err := newMatcher(v.QueryText, v.UseRegex)
+		if err != nil {
+			return nil, err
+		}
+		f.text = &m
+	}
+	if v.QuerySubject != "" {
+		m, err := newMatcher(v.QuerySubject, v.UseRegex)
+		if err != nil {
+			return nil, err
+		}
+		f.subject = &m
+	}
+	for _, a := range splitAddrs(v.QueryFrom) {
+		m, err := newMatcher(a, v.UseRegex)
+		if err != nil {
+			return nil, err
+		}
+		f.from = append(f.from, m)
+	}
+	for _, a := range splitAddrs(v.QueryTo) {
+		m, err := newMatcher(a, v.UseRegex)
+		if err != nil {
+			return nil, err
+		}
+		f.to = append(f.to, m)
+	}
+	return f, nil
+}
+
+func (f *viewFilter) matches(m storage.Message) bool {
+	if f.text != nil {
+		hay := m.Subject + "\n" + m.BodyPlain + "\n" + m.FromName + " " + m.FromAddress + "\n" + m.ToAddresses + " " + m.CcAddresses
+		if !f.text.match(hay) {
+			return false
+		}
+	}
+	if f.subject != nil && !f.subject.match(m.Subject) {
+		return false
+	}
+	if len(f.from) > 0 && !anyMatch(f.from, m.FromName+" "+m.FromAddress) {
+		return false
+	}
+	if len(f.to) > 0 && !anyMatch(f.to, m.ToAddresses+" "+m.CcAddresses) {
+		return false
+	}
+	return true
+}
+
+func anyMatch(ms []matcher, s string) bool {
+	for _, m := range ms {
+		if m.match(s) {
+			return true
+		}
+	}
+	return false
 }

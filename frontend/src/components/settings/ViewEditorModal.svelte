@@ -21,8 +21,48 @@
   const dispatch = createEventDispatcher<{ saved: View; close: void }>()
 
   // local copy so cancelling discards edits.
-  let draft: View = { ...value }
+  let draft: View = { ...value, queryFrom: [...value.queryFrom], queryTo: [...value.queryTo] }
   let saving = false
+
+  // pending chip text per address field, committed on Enter/comma/blur.
+  let chipDraft: { queryFrom: string; queryTo: string } = { queryFrom: '', queryTo: '' }
+
+  type ChipField = 'queryFrom' | 'queryTo'
+
+  // addChips folds the pending text into the field's chip list, splitting on
+  // comma/semicolon/newline and dropping duplicates and blanks.
+  function addChips(field: ChipField): void {
+    const parts = chipDraft[field]
+      .split(/[,;\n]/)
+      .map((s) => s.trim())
+      .filter(Boolean)
+    if (parts.length) {
+      const seen = new Set(draft[field].map((a) => a.toLowerCase()))
+      const next = [...draft[field]]
+      for (const p of parts) {
+        const key = p.toLowerCase()
+        if (!seen.has(key)) {
+          next.push(p)
+          seen.add(key)
+        }
+      }
+      draft[field] = next
+    }
+    chipDraft = { ...chipDraft, [field]: '' }
+  }
+
+  function onChipKey(e: KeyboardEvent, field: ChipField): void {
+    if (e.key === 'Enter' || e.key === ',' || e.key === ';') {
+      e.preventDefault()
+      addChips(field)
+    } else if (e.key === 'Backspace' && chipDraft[field] === '' && draft[field].length) {
+      draft[field] = draft[field].slice(0, -1)
+    }
+  }
+
+  function removeChip(field: ChipField, i: number): void {
+    draft[field] = draft[field].filter((_, idx) => idx !== i)
+  }
 
   // relative date window presets, in days. 0 means no bound.
   const windows: { days: number; key: string }[] = [
@@ -40,6 +80,9 @@
     if (!canSave) {
       return
     }
+    // fold any half-typed address into its chip list before persisting.
+    addChips('queryFrom')
+    addChips('queryTo')
     saving = true
     try {
       const saved = await saveView(draft)
@@ -113,20 +156,63 @@
       </label>
 
       <div class="two">
-        <label class="field">
+        <div class="field">
           <span class="label">{$t('views.queryFrom')}</span>
-          <input type="text" bind:value={draft.queryFrom} placeholder={$t('views.queryFromPlaceholder')} />
-        </label>
-        <label class="field">
+          <div class="chips">
+            {#each draft.queryFrom as addr, i (addr)}
+              <span class="chip">
+                {addr}
+                <button type="button" class="chip-x" aria-label={$t('views.removeChip')} on:click={() => removeChip('queryFrom', i)}>
+                  <IconX size={12} stroke={2} />
+                </button>
+              </span>
+            {/each}
+            <input
+              type="text"
+              class="chip-in"
+              bind:value={chipDraft.queryFrom}
+              placeholder={draft.queryFrom.length ? '' : $t('views.queryFromPlaceholder')}
+              on:keydown={(e) => onChipKey(e, 'queryFrom')}
+              on:blur={() => addChips('queryFrom')}
+            />
+          </div>
+        </div>
+        <div class="field">
           <span class="label">{$t('views.queryTo')}</span>
-          <input type="text" bind:value={draft.queryTo} placeholder={$t('views.queryToPlaceholder')} />
-        </label>
+          <div class="chips">
+            {#each draft.queryTo as addr, i (addr)}
+              <span class="chip">
+                {addr}
+                <button type="button" class="chip-x" aria-label={$t('views.removeChip')} on:click={() => removeChip('queryTo', i)}>
+                  <IconX size={12} stroke={2} />
+                </button>
+              </span>
+            {/each}
+            <input
+              type="text"
+              class="chip-in"
+              bind:value={chipDraft.queryTo}
+              placeholder={draft.queryTo.length ? '' : $t('views.queryToPlaceholder')}
+              on:keydown={(e) => onChipKey(e, 'queryTo')}
+              on:blur={() => addChips('queryTo')}
+            />
+          </div>
+        </div>
       </div>
+      <span class="hint">{$t('views.chipHint')}</span>
 
       <label class="field">
         <span class="label">{$t('views.querySubject')}</span>
         <input type="text" bind:value={draft.querySubject} placeholder={$t('views.querySubjectPlaceholder')} />
       </label>
+
+      <label class="check">
+        <input type="checkbox" bind:checked={draft.useRegex} />
+        <span>{$t('views.useRegex')}</span>
+      </label>
+      {#if draft.useRegex}
+        <span class="hint">{$t('views.useRegexHint')}</span>
+      {/if}
 
       <div class="two">
         <label class="field">
@@ -271,6 +357,66 @@
   input[type='text']:focus,
   select:focus {
     border-color: var(--accent);
+  }
+
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-1);
+    padding: var(--space-1) var(--space-2);
+    border: var(--hairline) solid var(--border-default);
+    border-radius: var(--radius-control);
+    background: var(--surface-sunken);
+  }
+
+  .chips:focus-within {
+    border-color: var(--accent);
+  }
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    padding: 2px var(--space-1) 2px var(--space-2);
+    border-radius: 999px;
+    background: var(--selection-bg);
+    color: var(--text-primary);
+    font-size: var(--fz-meta);
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .chip-x {
+    display: inline-flex;
+    align-items: center;
+    border: none;
+    background: transparent;
+    color: var(--text-tertiary);
+    cursor: pointer;
+    padding: 0;
+  }
+
+  .chip-x:hover {
+    color: var(--text-primary);
+  }
+
+  .chip-in {
+    flex: 1;
+    min-width: 80px;
+    border: none;
+    outline: none;
+    background: transparent;
+    color: var(--text-primary);
+    font-size: var(--fz-label);
+    padding: var(--space-1) 0;
+  }
+
+  .hint {
+    font-size: var(--fz-meta);
+    color: var(--text-tertiary);
   }
 
   .section-head {
