@@ -10,6 +10,8 @@ export function AddVIPSender(arg1:string):Promise<void>;
 
 export function AllowDomainImages(arg1:number):Promise<void>;
 
+export function AllowRemoteForMessage(arg1:number):Promise<void>;
+
 export function AppVersion():Promise<string>;
 
 export function ArchiveMessage(arg1:number):Promise<desktop.ArchiveUndoDTO>;

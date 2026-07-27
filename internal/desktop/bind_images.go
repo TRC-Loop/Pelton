@@ -3,6 +3,8 @@ package desktop
 import (
 	"fmt"
 	"strings"
+
+	"github.com/TRC-Loop/Pelton/internal/storage"
 )
 
 // remote image allowlist. mail remote content (images) is blocked by default to
@@ -11,8 +13,9 @@ import (
 // are consulted when a message is rendered so trusted senders load immediately
 // with no banner.
 const (
-	settingRemoteSenders = "remote_allow_senders"
-	settingRemoteDomains = "remote_allow_domains"
+	settingRemoteSenders  = "remote_allow_senders"
+	settingRemoteDomains  = "remote_allow_domains"
+	settingRemoteMessages = "remote_allow_messages"
 )
 
 // remoteSenders returns the lowercased from-addresses the user trusts for remote
@@ -28,6 +31,50 @@ func (a *App) remoteDomains() []string {
 	var out []string
 	_ = a.store.GetJSON(a.ctx, settingRemoteDomains, &out)
 	return out
+}
+
+// remoteMessages returns the stable keys of individual messages the user has
+// allowed remote content for, without trusting their sender or domain.
+func (a *App) remoteMessages() []string {
+	var out []string
+	_ = a.store.GetJSON(a.ctx, settingRemoteMessages, &out)
+	return out
+}
+
+// messageRemoteKey is the stable key used to remember a per-message remote
+// allow: the RFC Message-ID header when present (so it survives re-sync and
+// expunge), otherwise a local fallback tied to the row id.
+func messageRemoteKey(m *storage.Message) string {
+	if id := strings.ToLower(strings.TrimSpace(m.MessageID)); id != "" {
+		return id
+	}
+	return fmt.Sprintf("local:%d", m.ID)
+}
+
+// remoteMessageAllowed reports whether this one message was individually allowed
+// to render remote content.
+func (a *App) remoteMessageAllowed(m *storage.Message) bool {
+	key := messageRemoteKey(m)
+	for _, k := range a.remoteMessages() {
+		if k == key {
+			return true
+		}
+	}
+	return false
+}
+
+// AllowRemoteForMessage permanently allows remote content for this one message,
+// keyed by its Message-ID, without trusting the whole sender or domain.
+func (a *App) AllowRemoteForMessage(messageID int64) error {
+	if err := a.ready(); err != nil {
+		return err
+	}
+	m, err := a.store.GetMessage(a.ctx, messageID)
+	if err != nil {
+		return err
+	}
+	keys := appendUnique(a.remoteMessages(), messageRemoteKey(m))
+	return a.store.SetJSON(a.ctx, settingRemoteMessages, keys)
 }
 
 // remoteAutoAllow reports whether a message from fromAddress should render remote

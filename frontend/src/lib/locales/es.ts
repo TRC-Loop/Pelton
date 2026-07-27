@@ -494,6 +494,8 @@ const es: Record<string, string> = {
   'detail.mailBody.more': '+{count} más',
   'detail.mailBody.loadOnce': 'Cargar una vez',
   'detail.mailBody.alwaysLoadFrom': 'Cargar siempre imágenes de {who}',
+  'detail.mailBody.thisEmail': 'Este correo',
+  'detail.mailBody.thisEmailTitle': 'Cargar siempre el contenido remoto solo para este correo',
   'detail.mailBody.thisSender': 'Este remitente',
   'detail.mailBody.thisDomain': 'Este dominio',
   'detail.mailBody.iframeTitle': 'Contenido del mensaje',
