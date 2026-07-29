@@ -709,6 +709,7 @@ export const SettingKeys = {
   monoFont: 'mono_font',
   notifyNewMail: 'notify_new_mail',
   verboseSync: 'verbose_sync',
+  liabilityAccepted: 'liability_accepted',
 } as const
 
 // listSystemFonts returns the installed font family names for the body font
