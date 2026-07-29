@@ -1,2 +1,6 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# the windows installer reads this file verbatim: NSIS needs CRLF and the
+# UTF-8 BOM to render the liability page correctly.
+build/windows/installer/disclaimer.txt text eol=crlf

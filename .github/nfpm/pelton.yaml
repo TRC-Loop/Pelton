@@ -24,6 +24,11 @@ contents:
     dst: /usr/share/icons/hicolor/1024x1024/apps/pelton.png
   - src: ./build/icons/pelton-default.png
     dst: /usr/share/pixmaps/pelton.png
+  # GPL-3.0 plus the warranty/liability terms that go with the copy
+  - src: ./LICENSE
+    dst: /usr/share/doc/pelton/LICENSE
+  - src: ./DISCLAIMER.md
+    dst: /usr/share/doc/pelton/DISCLAIMER.md
 
 # Fedora runtime package names; applied to the .rpm. The .deb overrides these
 # below with the Debian/Ubuntu names.
