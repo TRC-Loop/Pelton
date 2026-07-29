@@ -308,9 +308,10 @@
 </script>
 
 <div class="screen" role="dialog" aria-modal="true" aria-label="Welcome to Pelton">
-  <!-- no skip on the liability step: the acknowledgement is the one thing the
-       flow does not let you walk past. -->
-  {#if step !== 'done' && step !== 'liability'}
+  <!-- no skip before the acknowledgement is given: it is the one thing the flow
+       does not let you walk past, and skipping from the welcome screen would
+       jump straight over it. -->
+  {#if step !== 'done' && step !== 'welcome' && step !== 'liability'}
     <button type="button" class="skip" on:click={finish}>{$t('onboarding.skip')}</button>
   {/if}
 
