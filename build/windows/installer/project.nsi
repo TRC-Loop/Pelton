@@ -81,6 +81,20 @@ ManifestDPIAware true
 !insertmacro MUI_PAGE_LICENSE "..\..\..\LICENSE" # GPL-3.0. Kept in the original English text on every install
                                                   # language: unofficial translations of the GPL aren't legally
                                                   # authoritative, so the FSF recommends distributing only this text.
+
+####
+## Warranty and liability, an additional term under GPLv3 section 7(a). It is a
+## separate page because the GPL text has to stay verbatim. disclaimer.txt is
+## generated from DISCLAIMER.md by `make disclaimer` and carries both the
+## English and the authoritative German wording, so it stays readable on every
+## installer language.
+####
+!define MUI_PAGE_HEADER_TEXT "Warranty and liability"
+!define MUI_PAGE_HEADER_SUBTEXT "Please read the terms under which Pelton is provided."
+!define MUI_LICENSEPAGE_TEXT_TOP "Pelton is provided free of charge and without warranty."
+!define MUI_LICENSEPAGE_TEXT_BOTTOM "Click Agree to continue installing Pelton."
+!define MUI_LICENSEPAGE_BUTTON "Agree"
+!insertmacro MUI_PAGE_LICENSE "disclaimer.txt"
 !insertmacro MULTIUSER_PAGE_INSTALLMODE # All users (admin) vs just me (no admin).
 !insertmacro MUI_PAGE_DIRECTORY # In which folder install page.
 !insertmacro MUI_PAGE_COMPONENTS # Optional components (currently just the desktop shortcut).

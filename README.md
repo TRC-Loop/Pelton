@@ -112,6 +112,7 @@ A `.zip` of the raw `.app` (`Pelton-<version>-macos-<arch>-app.zip`) is also att
 3. The installer walks you through:
    - an installer-language picker (matches Pelton's own UI languages: English, German, French, Dutch, Spanish)
    - the GPL-3.0 license
+   - the warranty and liability terms
    - **install for all users** (needs admin) or **just me** (no admin needed)
    - an optional desktop shortcut (Start Menu shortcut is always created)
    - a "Launch Pelton" checkbox on the last page
@@ -195,3 +196,7 @@ Contributions are welcome. Whether you are fixing bugs, refining the UI layout, 
 ## <img src="https://api.iconify.design/tabler/file-certificate.svg?color=white" width="26" style="vertical-align: -4px;"> License
 
 Pelton is distributed under the **[GPL-3.0 License](https://github.com/TRC-Loop/Pelton/blob/main/LICENSE)**. See `LICENSE` for details.
+
+Warranty and liability are set out in **[DISCLAIMER.md](DISCLAIMER.md)**, an additional term under GPLv3 section 7(a), published as well at [pelton.app/terms](https://pelton.app/terms). Pelton comes without warranty and you use it at your own risk: it connects to your real mailboxes, deletions can be permanent, and it is not a backup tool. Keep your own backup of anything you cannot afford to lose.
+
+Security issues belong in [SECURITY.md](SECURITY.md), not in a public issue.
