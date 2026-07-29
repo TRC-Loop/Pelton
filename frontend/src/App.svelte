@@ -52,6 +52,7 @@
     consumePendingMailto,
   } from './lib/api'
   import { BrowserOpenURL } from '../wailsjs/runtime/runtime'
+  import { liabilityAccepted } from './lib/liability'
   import { setDemoActive } from './lib/demo'
   import { recordArchived } from './stores/undoarchive'
   import { onMailNew, onSyncState, onSyncProgress, onOutboxChanged, onMenu, onViewsChanged, onMailtoCompose, type Unsubscribe, type MailtoDraft } from './lib/events'
@@ -80,6 +81,9 @@
   let settingsCategory: string | null = null
   let wizardOpen = false
   let onboardingOpen = false
+  // installs that predate the onboarding liability step have to acknowledge it
+  // once before they can carry on.
+  let liabilityOpen = false
   const unsubscribers: Unsubscribe[] = []
 
   // live pane widths. they track the persisted prefs unless the user is mid-drag,
@@ -159,6 +163,9 @@
         // if the lookup fails, do not block the app with onboarding.
         onboardingOpen = false
       }
+      // onboarding collects the acknowledgement itself, so only ask separately
+      // when the flow is not going to run.
+      liabilityOpen = !onboardingOpen && !(await liabilityAccepted())
     }
 
     unsubscribers.push(
@@ -749,6 +756,13 @@
       on:close={() => (settingsOpen = false)}
       on:rerunOnboarding={rerunOnboarding}
     />
+  {/await}
+{/if}
+
+<!-- the liability acknowledgement for installs from before the onboarding step. -->
+{#if liabilityOpen}
+  {#await import('./components/common/LiabilityDialog.svelte') then m}
+    <svelte:component this={m.default} on:accepted={() => (liabilityOpen = false)} />
   {/await}
 {/if}
 

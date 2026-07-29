@@ -5,7 +5,7 @@
   // in-app webview.
   import { onDestroy, onMount } from 'svelte'
   import { createEventDispatcher } from 'svelte'
-  import { IconBrandGithub, IconBug, IconLicense, IconX, IconRefresh, IconUsers, IconWorld, IconBook2 } from '@tabler/icons-svelte'
+  import { IconBrandGithub, IconBug, IconLicense, IconScale, IconX, IconRefresh, IconUsers, IconWorld, IconBook2 } from '@tabler/icons-svelte'
   import { BrowserOpenURL } from '../../../wailsjs/runtime/runtime'
   import { APP } from '../../lib/app-info'
   import { appVersion, checkForUpdates, defaultMailClientStatus, setDefaultMailClient, type UpdateCheckResult } from '../../lib/api'
@@ -14,6 +14,7 @@
   import { toastError, errorMessage } from '../../stores/toast'
   import SegmentedSetting from './SegmentedSetting.svelte'
   import { t } from '../../lib/i18n'
+  import { termsUrl } from '../../lib/liability'
 
   const dispatch = createEventDispatcher<{ rerunOnboarding: void }>()
 
@@ -172,6 +173,10 @@
     <button type="button" on:click={() => (showLicenses = true)}>
       <IconLicense size={15} stroke={1.6} />
       {$t('about.licenses')}
+    </button>
+    <button type="button" on:click={() => open(termsUrl())}>
+      <IconScale size={15} stroke={1.6} />
+      {$t('about.liability')}
     </button>
   </div>
 

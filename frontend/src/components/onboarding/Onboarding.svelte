@@ -38,6 +38,7 @@
   import ToggleSwitch from '../common/ToggleSwitch.svelte'
   import VimPreview from './VimPreview.svelte'
   import LanguageSelect from '../common/LanguageSelect.svelte'
+  import LiabilityNotice from '../common/LiabilityNotice.svelte'
   import {
     prefs,
     setTheme,
@@ -57,6 +58,7 @@
   } from '../../stores/prefs'
   import { ACCENT_PRESETS } from '../../theme/accent'
   import { defaultMailClientStatus, setDefaultMailClient } from '../../lib/api'
+  import { acceptLiability } from '../../lib/liability'
   import { toastError, errorMessage } from '../../stores/toast'
   import { pfpDataUri, type PfpStyle } from '../../lib/pfp'
   import { initials } from '../../lib/format'
@@ -152,6 +154,7 @@
   // the ordered steps. "done" is the finale and has no skip/progress chrome.
   type Step =
     | 'welcome'
+    | 'liability'
     | 'language'
     | 'features'
     | 'privacy'
@@ -166,6 +169,7 @@
     | 'done'
   const baseOrder: Step[] = [
     'welcome',
+    'liability',
     'language',
     'features',
     'privacy',
@@ -220,6 +224,19 @@
   function next(): void {
     dir = 1
     index = Math.min(index + 1, order.length - 1)
+  }
+
+  // the liability acknowledgement is persisted the moment it is given, not at
+  // the end of the flow, so quitting mid-onboarding does not lose it.
+  let liabilityAccepted = false
+  async function confirmLiability(): Promise<void> {
+    if (!liabilityAccepted) return
+    try {
+      await acceptLiability()
+    } catch (err) {
+      toastError(errorMessage(err))
+    }
+    next()
   }
 
   function back(): void {
@@ -291,7 +308,9 @@
 </script>
 
 <div class="screen" role="dialog" aria-modal="true" aria-label="Welcome to Pelton">
-  {#if step !== 'done'}
+  <!-- no skip on the liability step: the acknowledgement is the one thing the
+       flow does not let you walk past. -->
+  {#if step !== 'done' && step !== 'liability'}
     <button type="button" class="skip" on:click={finish}>{$t('onboarding.skip')}</button>
   {/if}
 
@@ -308,6 +327,17 @@
             <button class="primary big" on:click={next} in:fly={{ y: 12, duration: 500, delay: 380, easing: quintOut }}>
               {$t('onboarding.getStarted')} <IconArrowRight size={18} stroke={1.8} />
             </button>
+          </div>
+        {:else if step === 'liability'}
+          <div class="choose liability">
+            <h2>{$t('liability.title')}</h2>
+            <LiabilityNotice bind:accepted={liabilityAccepted} />
+            <div class="nav">
+              <button class="ghost" on:click={back}><IconArrowLeft size={16} stroke={1.8} /> {$t('onboarding.back')}</button>
+              <button class="primary" disabled={!liabilityAccepted} on:click={confirmLiability}>
+                {$t('onboarding.continue')} <IconArrowRight size={16} stroke={1.8} />
+              </button>
+            </div>
           </div>
         {:else if step === 'language'}
           <div class="choose">
@@ -1351,6 +1381,13 @@
     margin-bottom: var(--space-6);
   }
 
+  /* the liability step reads as prose, so it stays narrow and left-aligned
+     instead of following the centered card layouts. */
+  .liability {
+    max-width: 62ch;
+    text-align: left;
+  }
+
   /* shared nav + buttons. */
   .nav {
     display: flex;
@@ -1381,6 +1418,12 @@
 
   .primary:hover {
     filter: brightness(1.05);
+  }
+
+  .primary:disabled {
+    opacity: 0.5;
+    filter: none;
+    cursor: not-allowed;
   }
 
   .primary.big {
