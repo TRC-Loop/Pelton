@@ -12,6 +12,9 @@
   let entries: AddressBookEntry[] = []
   let query = ''
   let loading = true
+  // the address whose removal is awaiting confirmation, matching how mailboxes
+  // and themes ask before deleting.
+  let confirming = ''
 
   onMount(load)
 
@@ -27,6 +30,7 @@
   }
 
   async function remove(email: string): Promise<void> {
+    confirming = ''
     try {
       await deleteAddress(email)
       entries = entries.filter((e) => e.email !== email)
@@ -65,15 +69,50 @@
           {#if e.name}<span class="addr">{e.email}</span>{/if}
         </div>
         <span class="uses" title={$t('addressBook.timesUsed')}>{e.useCount}×</span>
-        <button type="button" class="del" aria-label={`${$t('addressBook.remove')} ${e.email}`} on:click={() => remove(e.email)}>
-          <IconTrash size={15} stroke={1.7} />
-        </button>
+        {#if confirming === e.email}
+          <div class="confirm">
+            <span class="warn">{$t('addressBook.removeConfirm')}</span>
+            <button type="button" class="danger" on:click={() => remove(e.email)}>{$t('addressBook.remove')}</button>
+            <button type="button" class="ghost" on:click={() => (confirming = '')}>{$t('addressBook.cancel')}</button>
+          </div>
+        {:else}
+          <button type="button" class="del" aria-label={`${$t('addressBook.remove')} ${e.email}`} on:click={() => (confirming = e.email)}>
+            <IconTrash size={15} stroke={1.7} />
+          </button>
+        {/if}
       </li>
     {/each}
   </ul>
 {/if}
 
 <style>
+  .confirm {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+  }
+  .warn {
+    font-size: var(--fz-label);
+    color: var(--text-secondary);
+  }
+  .confirm button {
+    height: var(--control-height);
+    padding: 0 var(--space-4);
+    border: var(--hairline) solid var(--border-default);
+    border-radius: var(--radius-control);
+    background: var(--surface-raised);
+    font: inherit;
+    font-size: var(--fz-label);
+    cursor: pointer;
+  }
+  .confirm .danger {
+    border-color: var(--danger);
+    color: var(--danger);
+  }
+  .confirm .ghost {
+    color: var(--text-secondary);
+  }
+
   h3 {
     margin: 0 0 var(--space-3);
     font-size: var(--fz-heading);
