@@ -26,6 +26,22 @@
   let importPasswords = false
   let credentialPassword = ''
 
+  // import writes straight into the live config, so the button asks first and
+  // names what is about to be replaced.
+  let confirming = false
+
+  // what the confirm step lists: the categories actually ticked, plus the
+  // credential restore when it is armed.
+  $: selectedLabels = file
+    ? [
+        ...(importSettings && file.hasSettings ? [$t('importExport.category.settings')] : []),
+        ...(importWhitelist && file.hasWhitelist ? [$t('importExport.category.whitelist')] : []),
+        ...(importMailboxes && file.hasMailboxes ? [$t('importExport.category.mailboxes')] : []),
+        ...(importSignatures && file.hasSignatures ? [$t('importExport.category.signatures')] : []),
+        ...(importPasswords && file.hasEncryptedCredentials ? [$t('importExport.restorePasswords')] : []),
+      ]
+    : []
+
   async function chooseFile(): Promise<void> {
     try {
       const info = await inspectBackupFile()
@@ -38,6 +54,7 @@
       importMailboxes = false
       importSignatures = info.hasSignatures
       importPasswords = false
+      confirming = false
       credentialPassword = ''
     } catch (err) {
       toastError(errorMessage(err))
@@ -63,6 +80,7 @@
       return
     }
     importing = true
+    confirming = false
     try {
       await importData(file.path, categories, importPasswords ? credentialPassword : '')
       // settings we just wrote drive the ui; reload them so it updates live.
@@ -148,14 +166,34 @@
         <span>{$t('importExport.category.signatures')}{#if file.hasSignatures}&nbsp;({file.signatureCount}){/if}</span>
       </label>
 
-      <button
-        type="button"
-        class="action-btn primary"
-        disabled={importing || (importPasswords && credentialPassword.length === 0)}
-        on:click={runImport}
-      >
-        {$t('importExport.importButton')}
-      </button>
+      {#if confirming}
+        <div class="confirm">
+          <span class="confirm-title">{$t('importExport.confirmTitle')}</span>
+          <ul>
+            {#each selectedLabels as label}
+              <li>{label}</li>
+            {/each}
+          </ul>
+          <p class="confirm-warn">{$t('importExport.confirmWarning')}</p>
+          <div class="confirm-actions">
+            <button type="button" class="action-btn" on:click={() => (confirming = false)}>
+              {$t('importExport.cancel')}
+            </button>
+            <button type="button" class="action-btn danger" disabled={importing} on:click={runImport}>
+              {$t('importExport.confirmButton')}
+            </button>
+          </div>
+        </div>
+      {:else}
+        <button
+          type="button"
+          class="action-btn primary"
+          disabled={importing || (importPasswords && credentialPassword.length === 0) || selectedLabels.length === 0}
+          on:click={() => (confirming = true)}
+        >
+          {$t('importExport.importButton')}
+        </button>
+      {/if}
     {/if}
   </div>
 </div>
@@ -192,6 +230,42 @@
     font-size: var(--fz-body);
     font-weight: var(--fw-semibold);
     color: var(--text-primary);
+  }
+
+  .confirm {
+    align-self: stretch;
+    margin-top: var(--space-4);
+    padding: var(--space-4);
+    border: var(--hairline) solid var(--border-default);
+    border-left: 2px solid var(--danger);
+    border-radius: var(--radius-card);
+    background: var(--surface-sunken);
+  }
+  .confirm-title {
+    display: block;
+    font-size: var(--fz-body);
+    font-weight: var(--fw-semibold);
+    color: var(--text-primary);
+  }
+  .confirm ul {
+    margin: var(--space-3) 0;
+    padding-left: var(--space-6);
+    font-size: var(--fz-label);
+    color: var(--text-secondary);
+  }
+  .confirm-warn {
+    margin: 0;
+    font-size: var(--fz-label);
+    color: var(--danger);
+  }
+  .confirm-actions {
+    display: flex;
+    gap: var(--space-3);
+    margin-top: var(--space-4);
+  }
+  .action-btn.danger {
+    border-color: var(--danger);
+    color: var(--danger);
   }
 
   .hint {
