@@ -1,6 +1,6 @@
 # Pelton - email client (Wails + Svelte)
 
-.PHONY: build build-mac build-win build-linux dmg run app-dev dev clean tidy deps licenses icon
+.PHONY: build build-mac build-win build-linux dmg run app-dev dev clean tidy deps licenses icon disclaimer
 
 # version string injected into the binary. it prefers the latest git tag (with a
 # short commit suffix on untagged commits) and falls back to "dev". it is wired
@@ -17,8 +17,10 @@ build:
 icon:
 	scripts/build-icon.sh
 
-# macOS build that also installs the Liquid Glass icon into the .app.
+# macOS build that also installs the Liquid Glass icon into the .app, and ships
+# the warranty/liability terms inside the bundle so they travel with the copy.
 build-mac: build icon
+	cp DISCLAIMER.md build/bin/Pelton.app/Contents/Resources/DISCLAIMER.md
 
 # macOS build packaged into a distributable .dmg (build/bin/Pelton.dmg), with a
 # drag-to-Applications drop link. Needs create-dmg (`brew install create-dmg`).
@@ -37,7 +39,7 @@ dmg: build-mac
 
 # windows build (amd64). cross-compiling from another OS needs the appropriate
 # toolchain (mingw-w64) and webview2; run on Windows for a no-fuss build.
-build-win:
+build-win: disclaimer
 	wails build -platform windows/amd64 -ldflags "$(LDFLAGS)"
 
 # linux build (amd64), then drop the .desktop launcher next to the binary so it
@@ -77,6 +79,12 @@ deps:
 
 tidy:
 	go mod tidy
+
+# render DISCLAIMER.md into the plain text the windows installer shows on its
+# liability page. the result is committed, so this only needs running after an
+# edit to DISCLAIMER.md (build-win does it anyway).
+disclaimer:
+	node scripts/gen-installer-notice.mjs
 
 # build licenses/manifest.json (embedded and shown in the about section).
 licenses:

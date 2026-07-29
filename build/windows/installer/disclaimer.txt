@@ -1,0 +1,203 @@
+﻿WARRANTY AND LIABILITY
+
+Pelton is provided free of charge by Stellar Foundry GmbH,
+Thomas-Mann-Straße 19, 53111 Bonn, Germany.
+
+This document is an additional term under section 7(a) of the GNU General
+Public License, version 3. For copies of Pelton distributed by Stellar
+Foundry GmbH, the sections below take the place of the warranty and
+liability provisions in sections 15 and 16 of the GPLv3. Anyone
+redistributing Pelton may remove this additional term under section 7,
+paragraph 2 of the GPLv3; that does not affect the redistributor's own
+liability for the copy they distribute.
+
+It does not restrict the rights the GPLv3 grants you to use, copy, modify
+and redistribute Pelton. The German version below is authoritative; the
+English text is a translation for convenience. The current version is
+published at https://pelton.app/terms.
+
+Last updated: 30 July 2026
+
+1. No warranty
+
+Pelton is provided free of charge and as it stands. We do not warrant that
+the software is free of defects, that it is continuously available, that it
+is fit for any particular purpose, or that it works with any given operating
+system, email provider or protocol implementation.
+
+Because the software is provided free of charge, we are liable for defects
+in quality only where we fraudulently concealed a defect (section 524 German
+Civil Code) and for defects in title accordingly (section 523 German Civil
+Code).
+
+2. Liability
+
+a) We are liable without limitation for intent and gross negligence, for
+injury to life, body or health, for the fraudulent concealment of a defect,
+to the extent of any guarantee we have expressly given, and in all cases of
+mandatory statutory liability, in particular under the German Product
+Liability Act.
+
+b) Otherwise our liability is limited to intent and gross negligence under
+section 521 of the German Civil Code, because we provide Pelton free of
+charge.
+
+c) Where we are nevertheless liable for ordinary negligence in breaching a
+material obligation, that liability is limited to the damage that was
+foreseeable and typical at the time the software was provided.
+
+d) Any liability beyond this is excluded. The limitations above also apply
+for the benefit of our legal representatives, employees and agents.
+
+3. Data integrity and backups
+
+Pelton connects to your live mailboxes and stores messages and metadata
+locally on your device. We do not warrant that locally stored data is
+complete, permanently available or recoverable, nor that an action you
+trigger in Pelton produces the expected result on your email provider's
+server. Deletions can be permanent.
+
+Pelton is not a backup tool and does not replace one. Keeping your own
+independent backup of your data is your responsibility. You use the software
+at your own risk.
+
+4. Development status, support and updates
+
+Pelton is under active development. Features may change, be restricted or be
+removed, and data formats may change between versions.
+
+You can report bugs as an issue at https://github.com/TRC-Loop/Pelton and we
+do read those reports. There is no entitlement to a reply, a fix, further
+development, updates or any level of availability.
+
+5. Third-party services
+
+Pelton communicates directly with the email providers you set up and, if you
+configure them, with further services such as MCP servers. We operate no
+servers in the data path and have no access to your messages or credentials.
+The respective provider is solely responsible for the performance,
+availability, security and terms of those services. The same applies to
+themes, extensions and configurations you obtain from third parties.
+
+6. Reporting security issues
+
+Please report security vulnerabilities confidentially as described in
+SECURITY.md rather than as a public issue.
+
+7. Governing law
+
+These terms are governed by the law of the Federal Republic of Germany. If
+you are a consumer, the mandatory consumer protection provisions of the
+country in which you have your habitual residence remain unaffected.
+
+8. Severability and changes
+
+If any provision of these terms is invalid, the remaining provisions stay in
+force. We may adjust these terms for future versions. For a version you have
+already downloaded, the wording published at the time of that download
+applies.
+
+----------------------------------------------------------------------------
+
+GEWÄHRLEISTUNG UND HAFTUNG
+
+Diese deutsche Fassung ist maßgeblich.
+
+Pelton wird unentgeltlich bereitgestellt von der Stellar Foundry GmbH,
+Thomas-Mann-Straße 19, 53111 Bonn, Deutschland.
+
+Dieses Dokument ist eine Zusatzbedingung nach § 7 lit. a der GNU General
+Public License, Version 3. Für Kopien von Pelton, die von der Stellar
+Foundry GmbH bereitgestellt werden, treten die nachfolgenden Ziffern an die
+Stelle der Gewährleistungs- und Haftungsregelungen in den §§ 15 und 16
+GPLv3. Wer Pelton weitergibt, darf diese Zusatzbedingung nach § 7 Abs. 2
+GPLv3 entfernen; die Haftung des Weitergebenden für die von ihm verbreitete
+Kopie bleibt davon unberührt.
+
+Die durch die GPLv3 gewährten Rechte an Nutzung, Vervielfältigung,
+Veränderung und Weitergabe werden dadurch nicht eingeschränkt. Die aktuelle
+Fassung ist unter https://pelton.app/terms/de veröffentlicht.
+
+Stand: 30. Juli 2026
+
+1. Keine Gewährleistung
+
+Pelton wird unentgeltlich und in der jeweils vorliegenden Fassung
+bereitgestellt. Wir sichern nicht zu, dass die Software fehlerfrei arbeitet,
+ununterbrochen verfügbar ist, sich für einen bestimmten Zweck eignet oder
+mit einem bestimmten Betriebssystem, E-Mail-Anbieter oder Protokollstand
+zusammenarbeitet.
+
+Da die Überlassung unentgeltlich erfolgt, haften wir für Sachmängel nach §
+524 BGB nur bei arglistigem Verschweigen eines Mangels und für Rechtsmängel
+entsprechend § 523 BGB.
+
+2. Haftung
+
+a) Unbeschränkt haften wir bei Vorsatz und grober Fahrlässigkeit, bei der
+Verletzung von Leben, Körper oder Gesundheit, bei arglistigem Verschweigen
+eines Mangels, im Umfang einer von uns ausdrücklich übernommenen Garantie
+sowie in allen Fällen zwingender gesetzlicher Haftung, insbesondere nach dem
+Produkthaftungsgesetz.
+
+b) Im Übrigen ist unsere Haftung nach § 521 BGB auf Vorsatz und grobe
+Fahrlässigkeit beschränkt, da wir Pelton unentgeltlich überlassen.
+
+c) Soweit wir gleichwohl für einfache Fahrlässigkeit bei der Verletzung
+einer wesentlichen Pflicht haften, ist die Haftung auf den bei
+Bereitstellung vorhersehbaren, typischerweise eintretenden Schaden begrenzt.
+
+d) Eine weitergehende Haftung ist ausgeschlossen. Die vorstehenden
+Beschränkungen gelten auch zugunsten unserer gesetzlichen Vertreter,
+Mitarbeiter und Erfüllungsgehilfen.
+
+3. Datenintegrität und Backups
+
+Pelton greift auf Ihre echten Postfächer zu und speichert Nachrichten und
+Metadaten lokal auf Ihrem Gerät. Wir sichern nicht zu, dass lokal
+gespeicherte Daten vollständig, dauerhaft verfügbar oder wiederherstellbar
+sind, und nicht, dass eine in Pelton ausgelöste Aktion beim Server Ihres
+E-Mail-Anbieters das erwartete Ergebnis hat. Löschvorgänge können endgültig
+sein.
+
+Pelton ist kein Backup-Werkzeug und ersetzt kein Backup. Für eine eigene,
+unabhängige Sicherung Ihrer Daten sind Sie selbst verantwortlich. Die
+Nutzung erfolgt auf eigene Gefahr.
+
+4. Entwicklungsstand, Support und Updates
+
+Pelton befindet sich in aktiver Entwicklung. Funktionen können sich ändern,
+eingeschränkt werden oder entfallen, und Datenformate können sich zwischen
+Versionen ändern.
+
+Sie können Fehler als Issue unter https://github.com/TRC-Loop/Pelton melden,
+und wir lesen diese Meldungen. Ein Anspruch auf Antwort, Fehlerbehebung,
+Weiterentwicklung, Updates oder eine bestimmte Verfügbarkeit besteht nicht.
+
+5. Drittanbieter
+
+Pelton kommuniziert direkt mit den von Ihnen eingerichteten E-Mail-Anbietern
+und, sofern Sie das konfigurieren, mit weiteren Diensten wie MCP-Servern.
+Wir betreiben keine Server im Datenpfad und haben keinen Zugriff auf Ihre
+Nachrichten oder Zugangsdaten. Für Leistung, Verfügbarkeit, Sicherheit und
+Bedingungen dieser Dienste ist allein der jeweilige Anbieter verantwortlich.
+Das gilt auch für Themes, Erweiterungen und Konfigurationen, die Sie von
+Dritten beziehen.
+
+6. Sicherheitslücken melden
+
+Sicherheitslücken melden Sie bitte vertraulich wie in SECURITY.md
+beschrieben und nicht als öffentliches Issue.
+
+7. Anwendbares Recht
+
+Es gilt das Recht der Bundesrepublik Deutschland. Sind Sie Verbraucher,
+bleiben die zwingenden Verbraucherschutzvorschriften des Staates unberührt,
+in dem Sie Ihren gewöhnlichen Aufenthalt haben.
+
+8. Salvatorische Klausel und Änderungen
+
+Sollte eine Bestimmung dieser Bedingungen unwirksam sein, bleibt die
+Wirksamkeit der übrigen Bestimmungen unberührt. Wir können diese Bedingungen
+für künftige Versionen anpassen. Für eine bereits von Ihnen bezogene Version
+gilt die Fassung, die zum Zeitpunkt des Downloads veröffentlicht war.
