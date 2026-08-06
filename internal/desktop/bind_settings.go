@@ -89,6 +89,9 @@ const (
 	// verbose sync surfaces the mailbox currently being synced in the status
 	// line instead of a plain "Syncing" (#128). Off by default.
 	settingVerboseSync = "verbose_sync"
+	// what the window's close button does: "background" (default) or "quit".
+	// See close.go.
+	settingCloseAction = "close_button_action"
 )
 
 // settingUpdateCheckFreq, settingLastUpdateCheck and defaultUpdateCheckFrequency
@@ -262,6 +265,9 @@ type UIPrefsDTO struct {
 	NotifyNewMail bool `json:"notifyNewMail"`
 	// VerboseSync shows which mailbox is currently syncing in the status line.
 	VerboseSync bool `json:"verboseSync"`
+	// CloseAction is what the window's close button does: "background" keeps
+	// Pelton running and syncing with the window hidden, "quit" exits.
+	CloseAction string `json:"closeAction"`
 }
 
 // GetUIPrefs returns all ui preferences with defaults filled in, so startup is a
@@ -332,6 +338,7 @@ func (a *App) GetUIPrefs() (UIPrefsDTO, error) {
 		MonoFont:                   a.stringSetting(settingMonoFont, "default"),
 		NotifyNewMail:              a.boolSetting(settingNotifyNewMail, false),
 		VerboseSync:                a.boolSetting(settingVerboseSync, false),
+		CloseAction:                a.stringSetting(settingCloseAction, closeActionBackground),
 	}, nil
 }
 

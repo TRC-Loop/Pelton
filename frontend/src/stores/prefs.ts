@@ -5,7 +5,7 @@
 // source of truth.
 
 import { writable } from 'svelte/store'
-import type { UIPrefs, ThemePref, DensityPref, EditorMode, ViewsPlacement } from '../lib/types'
+import type { UIPrefs, ThemePref, DensityPref, EditorMode, ViewsPlacement, CloseAction } from '../lib/types'
 import { getUIPrefs, setSetting, SettingKeys, systemColorScheme, setWindowTheme, getThemeApply } from '../lib/api'
 import { applyTheme, applyDensity, applyAccent, applyScale, applyReduceMotion, setThemeSchedule, applyUIFont, applyMonoFont, applyCorners, watchSystemTheme, setSystemSchemeOverride, resolveTheme } from '../theme/theme'
 import { applyUserTheme } from '../theme/usertheme'
@@ -75,6 +75,7 @@ const defaults: UIPrefs = {
   monoFont: 'default',
   notifyNewMail: false,
   verboseSync: false,
+  closeAction: 'background',
 }
 
 export const prefs = writable<UIPrefs>(defaults)
@@ -425,6 +426,13 @@ export function setMonoFont(value: string): void {
 export function setVerboseSync(value: boolean): void {
   prefs.update((p) => ({ ...p, verboseSync: value }))
   void setSetting(SettingKeys.verboseSync, String(value))
+}
+
+// setCloseAction picks what the window's close button does. The backend reads
+// the setting on each close, so the change takes effect without a restart.
+export function setCloseAction(value: CloseAction): void {
+  prefs.update((p) => ({ ...p, closeAction: value }))
+  void setSetting(SettingKeys.closeAction, value)
 }
 
 // toggle keys map a boolean preference to its setting key so setToggle stays

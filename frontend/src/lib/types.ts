@@ -271,7 +271,13 @@ export interface UIPrefs {
   notifyNewMail: boolean
   // verboseSync shows which mailbox is currently syncing in the status line.
   verboseSync: boolean
+  // closeAction is what the window's close button does: 'background' keeps
+  // Pelton running and syncing with the window hidden, 'quit' exits.
+  closeAction: CloseAction
 }
+
+// what the window's close button does.
+export type CloseAction = 'background' | 'quit'
 
 // an installed custom theme, as shown in the settings gallery.
 export interface ThemeInfo {
