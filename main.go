@@ -10,6 +10,7 @@ import (
 	"slices"
 
 	"github.com/TRC-Loop/Pelton/internal/desktop"
+	"github.com/TRC-Loop/Pelton/internal/storage"
 )
 
 //go:embed all:frontend/dist
@@ -28,14 +29,23 @@ var programLicense string
 
 // trayIcon is the Windows notification-area icon (see the desktop package's
 // tray_windows.go). Embedded on every platform - it is a few KB - but only
-// used on Windows.
+// used on Windows. nightlyTrayIcon is the nightly build's own icon, so a
+// nightly in the notification area is never mistaken for a real install.
 //
 //go:embed build/windows/icon.ico
 var trayIcon []byte
 
+//go:embed build/windows/icon-nightly.ico
+var nightlyTrayIcon []byte
+
 // version is overridden at build time with -ldflags "-X main.version=<v>" (see
 // the Makefile) and defaults to "dev".
 var version = "dev"
+
+// channel is the build channel, overridden at build time with -ldflags
+// "-X main.channel=nightly" by the nightly workflow. Empty means a normal
+// build; see internal/desktop/nightly.go for what a nightly does differently.
+var channel = ""
 
 func main() {
 	// --potatoes-are-nice launches a purely-cosmetic demo mode used for website
@@ -43,12 +53,18 @@ func main() {
 	// accounts and mail. Nothing else changes.
 	demoMode := slices.Contains(os.Args[1:], "--potatoes-are-nice")
 
+	tray := trayIcon
+	if channel == storage.ChannelNightly {
+		tray = nightlyTrayIcon
+	}
+
 	if err := desktop.Run(desktop.Config{
 		Assets:          assets,
 		Version:         version,
+		Channel:         channel,
 		LicenseManifest: licenseManifest,
 		ProgramLicense:  programLicense,
-		TrayIcon:        trayIcon,
+		TrayIcon:        tray,
 		DemoMode:        demoMode,
 	}); err != nil {
 		println("Error:", err.Error())

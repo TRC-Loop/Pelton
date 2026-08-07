@@ -48,6 +48,7 @@
     archiveMessage,
     setMailActionsEnabled,
     isDemoMode,
+    isNightly,
     unsubscribeMessage,
     consumePendingMailto,
   } from './lib/api'
@@ -84,6 +85,9 @@
   // installs that predate the onboarding liability step have to acknowledge it
   // once before they can carry on.
   let liabilityOpen = false
+  // a nightly build warns on every launch, before anything else including
+  // onboarding, and the acknowledgement is deliberately never remembered.
+  let nightlyOpen = false
   const unsubscribers: Unsubscribe[] = []
 
   // live pane widths. they track the persisted prefs unless the user is mid-drag,
@@ -137,6 +141,10 @@
     // data before anything loads, so the whole ui fills with the potato inbox.
     const demo = await isDemoMode().catch(() => false)
     setDemoActive(demo)
+
+    // a nightly warns before anything else is on screen. demo mode is only used
+    // for screenshots, so the dialog would just be in the way there.
+    nightlyOpen = !demo && (await isNightly().catch(() => false))
 
     await initPrefs()
     await initSidebarState()
@@ -756,6 +764,13 @@
       on:close={() => (settingsOpen = false)}
       on:rerunOnboarding={rerunOnboarding}
     />
+  {/await}
+{/if}
+
+<!-- the nightly-build warning, above everything else and shown every launch. -->
+{#if nightlyOpen}
+  {#await import('./components/common/NightlyDialog.svelte') then m}
+    <svelte:component this={m.default} on:accepted={() => (nightlyOpen = false)} />
   {/await}
 {/if}
 

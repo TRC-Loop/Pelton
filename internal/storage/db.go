@@ -58,24 +58,41 @@ type DB struct {
 	attachmentsDir string
 }
 
-// DefaultPath returns the database path inside the user config directory,
-// os.UserConfigDir()/Pelton/pelton.db. When the PELTON_DEV environment
-// variable is set (the `make run`/`wails dev` loop sets it), it uses
-// Pelton-dev instead, so a local dev/test run never touches a real install's
+// ChannelNightly is the build channel of the automated dev-branch builds. It
+// gets its own data directory so a nightly can never damage a real install's
 // accounts, cache or settings.
+const ChannelNightly = "nightly"
+
+// DefaultPath returns the database path for a normal build, inside the user
+// config directory: os.UserConfigDir()/Pelton/pelton.db. When the PELTON_DEV
+// environment variable is set (the `make run`/`wails dev` loop sets it), it
+// uses Pelton-dev instead, so a local dev/test run never touches a real
+// install's accounts, cache or settings.
 func DefaultPath() (string, error) {
+	return DefaultPathForChannel("")
+}
+
+// DefaultPathForChannel is DefaultPath for a specific build channel. Any
+// channel other than "" (stable) gets its own directory, e.g. Pelton-nightly.
+// PELTON_DEV still wins, so a dev run of a nightly build stays on throwaway
+// data rather than the nightly's own.
+func DefaultPathForChannel(channel string) (string, error) {
 	dir, err := os.UserConfigDir()
 	if err != nil {
 		return "", fmt.Errorf("storage: locate user config dir: %w", err)
 	}
-	return filepath.Join(dir, dataDirName(), dbFileName), nil
+	return filepath.Join(dir, dataDirName(channel), dbFileName), nil
 }
 
-func dataDirName() string {
-	if os.Getenv("PELTON_DEV") != "" {
+func dataDirName(channel string) string {
+	switch {
+	case os.Getenv("PELTON_DEV") != "":
 		return appDirName + "-dev"
+	case channel != "":
+		return appDirName + "-" + channel
+	default:
+		return appDirName
 	}
-	return appDirName
 }
 
 // Open opens (creating it and its parent directory if needed) the database at
