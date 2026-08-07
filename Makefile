@@ -1,6 +1,6 @@
 # Pelton - email client (Wails + Svelte)
 
-.PHONY: build build-mac build-win build-linux dmg run app-dev dev clean tidy deps licenses icon disclaimer
+.PHONY: build build-mac build-win build-linux dmg run run-nightly app-dev dev clean tidy deps licenses icon disclaimer
 
 # version string injected into the binary. it prefers the latest git tag (with a
 # short commit suffix on untagged commits) and falls back to "dev". it is wired
@@ -66,6 +66,14 @@ run: deps
 nice-potatoes: deps
 	wails generate module
 	PELTON_DEV=1 wails dev -appargs "--potatoes-are-nice" -ldflags "$(LDFLAGS)"
+
+# run the app as a nightly build would behave: the launch warning dialog, the
+# status bar marker and the nightly name/icon in the about block. PELTON_DEV
+# still points it at the dev data directory, so this does not create the real
+# nightly one either.
+run-nightly: deps
+	wails generate module
+	PELTON_DEV=1 wails dev -ldflags "$(LDFLAGS) -X main.channel=nightly"
 
 dev: run
 

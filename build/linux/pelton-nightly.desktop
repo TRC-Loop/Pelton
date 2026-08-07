@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Pelton (Nightly)
+GenericName=Email Client
+Comment=Untested nightly build of Pelton. Do not use with your real inbox.
+Exec=pelton-nightly %u
+Icon=pelton-nightly
+Terminal=false
+Categories=Network;Email;Office;
+Keywords=email;mail;imap;smtp;inbox;nightly;
+StartupNotify=true
+StartupWMClass=Pelton

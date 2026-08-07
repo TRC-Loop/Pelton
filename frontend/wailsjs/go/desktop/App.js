@@ -170,6 +170,10 @@ export function IsDevMode() {
   return window['go']['desktop']['App']['IsDevMode']();
 }
 
+export function IsNightly() {
+  return window['go']['desktop']['App']['IsNightly']();
+}
+
 export function Licenses() {
   return window['go']['desktop']['App']['Licenses']();
 }

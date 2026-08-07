@@ -110,6 +110,12 @@
   --warning-bg: color-mix(in srgb, #9a6700 14%, transparent);
   --danger: #c0392b;
   --danger-bg: color-mix(in srgb, #c0392b 12%, transparent);
+
+  /* the purple of the NIGHTLY badge in the nightly build's logo, so the marker
+     in the ui matches the icon on the dock/taskbar. darkened here to keep it
+     readable on a light surface. */
+  --nightly: #8b3cc0;
+  --nightly-bg: color-mix(in srgb, #b965e2 16%, transparent);
 }
 
 /* dark theme. every token has a dark value so the toggle never leaves a gap. */
@@ -142,6 +148,9 @@
   --warning-bg: color-mix(in srgb, #d9a441 16%, transparent);
   --danger: #e5675a;
   --danger-bg: color-mix(in srgb, #e5675a 16%, transparent);
+
+  --nightly: #c98cea;
+  --nightly-bg: color-mix(in srgb, #b965e2 22%, transparent);
 
   --shadow-overlay: 0 8px 24px rgba(0, 0, 0, 0.5);
 }

@@ -1,0 +1,57 @@
+# Packaging for the automated nightly builds (.github/workflows/nightly.yml).
+# It is deliberately a separate package from pelton.yaml rather than a variant
+# of it: a nightly installs alongside a real Pelton under its own name and
+# binary, so it can never replace a working install, and it does not register
+# as a mailto handler, so it cannot quietly become the system's mail client.
+name: pelton-nightly
+arch: amd64
+platform: linux
+version: ${VERSION}
+section: mail
+priority: optional
+maintainer: "Arne K. <me@arne.sh>"
+description: |
+  Untested nightly build of Pelton, the open-source desktop email client.
+  Not a release. Do not use it with your real inbox.
+vendor: "Arne K. and the Pelton contributors"
+homepage: "https://github.com/TRC-Loop/Pelton"
+license: GPL-3.0-or-later
+
+contents:
+  - src: ./build/bin/Pelton
+    dst: /usr/bin/pelton-nightly
+    file_info:
+      mode: 0755
+  - src: ./build/linux/pelton-nightly.desktop
+    dst: /usr/share/applications/pelton-nightly.desktop
+  - src: ./build/icons/pelton-nightly.png
+    dst: /usr/share/icons/hicolor/1024x1024/apps/pelton-nightly.png
+  - src: ./build/icons/pelton-nightly.png
+    dst: /usr/share/pixmaps/pelton-nightly.png
+  # GPL-3.0, the warranty/liability terms, and the nightly-specific warning
+  - src: ./LICENSE
+    dst: /usr/share/doc/pelton-nightly/LICENSE
+  - src: ./DISCLAIMER.md
+    dst: /usr/share/doc/pelton-nightly/DISCLAIMER.md
+  - src: ./build/windows/installer/nightly.txt
+    dst: /usr/share/doc/pelton-nightly/NIGHTLY-WARNING.txt
+
+depends:
+  - gtk3
+  - webkit2gtk4.1
+
+rpm:
+  group: Applications/Internet
+  scripts:
+    posttrans: ./.github/nfpm/posttrans.sh
+
+overrides:
+  deb:
+    depends:
+      - "libgtk-3-0 | libgtk-3-0t64"
+      - "libwebkit2gtk-4.1-0"
+    scripts:
+      postinstall: ./.github/nfpm/posttrans.sh
+
+scripts:
+  preinstall: ./.github/nfpm/nightly-preinstall.sh
