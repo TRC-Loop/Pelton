@@ -150,6 +150,10 @@ func (a *App) startup(ctx context.Context) {
 	// so its menu labels can follow the language setting.
 	a.startTray()
 
+	// watches for a minimize to send to that tray (no-op elsewhere). needs the
+	// store, since it reads the minimize setting on every tick.
+	go a.watchMinimize()
+
 	// demo mode is purely cosmetic: the frontend renders fixed sample data, so we
 	// skip everything that would touch the network or mutate the store (sync, idle,
 	// the outbox worker, auto-update checks, download resume, migrations). the

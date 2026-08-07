@@ -717,6 +717,7 @@ export const SettingKeys = {
   notifyNewMail: 'notify_new_mail',
   verboseSync: 'verbose_sync',
   closeAction: 'close_button_action',
+  minimizeAction: 'minimize_button_action',
   liabilityAccepted: 'liability_accepted',
 } as const
 
