@@ -38,6 +38,13 @@ Unicode true
 ####
 !define REQUEST_EXECUTION_LEVEL "Highest"
 ####
+## Build channel. The nightly workflow writes a channel.nsh next to this file
+## containing `!define PELTON_NIGHTLY`; a normal release build has no such file
+## and the /NONFATAL include is a no-op. Everything guarded by PELTON_NIGHTLY
+## below is therefore absent from release installers entirely.
+####
+!include /NONFATAL "channel.nsh"
+####
 ## Include the wails tools
 ####
 !include "wails_tools.nsh"
@@ -95,6 +102,22 @@ ManifestDPIAware true
 !define MUI_LICENSEPAGE_TEXT_BOTTOM "Click Agree to continue installing Pelton."
 !define MUI_LICENSEPAGE_BUTTON "Agree"
 !insertmacro MUI_PAGE_LICENSE "disclaimer.txt"
+
+####
+## Nightly builds get one more page, after the terms and before anything is
+## chosen or written, spelling out that this is an untested build that must not
+## be pointed at a real inbox. The "I understand" button is the only way past
+## it. Release installers never see this block.
+####
+!ifdef PELTON_NIGHTLY
+    !define MUI_PAGE_HEADER_TEXT "Nightly build"
+    !define MUI_PAGE_HEADER_SUBTEXT "This is not a release. Please read before installing."
+    !define MUI_LICENSEPAGE_TEXT_TOP "You are about to install an untested nightly build."
+    !define MUI_LICENSEPAGE_TEXT_BOTTOM "Click I understand to install this nightly build at your own risk."
+    !define MUI_LICENSEPAGE_BUTTON "I understand"
+    !insertmacro MUI_PAGE_LICENSE "nightly.txt"
+!endif
+
 !insertmacro MULTIUSER_PAGE_INSTALLMODE # All users (admin) vs just me (no admin).
 !insertmacro MUI_PAGE_DIRECTORY # In which folder install page.
 !insertmacro MUI_PAGE_COMPONENTS # Optional components (currently just the desktop shortcut).
@@ -143,6 +166,13 @@ ShowInstDetails show # This will always show the installation details.
 !macroend
 
 Function .onInit
+!ifdef PELTON_NIGHTLY
+   ; before the installer ui is even up, so nobody double-clicks their way past
+   ; the page below without registering what they downloaded.
+   MessageBox MB_YESNO|MB_ICONEXCLAMATION|MB_DEFBUTTON2 "This is a NIGHTLY build of ${INFO_PRODUCTNAME}, not a release.$\r$\n$\r$\nIt is untested, expected to be broken, and can lose or damage email. Do not use it with your real inbox.$\r$\n$\r$\nContinue installing?" IDYES pelton_nightly_ok
+       Quit
+   pelton_nightly_ok:
+!endif
    !insertmacro MULTIUSER_INIT # reads/handles the all-users vs per-user choice first; may relaunch elevated.
    ${If} $MultiUser.InstallMode == "AllUsers"
        UserInfo::GetAccountType

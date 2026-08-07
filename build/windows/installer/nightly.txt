@@ -1,0 +1,42 @@
+HIGHLY EXPERIMENTAL NIGHTLY BUILD
+
+This is not a release of Pelton. It is an automated nightly build, produced
+from the development branch without review, testing or approval of any kind.
+It exists so that people who want to help test unfinished work can do so.
+
+WHAT THIS MEANS
+
+  * It is expected to be broken. Features may be half-finished, newly added
+    code may never have been run by anyone before you, and the build may fail
+    to start at all.
+
+  * It can lose or damage email. It may fail to send, send the wrong thing,
+    delete messages on your server, or corrupt its local cache of your mail.
+    Deletions on an email server can be permanent and cannot be undone by us.
+
+  * DO NOT USE IT WITH YOUR REAL INBOX. Use a test account whose contents you
+    can afford to lose entirely.
+
+  * It has no support. There is no guarantee that a nightly will be fixed,
+    replaced, kept available, or ever built again.
+
+A nightly build stores its accounts, mail and settings in its own separate
+location and does not read or write the data of a normally installed Pelton.
+Installing it will not disturb an existing Pelton installation, and the two
+can be installed side by side.
+
+NO WARRANTY, NO LIABILITY
+
+This build is provided free of charge and as it stands, with no warranty of
+any kind, express or implied. You install and use it entirely at your own
+risk. To the fullest extent permitted by law, the authors and distributors of
+Pelton accept no liability for any loss of or damage to data, for lost or
+misdirected email, or for any other loss or damage arising from your use of a
+nightly build.
+
+The full warranty and liability terms shown on the previous page apply to this
+build as well, and nothing here reduces the rights the GNU General Public
+License version 3 grants you.
+
+If you are not willing to accept this, click Cancel and install a normal
+release of Pelton from https://pelton.app instead.

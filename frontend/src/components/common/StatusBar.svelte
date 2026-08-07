@@ -9,7 +9,7 @@
   import { online } from '../../stores/network'
   import { downloadProgress, attachmentProgress } from '../../stores/progress'
   import { formatRelative } from '../../lib/format'
-  import { cancelDownload, isDevMode } from '../../lib/api'
+  import { cancelDownload, isDevMode, isNightly } from '../../lib/api'
   import { prefs, setLowPowerMode } from '../../stores/prefs'
   import OutboxPanel from './OutboxPanel.svelte'
   import { t } from '../../lib/i18n'
@@ -18,8 +18,13 @@
   // process (set by the PELTON_DEV env var a dev run launches with), not
   // something that can change while the app is open.
   let devMode = false
+  // nightly is fixed at build time, so it is read once alongside devMode. it
+  // stays on screen for the whole session: the launch dialog is dismissed, this
+  // is the reminder that outlives it.
+  let nightly = false
   onMount(async () => {
     devMode = await isDevMode().catch(() => false)
+    nightly = await isNightly().catch(() => false)
   })
 
   // format an eta in seconds as m:ss (or just seconds under a minute).
@@ -59,6 +64,12 @@
 
 <footer class="statusbar">
   <div class="left">
+    {#if nightly}
+      <span class="dev-badge nightly-badge" title={$t('common.statusBar.nightlyTitle')}>
+        <IconAlertTriangle size={13} stroke={1.8} />
+        {$t('common.statusBar.nightly')}
+      </span>
+    {/if}
     {#if devMode}
       <span class="dev-badge" title={$t('common.statusBar.devModeTitle')}>
         <IconBug size={13} stroke={1.8} />
@@ -326,6 +337,13 @@
     font-size: var(--fz-meta);
     font-weight: var(--fw-semibold);
     letter-spacing: 0.02em;
+  }
+
+  /* the nightly marker takes the badge shape but the purple of the nightly
+     logo, so it reads as a build channel rather than as an error. */
+  .nightly-badge {
+    background: var(--nightly-bg);
+    color: var(--nightly);
   }
 
   .low-power:hover {
