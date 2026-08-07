@@ -1,0 +1,473 @@
+name: Nightly builds
+
+# Builds the dev branch once a day and publishes the installers as a GitHub
+# prerelease tagged nightly-YYYY.MM.DD (#171).
+#
+# Nightlies are untested and must never be mistaken for a release, so:
+#   * the release is always a prerelease. GitHub's /releases/latest API skips
+#     prereleases, which is what pelton.app and the in-app update check both
+#     read, so a nightly never shows up as an available update or a download.
+#   * the app is built with -X main.channel=nightly, which gives it its own data
+#     directory, its own name, icon and single-instance lock, and a blocking
+#     warning dialog at every launch (internal/desktop/nightly.go).
+#   * the Windows installer gains an extra acknowledgement page, and the Linux
+#     packages install as "pelton-nightly" alongside a real Pelton rather than
+#     replacing it.
+#
+# Nothing runs when dev has not moved since the last nightly, and nightlies
+# older than RETENTION_DAYS are deleted so the releases page stays readable.
+
+on:
+  schedule:
+    # 06:00 Europe/Berlin. GitHub cron is UTC only and has no notion of DST, so
+    # both candidate hours fire and the check job drops the one that is not
+    # 06:00 local. 04:00 UTC is 06:00 CEST (summer), 05:00 UTC is 06:00 CET
+    # (winter).
+    - cron: "0 4 * * *"
+    - cron: "0 5 * * *"
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "Build even if dev has not changed since the last nightly"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+env:
+  GO_VERSION: "1.25"
+  RETENTION_DAYS: "14"
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Decide whether there is anything to build. A nightly tag always points at
+  # the dev commit it was built from, so an existing nightly tag on the current
+  # dev HEAD means nothing has been merged since and the whole run is skipped.
+  # ---------------------------------------------------------------------------
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      build: ${{ steps.decide.outputs.build }}
+      sha: ${{ steps.decide.outputs.sha }}
+      short_sha: ${{ steps.decide.outputs.short_sha }}
+      tag: ${{ steps.decide.outputs.tag }}
+      version: ${{ steps.decide.outputs.version }}
+      product_version: ${{ steps.decide.outputs.product_version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev
+          fetch-depth: 0
+
+      - name: Decide
+        id: decide
+        env:
+          FORCE: ${{ inputs.force }}
+          EVENT: ${{ github.event_name }}
+        run: |
+          sha="$(git rev-parse HEAD)"
+          short="$(git rev-parse --short=7 HEAD)"
+          date="$(date -u +%Y.%m.%d)"
+
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          echo "short_sha=$short" >> "$GITHUB_OUTPUT"
+          echo "tag=nightly-$date" >> "$GITHUB_OUTPUT"
+          echo "version=nightly-$date+$short" >> "$GITHUB_OUTPUT"
+          # NSIS and Info.plist both want a plain numeric version; the date
+          # gives a monotonic one without leading zeros (2026.08.07 -> 2026.8.7).
+          echo "product_version=$(echo "$date" | awk -F. '{printf "%d.%d.%d", $1, $2, $3}')" >> "$GITHUB_OUTPUT"
+
+          if [ "$FORCE" = "true" ]; then
+            echo "forced build"
+            echo "build=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # only one of the two daily crons is 06:00 in Berlin; the other one
+          # stops here. 07 is accepted as well so a run the scheduler delivered
+          # late still counts, and the tag check below keeps that from producing
+          # a second build for the same commit.
+          if [ "$EVENT" = "schedule" ]; then
+            hour="$(TZ=Europe/Berlin date +%H)"
+            case "$hour" in
+              06 | 07) ;;
+              *)
+                echo "it is $hour:00 in Berlin, not this cron's turn"
+                echo "build=false" >> "$GITHUB_OUTPUT"
+                exit 0
+                ;;
+            esac
+          fi
+
+          existing="$(git tag --points-at "$sha" 'nightly-*' | head -n1)"
+          if [ -n "$existing" ]; then
+            echo "dev HEAD $short is already published as $existing, nothing to build"
+            echo "build=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "dev HEAD $short has no nightly yet, building"
+            echo "build=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  # ---------------------------------------------------------------------------
+  # Create the prerelease first, so the three build jobs can upload into it in
+  # parallel. The body carries the warning; it is the first thing anyone
+  # arriving from a link sees.
+  # ---------------------------------------------------------------------------
+  release:
+    needs: check
+    if: needs.check.outputs.build == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev
+          fetch-depth: 0
+
+      - name: Create prerelease
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ needs.check.outputs.tag }}
+          SHA: ${{ needs.check.outputs.sha }}
+          SHORT_SHA: ${{ needs.check.outputs.short_sha }}
+        run: |
+          # a re-run on the same day replaces the day's release rather than
+          # failing, so a half-finished nightly can be rebuilt.
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release delete "$TAG" --yes --cleanup-tag
+          fi
+
+          cat > notes.md <<'NOTES'
+          > [!CAUTION]
+          > ## This is not a release. Do not use it with your real inbox.
+          >
+          > This is an **automated nightly build** of Pelton, made from the `dev`
+          > branch. It has **not been reviewed, tested or released**, and it is
+          > expected to break.
+          >
+          > **It can lose or damage email.** It may fail to send, send the wrong
+          > thing, delete messages on your server, or corrupt its local cache of
+          > your mail. Deletions on an email server can be permanent and cannot
+          > be undone by us.
+          >
+          > **Use a test account whose contents you can afford to lose entirely.**
+          >
+          > There is **no warranty of any kind** and **no support**. You download
+          > and use this build entirely at your own risk. To the fullest extent
+          > permitted by law, the authors and distributors of Pelton accept no
+          > liability for any loss of or damage to data, for lost or misdirected
+          > email, or for any other loss or damage arising from its use. The full
+          > warranty and liability terms are at https://pelton.app/terms and in
+          > `DISCLAIMER.md`.
+          >
+          > If you want a working email client, download a
+          > [real release](https://github.com/TRC-Loop/Pelton/releases/latest)
+          > instead.
+
+          ### Installing alongside a normal Pelton
+
+          A nightly is deliberately kept separate from a real install and the two
+          can sit side by side:
+
+          - it installs as **Pelton Nightly** with its own icon,
+          - it keeps its **own accounts, mail and settings** in a separate data
+            directory, so it cannot touch or corrupt your normal install's mail,
+          - on Linux it is the `pelton-nightly` package with a `pelton-nightly`
+            binary, and it does **not** register itself as your `mailto:` handler.
+
+          Nightlies older than 14 days are deleted automatically.
+          NOTES
+
+          {
+            echo ""
+            echo "---"
+            echo ""
+            echo "Built from \`dev\` at [\`$SHORT_SHA\`](https://github.com/TRC-Loop/Pelton/commit/$SHA)."
+          } >> notes.md
+
+          gh release create "$TAG" \
+            --target "$SHA" \
+            --title "Nightly $TAG (untested, not a release)" \
+            --notes-file notes.md \
+            --prerelease
+
+  # ---------------------------------------------------------------------------
+  # macOS, Apple Silicon. Bundle is "Pelton Nightly.app" with its own bundle id
+  # so LaunchServices treats it as a different app from a real install, and the
+  # nightly icon rather than the Liquid Glass one.
+  # ---------------------------------------------------------------------------
+  macos:
+    needs: [check, release]
+    if: needs.check.outputs.build == 'true'
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: frontend/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Install wails CLI
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@$(go list -m -f '{{.Version}}' github.com/wailsapp/wails/v2)
+
+      - name: Install dependencies
+        run: |
+          go mod download
+          cd frontend && pnpm install --frozen-lockfile
+
+      - name: Brand as nightly
+        env:
+          PRODUCT_VERSION: ${{ needs.check.outputs.product_version }}
+        run: |
+          # the bundle, its display name and its version
+          jq --arg v "$PRODUCT_VERSION" \
+            '.name = "Pelton Nightly" | .outputfilename = "Pelton Nightly" | .info.productName = "Pelton Nightly" | .info.productVersion = $v' \
+            wails.json > wails.json.tmp
+          mv wails.json.tmp wails.json
+
+          # a distinct bundle id, or macOS treats a nightly and a real install
+          # as the same app for defaults, permissions and the Dock.
+          sed -i '' 's|<string>sh.arne.pelton</string>|<string>sh.arne.pelton.nightly</string>|' build/darwin/Info.plist
+
+          # CFBundleIconName points at the Liquid Glass "pelton" asset, which
+          # this job does not compile. Drop it so macOS uses iconfile.icns,
+          # which wails generates from build/appicon.png below.
+          python3 - <<'PY'
+          import re
+          p = 'build/darwin/Info.plist'
+          s = open(p, encoding='utf-8').read()
+          s = re.sub(r'\s*<key>CFBundleIconName</key>\s*<string>pelton</string>', '', s)
+          open(p, 'w', encoding='utf-8').write(s)
+          PY
+
+          cp build/icons/pelton-nightly.png build/appicon.png
+
+      - name: Build
+        env:
+          VERSION: ${{ needs.check.outputs.version }}
+        run: wails build -platform darwin/arm64 -ldflags "-X main.version=$VERSION -X main.channel=nightly"
+
+      - name: Use the nightly icon
+        run: cp build/icons/pelton-nightly.icns "build/bin/Pelton Nightly.app/Contents/Resources/iconfile.icns"
+
+      # Ad-hoc self-sign, same reasoning as the release workflow: not
+      # notarization, but it stops the bundle being flagged as "damaged".
+      - name: Ad-hoc codesign
+        run: codesign --force --deep -s - "build/bin/Pelton Nightly.app"
+
+      - name: Zip .app
+        env:
+          TAG: ${{ needs.check.outputs.tag }}
+        run: ditto -c -k --sequesterRsrc --keepParent "build/bin/Pelton Nightly.app" "build/bin/Pelton-$TAG-macos-applesilicon-app.zip"
+
+      - name: Install create-dmg
+        run: brew install create-dmg
+
+      - name: Build .dmg
+        env:
+          TAG: ${{ needs.check.outputs.tag }}
+        run: |
+          create-dmg \
+            --volname "Pelton Nightly" \
+            --volicon "build/icons/pelton-nightly.icns" \
+            --window-size 540 380 \
+            --icon-size 128 \
+            --icon "Pelton Nightly.app" 130 170 \
+            --app-drop-link 410 170 \
+            --hide-extension "Pelton Nightly.app" \
+            "build/bin/Pelton-$TAG-macos-applesilicon.dmg" \
+            "build/bin/Pelton Nightly.app"
+
+      - name: Upload
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ needs.check.outputs.tag }}
+        run: |
+          gh release upload "$TAG" \
+            "build/bin/Pelton-$TAG-macos-applesilicon.dmg" \
+            "build/bin/Pelton-$TAG-macos-applesilicon-app.zip" \
+            --clobber
+
+  # ---------------------------------------------------------------------------
+  # Windows amd64. channel.nsh switches on the installer's extra nightly
+  # acknowledgement page and its up-front message box.
+  # ---------------------------------------------------------------------------
+  windows:
+    needs: [check, release]
+    if: needs.check.outputs.build == 'true'
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: frontend/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Install wails CLI
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@$(go list -m -f '{{.Version}}' github.com/wailsapp/wails/v2)
+
+      - name: Install NSIS
+        shell: pwsh
+        run: |
+          choco install nsis -y
+          echo "C:\Program Files (x86)\NSIS" | Out-File -FilePath $env:GITHUB_PATH -Append
+
+      - name: Install dependencies
+        run: |
+          go mod download
+          cd frontend
+          pnpm install --frozen-lockfile
+
+      - name: Brand as nightly
+        shell: bash
+        env:
+          PRODUCT_VERSION: ${{ needs.check.outputs.product_version }}
+        run: |
+          # productName is what the user sees (Start Menu, install directory);
+          # name/outputfilename stay space-free so the generated paths do not
+          # need quoting all the way through NSIS.
+          jq --arg v "$PRODUCT_VERSION" \
+            '.name = "PeltonNightly" | .outputfilename = "PeltonNightly" | .info.productName = "Pelton Nightly" | .info.productVersion = $v' \
+            wails.json > wails.json.tmp
+          mv wails.json.tmp wails.json
+
+          cp build/windows/icon-nightly.ico build/windows/icon.ico
+          echo '!define PELTON_NIGHTLY' > build/windows/installer/channel.nsh
+
+      - name: Build + NSIS installer
+        env:
+          VERSION: ${{ needs.check.outputs.version }}
+        run: wails build -platform windows/amd64 -nsis -ldflags "-X main.version=$env:VERSION -X main.channel=nightly"
+
+      - name: Rename installer
+        shell: bash
+        env:
+          TAG: ${{ needs.check.outputs.tag }}
+        run: mv "build/bin/PeltonNightly-amd64-installer.exe" "build/bin/Pelton-$TAG-windows-amd64-installer.exe"
+
+      - name: Upload
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ needs.check.outputs.tag }}
+        run: gh release upload "$TAG" "build/bin/Pelton-$TAG-windows-amd64-installer.exe" --clobber
+
+  # ---------------------------------------------------------------------------
+  # Linux: the raw binary plus pelton-nightly .deb/.rpm. No Copr submission;
+  # a distro repo is for releases, not for untested builds.
+  # ---------------------------------------------------------------------------
+  linux:
+    needs: [check, release]
+    if: needs.check.outputs.build == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: frontend/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Install system build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev build-essential pkg-config rpm
+
+      - name: Install wails CLI
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@$(go list -m -f '{{.Version}}' github.com/wailsapp/wails/v2)
+
+      - name: Install nfpm
+        run: go install github.com/goreleaser/nfpm/v2/cmd/nfpm@latest
+
+      - name: Install dependencies
+        run: |
+          go mod download
+          cd frontend && pnpm install --frozen-lockfile
+
+      - name: Build
+        env:
+          VERSION: ${{ needs.check.outputs.version }}
+        run: wails build -platform linux/amd64 -tags webkit2_41 -ldflags "-X main.version=$VERSION -X main.channel=nightly"
+
+      - name: Stage raw binary
+        env:
+          TAG: ${{ needs.check.outputs.tag }}
+        run: cp "build/bin/Pelton" "build/bin/Pelton-$TAG-linux-amd64"
+
+      - name: Build packages
+        env:
+          TAG: ${{ needs.check.outputs.tag }}
+          # package managers reject "+" and a leading "v" in a version.
+          VERSION: ${{ needs.check.outputs.product_version }}
+        run: |
+          nfpm package --config .github/nfpm/pelton-nightly.yaml --packager deb --target "build/bin/Pelton-$TAG-linux-amd64.deb"
+          nfpm package --config .github/nfpm/pelton-nightly.yaml --packager rpm --target "build/bin/Pelton-$TAG-linux-fedora-x86_64.rpm"
+
+      - name: Upload
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ needs.check.outputs.tag }}
+        run: |
+          gh release upload "$TAG" \
+            "build/bin/Pelton-$TAG-linux-amd64" \
+            "build/bin/Pelton-$TAG-linux-amd64.deb" \
+            "build/bin/Pelton-$TAG-linux-fedora-x86_64.rpm" \
+            --clobber
+
+  # ---------------------------------------------------------------------------
+  # Delete nightlies older than RETENTION_DAYS, tag included. Runs after the
+  # builds so a failed build never takes the pruning down with it, and only
+  # touches nightly-* tags.
+  # ---------------------------------------------------------------------------
+  prune:
+    needs: [check, macos, windows, linux]
+    if: always() && needs.check.outputs.build == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete old nightlies
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          KEEP_TAG: ${{ needs.check.outputs.tag }}
+        run: |
+          cutoff="$(date -u -d "-$RETENTION_DAYS days" +%s)"
+          gh release list --limit 200 --json tagName,createdAt,isPrerelease \
+            --jq '.[] | select(.isPrerelease) | select(.tagName | startswith("nightly-")) | "\(.tagName) \(.createdAt)"' \
+          | while read -r tag created; do
+              [ "$tag" = "$KEEP_TAG" ] && continue
+              if [ "$(date -u -d "$created" +%s)" -lt "$cutoff" ]; then
+                echo "deleting $tag (created $created)"
+                gh release delete "$tag" --yes --cleanup-tag
+              fi
+            done

@@ -45,6 +45,9 @@ type App struct {
 	searchMu sync.Mutex
 	queue    *outbox.Queue
 	version  string
+	// channel is the build channel: "" for a normal build, storage.ChannelNightly
+	// for the automated dev-branch builds. See nightly.go.
+	channel string
 	// embedded license data served to the about section on demand.
 	licenseManifest string
 	programLicense  string
@@ -109,13 +112,14 @@ func (a *App) IsDevMode() bool {
 	return os.Getenv("PELTON_DEV") != ""
 }
 
-// newApp creates the App with the build version. The heavy initialization
-// happens in startup once wails has handed us a context we can emit runtime
-// events on.
-func newApp(version string) *App {
+// newApp creates the App with the build version and channel. The heavy
+// initialization happens in startup once wails has handed us a context we can
+// emit runtime events on.
+func newApp(version, channel string) *App {
 	return &App{
 		log:        slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelInfo})),
 		version:    version,
+		channel:    channel,
 		storeReady: make(chan struct{}),
 	}
 }
@@ -127,7 +131,7 @@ func newApp(version string) *App {
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
 
-	store, dataDir, err := openStore(ctx)
+	store, dataDir, err := openStore(ctx, a.channel)
 	if err != nil {
 		a.log.Error("open store", "err", err)
 		close(a.storeReady)
@@ -158,7 +162,7 @@ func (a *App) startup(ctx context.Context) {
 	// folder ("in-place" mode). that feature is gone; if a device still has that
 	// marker, migrate its data back to the normal app-support dir now, so the next
 	// launch opens from the standard location again.
-	if defaultPath, pathErr := storage.DefaultPath(); pathErr == nil {
+	if defaultPath, pathErr := storage.DefaultPathForChannel(a.channel); pathErr == nil {
 		stateDir := filepath.Dir(defaultPath)
 		if migrated, mErr := configsync.MigrateInPlaceBack(ctx, store, stateDir, filepath.Base(defaultPath)); mErr != nil {
 			a.log.Error("migrate config-sync data back", "err", mErr)
@@ -220,9 +224,10 @@ func (a *App) shutdown(ctx context.Context) {
 // directory it opened from. That is normally the default per-OS app-support
 // directory (the same path the cli tools use, so accounts they created are
 // visible here), but configsync's in-place mode can redirect it to a folder
-// the user chose instead - see configsync.ActiveDataDir.
-func openStore(ctx context.Context) (*storage.DB, string, error) {
-	defaultPath, err := storage.DefaultPath()
+// the user chose instead - see configsync.ActiveDataDir. A nightly build opens
+// its own directory, so it never sees or touches a stable install's mail.
+func openStore(ctx context.Context, channel string) (*storage.DB, string, error) {
+	defaultPath, err := storage.DefaultPathForChannel(channel)
 	if err != nil {
 		return nil, "", err
 	}

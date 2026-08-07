@@ -58,6 +58,13 @@ export function isDevMode(): Promise<boolean> {
   return App.IsDevMode()
 }
 
+// isNightly reports whether this is an automated nightly build cut from the dev
+// branch. Nightlies are untested and keep their own separate data directory, so
+// the ui warns about it at every launch and marks the status bar.
+export function isNightly(): Promise<boolean> {
+  return App.IsNightly()
+}
+
 // consumePendingMailto returns the mailto: draft the app was launched with (if
 // any) and clears it, so a reload does not reopen the same compose.
 export function consumePendingMailto(): Promise<desktop.PendingMailtoDTO> {

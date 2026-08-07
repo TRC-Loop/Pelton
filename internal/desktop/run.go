@@ -10,6 +10,7 @@ import (
 	"embed"
 	"os"
 
+	"github.com/TRC-Loop/Pelton/internal/storage"
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
@@ -29,11 +30,14 @@ type Config struct {
 	TrayIcon []byte
 	// DemoMode runs the app in the cosmetic screenshot mode (--potatoes-are-nice).
 	DemoMode bool
+	// Channel is the build channel ("" for a normal build, "nightly" for the
+	// automated dev-branch builds). See nightly.go.
+	Channel string
 }
 
 // Run constructs and runs the wails application. It returns wails.Run's error.
 func Run(cfg Config) error {
-	app := newApp(cfg.Version)
+	app := newApp(cfg.Version, cfg.Channel)
 	app.licenseManifest = cfg.LicenseManifest
 	app.programLicense = cfg.ProgramLicense
 	app.trayIcon = cfg.TrayIcon
@@ -46,16 +50,24 @@ func Run(cfg Config) error {
 		app.setPendingMailto(parseMailto(raw))
 	}
 
-	// a dev build (PELTON_DEV) runs against throwaway data and must not share the
-	// single-instance lock with an installed Pelton, or launching one would just
-	// surface the other and exit.
+	// a dev build (PELTON_DEV) and a nightly both run against their own data and
+	// must not share the single-instance lock with an installed Pelton, or
+	// launching one would just surface the other and exit.
 	instanceID := "com.pelton.app"
-	if os.Getenv("PELTON_DEV") != "" {
+	switch {
+	case os.Getenv("PELTON_DEV") != "":
 		instanceID = "com.pelton.app.dev"
+	case cfg.Channel != "":
+		instanceID = "com.pelton.app." + cfg.Channel
+	}
+
+	title := "Pelton"
+	if cfg.Channel == storage.ChannelNightly {
+		title = "Pelton Nightly"
 	}
 
 	return wails.Run(&options.App{
-		Title:     "Pelton",
+		Title:     title,
 		Width:     1280,
 		Height:    820,
 		MinWidth:  900,
@@ -89,8 +101,8 @@ func Run(cfg Config) error {
 		},
 		Mac: &mac.Options{
 			About: &mac.AboutInfo{
-				Title:   "Pelton",
-				Message: "An open-source desktop mail client.\nVersion " + cfg.Version,
+				Title:   title,
+				Message: aboutMessage(cfg.Channel, cfg.Version),
 			},
 			// macOS delivers a mailto: click as an Apple event, not argv.
 			OnUrlOpen: func(url string) {

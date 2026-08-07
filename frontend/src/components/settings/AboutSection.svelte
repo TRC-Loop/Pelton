@@ -8,7 +8,8 @@
   import { IconBrandGithub, IconBug, IconLicense, IconScale, IconX, IconRefresh, IconUsers, IconWorld, IconBook2 } from '@tabler/icons-svelte'
   import { BrowserOpenURL } from '../../../wailsjs/runtime/runtime'
   import { APP } from '../../lib/app-info'
-  import { appVersion, checkForUpdates, defaultMailClientStatus, setDefaultMailClient, type UpdateCheckResult } from '../../lib/api'
+  import { appVersion, checkForUpdates, defaultMailClientStatus, setDefaultMailClient, isNightly, type UpdateCheckResult } from '../../lib/api'
+  import nightlyLogo from '../../assets/images/icons/pelton-nightly-logo.png'
   import { onUpdateAvailable } from '../../lib/events'
   import { prefs, setUpdateCheckFrequency } from '../../stores/prefs'
   import { toastError, errorMessage } from '../../stores/toast'
@@ -21,7 +22,11 @@
   // the version is injected into the binary at build time; fall back to the
   // static value if the binding is unavailable (e.g. a stale dev build).
   let version: string = APP.version
+  // nightly is fixed at build time; it swaps the name and mark here so the
+  // about block cannot be mistaken for a real install's.
+  let nightly = false
   onMount(async () => {
+    nightly = await isNightly().catch(() => false)
     try {
       const v = await appVersion()
       if (v) {
@@ -137,10 +142,16 @@
 
 <div class="about">
   <div class="identity">
-    <span class="name">{APP.name}</span>
+    {#if nightly}
+      <img class="mark" src={nightlyLogo} alt="" draggable="false" />
+    {/if}
+    <span class="name">{nightly ? $t('nightly.appName') : APP.name}</span>
     <button type="button" class="version" on:click={toggleViewportInfo}>{version.startsWith('v') ? version : `v${version}`}</button>
   </div>
   <p class="tagline">{APP.tagline}</p>
+  {#if nightly}
+    <p class="nightly-note">{$t('common.statusBar.nightlyTitle')}</p>
+  {/if}
   {#if showViewportInfo}
     <p class="viewport-info">{viewportInfo}</p>
   {/if}
@@ -259,6 +270,22 @@
     display: flex;
     align-items: baseline;
     gap: var(--space-3);
+  }
+
+  .mark {
+    width: 28px;
+    height: 28px;
+    align-self: center;
+  }
+
+  .nightly-note {
+    margin: var(--space-3) 0 0;
+    padding: var(--space-3) var(--space-4);
+    border-radius: var(--radius-control);
+    background: var(--nightly-bg);
+    font-size: var(--fz-body);
+    font-weight: var(--fw-medium);
+    color: var(--text-primary);
   }
 
   .name {

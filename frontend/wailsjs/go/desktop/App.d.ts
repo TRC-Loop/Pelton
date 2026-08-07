@@ -86,6 +86,8 @@ export function IsDemoMode():Promise<boolean>;
 
 export function IsDevMode():Promise<boolean>;
 
+export function IsNightly():Promise<boolean>;
+
 export function Licenses():Promise<string>;
 
 export function ListAccounts():Promise<Array<desktop.AccountDTO>>;
