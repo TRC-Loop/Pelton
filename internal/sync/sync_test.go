@@ -138,7 +138,7 @@ func TestBuildPlanCoversUnionOfUIDsInOrder(t *testing.T) {
 		*server(3, storage.FlagSeen|storage.FlagFlagged), // server changed flags
 	}
 
-	plan := BuildPlan(locals, servers)
+	plan := BuildPlan(locals, servers, 0)
 
 	if len(plan) != 3 {
 		t.Fatalf("plan length = %d, want 3", len(plan))
@@ -157,7 +157,7 @@ func TestBuildPlanCoversUnionOfUIDsInOrder(t *testing.T) {
 }
 
 func TestBuildPlanEmpty(t *testing.T) {
-	if plan := BuildPlan(nil, nil); len(plan) != 0 {
+	if plan := BuildPlan(nil, nil, 0); len(plan) != 0 {
 		t.Fatalf("empty plan length = %d, want 0", len(plan))
 	}
 }

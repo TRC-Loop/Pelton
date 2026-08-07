@@ -43,6 +43,8 @@ import type {
   ProxyConfig,
   MCPConfig,
   View,
+  Selection,
+  FetchOlderResult,
 } from './types'
 
 // isDemoMode reports whether the app launched in the cosmetic --potatoes-are-nice
@@ -166,6 +168,26 @@ export function listSavedViewMessages(
   }
   return App.ListMessages(
     new desktop.ListMessagesRequest({ kind: 'savedView', folderId: 0, view: '', viewId, limit, offset }),
+  )
+}
+
+// fetchOlderMessages pulls the next batch of older mail from the server for a
+// selection, for when the local cache runs out before the mailbox does. It is a
+// network round trip, unlike the list* functions above which only read the
+// cache. In demo mode there is no server, so it reports nothing fetched.
+export function fetchOlderMessages(sel: Selection): Promise<FetchOlderResult> {
+  if (isDemoActive()) {
+    return Promise.resolve({ fetched: 0, hasOlder: false })
+  }
+  return App.FetchOlderMessages(
+    new desktop.ListMessagesRequest({
+      kind: sel.kind,
+      folderId: sel.kind === 'folder' ? sel.folderId : 0,
+      view: sel.kind === 'view' ? sel.view : '',
+      viewId: sel.kind === 'savedView' ? sel.viewId : 0,
+      limit: 0,
+      offset: 0,
+    }),
   )
 }
 
@@ -718,6 +740,8 @@ export const SettingKeys = {
   verboseSync: 'verbose_sync',
   closeAction: 'close_button_action',
   minimizeAction: 'minimize_button_action',
+  syncMessageLimit: 'sync_message_limit',
+  syncAutoBackfill: 'sync_auto_backfill',
   liabilityAccepted: 'liability_accepted',
 } as const
 

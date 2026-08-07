@@ -201,6 +201,7 @@ func (a *App) syncFolders(client *pimap.Client, accountID int64) error {
 	}
 	engine := psync.NewEngine(client, a.store, a.log)
 	engine.ColorSync = a.boolSetting(settingFlagColorSync, false)
+	engine.InitialLimit = a.syncMessageLimit()
 
 	newTotal := 0
 	for i, f := range folders {
@@ -256,6 +257,7 @@ func (a *App) findInboxFolder(accountID int64) (*storage.Folder, error) {
 func (a *App) syncOneFolder(client *pimap.Client, folder storage.Folder) error {
 	engine := psync.NewEngine(client, a.store, a.log)
 	engine.ColorSync = a.boolSetting(settingFlagColorSync, false)
+	engine.InitialLimit = a.syncMessageLimit()
 
 	res, err := engine.SyncFolder(a.ctx, folder)
 	if err != nil {

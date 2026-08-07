@@ -114,6 +114,45 @@ func (d *DB) SetFolderLastSeenUID(ctx context.Context, folderID int64, uid uint3
 	return requireOneRow(res, ErrFolderNotFound)
 }
 
+// FolderSyncFloorUID returns the lowest uid a folder's cache covers. 0 means
+// there is no floor and the folder is cached in full.
+func (d *DB) FolderSyncFloorUID(ctx context.Context, folderID int64) (uint32, error) {
+	var uid uint32
+	err := d.sql.QueryRowContext(ctx,
+		`SELECT sync_floor_uid FROM folders WHERE id = ?`, folderID).Scan(&uid)
+	if err != nil {
+		return 0, fmt.Errorf("storage: get sync_floor_uid for folder %d: %w", folderID, err)
+	}
+	return uid, nil
+}
+
+// SetFolderSyncFloorUID updates the folder's sync floor. Pass 0 to clear it,
+// meaning nothing older is left to fetch.
+func (d *DB) SetFolderSyncFloorUID(ctx context.Context, folderID int64, uid uint32) error {
+	res, err := d.sql.ExecContext(ctx,
+		`UPDATE folders SET sync_floor_uid = ? WHERE id = ?`, uid, folderID)
+	if err != nil {
+		return fmt.Errorf("storage: set sync_floor_uid for folder %d: %w", folderID, err)
+	}
+	return requireOneRow(res, ErrFolderNotFound)
+}
+
+// AnyFolderHasOlder reports whether any of the given folders still has messages
+// on the server below its sync floor, i.e. whether a backfill would fetch
+// anything. An empty list is false.
+func (d *DB) AnyFolderHasOlder(ctx context.Context, folderIDs []int64) (bool, error) {
+	if len(folderIDs) == 0 {
+		return false, nil
+	}
+	marks, args := inClause(folderIDs)
+	query := `SELECT COUNT(*) FROM folders WHERE sync_floor_uid > 0 AND id IN (` + marks + `)`
+	var n int
+	if err := d.sql.QueryRowContext(ctx, query, args...).Scan(&n); err != nil {
+		return false, fmt.Errorf("storage: check older messages for folders: %w", err)
+	}
+	return n > 0, nil
+}
+
 // PurgeFolderMessages removes every cached message and its attachment files for
 // a folder. It is used when the server's UIDVALIDITY changed and the whole
 // cache for the folder is stale. Attachment directories are removed per message

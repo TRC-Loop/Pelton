@@ -33,6 +33,8 @@
     messageList,
     loadList,
     loadMore,
+    loadOlder,
+    backfillFailed,
     runSearch,
     patchInList,
     removeFromList,
@@ -148,6 +150,13 @@
 
   $: items = $messageList.data?.items ?? []
   $: hasMore = !($messageList.data?.searching ?? false) && items.length < ($messageList.data?.total ?? 0)
+  // the cache is exhausted but the server still has older mail. hasMore covers
+  // paging what is cached; this covers going back to the server for the rest.
+  $: backfilling = $messageList.data?.backfilling ?? false
+  $: canLoadOlder = !hasMore && ($messageList.data?.hasOlder ?? false) && !($messageList.data?.searching ?? false)
+  // the button shows when auto-backfill is off, or when an automatic attempt
+  // failed and retrying is the user's call.
+  $: showLoadOlder = canLoadOlder && !backfilling && (!$prefs.syncAutoBackfill || $backfillFailed)
 
   // measure once rows first appear and the height is still unknown.
   $: if (items.length > 0 && rowHeight === 0) {
@@ -519,7 +528,13 @@
   function onScroll(): void {
     scrollTop = listEl.scrollTop
     viewportHeight = listEl.clientHeight
-    if (!hasMore || $messageList.status === 'loading') {
+    if ($messageList.status === 'loading' || backfilling) {
+      return
+    }
+    // once the cache is paged out, loadMore hands off to the server backfill,
+    // so this still fires when hasMore is false and older mail remains. a
+    // failed backfill stops the automatic retry and waits for the button.
+    if (!hasMore && !(canLoadOlder && $prefs.syncAutoBackfill && !$backfillFailed)) {
       return
     }
     const nearBottom = listEl.scrollTop + listEl.clientHeight >= listEl.scrollHeight - 200
@@ -633,6 +648,17 @@
       {/if}
       {#if $messageList.status === 'loading'}
         <Spinner label={$t('messageList.loadingMore')} inline />
+      {:else if backfilling}
+        <Spinner label={$t('messageList.fetchingOlder')} inline />
+      {:else if showLoadOlder}
+        <div class="load-older">
+          <p class="load-older-note">
+            {$backfillFailed ? $t('messageList.olderFailed') : $t('messageList.olderOnServer')}
+          </p>
+          <button type="button" class="load-older-btn" on:click={() => void loadOlder()}>
+            {$t('messageList.loadOlder')}
+          </button>
+        </div>
       {/if}
     {/if}
   </div>
@@ -675,6 +701,39 @@
     font-size: var(--fz-meta);
     color: var(--text-tertiary);
     flex-shrink: 0;
+  }
+
+  /* the end of the cache when the mailbox itself is not over: older mail is
+     still on the server and one press fetches the next batch. */
+  .load-older {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-6) var(--row-pad-x);
+  }
+
+  .load-older-note {
+    margin: 0;
+    font-size: var(--fz-meta);
+    color: var(--text-tertiary);
+    text-align: center;
+  }
+
+  .load-older-btn {
+    padding: var(--space-2) var(--space-4);
+    font-size: var(--fz-label);
+    font-weight: var(--fw-medium);
+    color: var(--text-secondary);
+    background: var(--surface-sunken);
+    border: var(--hairline) solid var(--border-default);
+    border-radius: var(--radius-control);
+    cursor: pointer;
+  }
+
+  .load-older-btn:hover {
+    background: var(--surface-hover);
+    color: var(--text-primary);
   }
 
   /* the selection toolbar replaces the meta bar while rows are selected. */

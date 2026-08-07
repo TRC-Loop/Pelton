@@ -77,6 +77,8 @@ const defaults: UIPrefs = {
   verboseSync: false,
   closeAction: 'background',
   minimizeAction: 'minimize',
+  syncMessageLimit: 50,
+  syncAutoBackfill: true,
 }
 
 export const prefs = writable<UIPrefs>(defaults)
@@ -442,6 +444,21 @@ export function setCloseAction(value: CloseAction): void {
 export function setMinimizeAction(value: MinimizeAction): void {
   prefs.update((p) => ({ ...p, minimizeAction: value }))
   void setSetting(SettingKeys.minimizeAction, value)
+}
+
+// setSyncMessageLimit caps how many of a folder's newest messages a first sync
+// fetches. It only applies to folders that have not synced yet, so lowering it
+// never discards mail that is already cached.
+export function setSyncMessageLimit(value: number): void {
+  prefs.update((p) => ({ ...p, syncMessageLimit: value }))
+  void setSetting(SettingKeys.syncMessageLimit, String(value))
+}
+
+// setSyncAutoBackfill toggles fetching the next batch of older mail
+// automatically on reaching the end of the list, as opposed to on a button.
+export function setSyncAutoBackfill(value: boolean): void {
+  prefs.update((p) => ({ ...p, syncAutoBackfill: value }))
+  void setSetting(SettingKeys.syncAutoBackfill, String(value))
 }
 
 // toggle keys map a boolean preference to its setting key so setToggle stays

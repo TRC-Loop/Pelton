@@ -142,7 +142,13 @@ func reconcileBoth(local *LocalMessage, server *ServerMessage) Decision {
 // BuildPlan reconciles a whole folder. It returns one Decision per message
 // across the union of local and server uids, in ascending uid order so the plan
 // is deterministic and easy to test. Pure: no io.
-func BuildPlan(locals []LocalMessage, servers []ServerMessage) []Decision {
+//
+// floor is the folder's sync floor (see SyncFolder): a server message below it
+// is outside the sync window and is left alone entirely, neither fetched nor
+// counted as a server-side deletion. A uid below the floor that IS cached
+// locally still reconciles normally, so lowering the window can never orphan or
+// silently drop mail the user already has.
+func BuildPlan(locals []LocalMessage, servers []ServerMessage, floor uint32) []Decision {
 	localByUID := make(map[uint32]LocalMessage, len(locals))
 	for _, l := range locals {
 		localByUID[l.UID] = l
@@ -157,6 +163,9 @@ func BuildPlan(locals []LocalMessage, servers []ServerMessage) []Decision {
 	for _, uid := range uids {
 		local, hasLocal := localByUID[uid]
 		server, hasServer := serverByUID[uid]
+		if uid < floor && !hasLocal {
+			continue
+		}
 		var lp *LocalMessage
 		var sp *ServerMessage
 		if hasLocal {

@@ -84,6 +84,10 @@ type MessageSummaryDTO struct {
 type MessageListDTO struct {
 	Messages []MessageSummaryDTO `json:"messages"`
 	Total    int                 `json:"total"`
+	// HasOlder means the server still holds messages older than anything cached
+	// for this selection, so reaching Total is not the end of the mailbox and
+	// the list can offer to fetch more (see bind_backfill.go).
+	HasOlder bool `json:"hasOlder"`
 }
 
 // AttachmentDTO describes a stored attachment. Inline parts (referenced by the

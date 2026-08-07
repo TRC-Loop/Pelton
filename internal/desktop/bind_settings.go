@@ -95,6 +95,11 @@ const (
 	// what the window's minimize button does: "minimize" (default) or "tray".
 	// Windows only, see minimize_windows.go.
 	settingMinimizeAction = "minimize_button_action"
+	// how many of a folder's newest messages a first sync fetches, and whether
+	// reaching the end of the list pulls the next batch automatically (#175).
+	// 0 messages means no limit: sync the whole mailbox as older versions did.
+	settingSyncMessageLimit = "sync_message_limit"
+	settingSyncAutoBackfill = "sync_auto_backfill"
 )
 
 // settingUpdateCheckFreq, settingLastUpdateCheck and defaultUpdateCheckFrequency
@@ -125,6 +130,10 @@ const (
 	defaultUIScale = "1"
 	// base font size (px) for rendered email content.
 	defaultMessageFont = 14
+	// how many of a folder's newest messages a first sync fetches. Matches the
+	// list's page size, so the first screenful is cached and anything past it is
+	// backfilled on demand rather than downloaded up front.
+	defaultSyncMessageLimit = 50
 )
 
 // UIPrefsDTO is the complete set of user-facing preferences this step exposes:
@@ -275,6 +284,12 @@ type UIPrefsDTO struct {
 	// the ordinary taskbar minimize, "tray" sends it to the notification area.
 	// Windows only; ignored elsewhere.
 	MinimizeAction string `json:"minimizeAction"`
+	// SyncMessageLimit caps how many of a folder's newest messages the first
+	// sync fetches; older mail stays on the server until it is asked for. 0
+	// means no limit. SyncAutoBackfill fetches the next batch automatically on
+	// reaching the end of the list; off puts it behind a button instead.
+	SyncMessageLimit int  `json:"syncMessageLimit"`
+	SyncAutoBackfill bool `json:"syncAutoBackfill"`
 }
 
 // GetUIPrefs returns all ui preferences with defaults filled in, so startup is a
@@ -347,6 +362,8 @@ func (a *App) GetUIPrefs() (UIPrefsDTO, error) {
 		VerboseSync:                a.boolSetting(settingVerboseSync, false),
 		CloseAction:                a.stringSetting(settingCloseAction, closeActionBackground),
 		MinimizeAction:             a.stringSetting(settingMinimizeAction, minimizeActionNormal),
+		SyncMessageLimit:           a.syncMessageLimit(),
+		SyncAutoBackfill:           a.boolSetting(settingSyncAutoBackfill, true),
 	}, nil
 }
 
