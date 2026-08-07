@@ -92,6 +92,9 @@ const (
 	// what the window's close button does: "background" (default) or "quit".
 	// See close.go.
 	settingCloseAction = "close_button_action"
+	// what the window's minimize button does: "minimize" (default) or "tray".
+	// Windows only, see minimize_windows.go.
+	settingMinimizeAction = "minimize_button_action"
 )
 
 // settingUpdateCheckFreq, settingLastUpdateCheck and defaultUpdateCheckFrequency
@@ -268,6 +271,10 @@ type UIPrefsDTO struct {
 	// CloseAction is what the window's close button does: "background" keeps
 	// Pelton running and syncing with the window hidden, "quit" exits.
 	CloseAction string `json:"closeAction"`
+	// MinimizeAction is what the window's minimize button does: "minimize" is
+	// the ordinary taskbar minimize, "tray" sends it to the notification area.
+	// Windows only; ignored elsewhere.
+	MinimizeAction string `json:"minimizeAction"`
 }
 
 // GetUIPrefs returns all ui preferences with defaults filled in, so startup is a
@@ -339,6 +346,7 @@ func (a *App) GetUIPrefs() (UIPrefsDTO, error) {
 		NotifyNewMail:              a.boolSetting(settingNotifyNewMail, false),
 		VerboseSync:                a.boolSetting(settingVerboseSync, false),
 		CloseAction:                a.stringSetting(settingCloseAction, closeActionBackground),
+		MinimizeAction:             a.stringSetting(settingMinimizeAction, minimizeActionNormal),
 	}, nil
 }
 

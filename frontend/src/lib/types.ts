@@ -274,10 +274,17 @@ export interface UIPrefs {
   // closeAction is what the window's close button does: 'background' keeps
   // Pelton running and syncing with the window hidden, 'quit' exits.
   closeAction: CloseAction
+  // minimizeAction is what the window's minimize button does: 'minimize' is the
+  // ordinary taskbar minimize, 'tray' sends it to the notification area.
+  // Windows only; ignored elsewhere.
+  minimizeAction: MinimizeAction
 }
 
 // what the window's close button does.
 export type CloseAction = 'background' | 'quit'
+
+// what the window's minimize button does. Windows only.
+export type MinimizeAction = 'minimize' | 'tray'
 
 // an installed custom theme, as shown in the settings gallery.
 export interface ThemeInfo {

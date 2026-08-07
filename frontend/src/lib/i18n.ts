@@ -125,6 +125,10 @@ export const t = derived([locale, catalogs, userCatalog], ([$locale, $catalogs, 
 // isMac drives the modifier symbol and is used by shortcut matching.
 export const isMac = /mac/i.test(navigator.userAgent)
 
+// isWindows gates the settings that only mean something with a notification
+// area, which is Windows only (see internal/desktop/tray_stub.go).
+export const isWindows = /win/i.test(navigator.userAgent) && !isMac
+
 // modSymbol is the display glyph for the primary modifier on this platform.
 export const modSymbol = isMac ? '⌘' : 'Ctrl'
 
