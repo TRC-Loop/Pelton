@@ -3,6 +3,9 @@ version: 2
 updates:
   - package-ecosystem: "gomod"
     directory: "/"
+    # dev is the integration branch; nothing lands on main directly, dependency
+    # updates included. Without this dependabot opens against the default branch.
+    target-branch: "dev"
     schedule:
       interval: "weekly"
     groups:
@@ -12,6 +15,7 @@ updates:
 
   - package-ecosystem: "npm"
     directory: "/frontend"
+    target-branch: "dev"
     schedule:
       interval: "weekly"
     groups:
