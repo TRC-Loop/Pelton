@@ -88,6 +88,7 @@
     setLowPowerMode,
     setAutoSyncInterval,
     setVerboseSync,
+    setCloseAction,
     setDefaultEditorMode,
     setComposeAutocomplete,
     setComposeChips,
@@ -110,7 +111,7 @@
   import { downloadProgress } from '../../stores/progress'
   import { toastInfo, toastError, errorMessage } from '../../stores/toast'
   import { t } from '../../lib/i18n'
-  import type { ThemePref, DensityPref, EditorMode, ViewsPlacement } from '../../lib/types'
+  import type { ThemePref, DensityPref, EditorMode, ViewsPlacement, CloseAction } from '../../lib/types'
 
   let editorModeOptions: { key: EditorMode; label: string }[] = []
   $: editorModeOptions = [
@@ -241,6 +242,7 @@
     { cat: 'power', label: $t('settingsPanel.toggle.lowPowerMode'), kw: 'battery energy' },
     { cat: 'power', label: $t('settingsPanel.label.autoSyncInterval'), kw: 'sync interval' },
     { cat: 'power', label: $t('settingsPanel.toggle.verboseSync'), kw: 'sync status' },
+    { cat: 'power', label: $t('settingsPanel.label.closeAction'), kw: 'close button tray background quit exit' },
     { cat: 'power', label: $t('settingsPanel.toggle.offlineIndicator'), kw: 'offline' },
     { cat: 'power', label: $t('settingsPanel.toggle.flagColorSync'), kw: 'flag color sync' },
     { cat: 'power', label: $t('settingsPanel.label.downloadOffline'), kw: 'download offline cache' },
@@ -295,6 +297,15 @@
   ]
   function onAutoSyncInterval(event: CustomEvent<string>): void {
     setAutoSyncInterval(Number(event.detail))
+  }
+
+  // what the window's close button does.
+  $: closeActionOptions = [
+    { key: 'background', label: $t('settingsPanel.closeAction.background') },
+    { key: 'quit', label: $t('settingsPanel.closeAction.quit') },
+  ]
+  function onCloseAction(event: CustomEvent<string>): void {
+    setCloseAction(event.detail as CloseAction)
   }
 
   // swipe gesture actions (trackpad). shown in the two direction dropdowns.
@@ -1142,6 +1153,15 @@
       {:else if active === 'power'}
         <section>
           <h3>{$t('settingsPanel.category.powerSync')}</h3>
+          <SegmentedSetting
+            label={$t('settingsPanel.label.closeAction')}
+            value={$prefs.closeAction}
+            options={closeActionOptions}
+            on:change={onCloseAction}
+          />
+          <p class="hint">
+            {$t('settingsPanel.hint.closeAction')}
+          </p>
           <div class="toggle" title={$t('settingsPanel.hint.lowPowerToggle')}>
             <span class="row-label">{$t('settingsPanel.toggle.lowPowerMode')}</span>
             <ToggleSwitch

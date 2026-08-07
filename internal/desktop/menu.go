@@ -45,7 +45,7 @@ func (a *App) buildMenu() *menu.Menu {
 		wailsruntime.WindowHide(a.ctx)
 	})
 	appMenu.AddText(s.quit, keys.CmdOrCtrl("q"), func(_ *menu.CallbackData) {
-		wailsruntime.Quit(a.ctx)
+		a.quitApp()
 	})
 
 	// with the in-app menu bar enabled and the native menu reduced, the

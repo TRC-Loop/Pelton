@@ -66,13 +66,14 @@ func Run(cfg Config) error {
 		// neutral dark surface so the native window chrome matches the ui before
 		// the frontend paints. the real colors come from the css token theme.
 		BackgroundColour: &options.RGBA{R: 17, G: 18, B: 20, A: 1},
-		// keep the app running when the window is closed, like macos Mail: closing
-		// hides the window and background sync continues; the dock icon reopens it,
-		// and Quit (Cmd+Q) in the menu actually exits.
-		HideWindowOnClose: true,
-		OnStartup:         app.startup,
-		OnDomReady:        app.domReady,
-		OnShutdown:        app.shutdown,
+		// what the close button does is a user setting, so beforeClose decides
+		// per close whether to hide the window or exit. HideWindowOnClose is
+		// deliberately left off: it is a static option and would take that
+		// decision away before beforeClose ever runs.
+		OnBeforeClose: app.beforeClose,
+		OnStartup:     app.startup,
+		OnDomReady:    app.domReady,
+		OnShutdown:    app.shutdown,
 		Menu:              app.initialMenu(),
 		// keep a single instance: a second launch (e.g. another mailto click)
 		// hands its argv to the running app and exits, so mailto links reuse the

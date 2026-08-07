@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"sync/atomic"
 
 	"github.com/TRC-Loop/Pelton/internal/configsync"
 	"github.com/TRC-Loop/Pelton/internal/mcpserver"
@@ -57,6 +58,11 @@ type App struct {
 	// resetting every item back to disabled.
 	mailMenuItems      []*menu.MenuItem
 	mailActionsEnabled bool
+
+	// quitRequested marks a quit the user asked for directly (the Quit menu
+	// item, the tray's Quit) so beforeClose does not mistake it for a window
+	// close and hide the window instead of exiting.
+	quitRequested atomic.Bool
 
 	// dlMu guards dlCancel, the cancel function of the running bulk offline
 	// download (nil when none is running). CancelDownload calls it to stop the

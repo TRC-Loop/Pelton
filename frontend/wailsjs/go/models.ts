@@ -993,6 +993,7 @@ export namespace desktop {
 	    monoFont: string;
 	    notifyNewMail: boolean;
 	    verboseSync: boolean;
+	    closeAction: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new UIPrefsDTO(source);
@@ -1060,6 +1061,7 @@ export namespace desktop {
 	        this.monoFont = source["monoFont"];
 	        this.notifyNewMail = source["notifyNewMail"];
 	        this.verboseSync = source["verboseSync"];
+	        this.closeAction = source["closeAction"];
 	    }
 	}
 	export class UnifiedViewDTO {
@@ -1174,8 +1176,8 @@ export namespace desktop {
 	    queryFrom: string[];
 	    queryTo: string[];
 	    querySubject: string;
-	    useRegex: boolean;
 	    withinDays: number;
+	    useRegex: boolean;
 	    unreadOnly: boolean;
 	    flaggedOnly: boolean;
 	    hasAttachment: boolean;
@@ -1198,8 +1200,8 @@ export namespace desktop {
 	        this.queryFrom = source["queryFrom"];
 	        this.queryTo = source["queryTo"];
 	        this.querySubject = source["querySubject"];
-	        this.useRegex = source["useRegex"];
 	        this.withinDays = source["withinDays"];
+	        this.useRegex = source["useRegex"];
 	        this.unreadOnly = source["unreadOnly"];
 	        this.flaggedOnly = source["flaggedOnly"];
 	        this.hasAttachment = source["hasAttachment"];
