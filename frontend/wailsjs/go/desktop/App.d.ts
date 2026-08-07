@@ -56,6 +56,8 @@ export function ExportMessagePrintView(arg1:number):Promise<void>;
 
 export function ExportTheme(arg1:string):Promise<string>;
 
+export function FetchOlderMessages(arg1:desktop.ListMessagesRequest):Promise<desktop.FetchOlderResult>;
+
 export function GetAccountSignatures(arg1:number):Promise<desktop.AccountSignaturesDTO>;
 
 export function GetMCPConfig():Promise<desktop.MCPConfigDTO>;

@@ -58,7 +58,11 @@ func (a *App) ListMessages(req ListMessagesRequest) (MessageListDTO, error) {
 	if err != nil {
 		return MessageListDTO{}, err
 	}
-	return MessageListDTO{Messages: summaries, Total: total}, nil
+	hasOlder, err := a.store.AnyFolderHasOlder(a.ctx, q.FolderIDs)
+	if err != nil {
+		return MessageListDTO{}, err
+	}
+	return MessageListDTO{Messages: summaries, Total: total, HasOlder: hasOlder}, nil
 }
 
 // requestQuery turns a list request into the storage query (the folder id set

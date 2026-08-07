@@ -95,6 +95,16 @@ export interface UnsubscribeInfo {
 export interface MessageList {
   messages: MessageSummary[]
   total: number
+  // hasOlder means the server still holds mail older than anything cached for
+  // this selection, so reaching total is not the end of the mailbox.
+  hasOlder: boolean
+}
+
+// FetchOlderResult reports what one 'load older mail' round trip fetched, and
+// whether anything is still left on the server after it.
+export interface FetchOlderResult {
+  fetched: number
+  hasOlder: boolean
 }
 
 export interface Attachment {
@@ -278,6 +288,12 @@ export interface UIPrefs {
   // ordinary taskbar minimize, 'tray' sends it to the notification area.
   // Windows only; ignored elsewhere.
   minimizeAction: MinimizeAction
+  // syncMessageLimit caps how many of a folder's newest messages the first sync
+  // fetches; older mail stays on the server until asked for. 0 means no limit.
+  syncMessageLimit: number
+  // syncAutoBackfill fetches the next batch of older mail automatically on
+  // reaching the end of the list. Off puts it behind a button instead.
+  syncAutoBackfill: boolean
 }
 
 // what the window's close button does.

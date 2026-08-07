@@ -167,7 +167,7 @@ export function demoViews(): UnifiedView[] {
 
 /** demoList returns the sample inbox for any folder or view selection. */
 export function demoList(): MessageList {
-  return { messages, total: 63 }
+  return { messages, total: 63, hasOlder: false }
 }
 
 /** demoMessage returns the shared potato body wrapped as the given message. */

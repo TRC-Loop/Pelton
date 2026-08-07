@@ -332,6 +332,20 @@ export namespace desktop {
 		    return a;
 		}
 	}
+	export class FetchOlderResult {
+	    fetched: number;
+	    hasOlder: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new FetchOlderResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.fetched = source["fetched"];
+	        this.hasOlder = source["hasOlder"];
+	    }
+	}
 	export class FolderDTO {
 	    id: number;
 	    accountId: number;
@@ -597,6 +611,7 @@ export namespace desktop {
 	export class MessageListDTO {
 	    messages: MessageSummaryDTO[];
 	    total: number;
+	    hasOlder: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new MessageListDTO(source);
@@ -606,6 +621,7 @@ export namespace desktop {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.messages = this.convertValues(source["messages"], MessageSummaryDTO);
 	        this.total = source["total"];
+	        this.hasOlder = source["hasOlder"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
@@ -995,6 +1011,8 @@ export namespace desktop {
 	    verboseSync: boolean;
 	    closeAction: string;
 	    minimizeAction: string;
+	    syncMessageLimit: number;
+	    syncAutoBackfill: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new UIPrefsDTO(source);
@@ -1063,7 +1081,9 @@ export namespace desktop {
 	        this.notifyNewMail = source["notifyNewMail"];
 	        this.verboseSync = source["verboseSync"];
 	        this.closeAction = source["closeAction"];
-        this.minimizeAction = source["minimizeAction"];
+	        this.minimizeAction = source["minimizeAction"];
+	        this.syncMessageLimit = source["syncMessageLimit"];
+	        this.syncAutoBackfill = source["syncAutoBackfill"];
 	    }
 	}
 	export class UnifiedViewDTO {

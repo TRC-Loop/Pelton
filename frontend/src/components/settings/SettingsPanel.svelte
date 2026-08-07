@@ -90,6 +90,8 @@
     setVerboseSync,
     setCloseAction,
     setMinimizeAction,
+    setSyncMessageLimit,
+    setSyncAutoBackfill,
     setDefaultEditorMode,
     setComposeAutocomplete,
     setComposeChips,
@@ -244,6 +246,8 @@
     { cat: 'power', label: $t('settingsPanel.label.autoSyncInterval'), kw: 'sync interval' },
     { cat: 'power', label: $t('settingsPanel.toggle.verboseSync'), kw: 'sync status' },
     { cat: 'power', label: $t('settingsPanel.label.closeAction'), kw: 'close button tray background quit exit' },
+    { cat: 'power', label: $t('settingsPanel.label.syncMessageLimit'), kw: 'sync limit messages older initial download' },
+    { cat: 'power', label: $t('settingsPanel.toggle.syncAutoBackfill'), kw: 'older mail backfill scroll load more' },
     { cat: 'power', label: $t('settingsPanel.label.minimizeAction'), kw: 'minimize button tray taskbar notification area' },
     { cat: 'power', label: $t('settingsPanel.toggle.offlineIndicator'), kw: 'offline' },
     { cat: 'power', label: $t('settingsPanel.toggle.flagColorSync'), kw: 'flag color sync' },
@@ -299,6 +303,21 @@
   ]
   function onAutoSyncInterval(event: CustomEvent<string>): void {
     setAutoSyncInterval(Number(event.detail))
+  }
+
+  // how many of a folder's newest messages a first sync fetches. "all" is the
+  // pre-#175 behavior of downloading the whole mailbox up front.
+  $: syncLimitOptions = [
+    { key: '50', label: '50' },
+    { key: '100', label: '100' },
+    { key: '250', label: '250' },
+    { key: '500', label: '500' },
+    { key: '1000', label: '1000' },
+    { key: '0', label: $t('settingsPanel.syncLimit.all') },
+  ]
+
+  function onSyncMessageLimit(event: CustomEvent<string>): void {
+    setSyncMessageLimit(Number(event.detail))
   }
 
   // what the window's close button does.
@@ -1215,6 +1234,26 @@
           </div>
           <p class="hint">
             {$t('settingsPanel.hint.verboseSyncDetail')}
+          </p>
+          <StepSlider
+            label={$t('settingsPanel.label.syncMessageLimit')}
+            value={String($prefs.syncMessageLimit)}
+            options={syncLimitOptions}
+            on:change={onSyncMessageLimit}
+          />
+          <p class="hint">
+            {$t('settingsPanel.hint.syncMessageLimit')}
+          </p>
+          <div class="toggle" title={$t('settingsPanel.hint.syncAutoBackfill')}>
+            <span class="row-label">{$t('settingsPanel.toggle.syncAutoBackfill')}</span>
+            <ToggleSwitch
+              checked={$prefs.syncAutoBackfill}
+              label={$t('settingsPanel.toggle.syncAutoBackfill')}
+              on:change={(e) => setSyncAutoBackfill(e.detail)}
+            />
+          </div>
+          <p class="hint">
+            {$t('settingsPanel.hint.syncAutoBackfillDetail')}
           </p>
 
           <h4 class="subhead">{$t('settingsPanel.category.offline')}</h4>

@@ -110,6 +110,10 @@ export function ExportTheme(arg1) {
   return window['go']['desktop']['App']['ExportTheme'](arg1);
 }
 
+export function FetchOlderMessages(arg1) {
+  return window['go']['desktop']['App']['FetchOlderMessages'](arg1);
+}
+
 export function GetAccountSignatures(arg1) {
   return window['go']['desktop']['App']['GetAccountSignatures'](arg1);
 }
