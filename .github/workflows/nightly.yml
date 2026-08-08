@@ -14,6 +14,12 @@ name: Nightly builds
 #     packages install as "pelton-nightly" alongside a real Pelton rather than
 #     replacing it.
 #
+# The prerelease is created last, after all three platforms have built, and it
+# is created with the installers already attached. A failed build therefore
+# leaves no nightly at all rather than an empty or half-filled one that looks
+# downloadable, and the previous day's nightly stays the newest thing on the
+# releases page.
+#
 # Nothing runs when dev has not moved since the last nightly, and nightlies
 # older than RETENTION_DAYS are deleted so the releases page stays readable.
 
@@ -110,94 +116,12 @@ jobs:
           fi
 
   # ---------------------------------------------------------------------------
-  # Create the prerelease first, so the three build jobs can upload into it in
-  # parallel. The body carries the warning; it is the first thing anyone
-  # arriving from a link sees.
-  # ---------------------------------------------------------------------------
-  release:
-    needs: check
-    if: needs.check.outputs.build == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: dev
-          fetch-depth: 0
-
-      - name: Create prerelease
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: ${{ needs.check.outputs.tag }}
-          SHA: ${{ needs.check.outputs.sha }}
-          SHORT_SHA: ${{ needs.check.outputs.short_sha }}
-        run: |
-          # a re-run on the same day replaces the day's release rather than
-          # failing, so a half-finished nightly can be rebuilt.
-          if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release delete "$TAG" --yes --cleanup-tag
-          fi
-
-          cat > notes.md <<'NOTES'
-          > [!CAUTION]
-          > ## This is not a release. Do not use it with your real inbox.
-          >
-          > This is an **automated nightly build** of Pelton, made from the `dev`
-          > branch. It has **not been reviewed, tested or released**, and it is
-          > expected to break.
-          >
-          > **It can lose or damage email.** It may fail to send, send the wrong
-          > thing, delete messages on your server, or corrupt its local cache of
-          > your mail. Deletions on an email server can be permanent and cannot
-          > be undone by us.
-          >
-          > **Use a test account whose contents you can afford to lose entirely.**
-          >
-          > There is **no warranty of any kind** and **no support**. You download
-          > and use this build entirely at your own risk. To the fullest extent
-          > permitted by law, the authors and distributors of Pelton accept no
-          > liability for any loss of or damage to data, for lost or misdirected
-          > email, or for any other loss or damage arising from its use. The full
-          > warranty and liability terms are at https://pelton.app/terms and in
-          > `DISCLAIMER.md`.
-          >
-          > If you want a working email client, download a
-          > [real release](https://github.com/TRC-Loop/Pelton/releases/latest)
-          > instead.
-
-          ### Installing alongside a normal Pelton
-
-          A nightly is deliberately kept separate from a real install and the two
-          can sit side by side:
-
-          - it installs as **Pelton Nightly** with its own icon,
-          - it keeps its **own accounts, mail and settings** in a separate data
-            directory, so it cannot touch or corrupt your normal install's mail,
-          - on Linux it is the `pelton-nightly` package with a `pelton-nightly`
-            binary, and it does **not** register itself as your `mailto:` handler.
-
-          Nightlies older than 14 days are deleted automatically.
-          NOTES
-
-          {
-            echo ""
-            echo "---"
-            echo ""
-            echo "Built from \`dev\` at [\`$SHORT_SHA\`](https://github.com/TRC-Loop/Pelton/commit/$SHA)."
-          } >> notes.md
-
-          gh release create "$TAG" \
-            --target "$SHA" \
-            --title "Nightly $TAG (untested, not a release)" \
-            --notes-file notes.md \
-            --prerelease
-
-  # ---------------------------------------------------------------------------
   # macOS, Apple Silicon. Bundle is "Pelton Nightly.app" with its own bundle id
   # so LaunchServices treats it as a different app from a real install, and the
   # nightly icon rather than the Liquid Glass one.
   # ---------------------------------------------------------------------------
   macos:
-    needs: [check, release]
+    needs: check
     if: needs.check.outputs.build == 'true'
     runs-on: macos-14
     steps:
@@ -289,22 +213,22 @@ jobs:
             "build/bin/Pelton-$TAG-macos-applesilicon.dmg" \
             "build/bin/Pelton Nightly.app"
 
-      - name: Upload
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: ${{ needs.check.outputs.tag }}
-        run: |
-          gh release upload "$TAG" \
-            "build/bin/Pelton-$TAG-macos-applesilicon.dmg" \
-            "build/bin/Pelton-$TAG-macos-applesilicon-app.zip" \
-            --clobber
+      - name: Stage installers
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-macos
+          path: |
+            build/bin/Pelton-${{ needs.check.outputs.tag }}-macos-applesilicon.dmg
+            build/bin/Pelton-${{ needs.check.outputs.tag }}-macos-applesilicon-app.zip
+          if-no-files-found: error
+          retention-days: 1
 
   # ---------------------------------------------------------------------------
   # Windows amd64. channel.nsh switches on the installer's extra nightly
   # acknowledgement page and its up-front message box.
   # ---------------------------------------------------------------------------
   windows:
-    needs: [check, release]
+    needs: check
     if: needs.check.outputs.build == 'true'
     runs-on: windows-latest
     steps:
@@ -367,19 +291,20 @@ jobs:
           TAG: ${{ needs.check.outputs.tag }}
         run: mv "build/bin/PeltonNightly-amd64-installer.exe" "build/bin/Pelton-$TAG-windows-amd64-installer.exe"
 
-      - name: Upload
-        shell: bash
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: ${{ needs.check.outputs.tag }}
-        run: gh release upload "$TAG" "build/bin/Pelton-$TAG-windows-amd64-installer.exe" --clobber
+      - name: Stage installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-windows
+          path: build/bin/Pelton-${{ needs.check.outputs.tag }}-windows-amd64-installer.exe
+          if-no-files-found: error
+          retention-days: 1
 
   # ---------------------------------------------------------------------------
   # Linux: the raw binary plus pelton-nightly .deb/.rpm. No Copr submission;
   # a distro repo is for releases, not for untested builds.
   # ---------------------------------------------------------------------------
   linux:
-    needs: [check, release]
+    needs: check
     if: needs.check.outputs.build == 'true'
     runs-on: ubuntu-latest
     steps:
@@ -435,24 +360,113 @@ jobs:
           nfpm package --config .github/nfpm/pelton-nightly.yaml --packager deb --target "build/bin/Pelton-$TAG-linux-amd64.deb"
           nfpm package --config .github/nfpm/pelton-nightly.yaml --packager rpm --target "build/bin/Pelton-$TAG-linux-fedora-x86_64.rpm"
 
-      - name: Upload
+      - name: Stage packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-linux
+          path: |
+            build/bin/Pelton-${{ needs.check.outputs.tag }}-linux-amd64
+            build/bin/Pelton-${{ needs.check.outputs.tag }}-linux-amd64.deb
+            build/bin/Pelton-${{ needs.check.outputs.tag }}-linux-fedora-x86_64.rpm
+          if-no-files-found: error
+          retention-days: 1
+
+  # ---------------------------------------------------------------------------
+  # Publish only once every platform has actually produced an installer. The
+  # prerelease is created with all of them attached in one go, so a nightly on
+  # the releases page is always complete: there is no window in which it exists
+  # with nothing to download, and a build that fails publishes nothing at all.
+  #
+  # The body carries the warning; it is the first thing anyone arriving from a
+  # link sees.
+  # ---------------------------------------------------------------------------
+  publish:
+    needs: [check, macos, windows, linux]
+    if: needs.check.outputs.build == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Collect installers
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          pattern: nightly-*
+          merge-multiple: true
+
+      - name: Create prerelease
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ needs.check.outputs.tag }}
+          SHA: ${{ needs.check.outputs.sha }}
+          SHORT_SHA: ${{ needs.check.outputs.short_sha }}
         run: |
-          gh release upload "$TAG" \
-            "build/bin/Pelton-$TAG-linux-amd64" \
-            "build/bin/Pelton-$TAG-linux-amd64.deb" \
-            "build/bin/Pelton-$TAG-linux-fedora-x86_64.rpm" \
-            --clobber
+          # a re-run on the same day replaces the day's release rather than
+          # failing, so a half-finished nightly can be rebuilt.
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release delete "$TAG" --yes --cleanup-tag
+          fi
+
+          cat > notes.md <<'NOTES'
+          > [!CAUTION]
+          > ## This is not a release. Do not use it with your real inbox.
+          >
+          > This is an **automated nightly build** of Pelton, made from the `dev`
+          > branch. It has **not been reviewed, tested or released**, and it is
+          > expected to break.
+          >
+          > **It can lose or damage email.** It may fail to send, send the wrong
+          > thing, delete messages on your server, or corrupt its local cache of
+          > your mail. Deletions on an email server can be permanent and cannot
+          > be undone by us.
+          >
+          > **Use a test account whose contents you can afford to lose entirely.**
+          >
+          > There is **no warranty of any kind** and **no support**. You download
+          > and use this build entirely at your own risk. To the fullest extent
+          > permitted by law, the authors and distributors of Pelton accept no
+          > liability for any loss of or damage to data, for lost or misdirected
+          > email, or for any other loss or damage arising from its use. The full
+          > warranty and liability terms are at https://pelton.app/terms and in
+          > `DISCLAIMER.md`.
+          >
+          > If you want a working email client, download a
+          > [real release](https://github.com/TRC-Loop/Pelton/releases/latest)
+          > instead.
+
+          ### Installing alongside a normal Pelton
+
+          A nightly is deliberately kept separate from a real install and the two
+          can sit side by side:
+
+          - it installs as **Pelton Nightly** with its own icon,
+          - it keeps its **own accounts, mail and settings** in a separate data
+            directory, so it cannot touch or corrupt your normal install's mail,
+          - on Linux it is the `pelton-nightly` package with a `pelton-nightly`
+            binary, and it does **not** register itself as your `mailto:` handler.
+
+          Nightlies older than 14 days are deleted automatically.
+          NOTES
+
+          {
+            echo ""
+            echo "---"
+            echo ""
+            echo "Built from \`dev\` at [\`$SHORT_SHA\`](https://github.com/TRC-Loop/Pelton/commit/$SHA)."
+          } >> notes.md
+
+          gh release create "$TAG" \
+            --target "$SHA" \
+            --title "Nightly $TAG (untested, not a release)" \
+            --notes-file notes.md \
+            --prerelease \
+            dist/*
 
   # ---------------------------------------------------------------------------
   # Delete nightlies older than RETENTION_DAYS, tag included. Runs after the
-  # builds so a failed build never takes the pruning down with it, and only
-  # touches nightly-* tags.
+  # publish step so a failed build never takes the pruning down with it, and
+  # only touches nightly-* tags.
   # ---------------------------------------------------------------------------
   prune:
-    needs: [check, macos, windows, linux]
+    needs: [check, publish]
     if: always() && needs.check.outputs.build == 'true'
     runs-on: ubuntu-latest
     steps:
