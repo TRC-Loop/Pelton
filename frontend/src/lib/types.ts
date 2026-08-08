@@ -284,10 +284,6 @@ export interface UIPrefs {
   // closeAction is what the window's close button does: 'background' keeps
   // Pelton running and syncing with the window hidden, 'quit' exits.
   closeAction: CloseAction
-  // minimizeAction is what the window's minimize button does: 'minimize' is the
-  // ordinary taskbar minimize, 'tray' sends it to the notification area.
-  // Windows only; ignored elsewhere.
-  minimizeAction: MinimizeAction
   // syncMessageLimit caps how many of a folder's newest messages the first sync
   // fetches; older mail stays on the server until asked for. 0 means no limit.
   syncMessageLimit: number
@@ -298,9 +294,6 @@ export interface UIPrefs {
 
 // what the window's close button does.
 export type CloseAction = 'background' | 'quit'
-
-// what the window's minimize button does. Windows only.
-export type MinimizeAction = 'minimize' | 'tray'
 
 // an installed custom theme, as shown in the settings gallery.
 export interface ThemeInfo {
