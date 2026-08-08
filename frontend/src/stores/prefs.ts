@@ -5,7 +5,7 @@
 // source of truth.
 
 import { writable } from 'svelte/store'
-import type { UIPrefs, ThemePref, DensityPref, EditorMode, ViewsPlacement, CloseAction, MinimizeAction } from '../lib/types'
+import type { UIPrefs, ThemePref, DensityPref, EditorMode, ViewsPlacement, CloseAction } from '../lib/types'
 import { getUIPrefs, setSetting, SettingKeys, systemColorScheme, setWindowTheme, getThemeApply } from '../lib/api'
 import { applyTheme, applyDensity, applyAccent, applyScale, applyReduceMotion, setThemeSchedule, applyUIFont, applyMonoFont, applyCorners, watchSystemTheme, setSystemSchemeOverride, resolveTheme } from '../theme/theme'
 import { applyUserTheme } from '../theme/usertheme'
@@ -76,7 +76,6 @@ const defaults: UIPrefs = {
   notifyNewMail: false,
   verboseSync: false,
   closeAction: 'background',
-  minimizeAction: 'minimize',
   syncMessageLimit: 50,
   syncAutoBackfill: true,
 }
@@ -436,14 +435,6 @@ export function setVerboseSync(value: boolean): void {
 export function setCloseAction(value: CloseAction): void {
   prefs.update((p) => ({ ...p, closeAction: value }))
   void setSetting(SettingKeys.closeAction, value)
-}
-
-// setMinimizeAction picks what the window's minimize button does. Windows only;
-// the backend reads the setting as it watches the window, so it takes effect
-// without a restart.
-export function setMinimizeAction(value: MinimizeAction): void {
-  prefs.update((p) => ({ ...p, minimizeAction: value }))
-  void setSetting(SettingKeys.minimizeAction, value)
 }
 
 // setSyncMessageLimit caps how many of a folder's newest messages a first sync

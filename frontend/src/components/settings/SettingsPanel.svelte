@@ -89,7 +89,6 @@
     setAutoSyncInterval,
     setVerboseSync,
     setCloseAction,
-    setMinimizeAction,
     setSyncMessageLimit,
     setSyncAutoBackfill,
     setDefaultEditorMode,
@@ -108,13 +107,13 @@
     setMonoFont,
   } from '../../stores/prefs'
   import peltonLogo from '../../assets/images/icons/pelton-logo.png'
-  import { isMac, isWindows } from '../../lib/i18n'
+  import { isMac } from '../../lib/i18n'
   import { downloadRange, cancelDownload, openLocalesFolder, saveLocaleTemplate } from '../../lib/api'
   import en from '../../lib/locales/en'
   import { downloadProgress } from '../../stores/progress'
   import { toastInfo, toastError, errorMessage } from '../../stores/toast'
   import { t } from '../../lib/i18n'
-  import type { ThemePref, DensityPref, EditorMode, ViewsPlacement, CloseAction, MinimizeAction } from '../../lib/types'
+  import type { ThemePref, DensityPref, EditorMode, ViewsPlacement, CloseAction } from '../../lib/types'
 
   let editorModeOptions: { key: EditorMode; label: string }[] = []
   $: editorModeOptions = [
@@ -248,7 +247,6 @@
     { cat: 'power', label: $t('settingsPanel.label.closeAction'), kw: 'close button tray background quit exit' },
     { cat: 'power', label: $t('settingsPanel.label.syncMessageLimit'), kw: 'sync limit messages older initial download' },
     { cat: 'power', label: $t('settingsPanel.toggle.syncAutoBackfill'), kw: 'older mail backfill scroll load more' },
-    { cat: 'power', label: $t('settingsPanel.label.minimizeAction'), kw: 'minimize button tray taskbar notification area' },
     { cat: 'power', label: $t('settingsPanel.toggle.offlineIndicator'), kw: 'offline' },
     { cat: 'power', label: $t('settingsPanel.toggle.flagColorSync'), kw: 'flag color sync' },
     { cat: 'power', label: $t('settingsPanel.label.downloadOffline'), kw: 'download offline cache' },
@@ -327,16 +325,6 @@
   ]
   function onCloseAction(event: CustomEvent<string>): void {
     setCloseAction(event.detail as CloseAction)
-  }
-
-  // what the window's minimize button does. only Windows has a notification
-  // area to minimize into, so the control is not offered elsewhere.
-  $: minimizeActionOptions = [
-    { key: 'minimize', label: $t('settingsPanel.minimizeAction.minimize') },
-    { key: 'tray', label: $t('settingsPanel.minimizeAction.tray') },
-  ]
-  function onMinimizeAction(event: CustomEvent<string>): void {
-    setMinimizeAction(event.detail as MinimizeAction)
   }
 
   // swipe gesture actions (trackpad). shown in the two direction dropdowns.
@@ -1193,17 +1181,6 @@
           <p class="hint">
             {$t('settingsPanel.hint.closeAction')}
           </p>
-          {#if isWindows}
-            <SegmentedSetting
-              label={$t('settingsPanel.label.minimizeAction')}
-              value={$prefs.minimizeAction}
-              options={minimizeActionOptions}
-              on:change={onMinimizeAction}
-            />
-            <p class="hint">
-              {$t('settingsPanel.hint.minimizeAction')}
-            </p>
-          {/if}
           <div class="toggle" title={$t('settingsPanel.hint.lowPowerToggle')}>
             <span class="row-label">{$t('settingsPanel.toggle.lowPowerMode')}</span>
             <ToggleSwitch

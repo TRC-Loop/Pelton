@@ -92,9 +92,6 @@ const (
 	// what the window's close button does: "background" (default) or "quit".
 	// See close.go.
 	settingCloseAction = "close_button_action"
-	// what the window's minimize button does: "minimize" (default) or "tray".
-	// Windows only, see minimize_windows.go.
-	settingMinimizeAction = "minimize_button_action"
 	// how many of a folder's newest messages a first sync fetches, and whether
 	// reaching the end of the list pulls the next batch automatically (#175).
 	// 0 messages means no limit: sync the whole mailbox as older versions did.
@@ -280,10 +277,6 @@ type UIPrefsDTO struct {
 	// CloseAction is what the window's close button does: "background" keeps
 	// Pelton running and syncing with the window hidden, "quit" exits.
 	CloseAction string `json:"closeAction"`
-	// MinimizeAction is what the window's minimize button does: "minimize" is
-	// the ordinary taskbar minimize, "tray" sends it to the notification area.
-	// Windows only; ignored elsewhere.
-	MinimizeAction string `json:"minimizeAction"`
 	// SyncMessageLimit caps how many of a folder's newest messages the first
 	// sync fetches; older mail stays on the server until it is asked for. 0
 	// means no limit. SyncAutoBackfill fetches the next batch automatically on
@@ -361,7 +354,6 @@ func (a *App) GetUIPrefs() (UIPrefsDTO, error) {
 		NotifyNewMail:              a.boolSetting(settingNotifyNewMail, false),
 		VerboseSync:                a.boolSetting(settingVerboseSync, false),
 		CloseAction:                a.stringSetting(settingCloseAction, closeActionBackground),
-		MinimizeAction:             a.stringSetting(settingMinimizeAction, minimizeActionNormal),
 		SyncMessageLimit:           a.syncMessageLimit(),
 		SyncAutoBackfill:           a.boolSetting(settingSyncAutoBackfill, true),
 	}, nil

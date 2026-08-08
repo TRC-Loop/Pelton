@@ -1010,7 +1010,6 @@ export namespace desktop {
 	    notifyNewMail: boolean;
 	    verboseSync: boolean;
 	    closeAction: string;
-	    minimizeAction: string;
 	    syncMessageLimit: number;
 	    syncAutoBackfill: boolean;
 	
@@ -1081,7 +1080,6 @@ export namespace desktop {
 	        this.notifyNewMail = source["notifyNewMail"];
 	        this.verboseSync = source["verboseSync"];
 	        this.closeAction = source["closeAction"];
-	        this.minimizeAction = source["minimizeAction"];
 	        this.syncMessageLimit = source["syncMessageLimit"];
 	        this.syncAutoBackfill = source["syncAutoBackfill"];
 	    }
