@@ -19,6 +19,12 @@
   <a href="https://github.com/TRC-Loop/Pelton/pulls">
     <img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=for-the-badge" alt="PRs Welcome">
   </a>
+  <a href="https://github.com/TRC-Loop/Pelton/pulls">
+    <img src="https://img.shields.io/github/downloads/TRC-Loop/Pelton/total?style=for-the-badge" alt="PRs Welcome">
+  </a>
+  <a href="https://github.com/TRC-Loop/Pelton/pulls">
+    <img src="https://img.shields.io/github/v/release/TRC-Loop/Pelton?style=for-the-badge&label=Version" alt="PRs Welcome">
+  </a>
 </p>
 
 <h3 align="center">An open-source email client built around your privacy, cross-platform with zero telemetry, fully yours.</h3>
