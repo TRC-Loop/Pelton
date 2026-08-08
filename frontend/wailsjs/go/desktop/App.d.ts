@@ -28,6 +28,8 @@ export function ConfirmThemeImport(arg1:string,arg2:boolean,arg3:boolean,arg4:bo
 
 export function ConsumePendingMailto():Promise<desktop.PendingMailtoDTO>;
 
+export function CreateFolder(arg1:desktop.CreateFolderRequest):Promise<desktop.FolderDTO>;
+
 export function DefaultMailClientStatus():Promise<desktop.DefaultMailStatusDTO>;
 
 export function DeleteAccount(arg1:number):Promise<void>;
@@ -35,6 +37,8 @@ export function DeleteAccount(arg1:number):Promise<void>;
 export function DeleteAddress(arg1:string):Promise<void>;
 
 export function DeleteDraft(arg1:number):Promise<void>;
+
+export function DeleteFolder(arg1:number):Promise<void>;
 
 export function DeleteMessage(arg1:number):Promise<void>;
 
@@ -145,6 +149,8 @@ export function RemoveImageAllow(arg1:string,arg2:string):Promise<void>;
 export function RemoveOffline(arg1:number):Promise<void>;
 
 export function RemoveVIPSender(arg1:string):Promise<void>;
+
+export function RenameFolder(arg1:number,arg2:string):Promise<void>;
 
 export function ReorderViews(arg1:Array<number>):Promise<void>;
 

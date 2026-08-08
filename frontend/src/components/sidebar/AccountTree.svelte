@@ -2,10 +2,11 @@
   // one account's section in the sidebar: a header with the address and the full
   // folder tree below it. the header chevron collapses the whole account. root
   // folders are those without a parent; the rest nest via FolderNode recursion.
-  import { IconChevronRight } from '@tabler/icons-svelte'
+  import { IconChevronRight, IconFolderPlus } from '@tabler/icons-svelte'
   import FolderNode from './FolderNode.svelte'
   import { prefs } from '../../stores/prefs'
   import { collapsedAccounts, toggleAccountCollapsed } from '../../stores/sidebarstate'
+  import { openCreateFolder } from '../../stores/folderdialog'
   import type { Account, Folder } from '../../lib/types'
   import { t } from '../../lib/i18n'
 
@@ -24,17 +25,28 @@
 </script>
 
 <section class="account">
-  <button
-    type="button"
-    class="account-head"
-    class:open={expanded}
-    title={account.email}
-    aria-expanded={expanded}
-    on:click={() => toggleAccountCollapsed(account.id)}
-  >
-    <span class="account-caret" aria-hidden="true"><IconChevronRight size={13} stroke={1.9} /></span>
-    <span class="account-name">{label}</span>
-  </button>
+  <div class="account-row">
+    <button
+      type="button"
+      class="account-head"
+      class:open={expanded}
+      title={account.email}
+      aria-expanded={expanded}
+      on:click={() => toggleAccountCollapsed(account.id)}
+    >
+      <span class="account-caret" aria-hidden="true"><IconChevronRight size={13} stroke={1.9} /></span>
+      <span class="account-name">{label}</span>
+    </button>
+    <button
+      type="button"
+      class="new-folder"
+      title={$t('folders.newFolder')}
+      aria-label={$t('folders.newFolder')}
+      on:click={() => openCreateFolder(account.id)}
+    >
+      <IconFolderPlus size={14} stroke={1.7} />
+    </button>
+  </div>
   {#if expanded}
     {#if roots.length === 0}
       <p class="empty-note">{$t('sidebar.account.noFolders')}</p>
@@ -51,11 +63,20 @@
     margin-top: var(--space-4);
   }
 
+  /* the header and its new-folder button share a row; the button only appears
+     on hover so the sidebar stays quiet at rest. */
+  .account-row {
+    display: flex;
+    align-items: center;
+    border-radius: var(--radius-control);
+  }
+
   .account-head {
     display: flex;
     align-items: center;
     gap: var(--space-1);
-    width: 100%;
+    flex: 1;
+    min-width: 0;
     padding: var(--space-2) var(--space-3);
     border: none;
     background: transparent;
@@ -64,8 +85,33 @@
     border-radius: var(--radius-control);
   }
 
-  .account-head:hover {
+  .account-row:hover {
     background: var(--surface-hover);
+  }
+
+  .new-folder {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    padding: var(--space-1);
+    margin-right: var(--space-2);
+    border: none;
+    background: transparent;
+    color: var(--text-tertiary);
+    border-radius: var(--radius-control);
+    cursor: pointer;
+    opacity: 0;
+  }
+
+  .account-row:hover .new-folder,
+  .new-folder:focus-visible {
+    opacity: 1;
+  }
+
+  .new-folder:hover {
+    color: var(--text-primary);
+    background: var(--surface-sunken);
   }
 
   .account-caret {

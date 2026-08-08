@@ -262,6 +262,22 @@ export namespace desktop {
 		    return a;
 		}
 	}
+	export class CreateFolderRequest {
+	    accountId: number;
+	    parentId: number;
+	    name: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new CreateFolderRequest(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.accountId = source["accountId"];
+	        this.parentId = source["parentId"];
+	        this.name = source["name"];
+	    }
+	}
 	export class DefaultMailStatusDTO {
 	    known: boolean;
 	    isDefault: boolean;

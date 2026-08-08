@@ -17,6 +17,7 @@
   import ContextMenu from './components/common/ContextMenu.svelte'
   import Resizer from './components/common/Resizer.svelte'
   import SnoozeDialog from './components/detail/SnoozeDialog.svelte'
+  import FolderDialog from './components/sidebar/FolderDialog.svelte'
   import AttachmentPreview from './components/detail/AttachmentPreview.svelte'
   import MoveDialog from './components/detail/MoveDialog.svelte'
 
@@ -809,6 +810,7 @@
 <Toasts />
 <ContextMenu />
 <SnoozeDialog />
+<FolderDialog />
 <AttachmentPreview />
 <MoveDialog />
 
