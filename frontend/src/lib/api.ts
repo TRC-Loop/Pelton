@@ -234,6 +234,42 @@ export function reorderViews(orderedIds: number[]): Promise<void> {
   return App.ReorderViews(orderedIds)
 }
 
+// reorderFolders persists a new order for one group of sibling folders. Every
+// id must share an account and a parent; the backend rejects a mixed group.
+export function reorderFolders(orderedIds: number[]): Promise<void> {
+  return App.ReorderFolders(orderedIds)
+}
+
+// reorderAccounts persists a new order for the sidebar's account sections.
+export function reorderAccounts(orderedIds: number[]): Promise<void> {
+  return App.ReorderAccounts(orderedIds)
+}
+
+// reorderUnifiedViews persists a new order for the unified views block, by key.
+export function reorderUnifiedViews(keys: string[]): Promise<void> {
+  return App.ReorderUnifiedViews(keys)
+}
+
+// listPinnedFolders returns the pinned folders across every account in the
+// order of the sidebar's Pinned group.
+export function listPinnedFolders(): Promise<Folder[]> {
+  if (isDemoActive()) {
+    return Promise.resolve([])
+  }
+  return App.ListPinnedFolders()
+}
+
+// setFolderPinned mirrors a folder into the Pinned group, or removes it from
+// there. The folder stays in its own account's tree either way.
+export function setFolderPinned(folderId: number, pinned: boolean): Promise<void> {
+  return App.SetFolderPinned(folderId, pinned)
+}
+
+// reorderPinnedFolders persists a new order for the Pinned group.
+export function reorderPinnedFolders(orderedIds: number[]): Promise<void> {
+  return App.ReorderPinnedFolders(orderedIds)
+}
+
 // getMessage returns the full message with sanitized body and attachments.
 export function getMessage(id: number): Promise<MessageDetail> {
   if (isDemoActive()) {
@@ -761,6 +797,8 @@ export const SettingKeys = {
   closeAction: 'close_button_action',
   syncMessageLimit: 'sync_message_limit',
   syncAutoBackfill: 'sync_auto_backfill',
+  startupSelection: 'startup_selection',
+  lastSelection: 'last_selection',
   liabilityAccepted: 'liability_accepted',
 } as const
 

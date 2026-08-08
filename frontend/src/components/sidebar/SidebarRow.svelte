@@ -4,15 +4,25 @@
   // unread is shown by weight and the count, never by accent color.
   import { createEventDispatcher } from 'svelte'
   import { IconChevronRight } from '@tabler/icons-svelte'
+  import DragGrip from './DragGrip.svelte'
   import { prefs } from '../../stores/prefs'
   import { t } from '../../lib/i18n'
 
   export let label: string
+  // hover text for the row, when the label alone is ambiguous (two accounts can
+  // both have a folder called Archive in the Pinned group). empty means none.
+  export let title: string = ''
   export let count: number = 0
   export let active: boolean = false
   export let depth: number = 0
   export let expandable: boolean = false
   export let expanded: boolean = false
+  // show the drag handle. the row only becomes draggable while the pointer is
+  // over that handle, so an ordinary click still selects instead of dragging.
+  export let reorderable: boolean = false
+  // identifies this row to the reorder action on the enclosing container. null
+  // when the row is not part of a reorderable group.
+  export let reorderId: string | number | null = null
 
   const dispatch = createEventDispatcher<{ select: void; toggle: void; contextmenu: MouseEvent }>()
 
@@ -29,6 +39,7 @@
 <div
   class="row"
   class:active
+  data-reorder-id={reorderId}
   style={`padding-left:${indent}`}
   on:contextmenu|preventDefault={(e) => dispatch('contextmenu', e)}
 >
@@ -53,13 +64,23 @@
     <span class="caret-spacer" aria-hidden="true"></span>
   {/if}
 
-  <button type="button" class="main" class:unread={count > 0} on:click={() => dispatch('select')}>
+  <button
+    type="button"
+    class="main"
+    class:unread={count > 0}
+    title={title || null}
+    on:click={() => dispatch('select')}
+  >
     <span class="icon" aria-hidden="true"><slot /></span>
     <span class="label">{label}</span>
     {#if count > 0}
       <span class="count" aria-label={`${count} ${$t('sidebar.unreadSuffix')}`}>{count}</span>
     {/if}
   </button>
+
+  {#if reorderable}
+    <DragGrip />
+  {/if}
 </div>
 
 <style>

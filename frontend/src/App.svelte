@@ -28,7 +28,7 @@
   import { loadSignatures } from './stores/signatures'
   import { loadVIPSenders } from './stores/vip'
   import { loadOutbox, syncing, lastSynced, syncFolder } from './stores/outbox'
-  import { selection } from './stores/selection'
+  import { selection, applyStartupSelection } from './stores/selection'
   import { loadList, messageList } from './stores/messages'
   import { initProgress } from './stores/progress'
   import { composeSessions, openCompose, openComposeWith, initComposePrefs, openReply, openForward } from './stores/compose'
@@ -156,6 +156,12 @@
     void loadVIPSenders()
     initProgress()
     await loadSidebar()
+    // the sidebar data has to be here first: a configured or remembered folder
+    // is only honoured if it still exists (#187).
+    const sidebarData = get(sidebar).data
+    if (sidebarData) {
+      await applyStartupSelection(get(prefs).startupSelection, sidebarData)
+    }
     void loadViews()
     await loadOutbox()
 

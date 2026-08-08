@@ -50,6 +50,7 @@
   import DateTimePicker from '../common/DateTimePicker.svelte'
   import { pfpDataUri, type PfpStyle } from '../../lib/pfp'
   import { initials } from '../../lib/format'
+  import { sidebar } from '../../stores/accounts'
   import {
     prefs,
     setTheme,
@@ -70,6 +71,7 @@
     setMultiSelectEnabled,
     setShowSelectedCount,
     setSidebarIndentGuides,
+    setStartupSelection,
     setShowFlaggedCount,
     setViewsPlacement,
     setRowTemplate,
@@ -213,6 +215,7 @@
     { cat: 'list', label: $t('settingsPanel.toggle.multiSelect'), kw: 'select multiple' },
     { cat: 'list', label: $t('settingsPanel.toggle.indentGuides'), kw: 'sidebar folders' },
     { cat: 'list', label: $t('settingsPanel.toggle.flaggedCount'), kw: 'sidebar flagged count' },
+    { cat: 'list', label: $t('settingsPanel.label.startupSelection'), kw: 'sidebar startup launch open default folder view last used' },
     { cat: 'list', label: $t('views.setting.label'), kw: 'views saved searches' },
     { cat: 'list', label: $t('settingsPanel.label.senderPhotos'), kw: 'avatar gravatar' },
     { cat: 'list', label: $t('settingsPanel.label.generatedStyle'), kw: 'avatar style' },
@@ -394,6 +397,20 @@
   })
 
   // select handlers (the cast lives in script; inline ts casts break the parser).
+  // the startup target is stored as an opaque string ('last', 'view:<key>' or
+  // 'folder:<id>'), so the select works directly on it.
+  function onStartupSelection(event: Event): void {
+    setStartupSelection((event.currentTarget as HTMLSelectElement).value)
+  }
+
+  // unified view names are localized by key in the sidebar; reuse that here so
+  // the setting and the row it points at read the same.
+  function unifiedViewName(key: string, fallback: string): string {
+    const lookup = key === 'inbox' ? 'sidebar.unifiedInbox' : `sidebar.view.${key}`
+    const translated = $t(lookup)
+    return translated === lookup ? fallback : translated
+  }
+
   function onBodyFont(event: Event): void {
     setBodyFont((event.currentTarget as HTMLSelectElement).value)
   }
@@ -944,6 +961,27 @@
               on:change={(e) => setShowFlaggedCount(e.detail)}
             />
           </div>
+          <div class="row">
+            <span class="row-label">{$t('settingsPanel.label.startupSelection')}</span>
+            <select class="select" value={$prefs.startupSelection} on:change={onStartupSelection}>
+              <option value="last">{$t('settingsPanel.startup.lastUsed')}</option>
+              {#if $sidebar.data}
+                <optgroup label={$t('sidebar.unifiedViews.heading')}>
+                  {#each $sidebar.data.views as view (view.key)}
+                    <option value={`view:${view.key}`}>{unifiedViewName(view.key, view.label)}</option>
+                  {/each}
+                </optgroup>
+                {#each $sidebar.data.accounts as account (account.id)}
+                  <optgroup label={account.email}>
+                    {#each $sidebar.data.foldersByAccount[account.id] ?? [] as folder (folder.id)}
+                      <option value={`folder:${folder.id}`}>{folder.imapPath}</option>
+                    {/each}
+                  </optgroup>
+                {/each}
+              {/if}
+            </select>
+          </div>
+          <p class="hint">{$t('settingsPanel.hint.startupSelection')}</p>
           <SegmentedSetting
             label={$t('views.setting.label')}
             value={$prefs.viewsPlacement}

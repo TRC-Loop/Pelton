@@ -1,7 +1,8 @@
 <script lang="ts">
   // the unified cross-account views at the top of the sidebar. unified inbox is
   // the default selection. flagged shows a total (flagged are not "unread"), the
-  // others show unread counts.
+  // others show unread counts. rows drag to reorder; the order is stored as a
+  // list of view keys, since the views themselves are computed, not rows.
   import {
     IconInbox,
     IconFlag,
@@ -16,9 +17,23 @@
   import type { UnifiedView, ViewKey } from '../../lib/types'
   import { selection, selectView } from '../../stores/selection'
   import { prefs } from '../../stores/prefs'
+  import { reorder, type ReorderDetail } from '../../lib/reorder'
+  import { refreshSidebar } from '../../stores/accounts'
+  import { reorderUnifiedViews } from '../../lib/api'
+  import { toastError, errorMessage } from '../../stores/toast'
   import { t } from '../../lib/i18n'
 
   export let views: UnifiedView[]
+
+  async function onReorder(event: CustomEvent<ReorderDetail>): Promise<void> {
+    try {
+      await reorderUnifiedViews(event.detail.ids)
+    } catch (err) {
+      toastError(errorMessage(err))
+    }
+    // reload either way, so the rows end up showing what was actually stored.
+    await refreshSidebar()
+  }
 
   const viewIcons: Record<string, typeof IconFolder> = {
     inbox: IconInbox,
@@ -57,16 +72,20 @@
 
 <nav class="views" aria-label={$t('sidebar.unifiedViews.ariaLabel')}>
   <header class="group-head">{$t('sidebar.unifiedViews.heading')}</header>
-  {#each views as view (view.key)}
-    <SidebarRow
-      label={viewLabel(view)}
-      count={badgeCount(view, $prefs.showFlaggedCount)}
-      active={$selection.kind === 'view' && $selection.view === view.key}
-      on:select={() => choose(view)}
-    >
-      <svelte:component this={viewIcons[view.key] ?? IconFolder} size={15} stroke={1.6} />
-    </SidebarRow>
-  {/each}
+  <div class="list" use:reorder on:reorder={onReorder}>
+    {#each views as view (view.key)}
+      <SidebarRow
+        label={viewLabel(view)}
+        count={badgeCount(view, $prefs.showFlaggedCount)}
+        active={$selection.kind === 'view' && $selection.view === view.key}
+        reorderable
+        reorderId={view.key}
+        on:select={() => choose(view)}
+      >
+        <svelte:component this={viewIcons[view.key] ?? IconFolder} size={15} stroke={1.6} />
+      </SidebarRow>
+    {/each}
+  </div>
 </nav>
 
 <style>
@@ -81,5 +100,11 @@
     font-size: var(--fz-label);
     font-weight: var(--fw-semibold);
     color: var(--text-tertiary);
+  }
+
+  .list {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
   }
 </style>

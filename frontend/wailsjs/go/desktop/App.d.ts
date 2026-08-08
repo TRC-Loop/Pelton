@@ -112,6 +112,8 @@ export function ListOAuthProviders():Promise<Record<string, string>>;
 
 export function ListOutbox():Promise<Array<desktop.OutboxRowDTO>>;
 
+export function ListPinnedFolders():Promise<Array<desktop.FolderDTO>>;
+
 export function ListSignatures():Promise<Array<desktop.SignatureDTO>>;
 
 export function ListSystemFonts():Promise<Array<string>>;
@@ -152,6 +154,14 @@ export function RemoveVIPSender(arg1:string):Promise<void>;
 
 export function RenameFolder(arg1:number,arg2:string):Promise<void>;
 
+export function ReorderAccounts(arg1:Array<number>):Promise<void>;
+
+export function ReorderFolders(arg1:Array<number>):Promise<void>;
+
+export function ReorderPinnedFolders(arg1:Array<number>):Promise<void>;
+
+export function ReorderUnifiedViews(arg1:Array<string>):Promise<void>;
+
 export function ReorderViews(arg1:Array<number>):Promise<void>;
 
 export function ResumePendingDownload():Promise<void>;
@@ -185,6 +195,8 @@ export function SetDefaultMailClient():Promise<void>;
 export function SetFlagColor(arg1:number,arg2:number):Promise<void>;
 
 export function SetFlagged(arg1:number,arg2:boolean):Promise<void>;
+
+export function SetFolderPinned(arg1:number,arg2:boolean):Promise<void>;
 
 export function SetMCPEnabled(arg1:boolean):Promise<void>;
 
