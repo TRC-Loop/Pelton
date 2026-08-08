@@ -739,7 +739,6 @@ export const SettingKeys = {
   notifyNewMail: 'notify_new_mail',
   verboseSync: 'verbose_sync',
   closeAction: 'close_button_action',
-  minimizeAction: 'minimize_button_action',
   syncMessageLimit: 'sync_message_limit',
   syncAutoBackfill: 'sync_auto_backfill',
   liabilityAccepted: 'liability_accepted',

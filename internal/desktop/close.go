@@ -14,16 +14,6 @@ const (
 	closeActionQuit = "quit"
 )
 
-// minimize button actions stored under settingMinimizeAction. Only Windows has
-// a notification area to minimize into, so the setting is ignored elsewhere and
-// the ui does not offer it (see minimize_windows.go).
-const (
-	// minimizeActionNormal is the ordinary minimize to the taskbar.
-	minimizeActionNormal = "minimize"
-	// minimizeActionTray sends the window to the notification area instead.
-	minimizeActionTray = "tray"
-)
-
 // quitApp exits the app from an explicit user action (the Quit menu item, the
 // tray's Quit). It marks the quit as intended so beforeClose lets it through
 // instead of treating it as a window close.
