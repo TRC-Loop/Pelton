@@ -14,7 +14,7 @@
   export let expandable: boolean = false
   export let expanded: boolean = false
 
-  const dispatch = createEventDispatcher<{ select: void; toggle: void }>()
+  const dispatch = createEventDispatcher<{ select: void; toggle: void; contextmenu: MouseEvent }>()
 
   // indent nested folders by depth. the base inset keeps the caret aligned.
   $: indent = `calc(var(--space-3) + ${depth} * var(--space-4))`
@@ -25,7 +25,13 @@
   $: guides = $prefs.sidebarIndentGuides ? Array.from({ length: Math.max(depth, 1) }, (_, i) => i) : []
 </script>
 
-<div class="row" class:active style={`padding-left:${indent}`}>
+<!-- svelte-ignore a11y-no-static-element-interactions -->
+<div
+  class="row"
+  class:active
+  style={`padding-left:${indent}`}
+  on:contextmenu|preventDefault={(e) => dispatch('contextmenu', e)}
+>
   {#each guides as level (level)}
     <span
       class="guide"

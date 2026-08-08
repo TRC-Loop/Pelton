@@ -121,6 +121,26 @@ export function listFolders(accountId: number): Promise<Folder[]> {
   return App.ListFolders(accountId)
 }
 
+// createFolder creates a mailbox on the server and returns the new folder.
+// parentId 0 creates it at the root of the account. name is one level: nesting
+// comes from parentId, not from embedding the server's delimiter in the name.
+export function createFolder(accountId: number, parentId: number, name: string): Promise<Folder> {
+  return App.CreateFolder(new desktop.CreateFolderRequest({ accountId, parentId, name }))
+}
+
+// renameFolder renames a mailbox in place, keeping its cached mail. Special
+// mailboxes (INBOX, Sent, Drafts, Trash, Junk, Archive) are refused by the
+// backend.
+export function renameFolder(id: number, name: string): Promise<void> {
+  return App.RenameFolder(id, name)
+}
+
+// deleteFolder deletes a mailbox, its subfolders and their mail, on the server
+// as well as locally. Destructive and not undoable: confirm before calling.
+export function deleteFolder(id: number): Promise<void> {
+  return App.DeleteFolder(id)
+}
+
 // listUnifiedViews returns the cross-account views with aggregate counts.
 export function listUnifiedViews(): Promise<UnifiedView[]> {
   if (isDemoActive()) {

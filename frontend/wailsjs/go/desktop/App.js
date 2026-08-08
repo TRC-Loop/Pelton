@@ -54,6 +54,10 @@ export function ConsumePendingMailto() {
   return window['go']['desktop']['App']['ConsumePendingMailto']();
 }
 
+export function CreateFolder(arg1) {
+  return window['go']['desktop']['App']['CreateFolder'](arg1);
+}
+
 export function DefaultMailClientStatus() {
   return window['go']['desktop']['App']['DefaultMailClientStatus']();
 }
@@ -68,6 +72,10 @@ export function DeleteAddress(arg1) {
 
 export function DeleteDraft(arg1) {
   return window['go']['desktop']['App']['DeleteDraft'](arg1);
+}
+
+export function DeleteFolder(arg1) {
+  return window['go']['desktop']['App']['DeleteFolder'](arg1);
 }
 
 export function DeleteMessage(arg1) {
@@ -288,6 +296,10 @@ export function RemoveOffline(arg1) {
 
 export function RemoveVIPSender(arg1) {
   return window['go']['desktop']['App']['RemoveVIPSender'](arg1);
+}
+
+export function RenameFolder(arg1, arg2) {
+  return window['go']['desktop']['App']['RenameFolder'](arg1, arg2);
 }
 
 export function ReorderViews(arg1) {

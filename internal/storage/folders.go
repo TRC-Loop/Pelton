@@ -109,6 +109,71 @@ func (d *DB) SetFolderUIDValidity(ctx context.Context, id int64, uidValidity uin
 	return requireOneRow(res, ErrFolderNotFound)
 }
 
+// RenameFolder updates a folder's display name and imap path. It does not touch
+// the folder's children: the caller renames the subtree, since only it knows the
+// server's delimiter (see RenameFolderSubtree).
+func (d *DB) RenameFolder(ctx context.Context, id int64, name, imapPath string) error {
+	res, err := d.sql.ExecContext(ctx,
+		`UPDATE folders SET name = ?, imap_path = ? WHERE id = ?`, name, imapPath, id)
+	if err != nil {
+		return fmt.Errorf("storage: rename folder %d: %w", id, err)
+	}
+	return requireOneRow(res, ErrFolderNotFound)
+}
+
+// RenameFolderSubtree rewrites the imap path prefix of every descendant of a
+// renamed folder, which an imap RENAME moves along with their parent. oldPrefix
+// and newPrefix are the parent paths with the server's delimiter already
+// appended, so the match cannot catch a sibling whose name merely starts with
+// the same text. Returns the number of rows rewritten.
+func (d *DB) RenameFolderSubtree(ctx context.Context, accountID int64, oldPrefix, newPrefix string) (int, error) {
+	// escape the like wildcards in the stored path so a folder legitimately
+	// containing % or _ does not match half the account.
+	const query = `
+UPDATE folders
+SET imap_path = ? || substr(imap_path, ?)
+WHERE account_id = ? AND imap_path LIKE ? ESCAPE '\'`
+	res, err := d.sql.ExecContext(ctx, query,
+		newPrefix, len(oldPrefix)+1, accountID, escapeLike(oldPrefix)+"%")
+	if err != nil {
+		return 0, fmt.Errorf("storage: rename folder subtree %q: %w", oldPrefix, err)
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return 0, fmt.Errorf("storage: rename subtree rows affected: %w", err)
+	}
+	return int(n), nil
+}
+
+// FolderDescendants returns every folder nested under a folder, deepest last,
+// so a caller can tear a subtree down parent-last or build it parent-first. The
+// folder itself is not included.
+func (d *DB) FolderDescendants(ctx context.Context, accountID int64, prefix string) ([]Folder, error) {
+	const query = `
+SELECT id, account_id, name, imap_path, delimiter, parent_id, attributes, uid_validity
+FROM folders
+WHERE account_id = ? AND imap_path LIKE ? ESCAPE '\'
+ORDER BY length(imap_path)`
+	rows, err := d.sql.QueryContext(ctx, query, accountID, escapeLike(prefix)+"%")
+	if err != nil {
+		return nil, fmt.Errorf("storage: list folder descendants of %q: %w", prefix, err)
+	}
+	defer rows.Close()
+
+	var folders []Folder
+	for rows.Next() {
+		f, err := scanFolder(rows)
+		if err != nil {
+			return nil, fmt.Errorf("storage: scan folder descendant: %w", err)
+		}
+		folders = append(folders, *f)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("storage: iterate folder descendants: %w", err)
+	}
+	return folders, nil
+}
+
 // DeleteFolder removes a folder; its messages and their attachment rows cascade.
 func (d *DB) DeleteFolder(ctx context.Context, id int64) error {
 	res, err := d.sql.ExecContext(ctx, `DELETE FROM folders WHERE id = ?`, id)
