@@ -23,6 +23,9 @@ type AccountDTO struct {
 	IMAPPort    int    `json:"imapPort"`
 	SMTPHost    string `json:"smtpHost"`
 	SMTPPort    int    `json:"smtpPort"`
+	// Local marks the Local Folders account, which holds imported mail and has
+	// no server. The ui labels it and hides the server-side actions.
+	Local bool `json:"local"`
 }
 
 // FolderDTO is one mailbox in an account's tree. ParentID is null at the root.
@@ -150,6 +153,7 @@ func toAccountDTO(a storage.Account) AccountDTO {
 		IMAPPort:    a.IMAPPort,
 		SMTPHost:    a.SMTPHost,
 		SMTPPort:    a.SMTPPort,
+		Local:       a.Local,
 	}
 }
 

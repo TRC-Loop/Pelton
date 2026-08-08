@@ -122,6 +122,12 @@ func (a *App) viewQuery(ctx context.Context, key string) (storage.MessageQuery, 
 		require   storage.Flag
 	)
 	for _, acc := range accounts {
+		// the unified views merge the mail your accounts are receiving. An
+		// imported archive is not that, and folding it in would put years of
+		// old mail into the unified inbox on the day of the import.
+		if acc.Local {
+			continue
+		}
 		folders, err := a.store.ListFolders(ctx, acc.ID)
 		if err != nil {
 			return storage.MessageQuery{}, err

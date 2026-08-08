@@ -188,6 +188,11 @@ func (a *App) exportMailboxes(credentialPassword string) ([]mailboxBackup, error
 	}
 	out := make([]mailboxBackup, 0, len(accounts))
 	for _, acc := range accounts {
+		// Local Folders has no server configuration to carry anywhere, and the
+		// imported mail it holds is not part of a settings backup.
+		if acc.Local {
+			continue
+		}
 		m := mailboxBackup{
 			Email:       acc.Email,
 			DisplayName: acc.DisplayName,

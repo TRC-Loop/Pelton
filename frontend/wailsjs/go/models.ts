@@ -9,6 +9,7 @@ export namespace desktop {
 	    imapPort: number;
 	    smtpHost: string;
 	    smtpPort: number;
+	    local: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new AccountDTO(source);
@@ -24,6 +25,7 @@ export namespace desktop {
 	        this.imapPort = source["imapPort"];
 	        this.smtpHost = source["smtpHost"];
 	        this.smtpPort = source["smtpPort"];
+	        this.local = source["local"];
 	    }
 	}
 	export class AccountSignaturesDTO {
@@ -932,6 +934,86 @@ export namespace desktop {
 		}
 	}
 	
+	export class ThunderbirdAccountDTO {
+	    email: string;
+	    displayName: string;
+	    username: string;
+	    imapHost: string;
+	    imapPort: number;
+	    smtpHost: string;
+	    smtpPort: number;
+	    kind: string;
+	    exists: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new ThunderbirdAccountDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.email = source["email"];
+	        this.displayName = source["displayName"];
+	        this.username = source["username"];
+	        this.imapHost = source["imapHost"];
+	        this.imapPort = source["imapPort"];
+	        this.smtpHost = source["smtpHost"];
+	        this.smtpPort = source["smtpPort"];
+	        this.kind = source["kind"];
+	        this.exists = source["exists"];
+	    }
+	}
+	export class ThunderbirdFolderDTO {
+	    name: string;
+	    path: string;
+	    sizeBytes: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new ThunderbirdFolderDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.path = source["path"];
+	        this.sizeBytes = source["sizeBytes"];
+	    }
+	}
+	export class ThunderbirdProfileDTO {
+	    name: string;
+	    path: string;
+	    accounts: ThunderbirdAccountDTO[];
+	    localFolders: ThunderbirdFolderDTO[];
+	
+	    static createFrom(source: any = {}) {
+	        return new ThunderbirdProfileDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.path = source["path"];
+	        this.accounts = this.convertValues(source["accounts"], ThunderbirdAccountDTO);
+	        this.localFolders = this.convertValues(source["localFolders"], ThunderbirdFolderDTO);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
 	export class UIPrefsDTO {
 	    theme: string;
 	    accent: string;

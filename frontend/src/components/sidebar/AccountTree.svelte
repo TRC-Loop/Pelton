@@ -19,8 +19,13 @@
   // roots have no parent. loose equality catches both null and undefined.
   $: roots = folders.filter((f) => f.parentId == null)
   // the header shows the display name, or the email when the user prefers it (or
-  // when there is no display name to show).
-  $: label = $prefs.showAccountEmail ? account.email : account.displayName || account.email
+  // when there is no display name to show). Local Folders has no real address,
+  // so it is named rather than addressed.
+  $: label = account.local
+    ? $t('sidebar.localFolders')
+    : $prefs.showAccountEmail
+      ? account.email
+      : account.displayName || account.email
 </script>
 
 <section class="account">
@@ -28,7 +33,7 @@
     type="button"
     class="account-head"
     class:open={expanded}
-    title={account.email}
+    title={account.local ? $t('sidebar.localFoldersHint') : account.email}
     aria-expanded={expanded}
     on:click={() => toggleAccountCollapsed(account.id)}
   >

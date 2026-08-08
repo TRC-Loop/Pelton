@@ -43,6 +43,7 @@ import type {
   ProxyConfig,
   MCPConfig,
   View,
+  ThunderbirdProfile,
 } from './types'
 
 // isDemoMode reports whether the app launched in the cosmetic --potatoes-are-nice
@@ -588,6 +589,45 @@ export function inspectBackupFile(): Promise<BackupInfo> {
 // credentials the file carries; a wrong password rejects with an error.
 export function importData(path: string, categories: string[], credentialPassword: string): Promise<void> {
   return App.ImportData(path, categories, credentialPassword)
+}
+
+// --- import from another mail client ---
+
+// findThunderbirdProfiles looks for Thunderbird profiles where it installs them
+// on this platform. An empty list means none were found there.
+export function findThunderbirdProfiles(): Promise<ThunderbirdProfile[]> {
+  return App.FindThunderbirdProfiles()
+}
+
+// chooseThunderbirdProfile opens a folder picker for a profile kept somewhere
+// discovery does not look. An empty list means the dialog was cancelled.
+export function chooseThunderbirdProfile(): Promise<ThunderbirdProfile[]> {
+  return App.ChooseThunderbirdProfile()
+}
+
+// importThunderbirdAccounts recreates the given addresses as mailboxes, reading
+// their server settings from the profile. Passwords cannot come across, so each
+// one needs its password entered once. Returns how many were created.
+export function importThunderbirdAccounts(profilePath: string, emails: string[]): Promise<number> {
+  return App.ImportThunderbirdAccounts(profilePath, emails)
+}
+
+// chooseMailFiles opens a picker for .eml and .mbox files. An empty list means
+// the dialog was cancelled.
+export function chooseMailFiles(): Promise<string[]> {
+  return App.ChooseMailFiles()
+}
+
+// importMailFiles imports the given files into Local Folders. It returns as soon
+// as the job starts; watch onImportProgress for progress and the final count.
+export function importMailFiles(paths: string[]): Promise<void> {
+  return App.ImportMailFiles(paths)
+}
+
+// importThunderbirdFolders imports mail folders found in a Thunderbird profile,
+// keeping their names. Like importMailFiles it runs in the background.
+export function importThunderbirdFolders(paths: string[]): Promise<void> {
+  return App.ImportThunderbirdFolders(paths)
 }
 
 // systemColorScheme returns the OS dark/light preference ("dark" | "light"), or
