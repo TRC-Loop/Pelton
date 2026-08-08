@@ -39,6 +39,11 @@ type Folder struct {
 	UIDValidity uint32
 }
 
+// folderColumns is the select list every folder query shares, in the order
+// scanFolder reads them.
+const folderColumns = `id, account_id, name, imap_path, delimiter, parent_id,
+       attributes, uid_validity`
+
 // CreateFolder inserts a folder and returns its new id.
 func (d *DB) CreateFolder(ctx context.Context, f *Folder) (int64, error) {
 	const query = `
@@ -61,7 +66,7 @@ VALUES (?, ?, ?, ?, ?, ?, ?)`
 // GetFolder returns one folder by id, or ErrFolderNotFound.
 func (d *DB) GetFolder(ctx context.Context, id int64) (*Folder, error) {
 	const query = `
-SELECT id, account_id, name, imap_path, delimiter, parent_id, attributes, uid_validity
+SELECT ` + folderColumns + `
 FROM folders WHERE id = ?`
 	f, err := scanFolder(d.sql.QueryRowContext(ctx, query, id))
 	if errors.Is(err, sql.ErrNoRows) {
@@ -76,7 +81,7 @@ FROM folders WHERE id = ?`
 // ListFolders returns every folder for an account ordered by id.
 func (d *DB) ListFolders(ctx context.Context, accountID int64) ([]Folder, error) {
 	const query = `
-SELECT id, account_id, name, imap_path, delimiter, parent_id, attributes, uid_validity
+SELECT ` + folderColumns + `
 FROM folders WHERE account_id = ? ORDER BY id`
 	rows, err := d.sql.QueryContext(ctx, query, accountID)
 	if err != nil {

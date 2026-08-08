@@ -48,6 +48,9 @@ const (
 	// EventViewsChanged fires when saved views or their eager-run counts change,
 	// so the sidebar can refresh view rows and badges without polling.
 	EventViewsChanged = "views:changed"
+	// EventImportProgress fires while mail is being imported from files, and
+	// once more with Running false when the job ends.
+	EventImportProgress = "import:progress"
 )
 
 // DownloadProgressEvent is the payload for EventDownloadProgress. Running is
@@ -72,6 +75,22 @@ type AttachmentProgressEvent struct {
 	FilesDone  int    `json:"filesDone"`
 	FilesTotal int    `json:"filesTotal"`
 	Error      string `json:"error"`
+}
+
+// ImportProgressEvent is the payload for EventImportProgress. Running is false
+// on the final event, which carries the totals; Error is set on failure.
+// BytesDone/BytesTotal measure the source files, because an mbox does not say
+// how many messages it holds until it has been read.
+type ImportProgressEvent struct {
+	Running    bool     `json:"running"`
+	Folder     string   `json:"folder"`
+	Imported   int      `json:"imported"`
+	Skipped    int      `json:"skipped"`
+	Failed     int      `json:"failed"`
+	BytesDone  int64    `json:"bytesDone"`
+	BytesTotal int64    `json:"bytesTotal"`
+	Folders    []string `json:"folders"`
+	Error      string   `json:"error"`
 }
 
 // MailNewEvent is the payload for EventMailNew.

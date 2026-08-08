@@ -42,6 +42,14 @@ export function CheckForUpdates() {
   return window['go']['desktop']['App']['CheckForUpdates']();
 }
 
+export function ChooseMailFiles() {
+  return window['go']['desktop']['App']['ChooseMailFiles']();
+}
+
+export function ChooseThunderbirdProfile() {
+  return window['go']['desktop']['App']['ChooseThunderbirdProfile']();
+}
+
 export function ClearSentOutbox() {
   return window['go']['desktop']['App']['ClearSentOutbox']();
 }
@@ -110,6 +118,10 @@ export function ExportTheme(arg1) {
   return window['go']['desktop']['App']['ExportTheme'](arg1);
 }
 
+export function FindThunderbirdProfiles() {
+  return window['go']['desktop']['App']['FindThunderbirdProfiles']();
+}
+
 export function GetAccountSignatures(arg1) {
   return window['go']['desktop']['App']['GetAccountSignatures'](arg1);
 }
@@ -156,6 +168,18 @@ export function GetUserLocale(arg1) {
 
 export function ImportData(arg1, arg2, arg3) {
   return window['go']['desktop']['App']['ImportData'](arg1, arg2, arg3);
+}
+
+export function ImportMailFiles(arg1) {
+  return window['go']['desktop']['App']['ImportMailFiles'](arg1);
+}
+
+export function ImportThunderbirdAccounts(arg1, arg2) {
+  return window['go']['desktop']['App']['ImportThunderbirdAccounts'](arg1, arg2);
+}
+
+export function ImportThunderbirdFolders(arg1) {
+  return window['go']['desktop']['App']['ImportThunderbirdFolders'](arg1);
 }
 
 export function InspectBackupFile() {

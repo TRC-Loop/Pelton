@@ -22,6 +22,10 @@ export function CancelSend(arg1:number):Promise<boolean>;
 
 export function CheckForUpdates():Promise<desktop.UpdateCheckResult>;
 
+export function ChooseMailFiles():Promise<Array<string>>;
+
+export function ChooseThunderbirdProfile():Promise<Array<desktop.ThunderbirdProfileDTO>>;
+
 export function ClearSentOutbox():Promise<void>;
 
 export function ConfirmThemeImport(arg1:string,arg2:boolean,arg3:boolean,arg4:boolean):Promise<desktop.ThemeInfoDTO>;
@@ -56,6 +60,8 @@ export function ExportMessagePrintView(arg1:number):Promise<void>;
 
 export function ExportTheme(arg1:string):Promise<string>;
 
+export function FindThunderbirdProfiles():Promise<Array<desktop.ThunderbirdProfileDTO>>;
+
 export function GetAccountSignatures(arg1:number):Promise<desktop.AccountSignaturesDTO>;
 
 export function GetMCPConfig():Promise<desktop.MCPConfigDTO>;
@@ -79,6 +85,12 @@ export function GetUIPrefs():Promise<desktop.UIPrefsDTO>;
 export function GetUserLocale(arg1:string):Promise<desktop.UserLocaleApplyDTO>;
 
 export function ImportData(arg1:string,arg2:Array<string>,arg3:string):Promise<void>;
+
+export function ImportMailFiles(arg1:Array<string>):Promise<void>;
+
+export function ImportThunderbirdAccounts(arg1:string,arg2:Array<string>):Promise<number>;
+
+export function ImportThunderbirdFolders(arg1:Array<string>):Promise<void>;
 
 export function InspectBackupFile():Promise<desktop.BackupInfoDTO>;
 

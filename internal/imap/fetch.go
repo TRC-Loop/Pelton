@@ -1,19 +1,13 @@
 package imap
 
 import (
-	"bytes"
 	"fmt"
-	"io"
-	"strings"
 	"time"
 
 	"github.com/emersion/go-imap/v2"
 	"github.com/emersion/go-imap/v2/imapclient"
-	"github.com/emersion/go-message"
-	"github.com/emersion/go-message/mail"
 
-	// registers legacy charset decoders (ISO-8859-*, Windows-125x, ...)
-	_ "github.com/emersion/go-message/charset"
+	"github.com/TRC-Loop/Pelton/internal/rfc822"
 )
 
 // Mailbox summarises a selected mailbox.
@@ -57,13 +51,10 @@ type Message struct {
 	ListUnsubscribePost bool
 }
 
-// Attachment holds attachment metadata and its decoded content.
-type Attachment struct {
-	Filename    string
-	ContentType string
-	ContentID   string // set for inline cid-referenced parts
-	Content     []byte
-}
+// Attachment holds attachment metadata and its decoded content. It is the
+// parser's type: the imap and file-import paths produce the same attachments,
+// so callers can handle both without converting.
+type Attachment = rfc822.Attachment
 
 // Select opens a mailbox. IMAP selects one mailbox per connection, so this
 // must precede the fetch and flag methods.
@@ -222,55 +213,17 @@ func headerFromBuffer(b *imapclient.FetchMessageBuffer) MessageHeader {
 }
 
 // parseBody extracts text, HTML and attachment metadata from a raw message.
+// The envelope fields come from the server's ENVELOPE response instead, so only
+// the body is walked here.
 func parseBody(raw []byte, msg *Message) error {
-	mr, err := mail.CreateReader(bytes.NewReader(raw))
-	// unknown charset is non-fatal: reader is still usable
-	if err != nil && !message.IsUnknownCharset(err) {
-		return fmt.Errorf("create mail reader: %w", err)
+	parsed, err := rfc822.ParseBody(raw)
+	if err != nil {
+		return err
 	}
-
-	msg.ListUnsubscribe = mr.Header.Get("List-Unsubscribe")
-	msg.ListUnsubscribePost = strings.Contains(strings.ToLower(mr.Header.Get("List-Unsubscribe-Post")), "one-click")
-
-	for {
-		part, err := mr.NextPart()
-		if err == io.EOF {
-			break
-		}
-		if err != nil && !message.IsUnknownCharset(err) {
-			return fmt.Errorf("read part: %w", err)
-		}
-
-		switch header := part.Header.(type) {
-		case *mail.InlineHeader:
-			body, err := io.ReadAll(part.Body)
-			if err != nil {
-				return fmt.Errorf("read inline part: %w", err)
-			}
-			contentType, _, _ := header.ContentType()
-			if strings.EqualFold(contentType, "text/html") {
-				if msg.HTML == "" {
-					msg.HTML = string(body)
-				}
-			} else if msg.Text == "" {
-				msg.Text = string(body)
-			}
-		case *mail.AttachmentHeader:
-			filename, _ := header.Filename()
-			contentType, _, _ := header.ContentType()
-			content, err := io.ReadAll(part.Body)
-			if err != nil {
-				return fmt.Errorf("read attachment part: %w", err)
-			}
-			// content-id arrives wrapped in angle brackets, strip them
-			contentID := strings.Trim(header.Get("Content-Id"), "<>")
-			msg.Attachments = append(msg.Attachments, Attachment{
-				Filename:    filename,
-				ContentType: contentType,
-				ContentID:   contentID,
-				Content:     content,
-			})
-		}
-	}
+	msg.Text = parsed.Text
+	msg.HTML = parsed.HTML
+	msg.Attachments = parsed.Attachments
+	msg.ListUnsubscribe = parsed.ListUnsubscribe
+	msg.ListUnsubscribePost = parsed.ListUnsubscribePost
 	return nil
 }
