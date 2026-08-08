@@ -6,6 +6,7 @@
   import { IconPencil, IconRefresh, IconMailbox, IconPlus } from '@tabler/icons-svelte'
   import UnifiedViews from './UnifiedViews.svelte'
   import AccountTree from './AccountTree.svelte'
+  import PinnedFolders from './PinnedFolders.svelte'
   import SavedViews from './SavedViews.svelte'
   import Spinner from '../common/Spinner.svelte'
   import ErrorState from '../common/ErrorState.svelte'
@@ -14,6 +15,9 @@
   import { views, openViewEditor, editViewInEditor } from '../../stores/views'
   import { syncing } from '../../stores/outbox'
   import { prefs } from '../../stores/prefs'
+  import { reorder, type ReorderDetail } from '../../lib/reorder'
+  import { reorderAccounts } from '../../lib/api'
+  import { toastError, errorMessage } from '../../stores/toast'
   import type { View } from '../../lib/types'
   import { t } from '../../lib/i18n'
 
@@ -24,6 +28,20 @@
   $: placement = $prefs.viewsPlacement
   // in tab mode, which pane the sidebar body shows.
   let tab: 'mail' | 'views' = 'mail'
+
+  // account email by id, so the Pinned group can say which mailbox a folder
+  // belongs to.
+  $: accountEmails = Object.fromEntries(($sidebar.data?.accounts ?? []).map((a) => [a.id, a.email]))
+
+  async function onReorderAccounts(event: CustomEvent<ReorderDetail>): Promise<void> {
+    try {
+      await reorderAccounts(event.detail.ids.map(Number))
+    } catch (err) {
+      toastError(errorMessage(err))
+    }
+    // reload either way, so the sections end up showing what was actually stored.
+    await loadSidebar()
+  }
 
   function openNew(): void {
     openViewEditor()
@@ -78,22 +96,20 @@
               {$t('views.tab.views')}
             </button>
           </div>
-          {#if tab === 'views'}
-            <SavedViews views={$views} on:new={openNew} on:edit={(e) => openEdit(e.detail)} />
-          {:else}
-            <UnifiedViews views={$sidebar.data.views} />
-            {#each $sidebar.data.accounts as account (account.id)}
-              <AccountTree {account} folders={$sidebar.data.foldersByAccount[account.id] ?? []} />
-            {/each}
-          {/if}
+        {/if}
+        {#if placement === 'tab' && tab === 'views'}
+          <SavedViews views={$views} on:new={openNew} on:edit={(e) => openEdit(e.detail)} />
         {:else}
+          <PinnedFolders folders={$sidebar.data.pinned} {accountEmails} />
           <UnifiedViews views={$sidebar.data.views} />
           {#if placement === 'sidebar'}
             <SavedViews views={$views} on:new={openNew} on:edit={(e) => openEdit(e.detail)} />
           {/if}
-          {#each $sidebar.data.accounts as account (account.id)}
-            <AccountTree {account} folders={$sidebar.data.foldersByAccount[account.id] ?? []} />
-          {/each}
+          <div use:reorder on:reorder={onReorderAccounts}>
+            {#each $sidebar.data.accounts as account (account.id)}
+              <AccountTree {account} folders={$sidebar.data.foldersByAccount[account.id] ?? []} />
+            {/each}
+          </div>
         {/if}
       {/if}
     {/if}

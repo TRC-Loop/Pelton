@@ -222,6 +222,10 @@ export function ListOutbox() {
   return window['go']['desktop']['App']['ListOutbox']();
 }
 
+export function ListPinnedFolders() {
+  return window['go']['desktop']['App']['ListPinnedFolders']();
+}
+
 export function ListSignatures() {
   return window['go']['desktop']['App']['ListSignatures']();
 }
@@ -302,6 +306,22 @@ export function RenameFolder(arg1, arg2) {
   return window['go']['desktop']['App']['RenameFolder'](arg1, arg2);
 }
 
+export function ReorderAccounts(arg1) {
+  return window['go']['desktop']['App']['ReorderAccounts'](arg1);
+}
+
+export function ReorderFolders(arg1) {
+  return window['go']['desktop']['App']['ReorderFolders'](arg1);
+}
+
+export function ReorderPinnedFolders(arg1) {
+  return window['go']['desktop']['App']['ReorderPinnedFolders'](arg1);
+}
+
+export function ReorderUnifiedViews(arg1) {
+  return window['go']['desktop']['App']['ReorderUnifiedViews'](arg1);
+}
+
 export function ReorderViews(arg1) {
   return window['go']['desktop']['App']['ReorderViews'](arg1);
 }
@@ -368,6 +388,10 @@ export function SetFlagColor(arg1, arg2) {
 
 export function SetFlagged(arg1, arg2) {
   return window['go']['desktop']['App']['SetFlagged'](arg1, arg2);
+}
+
+export function SetFolderPinned(arg1, arg2) {
+  return window['go']['desktop']['App']['SetFolderPinned'](arg1, arg2);
 }
 
 export function SetMCPEnabled(arg1) {

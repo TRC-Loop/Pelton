@@ -78,6 +78,7 @@ const defaults: UIPrefs = {
   closeAction: 'background',
   syncMessageLimit: 50,
   syncAutoBackfill: true,
+  startupSelection: 'view:inbox',
 }
 
 export const prefs = writable<UIPrefs>(defaults)
@@ -528,6 +529,14 @@ export function setMultiSelectEnabled(value: boolean): void {
 export function setShowSelectedCount(value: boolean): void {
   prefs.update((p) => ({ ...p, showSelectedCount: value }))
   void setSetting(SettingKeys.showSelectedCount, String(value))
+}
+
+// setStartupSelection picks what the sidebar opens on at launch: 'view:<key>',
+// 'folder:<id>', or 'last' to restore the previous session. Read once at
+// startup, so the change takes effect on the next launch.
+export function setStartupSelection(value: string): void {
+  prefs.update((p) => ({ ...p, startupSelection: value }))
+  void setSetting(SettingKeys.startupSelection, value)
 }
 
 // setSidebarIndentGuides toggles the nested-folder guide lines.

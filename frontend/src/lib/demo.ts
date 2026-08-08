@@ -67,6 +67,7 @@ function foldersFor(accountId: number, inboxUnread: number, inboxTotal: number):
     unreadCount: unread,
     totalCount: total,
     attributes: [],
+    pinned: false,
   })
   const base = accountId * 100
   return [

@@ -97,7 +97,21 @@ const (
 	// 0 messages means no limit: sync the whole mailbox as older versions did.
 	settingSyncMessageLimit = "sync_message_limit"
 	settingSyncAutoBackfill = "sync_auto_backfill"
+	// the order of the unified views block in the sidebar, as a comma-separated
+	// list of view keys (#187). The views have no rows of their own, so unlike
+	// folders and accounts their order lives here. Empty means the built-in
+	// order.
+	settingUnifiedViewOrder = "sidebar_unified_view_order"
+	// what Pelton opens on launch: "view:<key>", "folder:<id>", or "last" to
+	// restore whatever was open when the app last closed. settingLastSelection
+	// holds that remembered selection in the same "view:"/"folder:" form.
+	settingStartupSelection = "startup_selection"
+	settingLastSelection    = "last_selection"
 )
+
+// defaultStartupSelection is the unified inbox, which is where every version
+// before #187 opened.
+const defaultStartupSelection = "view:" + viewInbox
 
 // settingUpdateCheckFreq, settingLastUpdateCheck and defaultUpdateCheckFrequency
 // are defined in bind_update.go, next to the rest of the update-check logic.
@@ -283,6 +297,11 @@ type UIPrefsDTO struct {
 	// reaching the end of the list; off puts it behind a button instead.
 	SyncMessageLimit int  `json:"syncMessageLimit"`
 	SyncAutoBackfill bool `json:"syncAutoBackfill"`
+	// StartupSelection is what the sidebar selects on launch: "view:<key>" for a
+	// unified view, "folder:<id>" for one account folder, or "last" to restore
+	// the previous session. A target that no longer exists falls back to the
+	// unified inbox.
+	StartupSelection string `json:"startupSelection"`
 }
 
 // GetUIPrefs returns all ui preferences with defaults filled in, so startup is a
@@ -356,6 +375,7 @@ func (a *App) GetUIPrefs() (UIPrefsDTO, error) {
 		CloseAction:                a.stringSetting(settingCloseAction, closeActionBackground),
 		SyncMessageLimit:           a.syncMessageLimit(),
 		SyncAutoBackfill:           a.boolSetting(settingSyncAutoBackfill, true),
+		StartupSelection:           a.stringSetting(settingStartupSelection, defaultStartupSelection),
 	}, nil
 }
 

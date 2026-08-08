@@ -39,6 +39,9 @@ type FolderDTO struct {
 	UnreadCount int      `json:"unreadCount"`
 	TotalCount  int      `json:"totalCount"`
 	Attributes  []string `json:"attributes"`
+	// Pinned means the folder is mirrored into the sidebar's Pinned group. It
+	// still appears in its own account's tree either way.
+	Pinned bool `json:"pinned"`
 }
 
 // UnifiedViewDTO is a cross account view (inbox/flagged/sent/drafts). The ui
@@ -169,6 +172,7 @@ func toFolderDTO(f storage.Folder) FolderDTO {
 		ParentID:   f.ParentID,
 		Role:       folderRole(f),
 		Attributes: f.Attributes,
+		Pinned:     f.PinnedPosition > 0,
 	}
 }
 

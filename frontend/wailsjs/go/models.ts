@@ -373,6 +373,7 @@ export namespace desktop {
 	    unreadCount: number;
 	    totalCount: number;
 	    attributes: string[];
+	    pinned: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new FolderDTO(source);
@@ -390,6 +391,7 @@ export namespace desktop {
 	        this.unreadCount = source["unreadCount"];
 	        this.totalCount = source["totalCount"];
 	        this.attributes = source["attributes"];
+	        this.pinned = source["pinned"];
 	    }
 	}
 	export class ImageAllowEntryDTO {
@@ -1028,6 +1030,7 @@ export namespace desktop {
 	    closeAction: string;
 	    syncMessageLimit: number;
 	    syncAutoBackfill: boolean;
+	    startupSelection: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new UIPrefsDTO(source);
@@ -1098,6 +1101,7 @@ export namespace desktop {
 	        this.closeAction = source["closeAction"];
 	        this.syncMessageLimit = source["syncMessageLimit"];
 	        this.syncAutoBackfill = source["syncAutoBackfill"];
+	        this.startupSelection = source["startupSelection"];
 	    }
 	}
 	export class UnifiedViewDTO {

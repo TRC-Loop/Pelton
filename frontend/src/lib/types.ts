@@ -30,6 +30,9 @@ export interface Folder {
   unreadCount: number
   totalCount: number
   attributes: string[]
+  // mirrored into the sidebar's Pinned group. the folder stays in its own
+  // account's tree either way, so this is display state, not a move.
+  pinned: boolean
 }
 
 export interface UnifiedView {
@@ -290,6 +293,10 @@ export interface UIPrefs {
   // syncAutoBackfill fetches the next batch of older mail automatically on
   // reaching the end of the list. Off puts it behind a button instead.
   syncAutoBackfill: boolean
+  // what the sidebar selects on launch: 'view:<key>' for a unified view,
+  // 'folder:<id>' for one account folder, or 'last' to restore the previous
+  // session. A target that no longer exists falls back to the unified inbox.
+  startupSelection: string
 }
 
 // what the window's close button does.

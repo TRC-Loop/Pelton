@@ -25,7 +25,16 @@ type Account struct {
 	SMTPHost  string
 	SMTPPort  int
 	CreatedAt time.Time
+	// Position is the account section's rank in the sidebar, or 0 until the user
+	// reorders them. Unpositioned accounts sort after positioned ones by id, so
+	// an install that never reordered keeps creation order.
+	Position int
 }
+
+// accountColumns is the select list every account query shares, in the order
+// scanAccount reads them.
+const accountColumns = `id, email, display_name, username, imap_host, imap_port,
+       smtp_host, smtp_port, created_at, position`
 
 // CreateAccount inserts an account and returns its new id. CreatedAt is set to
 // now if the caller left it zero.
@@ -54,9 +63,7 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
 
 // GetAccount returns one account by id, or ErrAccountNotFound.
 func (d *DB) GetAccount(ctx context.Context, id int64) (*Account, error) {
-	const query = `
-SELECT id, email, display_name, username, imap_host, imap_port, smtp_host, smtp_port, created_at
-FROM accounts WHERE id = ?`
+	const query = `SELECT ` + accountColumns + ` FROM accounts WHERE id = ?`
 	a, err := scanAccount(d.sql.QueryRowContext(ctx, query, id))
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrAccountNotFound
@@ -67,11 +74,10 @@ FROM accounts WHERE id = ?`
 	return a, nil
 }
 
-// ListAccounts returns all accounts ordered by id.
+// ListAccounts returns all accounts in sidebar order: the ones the user
+// reordered first, in that order, then the rest by id.
 func (d *DB) ListAccounts(ctx context.Context) ([]Account, error) {
-	const query = `
-SELECT id, email, display_name, username, imap_host, imap_port, smtp_host, smtp_port, created_at
-FROM accounts ORDER BY id`
+	const query = `SELECT ` + accountColumns + ` FROM accounts ORDER BY position = 0, position, id`
 	rows, err := d.sql.QueryContext(ctx, query)
 	if err != nil {
 		return nil, fmt.Errorf("storage: list accounts: %w", err)
@@ -116,6 +122,13 @@ func (d *DB) DeleteAccount(ctx context.Context, id int64) error {
 	return requireOneRow(res, ErrAccountNotFound)
 }
 
+// SetAccountPositions rewrites the sidebar order of the account sections in one
+// transaction. Accounts not listed keep their current position. Positions start
+// at 1, since 0 means "never reordered".
+func (d *DB) SetAccountPositions(ctx context.Context, orderedIDs []int64) error {
+	return d.setPositions(ctx, `UPDATE accounts SET position = ? WHERE id = ?`, orderedIDs, "accounts")
+}
+
 // rowScanner is satisfied by both *sql.Row and *sql.Rows.
 type rowScanner interface {
 	Scan(dest ...any) error
@@ -127,7 +140,7 @@ func scanAccount(row rowScanner) (*Account, error) {
 		created string
 	)
 	if err := row.Scan(&a.ID, &a.Email, &a.DisplayName, &a.Username, &a.IMAPHost, &a.IMAPPort,
-		&a.SMTPHost, &a.SMTPPort, &created); err != nil {
+		&a.SMTPHost, &a.SMTPPort, &created, &a.Position); err != nil {
 		return nil, err
 	}
 	t, err := parseTime(created)
