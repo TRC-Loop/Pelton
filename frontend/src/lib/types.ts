@@ -464,6 +464,48 @@ export interface MCPConfig {
   running: boolean
 }
 
+// the VirusTotal integration's settings. the api key is write-only: the backend
+// keeps it in the os keyring and only reports hasApiKey, so the settings field
+// can show a filled state without the secret coming back to the ui.
+export interface VirusTotalConfig {
+  enabled: boolean
+  hasApiKey: boolean
+  autoScanLinks: boolean
+  autoScanAttachments: boolean
+}
+
+// one scan result. status is 'clean', 'flagged' or 'unknown'; error is set
+// instead when that one lookup failed, and carries either a code the ui
+// localizes ('rate_limited', 'unauthorized') or a message to show verbatim.
+export interface Verdict {
+  status: 'clean' | 'flagged' | 'unknown'
+  malicious: number
+  suspicious: number
+  total: number
+  permalink: string
+  error: string
+}
+
+// a verdict paired with the link it belongs to.
+export interface LinkVerdict {
+  url: string
+  verdict: Verdict
+}
+
+// a verdict paired with the attachment it belongs to.
+export interface AttachmentVerdict {
+  attachmentId: number
+  filename: string
+  verdict: Verdict
+}
+
+// the result of scanning a whole message. either list is empty when that target
+// type was not requested.
+export interface MessageScan {
+  links: LinkVerdict[]
+  attachments: AttachmentVerdict[]
+}
+
 export interface ProxyConfig {
   mode: string
   scheme: string

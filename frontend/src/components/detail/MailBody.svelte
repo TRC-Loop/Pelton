@@ -8,18 +8,24 @@
   // images are blocked by the backend by default; a per-message affordance
   // asks the backend to re-render with remote content allowed.
   import { onDestroy } from 'svelte'
+  import { get } from 'svelte/store'
   import { BrowserOpenURL } from '../../../wailsjs/runtime/runtime'
-  import { IconPhoto, IconUserCheck, IconWorldCheck, IconMailCheck } from '@tabler/icons-svelte'
+  import { IconPhoto, IconUserCheck, IconWorldCheck, IconMailCheck, IconShieldSearch } from '@tabler/icons-svelte'
   import { prefs } from '../../stores/prefs'
-  import { getMessageHtml, trustSenderImages, allowDomainImages, allowRemoteForMessage } from '../../lib/api'
+  import { getMessageHtml, trustSenderImages, allowDomainImages, allowRemoteForMessage, scanUrl } from '../../lib/api'
   import { setBodyHtml } from '../../stores/message'
+  import { openContextMenu } from '../../stores/contextmenu'
+  import { virusTotal, linkVerdicts, putLinkVerdict, scanEnabled } from '../../stores/virustotal'
+  import VerdictBadge from '../common/VerdictBadge.svelte'
   import { errorMessage, toastError, toastSuccess } from '../../stores/toast'
   import { displayName, linkifySegments } from '../../lib/format'
   import { bodyFontStack } from '../../lib/fonts'
   import { t } from '../../lib/i18n'
-  import type { MessageDetail } from '../../lib/types'
+  import type { MessageDetail, Verdict } from '../../lib/types'
 
   export let detail: MessageDetail
+
+  $: canScan = scanEnabled($virusTotal)
 
   // remoteLoaded starts true when the backend already rendered remote content
   // because the sender/domain is trusted (or the global override is on).
@@ -77,10 +83,14 @@
   // click handler that runs natively inside the iframe's own document, using
   // postMessage to hand the url back to the parent, has no such dependency on
   // cross-frame event delivery.
-  function buildSrcdoc(html: string, allowRemote: boolean, fontSize: number, bodyFont: string, nonce: string): string {
+  function buildSrcdoc(html: string, allowRemote: boolean, fontSize: number, bodyFont: string, nonce: string, offerScan: boolean): string {
     // the reader font preference only sets the fallback; mail that declares
     // its own fonts keeps them since this is just the base font-family.
     const font = bodyFontStack(bodyFont) ?? readVar('--font-ui')
+    // the .pelton-vt colors are the light-theme semantic token values written
+    // out literally, for the same reason the page colors above are: this
+    // document always renders on a fixed white background, so a badge that
+    // followed the dark theme would be a dark-mode green on white.
     const css = `
   html,body{margin:0;background:#ffffff;color:#1a1a1a;font-family:${font};font-size:${fontSize}px;line-height:1.5;}
   body{padding:4px 2px;word-wrap:break-word;overflow-wrap:break-word;}
@@ -88,7 +98,12 @@
   img{max-width:100%;height:auto;}
   blockquote{margin:0 0 0 8px;padding-left:10px;border-left:2px solid #94a3b8;color:#55606c;}
   table{max-width:100%;}
-  pre{white-space:pre-wrap;}`
+  pre{white-space:pre-wrap;}
+  .pelton-vt{display:inline-block;margin-left:3px;font-family:${readVar('--font-mono') || 'monospace'};font-weight:700;font-size:0.85em;cursor:default;}
+  .pelton-vt-clean{color:#1a7f4b;}
+  .pelton-vt-flagged{color:#c0392b;}
+  .pelton-vt-unknown{color:#6b7280;}
+  .pelton-vt-error{color:#9a6700;}`
     const imgSrc = allowRemote ? 'data: https: http:' : 'data:'
     const csp = `default-src 'none'; img-src ${imgSrc}; style-src 'unsafe-inline'; font-src data:; script-src 'nonce-${nonce}'`
     const cspMeta = `<meta http-equiv="Content-Security-Policy" content="${csp}">`
@@ -98,11 +113,20 @@
     // sandboxed iframe (which has no allow-top-navigation and would silently
     // do nothing). runs inside the iframe's own document so it's a normal,
     // same-document click listener - no cross-frame event delivery involved.
+    //
+    // the contextmenu half is only wired up when a scan can actually be
+    // offered: with the integration off there is nothing to put in a menu, and
+    // suppressing the default one to show nothing would just look broken.
+    const contextHandler = offerScan
+      ? 'document.addEventListener("contextmenu",function(e){var a=e.target&&e.target.closest("a");if(!a)return;var href=(a.getAttribute("href")||"").trim();if(!/^https?:/i.test(href))return;e.preventDefault();window.parent.postMessage({peltonContextLink:href,x:e.clientX,y:e.clientY},"*")});'
+      : ''
     const script =
       '<scr' +
       'ipt nonce="' +
       nonce +
-      '">document.addEventListener("click",function(e){var a=e.target&&e.target.closest("a");if(!a)return;var href=(a.getAttribute("href")||"").trim();if(!href)return;e.preventDefault();if(/^(https?:|mailto:)/i.test(href)){window.parent.postMessage({peltonOpenUrl:href},"*")}});</scr' +
+      '">document.addEventListener("click",function(e){var a=e.target&&e.target.closest("a");if(!a)return;var href=(a.getAttribute("href")||"").trim();if(!href)return;e.preventDefault();if(/^(https?:|mailto:)/i.test(href)){window.parent.postMessage({peltonOpenUrl:href},"*")}});' +
+      contextHandler +
+      '</scr' +
       'ipt>'
     // data-pelton-ready marks the body as belonging to our own srcdoc, not
     // the iframe's initial blank placeholder document: a fresh iframe already
@@ -118,7 +142,7 @@
     return crypto.randomUUID().replace(/-/g, '')
   }
 
-  $: srcdoc = buildSrcdoc(detail.bodyHtmlSafe, remoteLoaded, $prefs.messageFontSize, $prefs.bodyFont, makeNonce())
+  $: srcdoc = buildSrcdoc(detail.bodyHtmlSafe, remoteLoaded, $prefs.messageFontSize, $prefs.bodyFont, makeNonce(), canScan)
 
   // plain-text bodies render in a <pre>, not the sandboxed iframe, so bare
   // urls need their own linkification: nothing upstream turns them into real
@@ -185,6 +209,9 @@
     measure()
     resizeObserver = new ResizeObserver(() => measure())
     resizeObserver.observe(body)
+    // a fresh srcdoc replaces the document, so any badges from the previous
+    // render are gone and have to be put back.
+    decorateLinks(get(linkVerdicts))
   }
 
   // onFrameLoad fires when the iframe's srcdoc finishes loading. It is the
@@ -229,10 +256,107 @@
     if (event.source !== frame?.contentWindow) {
       return
     }
-    const href = (event.data as { peltonOpenUrl?: unknown } | null)?.peltonOpenUrl
+    const data = event.data as { peltonOpenUrl?: unknown; peltonContextLink?: unknown; x?: unknown; y?: unknown } | null
+    const href = data?.peltonOpenUrl
     if (typeof href === 'string' && /^(https?:|mailto:)/i.test(href)) {
       BrowserOpenURL(href)
+      return
     }
+    const link = data?.peltonContextLink
+    if (typeof link === 'string' && typeof data?.x === 'number' && typeof data?.y === 'number') {
+      openLinkMenu(link, data.x, data.y)
+    }
+  }
+
+  // openLinkMenu shows the scan action for a link the user right-clicked inside
+  // the iframe. the coordinates arrive in the iframe's own space, which the
+  // interface zoom scales relative to the parent, so they are converted using
+  // the measured ratio between the element's rendered and internal widths
+  // rather than by reasoning about the zoom factor.
+  function openLinkMenu(url: string, frameX: number, frameY: number): void {
+    if (!canScan || !frame) {
+      return
+    }
+    const rect = frame.getBoundingClientRect()
+    const inner = frame.contentDocument?.documentElement.clientWidth ?? 0
+    const scale = inner > 0 ? rect.width / inner : 1
+    openContextMenu(rect.left + frameX * scale, rect.top + frameY * scale, [
+      { label: $t('virustotal.scanLink'), icon: IconShieldSearch, action: () => void scanLink(url) },
+    ])
+  }
+
+  // the plain-text body is rendered by svelte rather than in the iframe, so its
+  // links get the same menu directly.
+  function onPlainContext(event: MouseEvent, url: string): void {
+    if (!canScan || url === '') {
+      return
+    }
+    event.preventDefault()
+    openContextMenu(event.clientX, event.clientY, [
+      { label: $t('virustotal.scanLink'), icon: IconShieldSearch, action: () => void scanLink(url) },
+    ])
+  }
+
+  async function scanLink(url: string): Promise<void> {
+    try {
+      putLinkVerdict(detail.id, url, await scanUrl(url))
+    } catch (err) {
+      toastError(errorMessage(err))
+    }
+  }
+
+  // glyph and class for a verdict badge rendered inside the iframe, where the
+  // svelte badge component cannot reach.
+  function verdictGlyph(v: Verdict): { text: string; cls: string; label: string } {
+    if (v.error !== '') {
+      const label = v.error === 'rate_limited' ? $t('virustotal.error.rateLimited') : v.error === 'unauthorized' ? $t('virustotal.error.unauthorized') : v.error
+      return { text: '!', cls: 'pelton-vt-error', label }
+    }
+    if (v.status === 'clean') {
+      return { text: '✓', cls: 'pelton-vt-clean', label: `0/${v.total} ${$t('virustotal.verdict.enginesFlagged')}` }
+    }
+    if (v.status === 'flagged') {
+      return {
+        text: '✗',
+        cls: 'pelton-vt-flagged',
+        label: `${v.malicious + v.suspicious}/${v.total} ${$t('virustotal.verdict.enginesFlagged')}`,
+      }
+    }
+    return { text: '?', cls: 'pelton-vt-unknown', label: $t('virustotal.verdict.unknown') }
+  }
+
+  // decorateLinks pins a badge to every anchor whose target has a verdict.
+  // Badges are added to the iframe's own document, which the parent can reach
+  // because the sandbox allows same-origin; they are our own nodes, never
+  // anything the sender supplied, and are rebuilt from scratch on every pass so
+  // a re-scan cannot leave a stale marker behind.
+  function decorateLinks(verdicts: Map<string, Verdict>): void {
+    const doc = frame?.contentDocument
+    if (!readyBody() || !doc) {
+      return
+    }
+    for (const stale of Array.from(doc.querySelectorAll('.pelton-vt'))) {
+      stale.remove()
+    }
+    if (verdicts.size === 0) {
+      return
+    }
+    for (const anchor of Array.from(doc.querySelectorAll('a[href]'))) {
+      const verdict = verdicts.get((anchor.getAttribute('href') ?? '').trim())
+      if (!verdict) {
+        continue
+      }
+      const { text, cls, label } = verdictGlyph(verdict)
+      const badge = doc.createElement('span')
+      badge.className = `pelton-vt ${cls}`
+      badge.textContent = text
+      badge.title = label
+      anchor.after(badge)
+    }
+  }
+
+  $: if (frame && detail.isHtml) {
+    decorateLinks($linkVerdicts)
   }
 
   window.addEventListener('message', onWindowMessage)
@@ -335,7 +459,8 @@
         class="plain-link"
         href={segment.href}
         on:click|preventDefault={() => BrowserOpenURL(segment.href ?? '')}
-      >{segment.text}</a>{:else}{segment.text}{/if}{/each}</pre>
+        on:contextmenu={(e) => onPlainContext(e, segment.href ?? '')}
+      >{segment.text}</a>{#if $linkVerdicts.has(segment.href ?? '')}<VerdictBadge verdict={$linkVerdicts.get(segment.href ?? '')!} size={12} />{/if}{:else}{segment.text}{/if}{/each}</pre>
 {/if}
 
 <style>

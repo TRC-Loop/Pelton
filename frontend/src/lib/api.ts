@@ -42,6 +42,9 @@ import type {
   UserLocaleApply,
   ProxyConfig,
   MCPConfig,
+  VirusTotalConfig,
+  Verdict,
+  MessageScan,
   View,
   Selection,
   FetchOlderResult,
@@ -933,4 +936,50 @@ export function setMCPPort(port: number): Promise<void> {
 // returns it for display.
 export function regenerateMCPToken(): Promise<string> {
   return App.RegenerateMCPToken()
+}
+
+// getVirusTotalConfig returns the VirusTotal integration's settings: whether it
+// is on, whether a key is stored, and the two auto-scan toggles.
+export function getVirusTotalConfig(): Promise<VirusTotalConfig> {
+  return App.GetVirusTotalConfig() as Promise<VirusTotalConfig>
+}
+
+// setVirusTotalEnabled turns the integration on or off. Turning it off also
+// discards every cached verdict and resets both auto-scan toggles.
+export function setVirusTotalEnabled(enabled: boolean): Promise<void> {
+  return App.SetVirusTotalEnabled(enabled)
+}
+
+// setVirusTotalApiKey stores the api key in the os keyring, or clears it (and
+// the cached verdicts it produced) when given an empty string.
+export function setVirusTotalApiKey(apiKey: string): Promise<void> {
+  return App.SetVirusTotalAPIKey(apiKey)
+}
+
+// setVirusTotalAutoScanLinks turns automatic link scanning on or off.
+export function setVirusTotalAutoScanLinks(enabled: boolean): Promise<void> {
+  return App.SetVirusTotalAutoScanLinks(enabled)
+}
+
+// setVirusTotalAutoScanAttachments turns automatic attachment scanning on or off.
+export function setVirusTotalAutoScanAttachments(enabled: boolean): Promise<void> {
+  return App.SetVirusTotalAutoScanAttachments(enabled)
+}
+
+// scanUrl looks one link up on VirusTotal, answering from the local cache when
+// it can. This is the on-demand path behind the link context menu.
+export function scanUrl(url: string): Promise<Verdict> {
+  return App.ScanURL(url) as Promise<Verdict>
+}
+
+// scanAttachment looks one attachment up by the sha-256 of its bytes. The file
+// itself is never uploaded, so an unrecognised file stays 'unknown'.
+export function scanAttachment(messageId: number, attachmentId: number): Promise<Verdict> {
+  return App.ScanAttachment(messageId, attachmentId) as Promise<Verdict>
+}
+
+// scanMessage scans a whole message's links, attachments, or both. Results come
+// back per target, so one failed lookup does not lose the others.
+export function scanMessage(messageId: number, links: boolean, attachments: boolean): Promise<MessageScan> {
+  return App.ScanMessage(messageId, links, attachments) as Promise<MessageScan>
 }

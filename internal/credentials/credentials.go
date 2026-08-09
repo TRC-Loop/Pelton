@@ -164,6 +164,44 @@ func DeleteProxyPassword() error {
 	return nil
 }
 
+// virusTotalKeyName is the keyring entry holding the VirusTotal API key.
+const virusTotalKeyName = "virustotal-api-key"
+
+// StoreVirusTotalKey saves the VirusTotal API key, or clears it when empty. It
+// is a credential to a third-party account, so it belongs in the keyring rather
+// than the settings db.
+func StoreVirusTotalKey(apiKey string) error {
+	if apiKey == "" {
+		return DeleteVirusTotalKey()
+	}
+	if err := keyring.Set(service, virusTotalKeyName, apiKey); err != nil {
+		return fmt.Errorf("credentials: store virustotal key: %w", err)
+	}
+	return nil
+}
+
+// LoadVirusTotalKey returns the stored VirusTotal API key, or "" when none is set.
+func LoadVirusTotalKey() (string, error) {
+	raw, err := keyring.Get(service, virusTotalKeyName)
+	if errors.Is(err, keyring.ErrNotFound) {
+		return "", nil
+	}
+	if err != nil {
+		return "", fmt.Errorf("credentials: load virustotal key: %w", err)
+	}
+	return raw, nil
+}
+
+// DeleteVirusTotalKey removes the stored VirusTotal API key. A missing entry is
+// not an error.
+func DeleteVirusTotalKey() error {
+	err := keyring.Delete(service, virusTotalKeyName)
+	if err != nil && !errors.Is(err, keyring.ErrNotFound) {
+		return fmt.Errorf("credentials: delete virustotal key: %w", err)
+	}
+	return nil
+}
+
 // key is the per-account keyring entry name.
 func key(accountID int64) string {
 	return strconv.FormatInt(accountID, 10)

@@ -4,22 +4,41 @@
   // can connect to on loopback with a bearer token; future external integrations
   // live under the same category.
   import { onMount } from 'svelte'
-  import { IconCheck, IconCopy, IconRefresh } from '@tabler/icons-svelte'
+  import { BrowserOpenURL } from '../../../wailsjs/runtime/runtime'
+  import { IconCheck, IconCopy, IconRefresh, IconExternalLink } from '@tabler/icons-svelte'
   import ToggleSwitch from '../common/ToggleSwitch.svelte'
-  import { getMCPConfig, setMCPEnabled, setMCPPort, regenerateMCPToken } from '../../lib/api'
+  import {
+    getMCPConfig,
+    setMCPEnabled,
+    setMCPPort,
+    regenerateMCPToken,
+    setVirusTotalEnabled,
+    setVirusTotalApiKey,
+    setVirusTotalAutoScanLinks,
+    setVirusTotalAutoScanAttachments,
+  } from '../../lib/api'
+  import { virusTotal, loadVirusTotalConfig } from '../../stores/virustotal'
   import { errorMessage, toastError, toastSuccess } from '../../stores/toast'
   import { t } from '../../lib/i18n'
   import type { MCPConfig } from '../../lib/types'
 
+  // where a VirusTotal account's api key is found, linked from the key field so
+  // the user is not left to hunt for it.
+  const apiKeyPage = 'https://www.virustotal.com/gui/my-apikey'
+
   let cfg: MCPConfig = { enabled: false, port: 8765, token: '', url: '', running: false }
   let loading = true
   let busy = false
+  // the key is typed locally and only sent on save; the backend never sends a
+  // stored key back, so an empty field with hasApiKey set means "unchanged".
+  let apiKeyDraft = ''
+  let vtBusy = false
   // the port field is edited locally and only committed on save, so typing does
   // not restart the server on every keystroke.
   let portDraft = 8765
 
   onMount(async () => {
-    await reload()
+    await Promise.all([reload(), loadVirusTotalConfig()])
     loading = false
   })
 
@@ -78,6 +97,27 @@
     } catch (err) {
       toastError(errorMessage(err))
     }
+  }
+
+  // runVT wraps a settings write so every VirusTotal control shares the same
+  // busy handling and refetches the state the backend actually ended up in.
+  async function runVT(change: () => Promise<void>): Promise<void> {
+    vtBusy = true
+    try {
+      await change()
+    } catch (err) {
+      toastError(errorMessage(err))
+    } finally {
+      await loadVirusTotalConfig()
+      vtBusy = false
+    }
+  }
+
+  async function saveApiKey(): Promise<void> {
+    const key = apiKeyDraft.trim()
+    await runVT(() => setVirusTotalApiKey(key))
+    apiKeyDraft = ''
+    toastSuccess(key === '' ? $t('virustotal.keyCleared') : $t('virustotal.keySaved'))
   }
 
   // the ready-to-paste client config for an MCP host that speaks streamable HTTP.
@@ -158,6 +198,74 @@
       </div>
     {/if}
   </div>
+
+  <div class="card">
+    <div class="card-head">
+      <span class="card-title">{$t('virustotal.title')}</span>
+      <ToggleSwitch
+        checked={$virusTotal.enabled}
+        label={$t('virustotal.title')}
+        disabled={vtBusy}
+        on:change={(e) => runVT(() => setVirusTotalEnabled(e.detail))}
+      />
+    </div>
+    <p class="hint">{$t('virustotal.hint')}</p>
+
+    {#if $virusTotal.enabled}
+      <label class="field">
+        <span>{$t('virustotal.apiKey')}</span>
+        <div class="copy-row">
+          <input
+            type="password"
+            bind:value={apiKeyDraft}
+            autocomplete="off"
+            placeholder={$virusTotal.hasApiKey ? $t('virustotal.keyStored') : $t('virustotal.keyPlaceholder')}
+          />
+          <button type="button" class="ghost" on:click={saveApiKey} disabled={vtBusy || (apiKeyDraft.trim() === '' && !$virusTotal.hasApiKey)}>
+            <IconCheck size={14} stroke={2} />
+            {$t('virustotal.saveKey')}
+          </button>
+        </div>
+        <p class="hint">
+          {$t('virustotal.apiKeyHint')}
+          <button type="button" class="link" on:click={() => BrowserOpenURL(apiKeyPage)}>
+            {$t('virustotal.getApiKey')}
+            <IconExternalLink size={12} stroke={1.8} />
+          </button>
+        </p>
+      </label>
+
+      {#if $virusTotal.hasApiKey}
+        <div class="toggle-row">
+          <div class="toggle-text">
+            <span>{$t('virustotal.autoScanLinks')}</span>
+            <p class="hint">{$t('virustotal.autoScanLinksHint')}</p>
+          </div>
+          <ToggleSwitch
+            checked={$virusTotal.autoScanLinks}
+            label={$t('virustotal.autoScanLinks')}
+            disabled={vtBusy}
+            on:change={(e) => runVT(() => setVirusTotalAutoScanLinks(e.detail))}
+          />
+        </div>
+
+        <div class="toggle-row">
+          <div class="toggle-text">
+            <span>{$t('virustotal.autoScanAttachments')}</span>
+            <p class="hint">{$t('virustotal.autoScanAttachmentsHint')}</p>
+          </div>
+          <ToggleSwitch
+            checked={$virusTotal.autoScanAttachments}
+            label={$t('virustotal.autoScanAttachments')}
+            disabled={vtBusy}
+            on:change={(e) => runVT(() => setVirusTotalAutoScanAttachments(e.detail))}
+          />
+        </div>
+
+        <p class="hint last">{$t('virustotal.privacyNote')}</p>
+      {/if}
+    {/if}
+  </div>
 {/if}
 
 <style>
@@ -180,6 +288,10 @@
     border-radius: var(--radius-card);
     padding: var(--space-4);
     background: var(--surface-raised);
+  }
+
+  .card + .card {
+    margin-top: var(--space-4);
   }
 
   .card-head {
@@ -285,5 +397,46 @@
 
   .self-start {
     align-self: flex-start;
+  }
+
+  .toggle-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--space-4);
+    padding-top: var(--space-3);
+    border-top: var(--hairline) solid var(--border-subtle);
+  }
+
+  .toggle-text {
+    min-width: 0;
+  }
+
+  .toggle-text span {
+    font-size: var(--fz-label);
+    color: var(--text-primary);
+  }
+
+  .toggle-text .hint {
+    margin: 2px 0 0;
+  }
+
+  .hint.last {
+    margin: var(--space-3) 0 0;
+  }
+
+  /* an inline text link that opens in the external browser; a button rather
+     than an anchor so nothing can navigate the app's own window. */
+  .link {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 0;
+    border: none;
+    background: none;
+    color: var(--link);
+    font-size: inherit;
+    cursor: pointer;
+    text-decoration: underline;
   }
 </style>

@@ -14,12 +14,17 @@
     IconPrinter,
     IconInfoCircle,
     IconCode,
+    IconShieldSearch,
   } from '@tabler/icons-svelte'
   import IconButton from '../common/IconButton.svelte'
   import { t } from '../../lib/i18n'
   import { online } from '../../stores/network'
 
   export let flagged: boolean = false
+  /** whether the VirusTotal scan action is offered. */
+  export let canScan: boolean = false
+  /** whether a scan of this message is currently running. */
+  export let scanning: boolean = false
 
   const dispatch = createEventDispatcher<{
     reply: void
@@ -31,6 +36,7 @@
     print: void
     info: void
     source: void
+    scan: void
   }>()
 
   $: flagLabel = flagged ? $t('detail.toolbar.unflag') : $t('detail.toolbar.flag')
@@ -62,6 +68,17 @@
   <IconButton label={$t('action.delete')} danger on:click={() => dispatch('delete')}>
     <IconTrash size={18} stroke={1.6} />
   </IconButton>
+
+  {#if canScan}
+    <IconButton
+      label={$t('virustotal.scanMessage')}
+      title={$online ? $t('virustotal.scanMessage') : $t('common.network.offlineTitle')}
+      disabled={scanning || !$online}
+      on:click={() => dispatch('scan')}
+    >
+      <IconShieldSearch size={18} stroke={1.6} />
+    </IconButton>
+  {/if}
 
   <span class="divider" aria-hidden="true"></span>
 
