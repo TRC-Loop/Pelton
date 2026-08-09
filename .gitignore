@@ -28,8 +28,9 @@ frontend/dist
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
 
-# Dependency directories (remove the comment below to include it)
-# vendor/
+# Dependency directories. The flathub source tarball is built by running
+# `go mod vendor`, so this can appear locally; it must never be committed.
+vendor/
 
 # Go workspace file
 go.work

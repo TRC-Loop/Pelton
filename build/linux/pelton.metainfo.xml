@@ -44,12 +44,39 @@
     <keyword>inbox</keyword>
   </keywords>
 
-  <url type="homepage">https://github.com/TRC-Loop/Pelton</url>
+  <url type="homepage">https://pelton.app</url>
   <url type="bugtracker">https://github.com/TRC-Loop/Pelton/issues</url>
+  <url type="help">https://docs.pelton.app</url>
+  <url type="vcs-browser">https://github.com/TRC-Loop/Pelton</url>
 
   <content_rating type="oars-1.1" />
 
+  <!--
+    Flathub requires at least one screenshot and re-hosts what it finds here,
+    so these point at the default branch rather than a tag: a tagged url would
+    have to be bumped in lockstep with every release or the listing would show
+    the images of whichever version was submitted.
+  -->
+  <screenshots>
+    <screenshot type="default">
+      <image>https://raw.githubusercontent.com/TRC-Loop/Pelton/main/docs/assets/screenshots/screenshot-inbox-dark.png</image>
+      <caption>The unified inbox with a message open in the reading pane</caption>
+    </screenshot>
+    <screenshot>
+      <image>https://raw.githubusercontent.com/TRC-Loop/Pelton/main/docs/assets/screenshots/screenshot-inbox-light.png</image>
+      <caption>Light mode, with every account's mailboxes and saved views</caption>
+    </screenshot>
+    <screenshot>
+      <image>https://raw.githubusercontent.com/TRC-Loop/Pelton/main/docs/assets/screenshots/screenshot-message-actions.png</image>
+      <caption>Reply, colour tags, snooze and move from the message menu</caption>
+    </screenshot>
+    <screenshot>
+      <image>https://raw.githubusercontent.com/TRC-Loop/Pelton/main/docs/assets/screenshots/screenshot-compose.png</image>
+      <caption>Composing in markdown, with send later</caption>
+    </screenshot>
+  </screenshots>
+
   <releases>
-    <release version="1.0.4" date="2026-07-11" />
+    <release version="2026.3.3" date="2026-08-08" />
   </releases>
 </component>

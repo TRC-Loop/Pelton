@@ -91,7 +91,21 @@ Pelton is a modern, Free and Open-Source Software (FOSS) email client written in
 
 ## <img src="https://api.iconify.design/tabler/photo.svg?color=white" width="26" style="vertical-align: -4px;"> Gallery
 
-*(Screenshots and UI previews will be placed here soon!)*
+<img src="docs/assets/screenshots/screenshot-inbox-dark.png" alt="The unified inbox in dark mode, with a message open in the reading pane" width="100%">
+
+<table>
+<tr>
+<td width="50%"><img src="docs/assets/screenshots/screenshot-inbox-light.png" alt="The same unified inbox in light mode, showing per-account mailboxes and saved views"></td>
+<td width="50%"><img src="docs/assets/screenshots/screenshot-message-actions.png" alt="The message context menu with reply, colour tags, snooze and move actions"></td>
+</tr>
+<tr>
+<td colspan="2" align="center"><em>Light mode with saved views &middot; the message context menu</em></td>
+</tr>
+</table>
+
+<img src="docs/assets/screenshots/screenshot-compose.png" alt="The compose window in markdown mode with the send later menu open" width="100%">
+
+<p align="center"><em>Composing in plain text, markdown or rich text, with send later</em></p>
 
 ## <img src="https://api.iconify.design/tabler/download.svg?color=white" width="26" style="vertical-align: -4px;"> Installation
 
