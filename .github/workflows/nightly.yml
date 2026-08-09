@@ -399,10 +399,13 @@ jobs:
           SHA: ${{ needs.check.outputs.sha }}
           SHORT_SHA: ${{ needs.check.outputs.short_sha }}
         run: |
+          # nothing is checked out here, so gh has no remote to infer the
+          # repository from and every call needs --repo.
+          #
           # a re-run on the same day replaces the day's release rather than
           # failing, so a half-finished nightly can be rebuilt.
-          if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release delete "$TAG" --yes --cleanup-tag
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release delete "$TAG" --repo "$GITHUB_REPOSITORY" --yes --cleanup-tag
           fi
 
           cat > notes.md <<'NOTES'
@@ -454,6 +457,7 @@ jobs:
           } >> notes.md
 
           gh release create "$TAG" \
+            --repo "$GITHUB_REPOSITORY" \
             --target "$SHA" \
             --title "Nightly $TAG (untested, not a release)" \
             --notes-file notes.md \
@@ -476,12 +480,12 @@ jobs:
           KEEP_TAG: ${{ needs.check.outputs.tag }}
         run: |
           cutoff="$(date -u -d "-$RETENTION_DAYS days" +%s)"
-          gh release list --limit 200 --json tagName,createdAt,isPrerelease \
+          gh release list --repo "$GITHUB_REPOSITORY" --limit 200 --json tagName,createdAt,isPrerelease \
             --jq '.[] | select(.isPrerelease) | select(.tagName | startswith("nightly-")) | "\(.tagName) \(.createdAt)"' \
           | while read -r tag created; do
               [ "$tag" = "$KEEP_TAG" ] && continue
               if [ "$(date -u -d "$created" +%s)" -lt "$cutoff" ]; then
                 echo "deleting $tag (created $created)"
-                gh release delete "$tag" --yes --cleanup-tag
+                gh release delete "$tag" --repo "$GITHUB_REPOSITORY" --yes --cleanup-tag
               fi
             done
