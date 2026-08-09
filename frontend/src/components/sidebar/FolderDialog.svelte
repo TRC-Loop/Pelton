@@ -1,14 +1,16 @@
 <script lang="ts">
-  // the create/rename/delete mailbox dialog (#132). one component for all three
-  // because they share a shape: a folder, a confirmation and a server round trip
-  // that can fail. delete is destructive on the server, so it asks for the
-  // folder's name to be typed rather than offering a plain confirm button.
+  // the create/rename/delete mailbox dialog (#132), which also confirms emptying
+  // the trash. they share a shape: a folder, a confirmation and a server round
+  // trip that can fail. deleting a mailbox asks for its name to be typed rather
+  // than offering a plain confirm button; emptying the trash only confirms,
+  // since the messages in there have already been deleted once.
   import { fade, scale } from 'svelte/transition'
   import { IconX, IconAlertTriangle } from '@tabler/icons-svelte'
   import { folderDialog, closeFolderDialog } from '../../stores/folderdialog'
-  import { createFolder, renameFolder, deleteFolder } from '../../lib/api'
+  import { createFolder, renameFolder, deleteFolder, emptyTrash } from '../../lib/api'
   import { refreshSidebar } from '../../stores/accounts'
-  import { selection, selectView } from '../../stores/selection'
+  import { selection, selectView, openMessageId } from '../../stores/selection'
+  import { loadList } from '../../stores/messages'
   import { toastError, toastInfo, errorMessage } from '../../stores/toast'
   import { t } from '../../lib/i18n'
 
@@ -34,14 +36,19 @@
         : $t('folders.createTitle')
       : request?.mode === 'rename'
         ? $t('folders.renameTitle')
-        : $t('folders.deleteTitle')
+        : request?.mode === 'empty'
+          ? $t('folders.emptyTrashTitle')
+          : $t('folders.deleteTitle')
 
-  // delete needs the exact folder name typed back; the others just need a name
-  // that is non-empty and, for rename, actually different.
+  // delete needs the exact folder name typed back; empty only needs the confirm
+  // button; the others just need a name that is non-empty and, for rename,
+  // actually different.
   $: canSubmit =
     request?.mode === 'delete'
       ? confirmName.trim() === request.folder?.name
-      : name.trim() !== '' && !(request?.mode === 'rename' && name.trim() === request.folder?.name)
+      : request?.mode === 'empty'
+        ? true
+        : name.trim() !== '' && !(request?.mode === 'rename' && name.trim() === request.folder?.name)
 
   function close(): void {
     closeFolderDialog()
@@ -59,6 +66,19 @@
       } else if (request.mode === 'rename') {
         await renameFolder(request.folder!.id, name.trim())
         toastInfo($t('folders.renamed').replace('{name}', name.trim()))
+      } else if (request.mode === 'empty') {
+        const emptied = request.folder!
+        const removed = await emptyTrash(emptied.id)
+        // the rows are hidden from the store's queries the moment they are
+        // marked, but the list already in memory still holds them, so a trash
+        // the user is looking at has to be re-read rather than left stale.
+        if ($selection.kind === 'folder' && $selection.folderId === emptied.id) {
+          // anything open came from the folder just emptied, so the reading
+          // pane would be showing a message that no longer exists.
+          openMessageId.set(null)
+          await loadList($selection)
+        }
+        toastInfo($t('folders.trashEmptied').replace('{count}', String(removed)))
       } else {
         const gone = request.folder!
         await deleteFolder(gone.id)
@@ -117,6 +137,15 @@
         <!-- svelte-ignore a11y-autofocus -->
         <input type="text" bind:value={confirmName} autofocus spellcheck="false" />
       </label>
+    {:else if request.mode === 'empty'}
+      <div class="warn">
+        <span class="warn-icon"><IconAlertTriangle size={17} stroke={1.8} /></span>
+        <p>
+          {$t('folders.emptyTrashWarning')
+            .replace('{count}', String(request.folder?.totalCount ?? 0))
+            .replace('{name}', request.folder?.name ?? '')}
+        </p>
+      </div>
     {:else}
       <label class="field">
         <span>{$t('folders.nameLabel')}</span>
@@ -136,11 +165,17 @@
       <button
         type="button"
         class="go"
-        class:danger={request.mode === 'delete'}
+        class:danger={request.mode === 'delete' || request.mode === 'empty'}
         disabled={!canSubmit || busy}
         on:click={submit}
       >
-        {request.mode === 'delete' ? $t('action.delete') : $t('folders.save')}
+        {#if request.mode === 'delete'}
+          {$t('action.delete')}
+        {:else if request.mode === 'empty'}
+          {$t('folders.emptyTrashConfirm')}
+        {:else}
+          {$t('folders.save')}
+        {/if}
       </button>
     </div>
   </div>

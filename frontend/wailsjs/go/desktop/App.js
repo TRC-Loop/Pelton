@@ -106,6 +106,10 @@ export function DownloadRange(arg1, arg2) {
   return window['go']['desktop']['App']['DownloadRange'](arg1, arg2);
 }
 
+export function EmptyTrash(arg1) {
+  return window['go']['desktop']['App']['EmptyTrash'](arg1);
+}
+
 export function ExportData(arg1, arg2) {
   return window['go']['desktop']['App']['ExportData'](arg1, arg2);
 }
