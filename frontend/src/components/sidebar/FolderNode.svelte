@@ -25,7 +25,7 @@
   import { reorder, type ReorderDetail } from '../../lib/reorder'
   import { selection, selectFolder } from '../../stores/selection'
   import { openContextMenu, type MenuEntry } from '../../stores/contextmenu'
-  import { openCreateFolder, openRenameFolder, openDeleteFolder } from '../../stores/folderdialog'
+  import { openCreateFolder, openRenameFolder, openDeleteFolder, openEmptyTrash } from '../../stores/folderdialog'
   import { startFolderDrag, endFolderDrag } from '../../stores/sidebardrag'
   import { refreshSidebar } from '../../stores/accounts'
   import { reorderFolders, setFolderPinned } from '../../lib/api'
@@ -45,6 +45,9 @@
   $: manageable = folder.role === 'normal'
   // nesting needs a hierarchy delimiter; a flat server has none.
   $: nestable = folder.delimiter !== ''
+  // emptying is only offered on the trash, and only when there is something in
+  // it, so the menu never carries an action that would do nothing.
+  $: emptiable = folder.role === 'trash' && folder.totalCount > 0
 
   async function onReorder(event: CustomEvent<ReorderDetail>): Promise<void> {
     try {
@@ -73,6 +76,15 @@
         action: () => void togglePinned(),
       },
     ]
+    if (emptiable) {
+      entries.push('separator')
+      entries.push({
+        label: $t('folders.emptyTrash'),
+        icon: IconTrash,
+        danger: true,
+        action: () => openEmptyTrash(folder),
+      })
+    }
     if (nestable) {
       entries.push('separator')
       entries.push({

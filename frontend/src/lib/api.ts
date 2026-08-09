@@ -144,6 +144,13 @@ export function deleteFolder(id: number): Promise<void> {
   return App.DeleteFolder(id)
 }
 
+// emptyTrash permanently deletes every message in a trash folder and resolves
+// with how many it removed. The backend refuses any folder that is not the
+// account's trash. Destructive and not undoable: confirm before calling.
+export function emptyTrash(folderId: number): Promise<number> {
+  return App.EmptyTrash(folderId)
+}
+
 // listUnifiedViews returns the cross-account views with aggregate counts.
 export function listUnifiedViews(): Promise<UnifiedView[]> {
   if (isDemoActive()) {

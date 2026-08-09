@@ -183,6 +183,51 @@ func (a *App) DeleteFolder(id int64) error {
 	return nil
 }
 
+// errNotTrash is returned when EmptyTrash is pointed at a folder that is not
+// the account's trash. Emptying is unrecoverable, so the role is checked here
+// rather than trusted from the caller.
+var errNotTrash = errors.New("pelton: that folder is not a trash folder")
+
+// EmptyTrash deletes every message in a trash folder and returns how many it
+// marked. It is the same delete the per-message action performs, applied to the
+// whole folder: the rows are marked pending (which takes them out of the lists
+// at once) and the server expunge is pushed by a folder sync started in the
+// background, so a failed or offline push is retried by the next regular sync
+// instead of being lost.
+//
+// Nothing is moved anywhere. Messages in the trash have already been deleted
+// once; this is the second, permanent one.
+func (a *App) EmptyTrash(folderID int64) (int, error) {
+	if err := a.ready(); err != nil {
+		return 0, err
+	}
+	folder, err := a.store.GetFolder(a.ctx, folderID)
+	if err != nil {
+		return 0, err
+	}
+	if folderRole(*folder) != roleTrash {
+		return 0, errNotTrash
+	}
+
+	marked, err := a.store.MarkFolderDeletePending(a.ctx, folderID)
+	if err != nil {
+		return 0, err
+	}
+	if marked == 0 {
+		return 0, nil
+	}
+
+	go a.refreshViewCounts()
+	go func() {
+		if err := a.withAccountIMAP(folder.AccountID, func(client *pimap.Client) error {
+			return a.syncOneFolder(client, *folder)
+		}); err != nil {
+			a.log.Error("push emptied trash", "folder", folder.ID, "err", err)
+		}
+	}()
+	return marked, nil
+}
+
 // subtreeFolders returns the folder and everything nested under it, shallowest
 // first. On a flat server a folder has no descendants by definition.
 func (a *App) subtreeFolders(folder storage.Folder) ([]storage.Folder, error) {

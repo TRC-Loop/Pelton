@@ -6,7 +6,7 @@ import { writable } from 'svelte/store'
 import type { Folder } from '../lib/types'
 
 /** What the dialog is being opened for. */
-export type FolderDialogMode = 'create' | 'rename' | 'delete'
+export type FolderDialogMode = 'create' | 'rename' | 'delete' | 'empty'
 
 /** An open request for the folder dialog. */
 export interface FolderDialogRequest {
@@ -34,6 +34,15 @@ export function openRenameFolder(folder: Folder): void {
 /** Opens the delete confirmation for a mailbox. */
 export function openDeleteFolder(folder: Folder): void {
   folderDialog.set({ mode: 'delete', accountId: folder.accountId, folder })
+}
+
+/**
+ * Opens the confirmation for permanently deleting everything in the trash. The
+ * folder is already the discard pile, so this confirms rather than asking for
+ * the name to be typed back the way deleting a whole mailbox does.
+ */
+export function openEmptyTrash(folder: Folder): void {
+  folderDialog.set({ mode: 'empty', accountId: folder.accountId, folder })
 }
 
 /** Closes the dialog without acting. */

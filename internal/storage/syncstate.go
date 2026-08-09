@@ -82,6 +82,23 @@ func (d *DB) MarkDeletePending(ctx context.Context, id int64) error {
 	return requireOneRow(res, ErrMessageNotFound)
 }
 
+// MarkFolderDeletePending marks every cached message in a folder for deletion
+// in one statement and returns how many rows it marked. Rows already pending
+// are left alone and not counted again, so emptying a folder twice reports 0
+// the second time rather than double counting what is already on its way out.
+func (d *DB) MarkFolderDeletePending(ctx context.Context, folderID int64) (int, error) {
+	res, err := d.sql.ExecContext(ctx,
+		`UPDATE messages SET pending_delete = 1 WHERE folder_id = ? AND pending_delete = 0`, folderID)
+	if err != nil {
+		return 0, fmt.Errorf("storage: mark folder %d delete pending: %w", folderID, err)
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return 0, fmt.Errorf("storage: rows affected: %w", err)
+	}
+	return int(n), nil
+}
+
 // ClearDeletePending undoes a pending local deletion, as long as the row is still
 // cached (a sync has not yet expunged it on the server and dropped it locally).
 func (d *DB) ClearDeletePending(ctx context.Context, id int64) error {
