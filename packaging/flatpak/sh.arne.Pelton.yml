@@ -1,0 +1,97 @@
+# Flathub manifest for Pelton (#201).
+#
+# This file is the source of truth; the copy in the flathub/sh.arne.Pelton
+# repository is what Flathub actually builds. See README.md next to this file
+# for how to submit it and how to bump it for a release.
+#
+# Flathub builds with no network access, so nothing here may fetch anything at
+# build time. The single source is the vendored tarball produced by the
+# release workflow: repository sources plus Go's vendor/ and a symlink-free
+# frontend/node_modules.
+id: sh.arne.Pelton
+
+runtime: org.gnome.Platform
+runtime-version: '50'
+sdk: org.gnome.Sdk
+
+# Pelton is a Wails v2 app, so it needs webkit2gtk-4.1 (present in the GNOME
+# runtime) plus a Go toolchain and Node to build the frontend.
+sdk-extensions:
+  - org.freedesktop.Sdk.Extension.golang
+  - org.freedesktop.Sdk.Extension.node22
+
+command: pelton
+
+# The Linux release is amd64 only.
+only-arches:
+  - x86_64
+
+finish-args:
+  - --share=ipc
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --device=dri
+  # IMAP, SMTP and, when the user turns them on, update checks and VirusTotal
+  # lookups. Nothing else leaves the machine.
+  - --share=network
+  # Account passwords and OAuth tokens live in the OS keyring, never on disk.
+  - --talk-name=org.freedesktop.secrets
+  # New-mail notifications.
+  - --talk-name=org.freedesktop.Notifications
+  # Wails v2 opens GTK file chooser dialogs directly rather than through the
+  # document portal, so the sandbox has to be able to see what the user picks.
+  # Saving an attachment or exporting a backup to an arbitrary directory would
+  # silently fail with a narrower filesystem permission.
+  - --filesystem=home
+
+cleanup:
+  - /include
+  - /lib/pkgconfig
+  - /share/pkgconfig
+
+modules:
+  - name: pelton
+    buildsystem: simple
+
+    build-options:
+      append-path: /usr/lib/sdk/golang/bin:/usr/lib/sdk/node22/bin
+      env:
+        GOPATH: /run/build/pelton/.gopath
+        GOCACHE: /run/build/pelton/.gocache
+        GOFLAGS: -mod=vendor
+        GOTOOLCHAIN: local
+
+    build-commands:
+      - cd frontend && node node_modules/vite/bin/vite.js build
+      # The tag is read from the VERSION file the release workflow puts in the
+      # tarball, so a version bump here is only ever the url and its checksum
+      # and the external data checker can do it unattended.
+      - go build -tags webkit2_41 -ldflags "-s -w -X main.version=$(cat VERSION)" -o pelton .
+      - install -Dm755 pelton /app/bin/pelton
+      - install -Dm644 build/icons/pelton-512.png
+        /app/share/icons/hicolor/512x512/apps/sh.arne.Pelton.png
+      - install -Dm644 build/linux/pelton.desktop
+        /app/share/applications/sh.arne.Pelton.desktop
+      - install -Dm644 build/linux/pelton.metainfo.xml
+        /app/share/metainfo/sh.arne.Pelton.metainfo.xml
+      # The .desktop and .metainfo files are shared with the .deb/.rpm, which
+      # install them under the plain "pelton" name. Flatpak requires both to
+      # carry the application id instead, so point them at the renamed files
+      # here rather than forking a second copy of each.
+      - desktop-file-edit --set-icon=sh.arne.Pelton
+        /app/share/applications/sh.arne.Pelton.desktop
+      - sed -i 's|>pelton\.desktop<|>sh.arne.Pelton.desktop<|'
+        /app/share/metainfo/sh.arne.Pelton.metainfo.xml
+
+    sources:
+      - type: archive
+        url: https://github.com/TRC-Loop/Pelton/releases/download/v2026.3.3/Pelton-v2026.3.3-vendored.tar.gz
+        sha256: 0000000000000000000000000000000000000000000000000000000000000000
+        # Lets Flathub's external data checker open the version bump PR on its
+        # own once a release publishes the tarball.
+        x-checker-data:
+          type: json
+          url: https://api.github.com/repos/TRC-Loop/Pelton/releases/latest
+          version-query: .tag_name
+          url-query: '"https://github.com/TRC-Loop/Pelton/releases/download/"
+            + $version + "/Pelton-" + $version + "-vendored.tar.gz"'
