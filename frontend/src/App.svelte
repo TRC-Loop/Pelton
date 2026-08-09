@@ -27,6 +27,7 @@
   import { initSidebarState } from './stores/sidebarstate'
   import { loadSignatures } from './stores/signatures'
   import { loadVIPSenders } from './stores/vip'
+  import { loadVirusTotalConfig } from './stores/virustotal'
   import { loadOutbox, syncing, lastSynced, syncFolder } from './stores/outbox'
   import { selection, applyStartupSelection } from './stores/selection'
   import { loadList, messageList } from './stores/messages'
@@ -154,6 +155,7 @@
     void initMenuBar()
     void loadSignatures()
     void loadVIPSenders()
+    void loadVirusTotalConfig()
     initProgress()
     await loadSidebar()
     // the sidebar data has to be here first: a configured or remembered folder

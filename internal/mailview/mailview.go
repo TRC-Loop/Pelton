@@ -10,6 +10,7 @@
 package mailview
 
 import (
+	stdhtml "html"
 	"regexp"
 	"strings"
 	"unicode/utf8"
@@ -142,6 +143,70 @@ func RemoteHosts(html string) []string {
 		out = append(out, host)
 		if len(out) >= 8 {
 			break
+		}
+	}
+	return out
+}
+
+// maxLinks caps how many distinct links Links returns, so a message built out
+// of thousands of anchors cannot turn one scan into thousands of lookups.
+const maxLinks = 100
+
+// anchorHrefPattern captures the href of an anchor, quoted or bare.
+var anchorHrefPattern = regexp.MustCompile(`(?i)<a\b[^>]*?\bhref\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))`)
+
+// bareURLPattern finds http(s) urls in plain text, where nothing has marked
+// them up as links. It matches what the ui's own linkifier treats as a link, so
+// a scanned url is the same string the reader sees underlined.
+var bareURLPattern = regexp.MustCompile(`(?i)https?://[^\s<>"')\]]+`)
+
+// plainTrailing is sentence punctuation that follows a bare url rather than
+// belonging to it. Anchor hrefs are never trimmed this way: there the target is
+// stated exactly, and a url that genuinely ends in a bracket would otherwise be
+// scanned as a different address than the one the link points at.
+const plainTrailing = ".,;:!?"
+
+// Links returns the unique http(s) urls a message points at: anchor targets in
+// the html part, and bare urls in the plain text part. Image sources and other
+// embedded resources are deliberately excluded, since those are remote content
+// (which the sanitizer already handles) rather than something the reader can
+// click. Order is the order of first appearance, and the result is capped at
+// maxLinks.
+//
+// Each url is exactly the string the reader can click, so a verdict can be
+// matched back to the link it belongs to: an anchor's href verbatim, and for
+// plain text the same span the ui's own linkifier underlines.
+func Links(html, plain string) []string {
+	seen := make(map[string]bool)
+	out := make([]string, 0, 8)
+
+	add := func(raw string, trimTrailing bool) bool {
+		url := strings.TrimSpace(stdhtml.UnescapeString(raw))
+		if trimTrailing {
+			url = strings.TrimRight(url, plainTrailing)
+		}
+		lower := strings.ToLower(url)
+		if !strings.HasPrefix(lower, "http://") && !strings.HasPrefix(lower, "https://") {
+			return true
+		}
+		if seen[url] {
+			return true
+		}
+		seen[url] = true
+		out = append(out, url)
+		return len(out) < maxLinks
+	}
+
+	for _, m := range anchorHrefPattern.FindAllStringSubmatch(html, -1) {
+		// exactly one of the three alternatives matched.
+		href := m[1] + m[2] + m[3]
+		if !add(href, false) {
+			return out
+		}
+	}
+	for _, m := range bareURLPattern.FindAllString(plain, -1) {
+		if !add(m, true) {
+			return out
 		}
 	}
 	return out

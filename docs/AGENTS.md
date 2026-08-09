@@ -21,7 +21,11 @@ Pelton is a free, open source, privacy-focused email client for macOS, Windows a
 
 ## Network behavior
 
-Only: user's IMAP/SMTP servers; GitHub releases API if update check enabled (default off); BIMI/Gravatar avatar lookups unless avatar source set to generated; remote mail images only after user approval (default blocked). No telemetry.
+Only: user's IMAP/SMTP servers; GitHub releases API if update check enabled (default off); BIMI/Gravatar avatar lookups unless avatar source set to generated; remote mail images only after user approval (default blocked); VirusTotal lookups if the user enables the integration and supplies an API key (default off). No telemetry.
+
+## VirusTotal integration
+
+Off by default, Settings > External. Requires the user's own API key, stored in the OS keyring. Read-only v3 API: `GET /urls/{base64url_nopad(url)}` and `GET /files/{sha256}`. Never submits or uploads; attachments are looked up by hash only, so an unknown file stays unknown. Auto-scan of links and of attachments are separate toggles, both off by default; on-demand scanning is via right-click on a link or attachment, or the shield button in the message toolbar for a whole message. Verdicts cached locally 7 days, max 25 targets per scan; disabling the integration or clearing the key deletes the cache.
 
 ## Mail providers
 

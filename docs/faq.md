@@ -12,6 +12,7 @@ No. There is no telemetry and nothing to opt out of. The complete list of networ
 - the GitHub releases API, only if you enable update checks (off by default)
 - BIMI and Gravatar lookups for sender avatars, unless you switch the avatar source to generated placeholders
 - remote images inside mails, only after you allow them (blocked by default)
+- VirusTotal, only if you enable the integration and supply your own API key (off by default, see [Scanning links and attachments](virustotal.md))
 
 Nothing else, ever. Themes with remote CSS references are flagged at import for exactly this reason.
 

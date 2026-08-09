@@ -160,6 +160,62 @@ export namespace desktop {
 	        this.inline = source["inline"];
 	    }
 	}
+	export class VerdictDTO {
+	    status: string;
+	    malicious: number;
+	    suspicious: number;
+	    total: number;
+	    permalink: string;
+	    error: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new VerdictDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.status = source["status"];
+	        this.malicious = source["malicious"];
+	        this.suspicious = source["suspicious"];
+	        this.total = source["total"];
+	        this.permalink = source["permalink"];
+	        this.error = source["error"];
+	    }
+	}
+	export class AttachmentVerdictDTO {
+	    attachmentId: number;
+	    filename: string;
+	    verdict: VerdictDTO;
+	
+	    static createFrom(source: any = {}) {
+	        return new AttachmentVerdictDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.attachmentId = source["attachmentId"];
+	        this.filename = source["filename"];
+	        this.verdict = this.convertValues(source["verdict"], VerdictDTO);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
 	export class BackupInfoDTO {
 	    path: string;
 	    createdAt: string;
@@ -414,6 +470,38 @@ export namespace desktop {
 	        this.exampleFrom = source["exampleFrom"];
 	    }
 	}
+	export class LinkVerdictDTO {
+	    url: string;
+	    verdict: VerdictDTO;
+	
+	    static createFrom(source: any = {}) {
+	        return new LinkVerdictDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.url = source["url"];
+	        this.verdict = this.convertValues(source["verdict"], VerdictDTO);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
 	export class ListMessagesRequest {
 	    kind: string;
 	    folderId: number;
@@ -640,6 +728,38 @@ export namespace desktop {
 	        this.messages = this.convertValues(source["messages"], MessageSummaryDTO);
 	        this.total = source["total"];
 	        this.hasOlder = source["hasOlder"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class MessageScanDTO {
+	    links: LinkVerdictDTO[];
+	    attachments: AttachmentVerdictDTO[];
+	
+	    static createFrom(source: any = {}) {
+	        return new MessageScanDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.links = this.convertValues(source["links"], LinkVerdictDTO);
+	        this.attachments = this.convertValues(source["attachments"], AttachmentVerdictDTO);
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
@@ -1207,6 +1327,7 @@ export namespace desktop {
 	        this.count = source["count"];
 	    }
 	}
+	
 	export class ViewDTO {
 	    id: number;
 	    name: string;
@@ -1249,6 +1370,24 @@ export namespace desktop {
 	        this.position = source["position"];
 	        this.unreadCount = source["unreadCount"];
 	        this.totalCount = source["totalCount"];
+	    }
+	}
+	export class VirusTotalConfigDTO {
+	    enabled: boolean;
+	    hasApiKey: boolean;
+	    autoScanLinks: boolean;
+	    autoScanAttachments: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new VirusTotalConfigDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.enabled = source["enabled"];
+	        this.hasApiKey = source["hasApiKey"];
+	        this.autoScanLinks = source["autoScanLinks"];
+	        this.autoScanAttachments = source["autoScanAttachments"];
 	    }
 	}
 

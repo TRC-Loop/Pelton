@@ -84,6 +84,8 @@ export function GetUIPrefs():Promise<desktop.UIPrefsDTO>;
 
 export function GetUserLocale(arg1:string):Promise<desktop.UserLocaleApplyDTO>;
 
+export function GetVirusTotalConfig():Promise<desktop.VirusTotalConfigDTO>;
+
 export function ImportData(arg1:string,arg2:Array<string>,arg3:string):Promise<void>;
 
 export function InspectBackupFile():Promise<desktop.BackupInfoDTO>;
@@ -180,6 +182,12 @@ export function SaveSignature(arg1:desktop.SignatureDTO):Promise<desktop.Signatu
 
 export function SaveView(arg1:desktop.ViewDTO):Promise<desktop.ViewDTO>;
 
+export function ScanAttachment(arg1:number,arg2:number):Promise<desktop.VerdictDTO>;
+
+export function ScanMessage(arg1:number,arg2:boolean,arg3:boolean):Promise<desktop.MessageScanDTO>;
+
+export function ScanURL(arg1:string):Promise<desktop.VerdictDTO>;
+
 export function Search(arg1:desktop.SearchRequestDTO):Promise<Array<desktop.MessageSummaryDTO>>;
 
 export function SearchAddresses(arg1:string,arg2:number):Promise<Array<desktop.AddressBookEntryDTO>>;
@@ -209,6 +217,14 @@ export function SetProxyConfig(arg1:desktop.ProxyConfigDTO):Promise<void>;
 export function SetSeen(arg1:number,arg2:boolean):Promise<void>;
 
 export function SetSetting(arg1:string,arg2:string):Promise<void>;
+
+export function SetVirusTotalAPIKey(arg1:string):Promise<void>;
+
+export function SetVirusTotalAutoScanAttachments(arg1:boolean):Promise<void>;
+
+export function SetVirusTotalAutoScanLinks(arg1:boolean):Promise<void>;
+
+export function SetVirusTotalEnabled(arg1:boolean):Promise<void>;
 
 export function SetWindowTheme(arg1:boolean):Promise<void>;
 

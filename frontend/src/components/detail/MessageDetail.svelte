@@ -13,7 +13,16 @@
   import ErrorState from '../common/ErrorState.svelte'
   import { openMessageId } from '../../stores/selection'
   import { messageDetail, loadMessage, clearMessage } from '../../stores/message'
-  import { setFlagged, deleteMessage, archiveMessage } from '../../lib/api'
+  import { setFlagged, deleteMessage, archiveMessage, scanMessage } from '../../lib/api'
+  import {
+    virusTotal,
+    scanning,
+    scanEnabled,
+    resetVerdicts,
+    putLinkVerdict,
+    putAttachmentVerdict,
+    currentVerdictMessage,
+  } from '../../stores/virustotal'
   import { removeFromList, patchInList } from '../../stores/messages'
   import { recordDeleted } from '../../stores/undodelete'
   import { recordArchived } from '../../stores/undoarchive'
@@ -38,6 +47,45 @@
   $: if ($openMessageId === null && loadedId !== -1) {
     loadedId = -1
     clearMessage()
+  }
+
+  $: canScan = scanEnabled($virusTotal)
+
+  // a message opening clears the previous one's verdicts, then auto-scans
+  // whichever targets the user turned on. autoScannedId keeps that to one pass
+  // per message, since the reactive block also re-runs on unrelated changes.
+  let autoScannedId = -1
+  $: if ($messageDetail.data && currentVerdictMessage() !== $messageDetail.data.id) {
+    resetVerdicts($messageDetail.data.id)
+  }
+  $: if (canScan && $messageDetail.data && $messageDetail.data.id !== autoScannedId) {
+    autoScannedId = $messageDetail.data.id
+    if ($virusTotal.autoScanLinks || $virusTotal.autoScanAttachments) {
+      void runScan($messageDetail.data.id, $virusTotal.autoScanLinks, $virusTotal.autoScanAttachments)
+    }
+  }
+
+  // runScan scans a message's links, attachments or both, and files each result
+  // against the message it belongs to so a slow scan cannot land on whatever
+  // message the user moved on to.
+  async function runScan(messageId: number, links: boolean, attachments: boolean): Promise<void> {
+    if (get(scanning)) {
+      return
+    }
+    scanning.set(true)
+    try {
+      const result = await scanMessage(messageId, links, attachments)
+      for (const link of result.links) {
+        putLinkVerdict(messageId, link.url, link.verdict)
+      }
+      for (const att of result.attachments) {
+        putAttachmentVerdict(messageId, att.attachmentId, att.verdict)
+      }
+    } catch (err) {
+      toastError(errorMessage(err))
+    } finally {
+      scanning.set(false)
+    }
   }
 
   async function toggleFlag(detail: MessageDetail): Promise<void> {
@@ -164,6 +212,9 @@ ${bodyHtml}
     <div class="toolbar-bar">
       <ActionToolbar
         flagged={detail.flagged}
+        {canScan}
+        scanning={$scanning}
+        on:scan={() => runScan(detail.id, true, true)}
         on:reply={() => openReply(detail, replyMode, false)}
         on:replyAll={() => openReply(detail, replyMode, true)}
         on:forward={() => openForward(detail, replyMode)}

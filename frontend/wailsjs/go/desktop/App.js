@@ -166,6 +166,10 @@ export function GetUserLocale(arg1) {
   return window['go']['desktop']['App']['GetUserLocale'](arg1);
 }
 
+export function GetVirusTotalConfig() {
+  return window['go']['desktop']['App']['GetVirusTotalConfig']();
+}
+
 export function ImportData(arg1, arg2, arg3) {
   return window['go']['desktop']['App']['ImportData'](arg1, arg2, arg3);
 }
@@ -358,6 +362,18 @@ export function SaveView(arg1) {
   return window['go']['desktop']['App']['SaveView'](arg1);
 }
 
+export function ScanAttachment(arg1, arg2) {
+  return window['go']['desktop']['App']['ScanAttachment'](arg1, arg2);
+}
+
+export function ScanMessage(arg1, arg2, arg3) {
+  return window['go']['desktop']['App']['ScanMessage'](arg1, arg2, arg3);
+}
+
+export function ScanURL(arg1) {
+  return window['go']['desktop']['App']['ScanURL'](arg1);
+}
+
 export function Search(arg1) {
   return window['go']['desktop']['App']['Search'](arg1);
 }
@@ -416,6 +432,22 @@ export function SetSeen(arg1, arg2) {
 
 export function SetSetting(arg1, arg2) {
   return window['go']['desktop']['App']['SetSetting'](arg1, arg2);
+}
+
+export function SetVirusTotalAPIKey(arg1) {
+  return window['go']['desktop']['App']['SetVirusTotalAPIKey'](arg1);
+}
+
+export function SetVirusTotalAutoScanAttachments(arg1) {
+  return window['go']['desktop']['App']['SetVirusTotalAutoScanAttachments'](arg1);
+}
+
+export function SetVirusTotalAutoScanLinks(arg1) {
+  return window['go']['desktop']['App']['SetVirusTotalAutoScanLinks'](arg1);
+}
+
+export function SetVirusTotalEnabled(arg1) {
+  return window['go']['desktop']['App']['SetVirusTotalEnabled'](arg1);
 }
 
 export function SetWindowTheme(arg1) {
