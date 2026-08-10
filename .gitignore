@@ -2,6 +2,12 @@ build/bin
 node_modules
 frontend/dist
 
+# wails' marker for whether the frontend deps need reinstalling. It is a local
+# build cache keyed on package.json, rewritten by every build, so tracking it
+# meant a dependency bump left the tree dirty until someone built. Wails writes
+# it (and installs) when it is missing, so a fresh clone is unaffected.
+frontend/package.json.md5
+
 # compiled binaries at repo root
 /Pelton
 /Pelton.exe
