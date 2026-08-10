@@ -31,6 +31,17 @@ import {
   IconMailX,
   IconSearch,
   IconBookmarkPlus,
+  IconBookmarkEdit,
+  IconStar,
+  IconFolderSymlink,
+  IconPalette,
+  IconDownloadOff,
+  IconFolderPlus,
+  IconFolderX,
+  IconTrashX,
+  IconPin,
+  IconBrush,
+  IconCommand,
 } from '@tabler/icons-svelte'
 import type { ShortcutAction } from './shortcuts'
 import { isMac } from './i18n'
@@ -81,6 +92,7 @@ export const menuActionCatalog: MenuActionDef[] = [
   { action: 'add-mailbox', labelKey: 'menu.addMailbox', iconName: 'plus', icon: IconPlus },
   { action: 'open-mailboxes', labelKey: 'menu.manageMailboxes', iconName: 'mailbox', icon: IconMailbox },
   { action: 'search', labelKey: 'shortcut.search', iconName: 'search', icon: IconSearch },
+  { action: 'command-palette', labelKey: 'shortcut.commandPalette', iconName: 'command', icon: IconCommand },
   { action: 'undo', labelKey: 'menu.undo', iconName: 'arrow-back-up', icon: IconArrowBackUp, hint: 'mod+z' },
   { action: 'reply', labelKey: 'shortcut.reply', iconName: 'corner-up-left', icon: IconCornerUpLeft, needsMessage: true },
   { action: 'reply-all', labelKey: 'shortcut.replyAll', iconName: 'corner-up-left-double', icon: IconCornerUpLeftDouble, needsMessage: true },
@@ -94,8 +106,19 @@ export const menuActionCatalog: MenuActionDef[] = [
   { action: 'delete-message', labelKey: 'menu.deleteMessage', iconName: 'trash', icon: IconTrash, needsMessage: true, danger: true },
   { action: 'unsubscribe', labelKey: 'shortcut.unsubscribe', iconName: 'mail-x', icon: IconMailX, needsMessage: true },
   { action: 'new-view', labelKey: 'views.new', iconName: 'bookmark-plus', icon: IconBookmarkPlus },
+  { action: 'edit-view', labelKey: 'palette.action.editView', iconName: 'bookmark-edit', icon: IconBookmarkEdit },
   { action: 'toggle-fullscreen', labelKey: 'menu.toggleFullscreen', iconName: 'maximize', icon: IconMaximize },
   { action: 'toggle-low-power', labelKey: 'menu.lowPower', iconName: 'battery-eco', icon: IconBatteryEco },
+  { action: 'mark-vip', labelKey: 'palette.action.markVip', iconName: 'star', icon: IconStar, needsMessage: true },
+  { action: 'move-to', labelKey: 'messageList.menu.moveTo', iconName: 'folder-symlink', icon: IconFolderSymlink, needsMessage: true },
+  { action: 'flag-color', labelKey: 'palette.action.flagColor', iconName: 'palette', icon: IconPalette, needsMessage: true },
+  { action: 'remove-offline', labelKey: 'messageList.menu.removeOffline', iconName: 'download-off', icon: IconDownloadOff, needsMessage: true },
+  { action: 'new-folder', labelKey: 'palette.action.newFolder', iconName: 'folder-plus', icon: IconFolderPlus },
+  { action: 'rename-folder', labelKey: 'palette.action.renameFolder', iconName: 'pencil', icon: IconPencil },
+  { action: 'delete-folder', labelKey: 'palette.action.deleteFolder', iconName: 'folder-x', icon: IconFolderX, danger: true },
+  { action: 'empty-trash', labelKey: 'folders.emptyTrash', iconName: 'trash-x', icon: IconTrashX, danger: true },
+  { action: 'toggle-pin-folder', labelKey: 'palette.action.pinFolder', iconName: 'pin', icon: IconPin },
+  { action: 'apply-theme', labelKey: 'palette.action.applyTheme', iconName: 'brush', icon: IconBrush },
 ]
 
 // catalogByAction resolves an action id to its definition in O(1).

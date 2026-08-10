@@ -7,6 +7,7 @@ Pelton uses ++cmd++ on macOS and ++ctrl++ on Windows and Linux for the same bind
 | Shortcut | Action |
 | -------- | ------ |
 | ++cmd+n++ | Compose a new message |
+| ++cmd+k++ | [Command palette](command-palette.md) |
 | ++cmd+f++ | Search |
 | ++cmd+r++ | Sync now |
 | ++cmd+m++ | Add mailbox |
