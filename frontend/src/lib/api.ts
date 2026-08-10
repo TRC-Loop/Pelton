@@ -94,7 +94,8 @@ export function listAccounts(): Promise<Account[]> {
   return App.ListAccounts()
 }
 
-// updateAccount persists edits to an account's display name and server settings.
+// updateAccount persists edits to an account's display name and server
+// settings. An empty password leaves the stored one alone.
 export function updateAccount(req: {
   id: number
   displayName: string
@@ -103,8 +104,21 @@ export function updateAccount(req: {
   imapPort: number
   smtpHost: string
   smtpPort: number
+  password: string
 }): Promise<Account> {
   return App.UpdateAccount(new desktop.UpdateAccountRequest(req))
+}
+
+// setAccountPassword stores a login password for an account, replacing any
+// existing one. Refused for accounts that sign in with OAuth.
+export function setAccountPassword(accountId: number, password: string): Promise<void> {
+  return App.SetAccountPassword(accountId, password)
+}
+
+// accountsNeedingPassword lists accounts with no stored password, which is the
+// state an account imported from another mail client arrives in.
+export function accountsNeedingPassword(): Promise<Account[]> {
+  return App.AccountsNeedingPassword().then((list) => (list ?? []) as unknown as Account[])
 }
 
 // deleteAccount removes an account, its cached mail and its keyring secret.
