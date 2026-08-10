@@ -106,14 +106,17 @@ export function requestMailSearch(text: string): void {
       afterUnix: 0,
       beforeUnix: 0,
       limit: mailLimit,
+      // the palette shows a short preview of the best matches, so it never
+      // pages: the list is where a full result set is worked through.
+      offset: 0,
       from: '',
       to: '',
       subject: '',
       hasAttachment: false,
     })
-      .then((hits) => {
+      .then((res) => {
         if (seq === mailSeq) {
-          paletteMail.set(hits)
+          paletteMail.set(res.messages)
         }
       })
       .catch(() => {

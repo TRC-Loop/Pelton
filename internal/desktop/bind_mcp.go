@@ -277,8 +277,8 @@ func (m *mcpMailbox) Search(ctx context.Context, params mcpserver.SearchParams) 
 	if err != nil {
 		return nil, err
 	}
-	out := make([]mcpserver.MessageSummary, 0, len(hits))
-	for _, h := range hits {
+	out := make([]mcpserver.MessageSummary, 0, len(hits.Hits))
+	for _, h := range hits.Hits {
 		msg, err := m.app.store.GetMessage(ctx, h.ID)
 		if err != nil {
 			continue

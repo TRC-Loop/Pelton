@@ -585,6 +585,7 @@ const en: Record<string, string> = {
   'messageList.unflag': 'Unflag',
   'messageList.result': 'result',
   'messageList.results': 'results',
+  'messageList.resultsOf': '{loaded} of {total} results',
   'messageList.message': 'message',
   'messageList.messages': 'messages',
   'messageList.ariaLabel': 'Messages',

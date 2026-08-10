@@ -583,6 +583,7 @@ const pl: Record<string, string> = {
   'messageList.unflag': 'Usuń flagę',
   'messageList.result': 'wynik',
   'messageList.results': 'wyniki',
+  'messageList.resultsOf': '{loaded} z {total} wyników',
   'messageList.message': 'wiadomość',
   'messageList.messages': 'wiadomości',
   'messageList.ariaLabel': 'Wiadomości',

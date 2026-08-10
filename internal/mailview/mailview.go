@@ -16,6 +16,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/microcosm-cc/bluemonday"
+	htmltok "golang.org/x/net/html"
 )
 
 // PGPStatus is the detected protection state of a received message. It is a best
@@ -259,12 +260,57 @@ func DetectPGP(plain, html string) PGPStatus {
 	}
 }
 
+// skipTextIn are elements whose text content is markup rather than prose, so it
+// never belongs in a snippet or the search index.
+var skipTextIn = map[string]bool{"script": true, "style": true, "head": true, "title": true}
+
+// PlainText renders html as readable text: element boundaries become
+// whitespace, entities are decoded, and script/style content is dropped. It
+// exists so html-only mail is still searchable and previewable. Callers get
+// prose, not layout: runs of whitespace collapse to a single space.
+func PlainText(markup string) string {
+	if markup == "" {
+		return ""
+	}
+	z := htmltok.NewTokenizer(strings.NewReader(markup))
+	var b strings.Builder
+	// depth of nested elements whose text we are discarding.
+	skip := 0
+	for {
+		switch z.Next() {
+		case htmltok.ErrorToken:
+			// io.EOF or malformed markup: keep whatever was recovered.
+			return strings.Join(strings.Fields(b.String()), " ")
+		case htmltok.TextToken:
+			if skip == 0 {
+				b.Write(z.Text())
+			}
+		case htmltok.StartTagToken:
+			name, _ := z.TagName()
+			if skipTextIn[string(name)] {
+				skip++
+			}
+			// a tag is a word boundary: without this, adjacent blocks glue into
+			// one unsearchable token.
+			b.WriteByte(' ')
+		case htmltok.EndTagToken:
+			name, _ := z.TagName()
+			if skipTextIn[string(name)] && skip > 0 {
+				skip--
+			}
+			b.WriteByte(' ')
+		case htmltok.SelfClosingTagToken:
+			b.WriteByte(' ')
+		}
+	}
+}
+
 // Snippet returns a short plain text preview for the message list. It prefers
-// the plain body and falls back to stripping tags from the html body.
+// the plain body and falls back to the text of the html body.
 func Snippet(plain, html string) string {
 	text := strings.TrimSpace(plain)
 	if text == "" && html != "" {
-		text = strings.TrimSpace(bluemonday.StrictPolicy().Sanitize(html))
+		text = PlainText(html)
 	}
 	text = strings.Join(strings.Fields(text), " ")
 	if len(text) > snippetLen {

@@ -99,3 +99,61 @@ func TestLinksIsCapped(t *testing.T) {
 		t.Errorf("len(Links()) = %d, want %d", got, maxLinks)
 	}
 }
+
+func TestPlainText(t *testing.T) {
+	for _, tt := range []struct {
+		name string
+		html string
+		want string
+	}{
+		{
+			// the reason this exists: tag removal without a separator welds the
+			// last word of one block onto the first of the next, and the result
+			// is a token no search will ever match.
+			name: "block boundaries separate words",
+			html: "<p>hello friends</p><div>invoice 42</div>",
+			want: "hello friends invoice 42",
+		},
+		{
+			name: "entities are decoded",
+			html: "<p>Jane &amp; Co &mdash; caf&eacute;</p>",
+			want: "Jane & Co — café",
+		},
+		{
+			name: "script and style are not prose",
+			html: "<head><style>.a{color:red}</style></head><body><script>var x=1;</script><p>real text</p></body>",
+			want: "real text",
+		},
+		{
+			name: "whitespace collapses",
+			html: "<p>a\n\n   b\t\tc</p>",
+			want: "a b c",
+		},
+		{
+			// mail html is frequently malformed; recovering what is readable
+			// beats returning nothing.
+			name: "unclosed tags still yield text",
+			html: "<div><p>dangling",
+			want: "dangling",
+		},
+		{
+			name: "empty input",
+			html: "",
+			want: "",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := PlainText(tt.html); got != tt.want {
+				t.Errorf("PlainText() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+// Snippet falls back to the html body, so html-only mail still previews.
+func TestSnippetFallsBackToHTML(t *testing.T) {
+	got := Snippet("", "<p>hello</p><div>world</div>")
+	if got != "hello world" {
+		t.Errorf("Snippet() = %q, want %q", got, "hello world")
+	}
+}
