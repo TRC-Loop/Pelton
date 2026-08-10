@@ -222,6 +222,8 @@ export function SetFlagged(arg1:number,arg2:boolean):Promise<void>;
 
 export function SetFolderPinned(arg1:number,arg2:boolean):Promise<void>;
 
+export function SetFolderRole(arg1:number,arg2:string):Promise<void>;
+
 export function SetMCPEnabled(arg1:boolean):Promise<void>;
 
 export function SetMCPPort(arg1:number):Promise<void>;

@@ -442,6 +442,10 @@ export function SetFolderPinned(arg1, arg2) {
   return window['go']['desktop']['App']['SetFolderPinned'](arg1, arg2);
 }
 
+export function SetFolderRole(arg1, arg2) {
+  return window['go']['desktop']['App']['SetFolderRole'](arg1, arg2);
+}
+
 export function SetMCPEnabled(arg1) {
   return window['go']['desktop']['App']['SetMCPEnabled'](arg1);
 }

@@ -7,7 +7,14 @@
   import { fade, scale } from 'svelte/transition'
   import { IconX, IconAlertTriangle } from '@tabler/icons-svelte'
   import { folderDialog, closeFolderDialog } from '../../stores/folderdialog'
-  import { createFolder, renameFolder, deleteFolder, emptyTrash } from '../../lib/api'
+  import {
+    createFolder,
+    renameFolder,
+    deleteFolder,
+    emptyTrash,
+    setFolderRole,
+    assignableFolderRoles,
+  } from '../../lib/api'
   import { refreshSidebar } from '../../stores/accounts'
   import { selection, selectView, openMessageId } from '../../stores/selection'
   import { loadList } from '../../stores/messages'
@@ -17,6 +24,8 @@
   let name = ''
   let confirmName = ''
   let busy = false
+  // the role to assign, '' meaning "detect automatically".
+  let role = ''
   // the request the input was seeded from, so reopening the dialog for a
   // different folder reseeds it but typing does not fight the reactive block.
   let seededFor: unknown = null
@@ -26,6 +35,7 @@
     seededFor = request
     name = request?.mode === 'rename' ? (request.folder?.name ?? '') : ''
     confirmName = ''
+    role = request?.folder?.roleOverride ?? ''
     busy = false
   }
 
@@ -38,7 +48,9 @@
         ? $t('folders.renameTitle')
         : request?.mode === 'empty'
           ? $t('folders.emptyTrashTitle')
-          : $t('folders.deleteTitle')
+          : request?.mode === 'role'
+            ? $t('folders.roleTitle').replace('{name}', request.folder?.name ?? '')
+            : $t('folders.deleteTitle')
 
   // delete needs the exact folder name typed back; empty only needs the confirm
   // button; the others just need a name that is non-empty and, for rename,
@@ -48,7 +60,9 @@
       ? confirmName.trim() === request.folder?.name
       : request?.mode === 'empty'
         ? true
-        : name.trim() !== '' && !(request?.mode === 'rename' && name.trim() === request.folder?.name)
+        : request?.mode === 'role'
+          ? role !== (request.folder?.roleOverride ?? '')
+          : name.trim() !== '' && !(request?.mode === 'rename' && name.trim() === request.folder?.name)
 
   function close(): void {
     closeFolderDialog()
@@ -66,6 +80,16 @@
       } else if (request.mode === 'rename') {
         await renameFolder(request.folder!.id, name.trim())
         toastInfo($t('folders.renamed').replace('{name}', name.trim()))
+      } else if (request.mode === 'role') {
+        const target = request.folder!
+        await setFolderRole(target.id, role)
+        toastInfo(
+          role === ''
+            ? $t('folders.roleCleared').replace('{name}', target.name)
+            : $t('folders.roleSet')
+                .replace('{name}', target.name)
+                .replace('{role}', $t(`folders.role.${role}`)),
+        )
       } else if (request.mode === 'empty') {
         const emptied = request.folder!
         const removed = await emptyTrash(emptied.id)
@@ -145,6 +169,24 @@
             .replace('{count}', String(request.folder?.totalCount ?? 0))
             .replace('{name}', request.folder?.name ?? '')}
         </p>
+      </div>
+    {:else if request.mode === 'role'}
+      <p class="hint">{$t('folders.roleHint')}</p>
+      <div class="roles" role="radiogroup" aria-label={title}>
+        <!-- "detect automatically" is first and is the default, so the picker
+             reads as an override of what Pelton worked out rather than the only
+             way a folder ever gets a role. -->
+        <label class="role">
+          <input type="radio" bind:group={role} value="" />
+          <span class="role-name">{$t('folders.roleAuto')}</span>
+          <span class="role-note">{$t(`folders.role.${request.folder?.role ?? 'normal'}`)}</span>
+        </label>
+        {#each assignableFolderRoles as option}
+          <label class="role">
+            <input type="radio" bind:group={role} value={option} />
+            <span class="role-name">{$t(`folders.role.${option}`)}</span>
+          </label>
+        {/each}
       </div>
     {:else}
       <label class="field">
@@ -252,6 +294,42 @@
     margin: 0;
     font-size: var(--fz-meta);
     color: var(--text-secondary);
+  }
+
+  .hint {
+    margin: 0;
+    font-size: var(--fz-meta);
+    color: var(--text-secondary);
+  }
+
+  .roles {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+
+  .role {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-control);
+    cursor: pointer;
+  }
+  .role:hover {
+    background: var(--surface-hover);
+  }
+
+  .role-name {
+    font-size: var(--fz-body);
+    color: var(--text-primary);
+  }
+
+  /* what detection currently resolves to, so "automatic" is not a blind choice. */
+  .role-note {
+    margin-left: auto;
+    font-size: var(--fz-meta);
+    color: var(--text-tertiary);
   }
 
   .field {

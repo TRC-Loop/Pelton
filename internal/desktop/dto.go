@@ -1,6 +1,7 @@
 package desktop
 
 import (
+	"slices"
 	"strings"
 	"time"
 
@@ -42,6 +43,10 @@ type FolderDTO struct {
 	// Pinned means the folder is mirrored into the sidebar's Pinned group. It
 	// still appears in its own account's tree either way.
 	Pinned bool `json:"pinned"`
+	// RoleOverride is the role the user assigned by hand, empty when the role
+	// above was detected. The ui needs the two apart to show which entry is
+	// ticked and whether "detect automatically" is the current state.
+	RoleOverride string `json:"roleOverride"`
 }
 
 // UnifiedViewDTO is a cross account view (inbox/flagged/sent/drafts). The ui
@@ -146,6 +151,17 @@ const (
 	roleNormal  = "normal"
 )
 
+// assignableRoles are the roles a user may pick for a folder by hand. Inbox is
+// deliberately absent: it is the one mailbox every imap server is required to
+// have under a fixed name, so there is nothing to disambiguate, and letting a
+// second folder claim it would give an account two inboxes.
+var assignableRoles = []string{roleNormal, roleSent, roleDrafts, roleTrash, roleJunk, roleArchive}
+
+// validFolderRole reports whether role is one a user may assign.
+func validFolderRole(role string) bool {
+	return slices.Contains(assignableRoles, role)
+}
+
 // toAccountDTO flattens a storage account.
 func toAccountDTO(a storage.Account) AccountDTO {
 	return AccountDTO{
@@ -164,21 +180,32 @@ func toAccountDTO(a storage.Account) AccountDTO {
 // the caller since they need a second query.
 func toFolderDTO(f storage.Folder) FolderDTO {
 	return FolderDTO{
-		ID:         f.ID,
-		AccountID:  f.AccountID,
-		Name:       f.Name,
-		IMAPPath:   f.IMAPPath,
-		Delimiter:  f.Delimiter,
-		ParentID:   f.ParentID,
-		Role:       folderRole(f),
-		Attributes: f.Attributes,
-		Pinned:     f.PinnedPosition > 0,
+		ID:           f.ID,
+		AccountID:    f.AccountID,
+		Name:         f.Name,
+		IMAPPath:     f.IMAPPath,
+		Delimiter:    f.Delimiter,
+		ParentID:     f.ParentID,
+		Role:         folderRole(f),
+		Attributes:   f.Attributes,
+		Pinned:       f.PinnedPosition > 0,
+		RoleOverride: f.RoleOverride,
 	}
 }
 
-// folderRole classifies a folder by its special-use attributes first (the
-// reliable signal) then by its name as a fallback.
+// folderRole classifies a folder: the role the user assigned by hand wins, then
+// the special-use attributes (the reliable automatic signal), then the name as
+// a fallback.
+//
+// Detection cannot be made to work everywhere. A server that reports no
+// special-use attribute and names its archive anything but "Archive" leaves the
+// mail cached but invisible to the unified views, and no list of localized or
+// provider-specific names would ever be complete. The manual override is the
+// escape hatch that does not depend on guessing (#186).
 func folderRole(f storage.Folder) string {
+	if role := f.RoleOverride; role != "" && validFolderRole(role) {
+		return role
+	}
 	for _, attr := range f.Attributes {
 		switch strings.ToLower(strings.TrimPrefix(attr, "\\")) {
 		case "sent":

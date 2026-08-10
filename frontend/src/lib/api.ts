@@ -276,6 +276,19 @@ export function setFolderPinned(folderId: number, pinned: boolean): Promise<void
   return App.SetFolderPinned(folderId, pinned)
 }
 
+// assignableFolderRoles are the roles a user may give a folder by hand. Inbox is
+// absent on purpose: every account has exactly one, named by the protocol, and a
+// second would break the unified inbox.
+export const assignableFolderRoles = ['normal', 'sent', 'drafts', 'trash', 'junk', 'archive'] as const
+
+// setFolderRole assigns a folder's role by hand, overriding what the server
+// reported and what its name suggests. Pass an empty role to go back to
+// automatic detection. Nothing is sent to the server: the role is local
+// classification, so this never renames or moves the mailbox.
+export function setFolderRole(folderId: number, role: string): Promise<void> {
+  return App.SetFolderRole(folderId, role)
+}
+
 // reorderPinnedFolders persists a new order for the Pinned group.
 export function reorderPinnedFolders(orderedIds: number[]): Promise<void> {
   return App.ReorderPinnedFolders(orderedIds)

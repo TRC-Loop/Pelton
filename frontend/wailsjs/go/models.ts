@@ -430,6 +430,7 @@ export namespace desktop {
 	    totalCount: number;
 	    attributes: string[];
 	    pinned: boolean;
+	    roleOverride: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new FolderDTO(source);
@@ -448,6 +449,7 @@ export namespace desktop {
 	        this.totalCount = source["totalCount"];
 	        this.attributes = source["attributes"];
 	        this.pinned = source["pinned"];
+	        this.roleOverride = source["roleOverride"];
 	    }
 	}
 	export class ImageAllowEntryDTO {
