@@ -31,6 +31,7 @@
   import { prefs } from '../../stores/prefs'
   import { t } from '../../lib/i18n'
   import { get } from 'svelte/store'
+  import { tick } from 'svelte'
   import type { MessageDetail, EditorMode } from '../../lib/types'
 
   // default editor mode for replies and forwards, from settings.
@@ -47,6 +48,26 @@
   $: if ($openMessageId === null && loadedId !== -1) {
     loadedId = -1
     clearMessage()
+  }
+
+  // the scroll container is reused across messages, so it keeps the offset of
+  // whatever was open before. after a long message a shorter one renders above
+  // the viewport and the pane looks blank until you scroll back up.
+  let scrollEl: HTMLDivElement | undefined
+  let scrolledId = -1
+  $: if ($messageDetail.data && $messageDetail.data.id !== scrolledId) {
+    scrolledId = $messageDetail.data.id
+    void resetScroll()
+  }
+
+  // the container only exists once a message has rendered, and the body iframe
+  // sizes itself after that, so this waits a tick rather than reading scrollEl
+  // straight out of the reactive block.
+  async function resetScroll(): Promise<void> {
+    await tick()
+    if (scrollEl) {
+      scrollEl.scrollTop = 0
+    }
   }
 
   $: canScan = scanEnabled($virusTotal)
@@ -235,7 +256,7 @@ ${bodyHtml}
       <SourceModal messageId={detail.id} on:close={() => (sourceOpen = false)} />
     {/if}
 
-    <div class="scroll selectable">
+    <div class="scroll selectable" bind:this={scrollEl}>
       <DetailHeader {detail} />
       <div class="body-wrap">
         <MailBody {detail} />
