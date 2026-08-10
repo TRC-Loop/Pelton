@@ -42,6 +42,8 @@ export function DeleteFolder(arg1:number):Promise<void>;
 
 export function DeleteMessage(arg1:number):Promise<void>;
 
+export function DeletePGPKey(arg1:string):Promise<void>;
+
 export function DeleteSignature(arg1:number):Promise<void>;
 
 export function DeleteTheme(arg1:string):Promise<void>;
@@ -60,9 +62,15 @@ export function ExportData(arg1:Array<string>,arg2:string):Promise<string>;
 
 export function ExportMessagePrintView(arg1:number):Promise<void>;
 
+export function ExportPGPKey(arg1:string,arg2:boolean):Promise<string>;
+
 export function ExportTheme(arg1:string):Promise<string>;
 
 export function FetchOlderMessages(arg1:desktop.ListMessagesRequest):Promise<desktop.FetchOlderResult>;
+
+export function ForgetPGPPassphrase(arg1:string):Promise<void>;
+
+export function GetAccountPGPKey(arg1:number):Promise<string>;
 
 export function GetAccountSignatures(arg1:number):Promise<desktop.AccountSignaturesDTO>;
 
@@ -90,6 +98,8 @@ export function GetVirusTotalConfig():Promise<desktop.VirusTotalConfigDTO>;
 
 export function ImportData(arg1:string,arg2:Array<string>,arg3:string):Promise<void>;
 
+export function ImportPGPKey():Promise<Array<desktop.PGPKeyDTO>>;
+
 export function InspectBackupFile():Promise<desktop.BackupInfoDTO>;
 
 export function IsDemoMode():Promise<boolean>;
@@ -115,6 +125,8 @@ export function ListMessages(arg1:desktop.ListMessagesRequest):Promise<desktop.M
 export function ListOAuthProviders():Promise<Record<string, string>>;
 
 export function ListOutbox():Promise<Array<desktop.OutboxRowDTO>>;
+
+export function ListPGPKeys():Promise<Array<desktop.PGPKeyDTO>>;
 
 export function ListPinnedFolders():Promise<Array<desktop.FolderDTO>>;
 
@@ -198,6 +210,8 @@ export function SendMessage(arg1:desktop.ComposeRequest):Promise<number>;
 
 export function SenderPhotos(arg1:string):Promise<Array<string>>;
 
+export function SetAccountPGPKey(arg1:number,arg2:string):Promise<void>;
+
 export function SetAccountSignatures(arg1:number,arg2:number,arg3:number):Promise<void>;
 
 export function SetDefaultMailClient():Promise<void>;
@@ -247,6 +261,8 @@ export function TrustSenderImages(arg1:number):Promise<void>;
 export function UnarchiveMessage(arg1:string,arg2:number):Promise<void>;
 
 export function UndoDelete(arg1:number):Promise<void>;
+
+export function UnlockPGPKey(arg1:string,arg2:string,arg3:boolean):Promise<void>;
 
 export function UnmarkSenderVIP(arg1:number):Promise<void>;
 

@@ -185,6 +185,14 @@ func (p *PGP) recipients(opts Options) ([]*openpgp.Entity, error) {
 	return entities, nil
 }
 
+// Unlock decrypts an entity's private keys in place if they are locked, and
+// reports whether the passphrase fits. Callers outside this package use it to
+// check a passphrase before holding on to it, so a typo surfaces at the prompt
+// rather than at the moment a message is sent.
+func Unlock(ent *openpgp.Entity, passphrase []byte) error {
+	return unlock(ent, passphrase)
+}
+
 // unlock decrypts an entity's private keys in place if they are locked. With no
 // passphrase available for a locked key it returns ErrPassphraseRequired.
 func unlock(ent *openpgp.Entity, passphrase []byte) error {

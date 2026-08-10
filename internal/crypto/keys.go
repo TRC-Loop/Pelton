@@ -79,6 +79,13 @@ func (s *PGPKeyStore) load(file string) (openpgp.EntityList, error) {
 	}
 	defer f.Close()
 
+	// a ring emptied of its last key is left as an empty file by some editors
+	// and by older versions of this code; treat it as no keys rather than
+	// failing every lookup with an armor error.
+	if info, err := f.Stat(); err == nil && info.Size() == 0 {
+		return nil, nil
+	}
+
 	list, err := openpgp.ReadArmoredKeyRing(f)
 	if err != nil {
 		return nil, fmt.Errorf("crypto: read keyring %q: %w", path, err)

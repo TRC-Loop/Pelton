@@ -48,6 +48,7 @@ import type {
   View,
   Selection,
   FetchOlderResult,
+  PGPKey,
 } from './types'
 
 // isDemoMode reports whether the app launched in the cosmetic --potatoes-are-nice
@@ -816,6 +817,57 @@ export const SettingKeys = {
 // dropdown (cached backend-side after the first scan).
 export function listSystemFonts(): Promise<string[]> {
   return App.ListSystemFonts().then((f) => f ?? [])
+}
+
+// --- pgp keys (#192) ---
+
+// listPGPKeys returns every imported key, private keys first.
+export function listPGPKeys(): Promise<PGPKey[]> {
+  return App.ListPGPKeys() as unknown as Promise<PGPKey[]>
+}
+
+// importPGPKey opens a file picker and imports the keys the file holds.
+// Resolves with an empty list when the dialog was cancelled.
+export function importPGPKey(): Promise<PGPKey[]> {
+  return App.ImportPGPKey().then((keys) => (keys ?? []) as unknown as PGPKey[])
+}
+
+// deletePGPKey removes a key from both rings and forgets its passphrase.
+export function deletePGPKey(fingerprint: string): Promise<void> {
+  return App.DeletePGPKey(fingerprint)
+}
+
+// exportPGPKey writes a key to a file the user picks, returning the path or ''
+// if cancelled. includePrivate writes the private half, which is the only
+// backup path for it: keys are deliberately excluded from the backup archive.
+export function exportPGPKey(fingerprint: string, includePrivate: boolean): Promise<string> {
+  return App.ExportPGPKey(fingerprint, includePrivate)
+}
+
+// unlockPGPKey verifies a passphrase and holds it for the session. remember
+// also stores it in the os keyring so it survives a restart.
+export function unlockPGPKey(
+  fingerprint: string,
+  passphrase: string,
+  remember: boolean,
+): Promise<void> {
+  return App.UnlockPGPKey(fingerprint, passphrase, remember)
+}
+
+// forgetPGPPassphrase drops a passphrase from the session and the keyring.
+export function forgetPGPPassphrase(fingerprint: string): Promise<void> {
+  return App.ForgetPGPPassphrase(fingerprint)
+}
+
+// getAccountPGPKey returns the fingerprint an account signs with, or ''.
+export function getAccountPGPKey(accountId: number): Promise<string> {
+  return App.GetAccountPGPKey(accountId)
+}
+
+// setAccountPGPKey pins the signing key for an account; '' clears it and falls
+// back to matching the account address against the keys' user ids.
+export function setAccountPGPKey(accountId: number, fingerprint: string): Promise<void> {
+  return App.SetAccountPGPKey(accountId, fingerprint)
 }
 
 // --- custom themes ---

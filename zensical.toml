@@ -32,6 +32,7 @@ nav = [
   ] },
   { "Shortcuts" = "shortcuts.md" },
   { "Scanning links and attachments" = "virustotal.md" },
+  { "Encryption keys" = "encryption.md" },
   { "FAQ" = "faq.md" },
 ]
 

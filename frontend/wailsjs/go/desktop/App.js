@@ -82,6 +82,10 @@ export function DeleteMessage(arg1) {
   return window['go']['desktop']['App']['DeleteMessage'](arg1);
 }
 
+export function DeletePGPKey(arg1) {
+  return window['go']['desktop']['App']['DeletePGPKey'](arg1);
+}
+
 export function DeleteSignature(arg1) {
   return window['go']['desktop']['App']['DeleteSignature'](arg1);
 }
@@ -118,12 +122,24 @@ export function ExportMessagePrintView(arg1) {
   return window['go']['desktop']['App']['ExportMessagePrintView'](arg1);
 }
 
+export function ExportPGPKey(arg1, arg2) {
+  return window['go']['desktop']['App']['ExportPGPKey'](arg1, arg2);
+}
+
 export function ExportTheme(arg1) {
   return window['go']['desktop']['App']['ExportTheme'](arg1);
 }
 
 export function FetchOlderMessages(arg1) {
   return window['go']['desktop']['App']['FetchOlderMessages'](arg1);
+}
+
+export function ForgetPGPPassphrase(arg1) {
+  return window['go']['desktop']['App']['ForgetPGPPassphrase'](arg1);
+}
+
+export function GetAccountPGPKey(arg1) {
+  return window['go']['desktop']['App']['GetAccountPGPKey'](arg1);
 }
 
 export function GetAccountSignatures(arg1) {
@@ -178,6 +194,10 @@ export function ImportData(arg1, arg2, arg3) {
   return window['go']['desktop']['App']['ImportData'](arg1, arg2, arg3);
 }
 
+export function ImportPGPKey() {
+  return window['go']['desktop']['App']['ImportPGPKey']();
+}
+
 export function InspectBackupFile() {
   return window['go']['desktop']['App']['InspectBackupFile']();
 }
@@ -228,6 +248,10 @@ export function ListOAuthProviders() {
 
 export function ListOutbox() {
   return window['go']['desktop']['App']['ListOutbox']();
+}
+
+export function ListPGPKeys() {
+  return window['go']['desktop']['App']['ListPGPKeys']();
 }
 
 export function ListPinnedFolders() {
@@ -394,6 +418,10 @@ export function SenderPhotos(arg1) {
   return window['go']['desktop']['App']['SenderPhotos'](arg1);
 }
 
+export function SetAccountPGPKey(arg1, arg2) {
+  return window['go']['desktop']['App']['SetAccountPGPKey'](arg1, arg2);
+}
+
 export function SetAccountSignatures(arg1, arg2, arg3) {
   return window['go']['desktop']['App']['SetAccountSignatures'](arg1, arg2, arg3);
 }
@@ -492,6 +520,10 @@ export function UnarchiveMessage(arg1, arg2) {
 
 export function UndoDelete(arg1) {
   return window['go']['desktop']['App']['UndoDelete'](arg1);
+}
+
+export function UnlockPGPKey(arg1, arg2, arg3) {
+  return window['go']['desktop']['App']['UnlockPGPKey'](arg1, arg2, arg3);
 }
 
 export function UnmarkSenderVIP(arg1) {

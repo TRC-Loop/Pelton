@@ -202,6 +202,46 @@ func DeleteVirusTotalKey() error {
 	return nil
 }
 
+// pgpPassphrasePrefix names the keyring entry holding one PGP private key's
+// passphrase, keyed by fingerprint. Storing it is opt-in per key: the default
+// is to hold it in memory for the session and forget it on quit.
+const pgpPassphrasePrefix = "pgp-passphrase-"
+
+// StorePGPPassphrase remembers a private key's passphrase, or clears it when
+// empty. It never goes near the settings database.
+func StorePGPPassphrase(fingerprint, passphrase string) error {
+	if passphrase == "" {
+		return DeletePGPPassphrase(fingerprint)
+	}
+	if err := keyring.Set(service, pgpPassphrasePrefix+fingerprint, passphrase); err != nil {
+		return fmt.Errorf("credentials: store pgp passphrase: %w", err)
+	}
+	return nil
+}
+
+// LoadPGPPassphrase returns a remembered passphrase, or "" when the user chose
+// not to remember this key.
+func LoadPGPPassphrase(fingerprint string) (string, error) {
+	raw, err := keyring.Get(service, pgpPassphrasePrefix+fingerprint)
+	if errors.Is(err, keyring.ErrNotFound) {
+		return "", nil
+	}
+	if err != nil {
+		return "", fmt.Errorf("credentials: load pgp passphrase: %w", err)
+	}
+	return raw, nil
+}
+
+// DeletePGPPassphrase forgets a remembered passphrase. A missing entry is not
+// an error, so deleting a key always cleans up after itself.
+func DeletePGPPassphrase(fingerprint string) error {
+	err := keyring.Delete(service, pgpPassphrasePrefix+fingerprint)
+	if err != nil && !errors.Is(err, keyring.ErrNotFound) {
+		return fmt.Errorf("credentials: delete pgp passphrase: %w", err)
+	}
+	return nil
+}
+
 // key is the per-account keyring entry name.
 func key(accountID int64) string {
 	return strconv.FormatInt(accountID, 10)
