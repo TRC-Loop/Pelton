@@ -20,6 +20,7 @@
   import FolderDialog from './components/sidebar/FolderDialog.svelte'
   import AttachmentPreview from './components/detail/AttachmentPreview.svelte'
   import MoveDialog from './components/detail/MoveDialog.svelte'
+  import CommandPalette from './components/common/CommandPalette.svelte'
 
   import { initPrefs, prefs, setPaneWidths, setLowPowerMode } from './stores/prefs'
   import { applyScale } from './theme/theme'
@@ -29,7 +30,7 @@
   import { loadVIPSenders } from './stores/vip'
   import { loadVirusTotalConfig } from './stores/virustotal'
   import { loadOutbox, syncing, lastSynced, syncFolder } from './stores/outbox'
-  import { selection, applyStartupSelection } from './stores/selection'
+  import { selection, applyStartupSelection, searchQuery } from './stores/selection'
   import { loadList, messageList } from './stores/messages'
   import { initProgress } from './stores/progress'
   import { composeSessions, openCompose, openComposeWith, initComposePrefs, openReply, openForward } from './stores/compose'
@@ -69,14 +70,48 @@
   import { triggerUndo } from './stores/undosend'
   import { recordDeleted, triggerUndoDelete } from './stores/undodelete'
   import { triggerUndoArchive } from './stores/undoarchive'
-  import { openMessageId } from './stores/selection'
+  import { openMessageId, openMessage } from './stores/selection'
   import { errorMessage, toastError, toastInfo } from './stores/toast'
   import { friendlyError } from './lib/errors'
   import { setOnline } from './stores/network'
   import { moveTarget } from './stores/move'
   import { snoozeTarget } from './stores/snooze'
   import { previewTarget } from './stores/preview'
-  import type { EditorMode } from './lib/types'
+  import { openMove } from './stores/move'
+  import { selectedIds, clearSelection } from './stores/listselect'
+  import { selectFolder, selectView } from './stores/selection'
+  import { setTheme, setThemeId } from './stores/prefs'
+  import { openCreateFolder, openRenameFolder, openDeleteFolder, openEmptyTrash } from './stores/folderdialog'
+  import { setFolderPinned, listThemes } from './lib/api'
+  import { editViewInEditor } from './stores/views'
+  import {
+    markSeen,
+    markFlagged,
+    markColor,
+    toggleSenderVIP,
+    setOffline,
+    trashMessage,
+    archive as archiveOne,
+    bulkMarkSeen,
+    bulkMarkFlagged,
+    bulkMarkColor,
+    bulkSetOffline,
+    bulkTrash,
+    bulkArchive,
+  } from './lib/messageactions'
+  import { buildCommands, mailCommands, type CommandContext, type MessageOp, type FolderOp } from './lib/commands'
+  import { catalogByAction } from './lib/menuactions'
+  import { shortcutLabel } from './lib/i18n'
+  import {
+    initPalette,
+    openPaletteStep,
+    togglePalette,
+    parseQuery,
+    paletteOpen,
+    paletteMail,
+    paletteQuery,
+  } from './stores/palette'
+  import type { EditorMode, MessageSummary, ThemePref, ThemeInfo, Folder } from './lib/types'
 
   let settingsOpen = false
   // the settings category to open on; set by menu actions that deep-link into a
@@ -153,6 +188,7 @@
     await initComposePrefs()
     void initShortcuts()
     void initMenuBar()
+    void initPalette()
     void loadSignatures()
     void loadVIPSenders()
     void loadVirusTotalConfig()
@@ -523,8 +559,227 @@
       case 'quit':
         Quit()
         break
+      case 'command-palette':
+        togglePalette()
+        break
+      case 'mark-vip': {
+        const msg = currentMessage()
+        if (msg) {
+          void toggleSenderVIP(msg)
+        } else {
+          toastInfo(get(t)('app.toast.openMessageFirst'))
+        }
+        break
+      }
+      case 'move-to': {
+        const msg = currentMessage()
+        if (msg) {
+          openMove(msg)
+        } else {
+          toastInfo(get(t)('app.toast.openMessageFirst'))
+        }
+        break
+      }
+      case 'remove-offline': {
+        const msg = currentMessage()
+        if (msg) {
+          void setOffline(msg, false)
+        } else {
+          toastInfo(get(t)('app.toast.openMessageFirst'))
+        }
+        break
+      }
+      // these need a target, so they hand off to the palette's picker rather
+      // than guessing one. that is also what makes them bindable to a key.
+      case 'flag-color':
+      case 'empty-trash':
+      case 'new-folder':
+      case 'rename-folder':
+      case 'delete-folder':
+      case 'toggle-pin-folder':
+      case 'apply-theme':
+      case 'edit-view':
+        openStepFor(action)
+        break
     }
   }
+
+  // openStepFor finds the palette entry for an action that needs a target and
+  // opens the palette directly on its picker.
+  function openStepFor(action: MenuAction): void {
+    const entry = buildCommands(commandContext).find((c) => c.id === `action:${action}`)
+    if (!entry) {
+      toastInfo(get(t)('palette.nothingToPick'))
+      return
+    }
+    const step = entry.run()
+    if (step && 'items' in step) {
+      openPaletteStep(step)
+    }
+  }
+
+  // --- command palette (#134) ---
+
+  // installed themes, only fetched while the palette is open so a user who
+  // never opens it never pays for the read.
+  let paletteThemes: ThemeInfo[] = []
+  let paletteThemesLoaded = false
+  $: if ($paletteOpen && !paletteThemesLoaded) {
+    paletteThemesLoaded = true
+    void listThemes()
+      .then((list) => (paletteThemes = list))
+      .catch(() => (paletteThemes = []))
+  }
+
+  $: selectedMessages = ($messageList.data?.items ?? []).filter((m) => $selectedIds.has(m.id))
+
+  function runMessageOp(op: MessageOp, item: MessageSummary, color = 0): void {
+    switch (op) {
+      case 'mark-read':
+        void markSeen(item, true)
+        break
+      case 'mark-unread':
+        void markSeen(item, false)
+        break
+      case 'flag':
+        void markFlagged(item, true)
+        break
+      case 'unflag':
+        void markFlagged(item, false)
+        break
+      case 'flag-color':
+        void markColor(item, color)
+        break
+      case 'delete':
+        void trashMessage(item)
+        break
+      case 'archive':
+        void archiveOne(item)
+        break
+      case 'download-offline':
+        void setOffline(item, true)
+        break
+      case 'remove-offline':
+        void setOffline(item, false)
+        break
+    }
+  }
+
+  function runBulkOp(op: MessageOp, items: MessageSummary[], color = 0): void {
+    switch (op) {
+      case 'mark-read':
+        void bulkMarkSeen(items, true)
+        break
+      case 'mark-unread':
+        void bulkMarkSeen(items, false)
+        break
+      case 'flag':
+        void bulkMarkFlagged(items, true)
+        break
+      case 'unflag':
+        void bulkMarkFlagged(items, false)
+        break
+      case 'flag-color':
+        void bulkMarkColor(items, color)
+        break
+      case 'delete':
+        void bulkTrash(items)
+        break
+      case 'archive':
+        void bulkArchive(items)
+        break
+      case 'download-offline':
+        void bulkSetOffline(items, true)
+        break
+      case 'remove-offline':
+        void bulkSetOffline(items, false)
+        break
+    }
+  }
+
+  async function runFolderOp(op: FolderOp, folder: Folder): Promise<void> {
+    switch (op) {
+      case 'rename':
+        openRenameFolder(folder)
+        break
+      case 'delete':
+        openDeleteFolder(folder)
+        break
+      case 'new-subfolder':
+        openCreateFolder(folder.accountId, folder)
+        break
+      case 'empty-trash':
+        openEmptyTrash(folder)
+        break
+      case 'toggle-pin':
+        try {
+          await setFolderPinned(folder.id, !folder.pinned)
+          await refreshSidebar()
+        } catch (err) {
+          toastError(errorMessage(err))
+        }
+        break
+    }
+  }
+
+  $: commandContext = {
+    t: get(t),
+    dispatch: (action) => dispatchAction(action as MenuAction),
+    hintFor: (action) => {
+      // a catalog entry can pin a fixed combo (the platform menu owns it);
+      // otherwise it is the live rebindable one, and menu-only actions like
+      // About are in neither.
+      const combo = catalogByAction[action]?.hint ?? ($bindings as Record<string, string>)[action] ?? ''
+      return combo ? shortcutLabel(combo) : ''
+    },
+    accounts: $sidebar.data?.accounts ?? [],
+    foldersByAccount: $sidebar.data?.foldersByAccount ?? {},
+    unifiedViews: $sidebar.data?.views ?? [],
+    savedViews: $savedViews,
+    themes: paletteThemes,
+    openMessage: currentMessage(),
+    selected: selectedMessages,
+    selectFolder: (folder) => {
+      selectFolder(folder)
+      clearSelection()
+    },
+    selectUnified: (key, label) => {
+      selectView(key as Parameters<typeof selectView>[0], label)
+      clearSelection()
+    },
+    selectSavedView: (id, name) => {
+      selectSavedView(id, name)
+      clearSelection()
+    },
+    openSettings: (category) => {
+      settingsCategory = category || null
+      settingsOpen = true
+    },
+    onMessage: runMessageOp,
+    onBulk: runBulkOp,
+    onFolder: (op, folder) => void runFolderOp(op, folder),
+    editView: (view) => editViewInEditor(view),
+    applyTheme: (themeId) => void setThemeId(themeId).catch((err) => toastError(errorMessage(err))),
+    setBaseTheme: (theme) => {
+      void setThemeId('')
+      setTheme(theme as ThemePref)
+    },
+  } satisfies CommandContext
+
+  // rebuilt whenever anything the entries depend on moves, so the open palette
+  // never offers a folder that was just deleted or a message action with no
+  // message behind it.
+  $: paletteCommands = $paletteOpen ? buildCommands(commandContext) : []
+
+  // opening a hit also puts the query in the search bar, so the list behind the
+  // palette holds the same results the reading pane is showing rather than
+  // whatever folder happened to be open.
+  function openMailHit(item: MessageSummary): void {
+    searchQuery.set(parseQuery(get(paletteQuery)).text)
+    openMessage(item.id)
+  }
+
+  $: paletteMailCommands = $paletteOpen ? mailCommands(get(t), $paletteMail, openMailHit) : []
 
   // cycleView moves the selection to the next (dir 1) or previous (dir -1) saved
   // view, wrapping around. From a non-view selection it jumps to the first/last.
@@ -608,7 +863,8 @@
       $composeSessions.length > 0 ||
       $moveTarget !== null ||
       $snoozeTarget !== null ||
-      $previewTarget !== null
+      $previewTarget !== null ||
+      $paletteOpen
     )
   }
 
@@ -821,6 +1077,8 @@
 <FolderDialog />
 <AttachmentPreview />
 <MoveDialog />
+
+<CommandPalette commands={paletteCommands} mail={paletteMailCommands} />
 
 <style>
   .shell {
