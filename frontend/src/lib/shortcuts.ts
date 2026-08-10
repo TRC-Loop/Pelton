@@ -17,6 +17,7 @@ export type ShortcutAction =
   | 'preferences'
   | 'sync'
   | 'search'
+  | 'command-palette'
   | 'add-mailbox'
   | 'export-pdf'
   | 'toggle-fullscreen'
@@ -35,6 +36,20 @@ export type ShortcutAction =
   | 'new-view'
   | 'next-view'
   | 'prev-view'
+  // actions the command palette (#134) made first-class. Several need a target
+  // the user has to choose; those open the palette on their own picker step
+  // rather than acting straight away, so they bind to a key like any other.
+  | 'mark-vip'
+  | 'move-to'
+  | 'flag-color'
+  | 'remove-offline'
+  | 'empty-trash'
+  | 'new-folder'
+  | 'rename-folder'
+  | 'delete-folder'
+  | 'toggle-pin-folder'
+  | 'apply-theme'
+  | 'edit-view'
 
 // Shortcut pairs an action with its default combo and the label key for display.
 export interface Shortcut {
@@ -51,6 +66,7 @@ export const shortcuts: Shortcut[] = [
   { action: 'sync', combo: 'mod+r', labelKey: 'shortcut.sync' },
   { action: 'add-mailbox', combo: 'mod+m', labelKey: 'shortcut.addMailbox' },
   { action: 'search', combo: 'mod+f', labelKey: 'shortcut.search' },
+  { action: 'command-palette', combo: 'mod+k', labelKey: 'shortcut.commandPalette' },
   { action: 'export-pdf', combo: 'mod+p', labelKey: 'shortcut.exportPdf' },
   // on macOS the native menu owns fullscreen (Cmd+Ctrl+F) and quit (Cmd+Q);
   // elsewhere the in-app menu bar relies on these frontend bindings.
@@ -72,6 +88,18 @@ export const shortcuts: Shortcut[] = [
   { action: 'new-view', combo: '', labelKey: 'shortcut.newView' },
   { action: 'next-view', combo: '', labelKey: 'shortcut.nextView' },
   { action: 'prev-view', combo: '', labelKey: 'shortcut.prevView' },
+  // palette actions, unbound by default.
+  { action: 'edit-view', combo: '', labelKey: 'palette.action.editView' },
+  { action: 'mark-vip', combo: '', labelKey: 'palette.action.markVip' },
+  { action: 'move-to', combo: '', labelKey: 'messageList.menu.moveTo' },
+  { action: 'flag-color', combo: '', labelKey: 'palette.action.flagColor' },
+  { action: 'remove-offline', combo: '', labelKey: 'messageList.menu.removeOffline' },
+  { action: 'new-folder', combo: '', labelKey: 'palette.action.newFolder' },
+  { action: 'rename-folder', combo: '', labelKey: 'palette.action.renameFolder' },
+  { action: 'delete-folder', combo: '', labelKey: 'palette.action.deleteFolder' },
+  { action: 'toggle-pin-folder', combo: '', labelKey: 'palette.action.pinFolder' },
+  { action: 'empty-trash', combo: '', labelKey: 'folders.emptyTrash' },
+  { action: 'apply-theme', combo: '', labelKey: 'palette.action.applyTheme' },
 ]
 
 // ParsedCombo is a combo broken into its modifier flags and final key.

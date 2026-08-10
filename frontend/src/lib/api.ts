@@ -794,6 +794,8 @@ export const SettingKeys = {
   menuBarNativeMinimal: 'menu_bar_native_minimal',
   menuBarIcons: 'menu_bar_icons',
   menuBarLayout: 'menu_bar_layout',
+  paletteUsage: 'palette_usage',
+  paletteQuickSelect: 'palette_quick_select',
   menuBarNewItems: 'menu_bar_new_items',
   timeFormat: 'time_format',
   reduceMotion: 'reduce_motion',

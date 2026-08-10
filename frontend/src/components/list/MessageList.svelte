@@ -52,11 +52,7 @@
   import { prefs } from '../../stores/prefs'
   import {
     setSeen,
-    setFlagged,
-    deleteMessage,
     getMessage,
-    setFlagColor,
-    downloadMessageOffline,
     removeOffline,
     archiveMessage,
   } from '../../lib/api'
@@ -66,10 +62,21 @@
   import { recordDeleted } from '../../stores/undodelete'
   import { recordArchived } from '../../stores/undoarchive'
   import { openContextMenu, type MenuEntry } from '../../stores/contextmenu'
-  import { errorMessage, toastError, toastSuccess } from '../../stores/toast'
-  import { isVIPAddress, addVIP, removeVIP } from '../../stores/vip'
+  import { errorMessage, toastError } from '../../stores/toast'
+  import { isVIPAddress } from '../../stores/vip'
   import type { Selection, MessageSummary, SwipeAction, EditorMode } from '../../lib/types'
   import { t } from '../../lib/i18n'
+  import {
+    markSeen,
+    markFlagged,
+    markColor,
+    toggleSenderVIP,
+    setOffline,
+    trashMessage,
+    bulkMarkSeen,
+    bulkMarkFlagged,
+    bulkTrash,
+  } from '../../lib/messageactions'
 
   // the meta-bar title. built-in unified views are localized by key (matching the
   // sidebar), so it stays correct after a language switch; folders and saved
@@ -295,92 +302,34 @@
   // toggleSeen / toggleFlag / remove act on a single row from the context menu,
   // updating the list optimistically and surfacing any backend error.
   async function toggleSeen(item: MessageSummary): Promise<void> {
-    patchInList(item.id, { seen: !item.seen })
-    try {
-      await setSeen(item.id, !item.seen)
-    } catch (err) {
-      toastError(errorMessage(err))
-    }
+    await markSeen(item, !item.seen)
   }
 
   async function toggleFlag(item: MessageSummary): Promise<void> {
-    patchInList(item.id, { flagged: !item.flagged })
-    try {
-      await setFlagged(item.id, !item.flagged)
-    } catch (err) {
-      toastError(errorMessage(err))
-    }
+    await markFlagged(item, !item.flagged)
   }
 
   // toggleVIP stars or unstars a row's sender from the context menu; the vip
   // store drives the live star on every row from that sender.
   async function toggleVIP(item: MessageSummary): Promise<void> {
-    try {
-      if (isVIPAddress(item.fromAddress)) {
-        await removeVIP(item.fromAddress)
-      } else {
-        await addVIP(item.fromAddress)
-      }
-    } catch (err) {
-      toastError(errorMessage(err))
-    }
+    await toggleSenderVIP(item)
   }
 
   async function remove(item: MessageSummary): Promise<void> {
-    try {
-      await deleteMessage(item.id)
-      recordDeleted(item)
-      removeFromList(item.id)
-      if ($openMessageId === item.id) {
-        openMessageId.set(null)
-      }
-    } catch (err) {
-      toastError(errorMessage(err))
-    }
+    await trashMessage(item)
   }
 
   // bulk actions operate on the whole multi-selection, then clear it.
   async function bulkSetSeen(seen: boolean): Promise<void> {
-    const targets = selectedItems
-    for (const item of targets) {
-      patchInList(item.id, { seen })
-    }
-    clearSelection()
-    await Promise.all(
-      targets.map((item) =>
-        setSeen(item.id, seen).catch((err) => toastError(errorMessage(err))),
-      ),
-    )
+    await bulkMarkSeen(selectedItems, seen)
   }
 
   async function bulkSetFlagged(flagged: boolean): Promise<void> {
-    const targets = selectedItems
-    for (const item of targets) {
-      patchInList(item.id, { flagged })
-    }
-    clearSelection()
-    await Promise.all(
-      targets.map((item) =>
-        setFlagged(item.id, flagged).catch((err) => toastError(errorMessage(err))),
-      ),
-    )
+    await bulkMarkFlagged(selectedItems, flagged)
   }
 
   async function bulkDelete(): Promise<void> {
-    const targets = selectedItems
-    clearSelection()
-    for (const item of targets) {
-      try {
-        await deleteMessage(item.id)
-        recordDeleted(item)
-        removeFromList(item.id)
-        if ($openMessageId === item.id) {
-          openMessageId.set(null)
-        }
-      } catch (err) {
-        toastError(errorMessage(err))
-      }
-    }
+    await bulkTrash(selectedItems)
   }
 
   // reply/forward need the full message (for quoting), so load it first.
@@ -406,12 +355,7 @@
 
   // setColor applies a flag color to a row (0 clears), optimistically.
   async function setColor(item: MessageSummary, color: number): Promise<void> {
-    patchInList(item.id, { flagColor: color })
-    try {
-      await setFlagColor(item.id, color)
-    } catch (err) {
-      toastError(errorMessage(err))
-    }
+    await markColor(item, color)
   }
 
   // archive moves a row to the account's Archive folder, removing it from the
@@ -435,18 +379,7 @@
 
   // toggleOffline pins or unpins a row for offline availability.
   async function toggleOffline(item: MessageSummary): Promise<void> {
-    const next = !item.offline
-    patchInList(item.id, { offline: next })
-    try {
-      if (next) {
-        await downloadMessageOffline(item.id)
-        toastSuccess($t('messageList.toast.savedOffline'))
-      } else {
-        await removeOffline(item.id)
-      }
-    } catch (err) {
-      toastError(errorMessage(err))
-    }
+    await setOffline(item, !item.offline)
   }
 
   // performSwipe runs the configured action for a swipe direction on a row.
