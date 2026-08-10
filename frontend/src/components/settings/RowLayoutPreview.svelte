@@ -25,7 +25,9 @@
       {/if}
       <div class="content">
         <div class="top">
-          <span class="dot" class:show={s.unread}></span>
+          {#if s.unread}
+            <span class="dot"></span>
+          {/if}
           <span class="from">{s.from}</span>
           {#if template === 'single'}
             <span class="subj inline">{s.subject}</span>
@@ -122,11 +124,8 @@
     width: 7px;
     height: 7px;
     border-radius: 999px;
-    background: transparent;
-    flex-shrink: 0;
-  }
-  .dot.show {
     background: var(--text-primary);
+    flex-shrink: 0;
   }
   .from {
     font-size: var(--fz-list);
