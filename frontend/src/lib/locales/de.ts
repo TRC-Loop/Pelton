@@ -585,6 +585,7 @@ const de: Record<string, string> = {
   'messageList.unflag': 'Markierung entfernen',
   'messageList.result': 'Ergebnis',
   'messageList.results': 'Ergebnisse',
+  'messageList.resultsOf': '{loaded} von {total} Ergebnissen',
   'messageList.message': 'Nachricht',
   'messageList.messages': 'Nachrichten',
   'messageList.ariaLabel': 'Nachrichten',

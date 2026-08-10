@@ -195,7 +195,7 @@ func (a *App) runViewMatches(ctx context.Context, v storage.View) ([]storage.Mes
 		if err != nil {
 			return nil, err
 		}
-		for _, h := range hits {
+		for _, h := range hits.Hits {
 			m, err := a.store.GetMessage(ctx, h.ID)
 			if err != nil {
 				continue

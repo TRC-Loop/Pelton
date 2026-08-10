@@ -356,6 +356,9 @@ export interface SearchRequest {
   afterUnix: number
   beforeUnix: number
   limit: number
+  // offset skips that many ranked hits, so the list can page through a result
+  // set instead of stopping at the first page.
+  offset: number
   // field-scoped constraints from typed search chips (from:/to:/subject:).
   from: string
   to: string
@@ -363,9 +366,17 @@ export interface SearchRequest {
   hasAttachment: boolean
 }
 
-// search runs a ranked, typo-tolerant search and returns matching summaries in
-// relevance order.
-export function search(req: SearchRequest): Promise<MessageSummary[]> {
+// SearchResult is one page of ranked results. total counts index matches and is
+// an upper bound on what is shown, since the attachment filter and any message
+// deleted since it was indexed are applied per page after ranking.
+export interface SearchResult {
+  messages: MessageSummary[]
+  total: number
+}
+
+// search runs a ranked, typo-tolerant search and returns a page of matching
+// summaries in relevance order.
+export function search(req: SearchRequest): Promise<SearchResult> {
   return App.Search(new desktop.SearchRequestDTO(req))
 }
 

@@ -202,7 +202,7 @@ export function ScanMessage(arg1:number,arg2:boolean,arg3:boolean):Promise<deskt
 
 export function ScanURL(arg1:string):Promise<desktop.VerdictDTO>;
 
-export function Search(arg1:desktop.SearchRequestDTO):Promise<Array<desktop.MessageSummaryDTO>>;
+export function Search(arg1:desktop.SearchRequestDTO):Promise<desktop.SearchResultDTO>;
 
 export function SearchAddresses(arg1:string,arg2:number):Promise<Array<desktop.AddressBookEntryDTO>>;
 

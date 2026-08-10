@@ -167,7 +167,14 @@
   }
 
   $: items = $messageList.data?.items ?? []
-  $: hasMore = !($messageList.data?.searching ?? false) && items.length < ($messageList.data?.total ?? 0)
+  // a result set pages too: a broad query matches far more than one page, and
+  // stopping at the first page is what made a match ranked below it look like
+  // no match at all.
+  $: searching = $messageList.data?.searching ?? false
+  $: hasMore = searching
+    ? !($messageList.data?.exhausted ?? false) &&
+      ($messageList.data?.loadedHits ?? items.length) < ($messageList.data?.total ?? 0)
+    : items.length < ($messageList.data?.total ?? 0)
   // the cache is exhausted but the server still has older mail. hasMore covers
   // paging what is cached; this covers going back to the server for the rest.
   $: backfilling = $messageList.data?.backfilling ?? false
@@ -540,7 +547,15 @@
       {#if $messageList.data}
         <span class="count">
           {#if $messageList.data.searching}
-            {items.length} {items.length === 1 ? $t('messageList.result') : $t('messageList.results')}
+            <!-- showing the match count, not just the loaded count, is what
+                 tells "that is everything" apart from "there is more below". -->
+            {#if items.length < $messageList.data.total}
+              {$t('messageList.resultsOf')
+                .replace('{loaded}', String(items.length))
+                .replace('{total}', String($messageList.data.total))}
+            {:else}
+              {items.length} {items.length === 1 ? $t('messageList.result') : $t('messageList.results')}
+            {/if}
           {:else}
             {$messageList.data.total} {$messageList.data.total === 1 ? $t('messageList.message') : $t('messageList.messages')}
           {/if}

@@ -13,7 +13,7 @@ import {
   search,
 } from '../lib/api'
 import { type AsyncState, idle, loading, ready, failed } from '../lib/async'
-import { errorMessage, push } from './toast'
+import { errorMessage, push, toastError } from './toast'
 import { prefs } from './prefs'
 
 // how many rows we request per page.
@@ -22,8 +22,16 @@ export const PAGE_SIZE = 50
 export interface ListData {
   items: MessageSummary[]
   total: number
-  // searching marks a search result set, where pagination does not apply.
+  // searching marks a search result set. These page by ranked offset rather
+  // than by row count, since rows can be dropped after ranking.
   searching: boolean
+  // loadedHits is how many ranked hits have been requested so far, which is
+  // what the next page offsets from. It outruns items.length whenever a page
+  // loses rows to the attachment filter or to mail deleted since indexing.
+  loadedHits?: number
+  // exhausted marks a result set whose ranked list ran out, so the list stops
+  // asking for more even if total still reads higher.
+  exhausted?: boolean
   // hasOlder means the server still holds mail older than anything cached, so
   // the end of this list is not the end of the mailbox. total only counts what
   // is cached locally.
@@ -84,6 +92,8 @@ async function fetchPage(sel: Selection, offset: number): Promise<Page> {
 export async function loadList(sel: Selection): Promise<void> {
   currentSelection = sel
   currentOffset = 0
+  // leaving a result set: a late search page must not append onto a folder.
+  currentSearch = null
   backfillFailed.set(false)
   const generation = ++loadGeneration
   messageList.update((s) => loading(s))
@@ -110,7 +120,14 @@ export async function loadList(sel: Selection): Promise<void> {
 // unless the user turned automatic backfill off.
 export async function loadMore(): Promise<void> {
   const state = get(messageList)
-  if (!currentSelection || state.status !== 'ready' || !state.data || state.data.searching) {
+  if (state.status !== 'ready' || !state.data) {
+    return
+  }
+  if (state.data.searching) {
+    await loadMoreSearch()
+    return
+  }
+  if (!currentSelection) {
     return
   }
   if (state.data.items.length >= state.data.total) {
@@ -245,29 +262,103 @@ export function filterActive(f: SearchFilter): boolean {
   )
 }
 
-// runSearch replaces the list with ranked search results for a query and the
-// structured chip constraints.
+// searchPageSize is how many ranked hits one search page holds. It matches what
+// the list used to request in one shot, so the first page is never worse than
+// before; the difference is that a broad query now pages on to the rest instead
+// of stopping here, where anything ranked below was indistinguishable from no
+// match at all.
+const searchPageSize = 200
+
+// the search the current result set belongs to, so loadMore can ask for the
+// next page of the same query. null whenever the list is not a result set.
+let currentSearch: { query: string; filter: SearchFilter } | null = null
+
+// searchPage fetches one page of ranked results.
+function searchPage(
+  query: string,
+  filter: SearchFilter,
+  offset: number,
+): Promise<{ messages: MessageSummary[]; total: number }> {
+  return search({
+    query,
+    afterUnix: filter.afterUnix,
+    beforeUnix: filter.beforeUnix,
+    from: filter.from,
+    to: filter.to,
+    subject: filter.subject,
+    hasAttachment: filter.hasAttachment,
+    limit: searchPageSize,
+    offset,
+  })
+}
+
+// runSearch replaces the list with the first page of ranked search results for a
+// query and the structured chip constraints.
 export async function runSearch(query: string, filter: SearchFilter = emptyFilter): Promise<void> {
+  currentSearch = { query, filter }
   messageList.update((s) => loading(s))
   try {
-    const items = await search({
-      query,
-      afterUnix: filter.afterUnix,
-      beforeUnix: filter.beforeUnix,
-      from: filter.from,
-      to: filter.to,
-      subject: filter.subject,
-      hasAttachment: filter.hasAttachment,
-      limit: 200,
-    })
+    const { messages, total } = await searchPage(query, filter, 0)
     // search runs over the local index, so backfilling older mail from the
     // server is not part of it: hasOlder stays false and the list shows no
     // "load older" affordance on a result set.
     messageList.set(
-      ready({ items, total: items.length, searching: true, hasOlder: false, backfilling: false }),
+      ready({
+        items: messages,
+        total,
+        searching: true,
+        hasOlder: false,
+        backfilling: false,
+        // one page of ranked hits was consumed, whether or not every one of
+        // them survived to become a row.
+        loadedHits: searchPageSize,
+      }),
     )
   } catch (err) {
     messageList.set(failed(errorMessage(err)))
+  }
+}
+
+// loadMoreSearch appends the next page of the current result set. The backend
+// total counts index matches, while the attachment filter and messages deleted
+// since indexing are applied per page, so a page can come back short without
+// meaning the results are exhausted; paging stops only on an empty page.
+async function loadMoreSearch(): Promise<void> {
+  const active = currentSearch
+  if (!active) {
+    return
+  }
+  const state = get(messageList)
+  if (state.status !== 'ready' || !state.data) {
+    return
+  }
+  const offset = state.data.loadedHits ?? state.data.items.length
+  // the scroll handler fires repeatedly near the bottom; the loading status is
+  // what stops it from launching the same page several times over.
+  messageList.update((s) => loading(s))
+  try {
+    const { messages, total } = await searchPage(active.query, active.filter, offset)
+    messageList.update((s) => {
+      // the status is 'loading' here (this function set it), so only the data
+      // is checked: a newer query landing mid-flight is what must be discarded.
+      if (!s.data || !s.data.searching || currentSearch !== active) {
+        return s
+      }
+      const items = appendPage(s.data.items, messages)
+      return ready({
+        ...s.data,
+        items,
+        total,
+        loadedHits: offset + searchPageSize,
+        // an empty page means the ranked list ran out, whatever total says.
+        exhausted: messages.length === 0,
+      })
+    })
+  } catch (err) {
+    // put the list back the way it was: a failed page must not leave it stuck
+    // on 'loading', which would block every later page.
+    messageList.update((s) => (s.data ? ready(s.data) : s))
+    toastError(errorMessage(err))
   }
 }
 
