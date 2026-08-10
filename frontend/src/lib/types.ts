@@ -467,6 +467,29 @@ export interface MCPConfig {
 // the VirusTotal integration's settings. the api key is write-only: the backend
 // keeps it in the os keyring and only reports hasApiKey, so the settings field
 // can show a filled state without the secret coming back to the ui.
+// one imported OpenPGP key, as the encryption settings list shows it. It never
+// carries key material: fingerprints and user ids are all the ui needs.
+export interface PGPKey {
+  // uppercase hex, unseparated.
+  fingerprint: string
+  name: string
+  email: string
+  emails: string[]
+  // rfc 3339; expires is empty when the key never expires.
+  created: string
+  expires: string
+  expired: boolean
+  hasPrivate: boolean
+  // locked means the private half is passphrase protected.
+  locked: boolean
+  // unlocked means this session already holds the passphrase.
+  unlocked: boolean
+  // remembered means the passphrase is in the os keyring.
+  remembered: boolean
+  algorithm: string
+  bits: number
+}
+
 export interface VirusTotalConfig {
   enabled: boolean
   hasApiKey: boolean

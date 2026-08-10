@@ -29,6 +29,8 @@
   import ThemedIcon from '../common/ThemedIcon.svelte'
   import RowLayoutPreview from './RowLayoutPreview.svelte'
   import AboutSection from './AboutSection.svelte'
+  import EncryptionSection from './EncryptionSection.svelte'
+  import PassphraseDialog from './PassphraseDialog.svelte'
   import { settingsCategories, settingsGroups } from '../../lib/settingscategories'
   import { paletteQuickSelect, setPaletteQuickSelect } from '../../stores/palette'
   import ToggleSwitch from '../common/ToggleSwitch.svelte'
@@ -213,6 +215,8 @@
     { cat: 'power', label: $t('settingsPanel.toggle.offlineIndicator'), kw: 'offline' },
     { cat: 'power', label: $t('settingsPanel.toggle.flagColorSync'), kw: 'flag color sync' },
     { cat: 'power', label: $t('settingsPanel.label.downloadOffline'), kw: 'download offline cache' },
+    { cat: 'encryption', label: $t('encryption.import'), kw: 'pgp gpg openpgp key import' },
+    { cat: 'encryption', label: $t('encryption.signingTitle'), kw: 'pgp sign key account' },
     { cat: 'shortcuts', label: $t('settingsPanel.toggle.shortcutHints'), kw: 'keyboard hints' },
     { cat: 'shortcuts', label: $t('settingsPanel.toggle.paletteQuickSelect'), kw: 'command palette quick select numbers' },
     { cat: 'shortcuts', label: $t('onboarding.extras.appVim'), kw: 'vim navigation' },
@@ -1345,6 +1349,11 @@
           />
           <p class="hint">{$t('settingsPanel.hint.undoSend')}</p>
         </section>
+      {:else if active === 'encryption'}
+        <section>
+          <h3>{$t('settingsPanel.category.encryption')}</h3>
+          <EncryptionSection />
+        </section>
       {:else if active === 'shortcuts'}
         <section>
           <h3>{$t('settings.shortcuts')}</h3>
@@ -1404,6 +1413,8 @@
     <svelte:component this={m.default} on:close={() => (vipOpen = false)} />
   {/await}
 {/if}
+
+<PassphraseDialog />
 
 <style>
   .screen {
