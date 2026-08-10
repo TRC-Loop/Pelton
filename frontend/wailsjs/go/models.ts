@@ -1171,11 +1171,12 @@ export namespace desktop {
 	    imapPort: number;
 	    smtpHost: string;
 	    smtpPort: number;
-	
+	    password: string;
+
 	    static createFrom(source: any = {}) {
 	        return new UpdateAccountRequest(source);
 	    }
-	
+
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.id = source["id"];
@@ -1185,6 +1186,7 @@ export namespace desktop {
 	        this.imapPort = source["imapPort"];
 	        this.smtpHost = source["smtpHost"];
 	        this.smtpPort = source["smtpPort"];
+	        this.password = source["password"];
 	    }
 	}
 	export class UpdateCheckResult {
