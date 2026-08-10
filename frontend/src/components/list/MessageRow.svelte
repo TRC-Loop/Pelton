@@ -222,7 +222,9 @@
 
     <div class="content">
       <div class="line top">
-        <span class="dot" class:show={unread} aria-hidden="true"></span>
+        {#if unread}
+          <span class="dot" aria-hidden="true"></span>
+        {/if}
         {#if isVip}
           <IconStarFilled size={12} class="vip-star" aria-label={$t('vip.star')} />
         {/if}
@@ -363,13 +365,9 @@
     width: 7px;
     height: 7px;
     border-radius: 999px;
-    background: transparent;
+    background: var(--text-primary);
     flex-shrink: 0;
     align-self: center;
-  }
-
-  .dot.show {
-    background: var(--text-primary);
   }
 
   .sender {
