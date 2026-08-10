@@ -28,7 +28,7 @@ const attributeSeparator = " "
 // folderColumns is the select list every folder query shares, in the order
 // scanFolder reads them.
 const folderColumns = `id, account_id, name, imap_path, delimiter, parent_id,
-       attributes, uid_validity, position, pinned_position`
+       attributes, uid_validity, position, pinned_position, role_override`
 
 // folderOrder sorts folders for display: reordered groups first in the order the
 // user chose, then everything untouched in discovery (id) order. In sqlite
@@ -56,6 +56,10 @@ type Folder struct {
 	// when it is not pinned. Pinning mirrors the folder into that group; it stays
 	// in its account's tree either way.
 	PinnedPosition int
+	// RoleOverride is the role the user assigned by hand, or empty to detect it
+	// from the server's special-use attribute and the folder name. It wins over
+	// both, because no amount of detection covers every server's naming.
+	RoleOverride string
 }
 
 // CreateFolder inserts a folder and returns its new id.
@@ -267,6 +271,18 @@ WHERE id = ? AND pinned_position = 0`
 	return nil
 }
 
+// SetFolderRoleOverride records the role the user assigned to a folder by hand.
+// An empty role clears the override and hands the folder back to automatic
+// detection. Validating the role itself is the caller's job.
+func (d *DB) SetFolderRoleOverride(ctx context.Context, id int64, role string) error {
+	res, err := d.sql.ExecContext(ctx,
+		`UPDATE folders SET role_override = ? WHERE id = ?`, role, id)
+	if err != nil {
+		return fmt.Errorf("storage: set folder %d role override: %w", id, err)
+	}
+	return requireOneRow(res, ErrFolderNotFound)
+}
+
 // setPositions runs one position-rewriting statement per id inside a single
 // transaction. The statement takes the new position and the id, in that order.
 func (d *DB) setPositions(ctx context.Context, stmt string, orderedIDs []int64, what string) error {
@@ -303,7 +319,8 @@ func scanFolder(row rowScanner) (*Folder, error) {
 		attrs  string
 	)
 	if err := row.Scan(&f.ID, &f.AccountID, &f.Name, &f.IMAPPath, &f.Delimiter,
-		&parent, &attrs, &f.UIDValidity, &f.Position, &f.PinnedPosition); err != nil {
+		&parent, &attrs, &f.UIDValidity, &f.Position, &f.PinnedPosition,
+		&f.RoleOverride); err != nil {
 		return nil, err
 	}
 	if parent.Valid {

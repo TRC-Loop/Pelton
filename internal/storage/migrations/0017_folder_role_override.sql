@@ -1,0 +1,12 @@
+-- a user-chosen role for a mailbox, overriding both automatic detection steps
+-- (the imap \Special-Use attribute and the exact folder-name match). Servers
+-- that report no special-use attribute and name their mailboxes anything other
+-- than the english defaults are invisible to the unified views, and no name
+-- list would ever cover every server, so this is the escape hatch.
+--
+-- Empty means "detect automatically", which is every existing row, so nothing
+-- changes for an install that is already working. A value is one of the role
+-- names the ui uses: inbox, sent, drafts, trash, junk, archive, or normal.
+-- "normal" is meaningful rather than redundant: it forces a folder out of a
+-- role that detection wrongly gave it.
+ALTER TABLE folders ADD COLUMN role_override TEXT NOT NULL DEFAULT '';

@@ -18,6 +18,7 @@
     IconPencil,
     IconPin,
     IconPinnedOff,
+    IconTags,
   } from '@tabler/icons-svelte'
   import SidebarRow from './SidebarRow.svelte'
   import Self from './FolderNode.svelte'
@@ -25,7 +26,13 @@
   import { reorder, type ReorderDetail } from '../../lib/reorder'
   import { selection, selectFolder } from '../../stores/selection'
   import { openContextMenu, type MenuEntry } from '../../stores/contextmenu'
-  import { openCreateFolder, openRenameFolder, openDeleteFolder, openEmptyTrash } from '../../stores/folderdialog'
+  import {
+    openCreateFolder,
+    openRenameFolder,
+    openDeleteFolder,
+    openEmptyTrash,
+    openFolderRole,
+  } from '../../stores/folderdialog'
   import { startFolderDrag, endFolderDrag } from '../../stores/sidebardrag'
   import { refreshSidebar } from '../../stores/accounts'
   import { reorderFolders, setFolderPinned } from '../../lib/api'
@@ -74,6 +81,13 @@
         label: folder.pinned ? $t('folders.unpin') : $t('folders.pin'),
         icon: folder.pinned ? IconPinnedOff : IconPin,
         action: () => void togglePinned(),
+      },
+      // offered on every folder, including the inbox: a mailbox the server
+      // flagged wrongly is exactly the one that needs correcting.
+      {
+        label: $t('folders.roleAction'),
+        icon: IconTags,
+        action: () => openFolderRole(folder),
       },
     ]
     if (emptiable) {

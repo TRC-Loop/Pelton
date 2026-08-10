@@ -33,6 +33,10 @@ export interface Folder {
   // mirrored into the sidebar's Pinned group. the folder stays in its own
   // account's tree either way, so this is display state, not a move.
   pinned: boolean
+  // the role the user assigned by hand, empty when role above was detected.
+  // kept apart from role so the picker can show whether the current state is a
+  // choice or automatic detection.
+  roleOverride: string
 }
 
 export interface UnifiedView {

@@ -68,6 +68,9 @@ function foldersFor(accountId: number, inboxUnread: number, inboxTotal: number):
     totalCount: total,
     attributes: [],
     pinned: false,
+    // the demo folders carry their role directly, so none of them is an
+    // override of anything.
+    roleOverride: '',
   })
   const base = accountId * 100
   return [

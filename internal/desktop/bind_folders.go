@@ -23,6 +23,30 @@ import (
 // the app itself depends on.
 var errFolderProtected = errors.New("this folder is used by Pelton and cannot be renamed or deleted")
 
+// errUnknownRole is returned for a role the ui should never have sent.
+var errUnknownRole = errors.New("pelton: unknown folder role")
+
+// SetFolderRole records the role a user assigned to a mailbox by hand,
+// overriding both detection steps. An empty role clears the assignment and
+// hands the folder back to automatic detection.
+//
+// This exists because detection cannot be made to work everywhere: a server
+// that reports no \Special-Use attribute and does not name its mailboxes with
+// the english defaults leaves that mail cached but missing from the unified
+// views, and no name list would ever cover every server (#186).
+//
+// Nothing is sent to the server. The role is local classification, which is why
+// assigning one never renames or moves the mailbox.
+func (a *App) SetFolderRole(folderID int64, role string) error {
+	if err := a.ready(); err != nil {
+		return err
+	}
+	if role != "" && !validFolderRole(role) {
+		return fmt.Errorf("%w: %s", errUnknownRole, role)
+	}
+	return a.store.SetFolderRoleOverride(a.ctx, folderID, role)
+}
+
 // CreateFolderRequest names a new mailbox. ParentID 0 creates it at the root of
 // the account; otherwise it is created as a child of that folder.
 type CreateFolderRequest struct {

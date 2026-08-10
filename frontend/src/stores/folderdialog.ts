@@ -6,7 +6,7 @@ import { writable } from 'svelte/store'
 import type { Folder } from '../lib/types'
 
 /** What the dialog is being opened for. */
-export type FolderDialogMode = 'create' | 'rename' | 'delete' | 'empty'
+export type FolderDialogMode = 'create' | 'rename' | 'delete' | 'empty' | 'role'
 
 /** An open request for the folder dialog. */
 export interface FolderDialogRequest {
@@ -43,6 +43,15 @@ export function openDeleteFolder(folder: Folder): void {
  */
 export function openEmptyTrash(folder: Folder): void {
   folderDialog.set({ mode: 'empty', accountId: folder.accountId, folder })
+}
+
+/**
+ * Opens the role picker for a mailbox. Assigning a role is what makes a folder
+ * reachable from the unified views when the server neither flags it with a
+ * special-use attribute nor names it the way Pelton expects (#186).
+ */
+export function openFolderRole(folder: Folder): void {
+  folderDialog.set({ mode: 'role', accountId: folder.accountId, folder })
 }
 
 /** Closes the dialog without acting. */
