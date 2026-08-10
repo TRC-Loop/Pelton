@@ -147,11 +147,22 @@
     return `folder:${sel.folderId}`
   }
 
+  // resetScroll puts the list back at the top. the container outlives the rows
+  // it holds, so without this a change of content keeps the old offset and a
+  // short result set renders far above the viewport, looking like no results.
+  function resetScroll(): void {
+    scrollTop = 0
+    if (listEl) {
+      listEl.scrollTop = 0
+    }
+  }
+
   let lastKey = ''
   $: if ($selection && selectionKey($selection) !== lastKey) {
     lastKey = selectionKey($selection)
     activeIndex = -1
     clearSelection()
+    resetScroll()
     void loadList($selection)
   }
 
@@ -201,6 +212,7 @@
   function applySearch(query: string, filter: SearchFilter): void {
     activeIndex = -1
     clearSelection()
+    resetScroll()
     if (query === '' && !filterActive(filter)) {
       void loadList($selection)
     } else {
