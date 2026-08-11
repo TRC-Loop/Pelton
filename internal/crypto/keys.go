@@ -65,6 +65,29 @@ func (s *PGPKeyStore) SenderKey(email string) (*openpgp.Entity, error) {
 	return ent, nil
 }
 
+// PrivateKeys returns every private key in the store. Decryption needs all of
+// them rather than one looked up by address: a message names the key it was
+// encrypted to by key id, and that key may belong to any of the user's
+// identities, including an address the message was never sent to directly.
+func (s *PGPKeyStore) PrivateKeys() (openpgp.EntityList, error) {
+	return s.load(secringFile)
+}
+
+// PublicKeys returns every key that can check a signature: the public keyring,
+// plus the public halves of the user's own private keys so mail they signed
+// themselves still verifies.
+func (s *PGPKeyStore) PublicKeys() (openpgp.EntityList, error) {
+	pub, err := s.load(pubringFile)
+	if err != nil {
+		return nil, err
+	}
+	sec, err := s.load(secringFile)
+	if err != nil {
+		return nil, err
+	}
+	return append(pub, sec...), nil
+}
+
 // load reads and parses one armored keyring file. A missing file is reported as
 // an empty keyring so lookups fall through to the not-found errors with a clear
 // message rather than a confusing open error.

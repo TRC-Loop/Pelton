@@ -485,6 +485,17 @@ const es: Record<string, string> = {
   'detail.attachments.noPreview': 'No hay vista previa en la aplicación para este tipo de archivo.',
   'detail.attachments.saveInstead': 'Guardarlo en su lugar',
   'detail.noSubject': '(sin asunto)',
+  'detail.pgp.locked.title': 'Este mensaje está cifrado',
+  'detail.pgp.locked.body':
+    'Introduce la frase de contraseña de tu clave para leerlo. Pelton la conserva hasta que cierres, así que no volverá a pedírtela en esta sesión.',
+  'detail.pgp.nokey.title': 'Este mensaje no se puede descifrar',
+  'detail.pgp.nokey.body':
+    'Se cifró para una clave que no has importado. Añade la clave privada correspondiente en Ajustes, Cifrado, y vuelve a abrir el mensaje.',
+  'detail.pgp.failed.title': 'No se ha podido leer este mensaje',
+  'detail.pgp.failed.body':
+    'Dice estar protegido con PGP, pero los datos están dañados o en un formato que Pelton no entiende. Consulta el código fuente para verlo tal como llegó.',
+  'detail.pgp.passphrase': 'Frase de contraseña',
+  'detail.pgp.unlock': 'Desbloquear',
   'detail.header.to': 'para',
   'detail.header.cc': 'cc',
   'detail.infoModal.pgp.none': 'Sin marcadores PGP',
@@ -1177,6 +1188,11 @@ const es: Record<string, string> = {
   'encryption.signingTitle': 'Claves de firma',
   'encryption.signingHint': 'Con qué clave privada firma cada cuenta. En automático, Pelton empareja la dirección de la cuenta con las claves que tiene.',
   'encryption.signingAuto': 'Emparejar por dirección',
+  'encryption.searchTitle': 'Buscar en el correo cifrado',
+  'encryption.searchLabel': 'Permitir que la búsqueda mire dentro de los mensajes cifrados',
+  'encryption.searchHint':
+    'Desactivado por defecto. El correo cifrado normalmente solo se encuentra por asunto, remitente y fecha, porque buscar en su texto significa escribir ese texto en el índice de búsqueda, un archivo normal en este equipo. Activarlo reconstruye el índice; desactivarlo lo reconstruye de nuevo y elimina lo escrito. Los mensajes cuya clave está bloqueada se omiten.',
+  'encryption.searchRebuilding': 'Reconstruyendo el índice de búsqueda en segundo plano',
   'encryption.passphrase.title': 'Desbloquear clave privada',
   'encryption.passphrase.label': 'Frase de contraseña',
   'encryption.passphrase.remember': 'Recordar esta frase de contraseña',

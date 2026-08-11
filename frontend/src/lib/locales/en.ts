@@ -485,6 +485,17 @@ const en: Record<string, string> = {
   'detail.attachments.noPreview': 'No in-app preview for this file type.',
   'detail.attachments.saveInstead': 'Save it instead',
   'detail.noSubject': '(no subject)',
+  'detail.pgp.locked.title': 'This message is encrypted',
+  'detail.pgp.locked.body':
+    'Enter the passphrase for your key to read it. Pelton keeps it until you quit, so you will not be asked again this session.',
+  'detail.pgp.nokey.title': 'This message cannot be decrypted',
+  'detail.pgp.nokey.body':
+    'It was encrypted to a key you have not imported. Add the matching private key under Settings, Encryption, and open the message again.',
+  'detail.pgp.failed.title': 'This message could not be read',
+  'detail.pgp.failed.body':
+    'It claims to be PGP protected, but the data is damaged or in a form Pelton does not understand. View the source to see it as it arrived.',
+  'detail.pgp.passphrase': 'Passphrase',
+  'detail.pgp.unlock': 'Unlock',
   'detail.header.to': 'to',
   'detail.header.cc': 'cc',
   'detail.infoModal.pgp.none': 'No PGP markers',
@@ -1177,6 +1188,11 @@ const en: Record<string, string> = {
   'encryption.signingTitle': 'Signing keys',
   'encryption.signingHint': 'Which private key each account signs with. Left automatic, Pelton matches the account address against the keys it has.',
   'encryption.signingAuto': 'Match by address',
+  'encryption.searchTitle': 'Searching encrypted mail',
+  'encryption.searchLabel': 'Let search look inside encrypted messages',
+  'encryption.searchHint':
+    'Off by default. Encrypted mail is normally findable by subject, sender and date only, because searching its text means writing that text into the search index, in a plain file on this computer. Turning this on rebuilds the index; turning it off rebuilds it again and removes what was written. Messages whose key is locked are skipped.',
+  'encryption.searchRebuilding': 'Rebuilding the search index in the background',
   'encryption.passphrase.title': 'Unlock private key',
   'encryption.passphrase.label': 'Passphrase',
   'encryption.passphrase.remember': 'Remember this passphrase',

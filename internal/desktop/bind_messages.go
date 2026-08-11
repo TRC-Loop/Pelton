@@ -113,6 +113,27 @@ func (a *App) GetMessage(id int64) (MessageDetailDTO, error) {
 		Unsubscribe:       a.unsubscribeInfo(m),
 	}
 	detail.BodyHTMLSafe = a.renderHTML(m.BodyHTML, atts, autoAllow)
+
+	// protected mail is decrypted here and only here: the plaintext replaces the
+	// armor for this response and is never written back. The stored body stays
+	// the ciphertext, so closing the message loses nothing that was not sent.
+	if body, isHTML, state, sig := a.openProtected(*m); state != "" {
+		detail.PGPState = state
+		detail.SMIME = smimeDTO(sig)
+		if state == pgpStateOpen {
+			if isHTML {
+				detail.IsHTML = true
+				detail.BodyPlain = ""
+				detail.BodyHTMLSafe = a.renderHTML(body, atts, autoAllow)
+				detail.HasRemoteContent = mailview.HasRemoteContent(body)
+				detail.RemoteHosts = mailview.RemoteHosts(body)
+			} else {
+				detail.IsHTML = false
+				detail.BodyPlain = body
+				detail.BodyHTMLSafe = ""
+			}
+		}
+	}
 	return detail, nil
 }
 

@@ -582,6 +582,26 @@ export namespace desktop {
 	        this.done = source["done"];
 	    }
 	}
+	export class SMIMEDTO {
+	    status: string;
+	    signer: string;
+	    email: string;
+	    issuer: string;
+	    detail: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new SMIMEDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.status = source["status"];
+	        this.signer = source["signer"];
+	        this.email = source["email"];
+	        this.issuer = source["issuer"];
+	        this.detail = source["detail"];
+	    }
+	}
 	export class MessageDetailDTO {
 	    id: number;
 	    accountId: number;
@@ -612,6 +632,7 @@ export namespace desktop {
 	    remoteAllowed: boolean;
 	    remoteHosts: string[];
 	    attachments: AttachmentDTO[];
+	    pgpState: string;
 	    unsubscribe?: UnsubscribeDTO;
 	
 	    static createFrom(source: any = {}) {
@@ -649,6 +670,7 @@ export namespace desktop {
 	        this.remoteAllowed = source["remoteAllowed"];
 	        this.remoteHosts = source["remoteHosts"];
 	        this.attachments = this.convertValues(source["attachments"], AttachmentDTO);
+	        this.pgpState = source["pgpState"];
 	        this.unsubscribe = this.convertValues(source["unsubscribe"], UnsubscribeDTO);
 	    }
 	
@@ -719,7 +741,7 @@ export namespace desktop {
 	        this.senderVip = source["senderVip"];
 	        this.smime = this.convertValues(source["smime"], SMIMEDTO);
 	    }
-
+	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
 		    if (!a) {
 		        return a;
@@ -923,26 +945,7 @@ export namespace desktop {
 	        this.hasPassword = source["hasPassword"];
 	    }
 	}
-	export class SMIMEDTO {
-	    status: string;
-	    signer: string;
-	    email: string;
-	    issuer: string;
-	    detail: string;
-
-	    static createFrom(source: any = {}) {
-	        return new SMIMEDTO(source);
-	    }
-
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.status = source["status"];
-	        this.signer = source["signer"];
-	        this.email = source["email"];
-	        this.issuer = source["issuer"];
-	        this.detail = source["detail"];
-	    }
-	}
+	
 	export class SaveThemeRequest {
 	    id: string;
 	    name: string;

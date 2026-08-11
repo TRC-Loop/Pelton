@@ -485,6 +485,17 @@ const pl: Record<string, string> = {
   'detail.attachments.noPreview': 'Brak podglądu w aplikacji dla tego typu pliku.',
   'detail.attachments.saveInstead': 'Zapisz go zamiast tego',
   'detail.noSubject': '(bez tematu)',
+  'detail.pgp.locked.title': 'Ta wiadomość jest zaszyfrowana',
+  'detail.pgp.locked.body':
+    'Podaj hasło do swojego klucza, aby ją przeczytać. Pelton zachowa je do zamknięcia programu, więc w tej sesji nie zapyta ponownie.',
+  'detail.pgp.nokey.title': 'Nie można odszyfrować tej wiadomości',
+  'detail.pgp.nokey.body':
+    'Zaszyfrowano ją dla klucza, którego nie zaimportowano. Dodaj odpowiedni klucz prywatny w Ustawieniach, Szyfrowanie, i otwórz wiadomość ponownie.',
+  'detail.pgp.failed.title': 'Nie udało się odczytać tej wiadomości',
+  'detail.pgp.failed.body':
+    'Deklaruje ochronę PGP, ale dane są uszkodzone lub w formie, której Pelton nie rozumie. Zobacz źródło, aby obejrzeć ją w postaci, w jakiej dotarła.',
+  'detail.pgp.passphrase': 'Hasło',
+  'detail.pgp.unlock': 'Odblokuj',
   'detail.header.to': 'do',
   'detail.header.cc': 'DW',
   'detail.infoModal.pgp.none': 'Brak znaczników PGP',
@@ -1177,6 +1188,11 @@ const pl: Record<string, string> = {
   'encryption.signingTitle': 'Klucze podpisujące',
   'encryption.signingHint': 'Którym kluczem prywatnym podpisuje każde konto. W trybie automatycznym Pelton dopasowuje adres konta do posiadanych kluczy.',
   'encryption.signingAuto': 'Dopasuj po adresie',
+  'encryption.searchTitle': 'Przeszukiwanie zaszyfrowanej poczty',
+  'encryption.searchLabel': 'Pozwól wyszukiwaniu zaglądać do zaszyfrowanych wiadomości',
+  'encryption.searchHint':
+    'Domyślnie wyłączone. Zaszyfrowaną pocztę można zwykle znaleźć tylko po temacie, nadawcy i dacie, bo przeszukiwanie jej treści oznacza zapisanie tej treści w indeksie wyszukiwania, w zwykłym pliku na tym komputerze. Włączenie przebudowuje indeks; wyłączenie przebudowuje go ponownie i usuwa to, co zapisano. Wiadomości z zablokowanym kluczem są pomijane.',
+  'encryption.searchRebuilding': 'Przebudowa indeksu wyszukiwania w tle',
   'encryption.passphrase.title': 'Odblokuj klucz prywatny',
   'encryption.passphrase.label': 'Hasło klucza',
   'encryption.passphrase.remember': 'Zapamiętaj to hasło',

@@ -6,6 +6,7 @@
   import DetailHeader from './DetailHeader.svelte'
   import ActionToolbar from './ActionToolbar.svelte'
   import MailBody from './MailBody.svelte'
+  import ProtectedNotice from './ProtectedNotice.svelte'
   import AttachmentList from './AttachmentList.svelte'
   import InfoModal from './InfoModal.svelte'
   import SourceModal from './SourceModal.svelte'
@@ -259,7 +260,17 @@ ${bodyHtml}
     <div class="scroll selectable" bind:this={scrollEl}>
       <DetailHeader {detail} />
       <div class="body-wrap">
-        <MailBody {detail} />
+        {#if detail.pgpState !== '' && detail.pgpState !== 'open'}
+          <!-- the body here is still the armor, so showing it would put
+               ciphertext in front of the reader. -->
+          <ProtectedNotice
+            state={detail.pgpState}
+            messageId={detail.id}
+            on:opened={() => void loadMessage(detail.id)}
+          />
+        {:else}
+          <MailBody {detail} />
+        {/if}
       </div>
       <AttachmentList messageId={detail.id} attachments={detail.attachments} />
     </div>

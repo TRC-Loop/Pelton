@@ -69,11 +69,14 @@ const (
 // safe to show: it is read out of the certificate, never invented.
 type Signature struct {
 	Status SignatureStatus
-	// SignerName is the certificate's common name, SignerEmail the address it
-	// was issued to, and Issuer the common name of the CA that issued it.
+	// SignerName is the display name the signature vouches for and SignerEmail
+	// the address. Issuer is the CA's common name for S/MIME and empty for PGP,
+	// which has no issuing authority; Fingerprint is the signing key's
+	// fingerprint for PGP and empty for S/MIME.
 	SignerName  string
 	SignerEmail string
 	Issuer      string
+	Fingerprint string
 	// Expires is when the signing certificate stops being valid.
 	Expires time.Time
 	// Detail explains a non-valid status in one sentence, for a tooltip. Empty

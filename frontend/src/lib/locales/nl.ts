@@ -485,6 +485,17 @@ const nl: Record<string, string> = {
   'detail.attachments.noPreview': 'Geen voorbeeld beschikbaar in de app voor dit bestandstype.',
   'detail.attachments.saveInstead': 'Sla het in plaats daarvan op',
   'detail.noSubject': '(geen onderwerp)',
+  'detail.pgp.locked.title': 'Dit bericht is versleuteld',
+  'detail.pgp.locked.body':
+    'Voer de wachtwoordzin van je sleutel in om het te lezen. Pelton bewaart die tot je afsluit, dus je wordt deze sessie niet opnieuw gevraagd.',
+  'detail.pgp.nokey.title': 'Dit bericht kan niet ontsleuteld worden',
+  'detail.pgp.nokey.body':
+    'Het is versleuteld voor een sleutel die je niet hebt geïmporteerd. Voeg de bijbehorende privésleutel toe bij Instellingen, Versleuteling en open het bericht opnieuw.',
+  'detail.pgp.failed.title': 'Dit bericht kon niet gelezen worden',
+  'detail.pgp.failed.body':
+    'Het zegt PGP-beveiligd te zijn, maar de gegevens zijn beschadigd of in een vorm die Pelton niet begrijpt. Bekijk de bron om het te zien zoals het aankwam.',
+  'detail.pgp.passphrase': 'Wachtwoordzin',
+  'detail.pgp.unlock': 'Ontgrendelen',
   'detail.header.to': 'aan',
   'detail.header.cc': 'cc',
   'detail.infoModal.pgp.none': 'Geen PGP-markeringen',
@@ -1177,6 +1188,11 @@ const nl: Record<string, string> = {
   'encryption.signingTitle': 'Ondertekeningssleutels',
   'encryption.signingHint': 'Met welke privésleutel elk account ondertekent. Automatisch koppelt Pelton het accountadres aan de aanwezige sleutels.',
   'encryption.signingAuto': 'Op adres koppelen',
+  'encryption.searchTitle': 'Versleutelde post doorzoeken',
+  'encryption.searchLabel': 'Zoeken mag in versleutelde berichten kijken',
+  'encryption.searchHint':
+    'Standaard uit. Versleutelde post is normaal alleen te vinden op onderwerp, afzender en datum, want de tekst doorzoeken betekent die tekst wegschrijven in de zoekindex, een gewoon bestand op deze computer. Aanzetten bouwt de index opnieuw op; uitzetten bouwt hem nogmaals op en verwijdert wat er geschreven was. Berichten met een vergrendelde sleutel worden overgeslagen.',
+  'encryption.searchRebuilding': 'Zoekindex wordt op de achtergrond opnieuw opgebouwd',
   'encryption.passphrase.title': 'Privésleutel ontgrendelen',
   'encryption.passphrase.label': 'Wachtwoordzin',
   'encryption.passphrase.remember': 'Deze wachtwoordzin onthouden',

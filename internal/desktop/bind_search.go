@@ -1,6 +1,7 @@
 package desktop
 
 import (
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -93,7 +94,9 @@ func (a *App) indexNewMessages() error {
 
 		docs := make([]search.Doc, 0, len(msgs))
 		for _, m := range msgs {
-			docs = append(docs, toSearchDoc(m))
+			doc := toSearchDoc(m)
+			doc.Body = a.searchBody(m)
+			docs = append(docs, doc)
 			if m.ID > watermark {
 				watermark = m.ID
 			}
@@ -124,6 +127,62 @@ func (a *App) searchWatermark() int64 {
 
 // toSearchDoc projects a stored message into the search document. The sender name
 // and address are combined so a search for either finds the mail.
+// rebuildSearchIndex discards the index and builds it again from the cache.
+// Used when what gets indexed changes in a way that overwriting documents would
+// not undo, which is the case for decrypted text: a plaintext already written
+// has to actually leave the index, not merely stop being added.
+func (a *App) rebuildSearchIndex() {
+	if a.index == nil {
+		return
+	}
+	a.searchMu.Lock()
+	if err := a.index.Close(); err != nil {
+		a.log.Error("close search index for rebuild", "err", err)
+	}
+	path := filepath.Join(a.dataDir, indexFileName)
+	if err := os.RemoveAll(path); err != nil {
+		a.log.Error("remove search index for rebuild", "err", err)
+	}
+	idx, err := search.Open(path)
+	if err != nil {
+		a.log.Error("reopen search index after rebuild", "err", err)
+		a.searchMu.Unlock()
+		return
+	}
+	a.index = idx
+	if err := a.store.Set(a.ctx, settingSearchWatermark, "0"); err != nil {
+		a.log.Error("rewind search watermark for rebuild", "err", err)
+	}
+	a.searchMu.Unlock()
+
+	if err := a.indexNewMessages(); err != nil {
+		a.log.Error("rebuild search index", "err", err)
+	}
+}
+
+// searchBody returns the text search should index for a message. Encrypted mail
+// is indexed by its armor, which finds nothing, unless the user has opted in to
+// indexing the decrypted text and the key is available to produce it.
+//
+// A locked key means the message is indexed unopened. Nothing re-indexes it
+// when the key is later unlocked, which is a real limit rather than an
+// oversight: re-indexing on unlock would mean decrypting the whole mailbox at
+// the moment a passphrase is typed.
+func (a *App) searchBody(m storage.Message) string {
+	body := m.BodyPlain
+	if strings.TrimSpace(body) == "" {
+		body = mailview.PlainText(m.BodyHTML)
+	}
+	if !a.boolSetting(settingIndexDecrypted, false) {
+		return body
+	}
+	opened, _, state, _ := a.openProtected(m)
+	if state != pgpStateOpen {
+		return body
+	}
+	return opened
+}
+
 func toSearchDoc(m storage.Message) search.Doc {
 	// html-only mail carries no text/plain part, so indexing body_plain alone
 	// left roughly a seventh of a real mailbox with an empty body: the text

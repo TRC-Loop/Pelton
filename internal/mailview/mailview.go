@@ -10,11 +10,16 @@
 package mailview
 
 import (
+	"bytes"
+	"fmt"
 	stdhtml "html"
+	"io"
 	"regexp"
 	"strings"
 	"unicode/utf8"
 
+	"github.com/emersion/go-message"
+	"github.com/emersion/go-message/mail"
 	"github.com/microcosm-cc/bluemonday"
 	htmltok "golang.org/x/net/html"
 )
@@ -258,6 +263,61 @@ func DetectPGP(plain, html string) PGPStatus {
 	default:
 		return PGPNone
 	}
+}
+
+// Entity is the readable content of a MIME entity: its text and html bodies.
+type Entity struct {
+	Text string
+	HTML string
+}
+
+// ParseEntity reads a standalone MIME entity into its text and html parts.
+//
+// It exists for decrypted mail. The plaintext inside an encrypted message is a
+// MIME entity in its own right, with its own headers, parts and transfer
+// encodings, and showing it raw would put MIME source in front of the reader.
+// The bodies are returned rather than stored, since caching decrypted content
+// would undo the encryption.
+func ParseEntity(raw []byte) (Entity, error) {
+	reader, err := mail.CreateReader(bytes.NewReader(raw))
+	if err != nil && !message.IsUnknownCharset(err) {
+		return Entity{}, fmt.Errorf("mailview: read entity: %w", err)
+	}
+
+	var out Entity
+	for {
+		part, err := reader.NextPart()
+		if err == io.EOF {
+			break
+		}
+		if err != nil && !message.IsUnknownCharset(err) {
+			// keep whatever was already recovered: a truncated multipart is
+			// better shown in part than discarded.
+			break
+		}
+		header, ok := part.Header.(*mail.InlineHeader)
+		if !ok {
+			continue
+		}
+		body, err := io.ReadAll(part.Body)
+		if err != nil {
+			break
+		}
+		contentType, _, _ := header.ContentType()
+		if strings.EqualFold(contentType, "text/html") {
+			if out.HTML == "" {
+				out.HTML = string(body)
+			}
+			continue
+		}
+		if out.Text == "" {
+			out.Text = string(body)
+		}
+	}
+	if out.Text == "" && out.HTML == "" {
+		return Entity{}, fmt.Errorf("mailview: entity has no readable body")
+	}
+	return out, nil
 }
 
 // skipTextIn are elements whose text content is markup rather than prose, so it

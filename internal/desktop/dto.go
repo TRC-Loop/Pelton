@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/TRC-Loop/Pelton/internal/crypto"
 	"github.com/TRC-Loop/Pelton/internal/mailview"
 	"github.com/TRC-Loop/Pelton/internal/storage"
 )
@@ -91,6 +92,19 @@ type MessageSummaryDTO struct {
 	SMIME SMIMEDTO `json:"smime"`
 }
 
+// smimeDTO flattens a verified signature for the ui. It carries both PGP and
+// S/MIME verdicts: they answer the same question and the reading pane shows
+// them the same way, so one shape keeps that from being two code paths.
+func smimeDTO(sig crypto.Signature) SMIMEDTO {
+	return SMIMEDTO{
+		Status: string(sig.Status),
+		Signer: sig.SignerName,
+		Email:  sig.SignerEmail,
+		Issuer: sig.Issuer,
+		Detail: sig.Detail,
+	}
+}
+
 // SMIMEDTO is a message's s/mime signature verdict for display. Status is one
 // of "", "valid", "untrusted" or "invalid"; Detail explains anything that is
 // not valid, in a sentence written for the reader.
@@ -142,6 +156,12 @@ type MessageDetailDTO struct {
 	// the banner can show the user where.
 	RemoteHosts []string        `json:"remoteHosts"`
 	Attachments []AttachmentDTO `json:"attachments"`
+	// PGPState is empty for ordinary mail, and otherwise says what happened when
+	// the message was opened: "open" (decrypted, body below is the plaintext),
+	// "locked" (a passphrase is needed), "nokey" (no imported key can open it)
+	// or "failed" (the pgp data could not be read). The reading pane offers a
+	// different next step for each, rather than one generic error.
+	PGPState string `json:"pgpState"`
 	// Unsubscribe describes the unsubscribe mechanism the message advertises
 	// via its List-Unsubscribe headers, nil when it has none on record.
 	Unsubscribe *UnsubscribeDTO `json:"unsubscribe"`

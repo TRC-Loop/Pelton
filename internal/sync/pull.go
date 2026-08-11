@@ -94,6 +94,16 @@ func (e *Engine) fetchAndStore(ctx context.Context, folder storage.Folder, uid u
 	if err != nil {
 		return 0, fmt.Errorf("sync: store message uid %d: %w", uid, err)
 	}
+
+	// pgp mail keeps its source, since decrypting and verifying need the exact
+	// bytes and nothing else caches them. What is kept is the sender's
+	// ciphertext, so this stores nothing the message did not already carry. A
+	// failure here costs the ability to open that one message, not the sync.
+	if crypto.IsProtected(msg.Raw) {
+		if err := e.store.SetMessagePGPSource(ctx, id, msg.Raw); err != nil {
+			e.log.Error("store pgp source", "uid", uid, "err", err)
+		}
+	}
 	return id, nil
 }
 

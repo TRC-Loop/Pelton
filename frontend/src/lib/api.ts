@@ -772,6 +772,9 @@ export const SettingKeys = {
   showDateTime: 'show_datetime',
   showPgp: 'show_pgp',
   showAuth: 'show_auth',
+  // lets search see inside encrypted mail, at the cost of writing the decrypted
+  // text into the on-disk index. off by default; toggling rebuilds the index.
+  indexDecrypted: 'search_index_decrypted',
   editorMode: 'editor_mode',
   toastPosition: 'toast_position',
   paneLocked: 'pane_locked',
@@ -878,6 +881,14 @@ export function unlockPGPKey(
   remember: boolean,
 ): Promise<void> {
   return App.UnlockPGPKey(fingerprint, passphrase, remember)
+}
+
+// unlockMessage tries a passphrase against one protected message and, if it
+// opens, holds the passphrase for the rest of the session. It does not offer to
+// store it in the keyring: that needs a specific key to file it under, which
+// the Encryption pane has and a message does not.
+export function unlockMessage(messageId: number, passphrase: string): Promise<void> {
+  return App.UnlockMessage(messageId, passphrase)
 }
 
 // forgetPGPPassphrase drops a passphrase from the session and the keyring.

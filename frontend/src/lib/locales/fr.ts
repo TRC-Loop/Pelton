@@ -485,6 +485,17 @@ const fr: Record<string, string> = {
   'detail.attachments.noPreview': 'Aucun aperçu disponible dans l\'application pour ce type de fichier.',
   'detail.attachments.saveInstead': 'Enregistre-le à la place',
   'detail.noSubject': '(sans objet)',
+  'detail.pgp.locked.title': 'Ce message est chiffré',
+  'detail.pgp.locked.body':
+    'Saisissez la phrase secrète de votre clé pour le lire. Pelton la conserve jusqu’à la fermeture, elle ne vous sera pas redemandée pendant cette session.',
+  'detail.pgp.nokey.title': 'Ce message ne peut pas être déchiffré',
+  'detail.pgp.nokey.body':
+    'Il a été chiffré pour une clé que vous n’avez pas importée. Ajoutez la clé privée correspondante dans Paramètres, Chiffrement, puis rouvrez le message.',
+  'detail.pgp.failed.title': 'Ce message n’a pas pu être lu',
+  'detail.pgp.failed.body':
+    'Il se présente comme protégé par PGP, mais les données sont endommagées ou dans une forme que Pelton ne comprend pas. Affichez la source pour le voir tel qu’il est arrivé.',
+  'detail.pgp.passphrase': 'Phrase secrète',
+  'detail.pgp.unlock': 'Déverrouiller',
   'detail.header.to': 'à',
   'detail.header.cc': 'cc',
   'detail.infoModal.pgp.none': 'Aucun marqueur PGP',
@@ -1177,6 +1188,11 @@ const fr: Record<string, string> = {
   'encryption.signingTitle': 'Clés de signature',
   'encryption.signingHint': "La clé privée avec laquelle chaque compte signe. En automatique, Pelton fait correspondre l'adresse du compte aux clés disponibles.",
   'encryption.signingAuto': 'Correspondre par adresse',
+  'encryption.searchTitle': 'Rechercher dans le courrier chiffré',
+  'encryption.searchLabel': 'Autoriser la recherche à lire les messages chiffrés',
+  'encryption.searchHint':
+    'Désactivé par défaut. Le courrier chiffré ne se trouve normalement que par objet, expéditeur et date, car rechercher dans son texte revient à écrire ce texte dans l’index de recherche, un simple fichier sur cet ordinateur. L’activer reconstruit l’index ; le désactiver le reconstruit à nouveau et efface ce qui y avait été écrit. Les messages dont la clé est verrouillée sont ignorés.',
+  'encryption.searchRebuilding': 'Reconstruction de l’index de recherche en arrière-plan',
   'encryption.passphrase.title': 'Déverrouiller la clé privée',
   'encryption.passphrase.label': 'Phrase secrète',
   'encryption.passphrase.remember': 'Mémoriser cette phrase secrète',
