@@ -1,7 +1,8 @@
 // Package crypto isolates Pelton's message signing and encryption behind a
 // small, library-agnostic surface so the rest of the app never imports an
-// openpgp or x509 package directly. PGP/MIME (RFC 3156) is implemented in full;
-// S/MIME (RFC 8551) is currently a hard-failing stub, see smime.go for why.
+// openpgp or x509 package directly. PGP/MIME (RFC 3156) is implemented in full.
+// S/MIME (RFC 8551) verifies signatures on received mail but cannot produce
+// them, so sending S/MIME hard-fails; see smime.go for why.
 //
 // # The one safety rule that shapes this package
 //

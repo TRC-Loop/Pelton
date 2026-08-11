@@ -58,6 +58,20 @@ type Message struct {
 	// ListUnsubscribePost marks RFC 8058 one-click support.
 	ListUnsubscribe     string
 	ListUnsubscribePost bool
+	// SMIME describes the message's s/mime signature as verified when it was
+	// synced. The zero value means no signature, which is most mail.
+	SMIME SMIMESignature
+}
+
+// SMIMESignature is a stored verification verdict. Status is '' for unsigned
+// mail, otherwise valid, untrusted or invalid; Detail explains anything that is
+// not valid, in a sentence fit to show the reader.
+type SMIMESignature struct {
+	Status string
+	Signer string
+	Email  string
+	Issuer string
+	Detail string
 }
 
 // IncomingAttachment is attachment metadata together with its content, handed
@@ -122,13 +136,15 @@ func insertMessage(ctx context.Context, ex execer, m *Message) (int64, error) {
 INSERT INTO messages (
     account_id, folder_id, uid, message_id, subject, from_address, from_name,
     to_addresses, cc_addresses, date, flags, body_plain, body_html,
-    has_attachments, size_bytes, list_unsubscribe, list_unsubscribe_post
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    has_attachments, size_bytes, list_unsubscribe, list_unsubscribe_post,
+    smime_status, smime_signer, smime_email, smime_issuer, smime_detail
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 	res, err := ex.ExecContext(ctx, query,
 		m.AccountID, m.FolderID, m.UID, m.MessageID, m.Subject, m.FromAddress,
 		m.FromName, m.ToAddresses, m.CcAddresses, formatTime(m.Date), uint8(m.Flags),
 		m.BodyPlain, m.BodyHTML, boolToInt(m.HasAttachments), m.SizeBytes,
-		m.ListUnsubscribe, boolToInt(m.ListUnsubscribePost))
+		m.ListUnsubscribe, boolToInt(m.ListUnsubscribePost),
+		m.SMIME.Status, m.SMIME.Signer, m.SMIME.Email, m.SMIME.Issuer, m.SMIME.Detail)
 	if err != nil {
 		return 0, fmt.Errorf("storage: insert message uid %d: %w", m.UID, err)
 	}
@@ -227,7 +243,8 @@ const selectMessageColumns = `
 SELECT id, account_id, folder_id, uid, message_id, subject, from_address,
        from_name, to_addresses, cc_addresses, date, flags, body_plain,
        body_html, has_attachments, size_bytes, flag_color, snooze_until,
-       snooze_hidden, offline, list_unsubscribe, list_unsubscribe_post`
+       snooze_hidden, offline, list_unsubscribe, list_unsubscribe_post,
+       smime_status, smime_signer, smime_email, smime_issuer, smime_detail`
 
 const selectMessageByID = selectMessageColumns + `
 FROM messages WHERE id = ?`
@@ -246,7 +263,9 @@ func scanMessage(row rowScanner) (*Message, error) {
 		&m.Subject, &m.FromAddress, &m.FromName, &m.ToAddresses, &m.CcAddresses,
 		&date, &flags, &m.BodyPlain, &m.BodyHTML, &hasAtt, &m.SizeBytes,
 		&m.FlagColor, &m.SnoozeUntil, &snoozeHidden, &offline,
-		&m.ListUnsubscribe, &unsubPost); err != nil {
+		&m.ListUnsubscribe, &unsubPost,
+		&m.SMIME.Status, &m.SMIME.Signer, &m.SMIME.Email, &m.SMIME.Issuer,
+		&m.SMIME.Detail); err != nil {
 		return nil, err
 	}
 	t, err := parseTime(date)

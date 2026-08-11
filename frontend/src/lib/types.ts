@@ -70,7 +70,24 @@ export interface MessageSummary {
   // senderVip is true when the from-address is on the VIP list, so the row can
   // show a star.
   senderVip: boolean
+  // smime is the signature verdict recorded when the message synced.
+  smime: SMIMESignature
 }
+
+// SMIMESignature is a message's s/mime signature verdict. An empty status means
+// the message is not signed, which is most mail. detail explains anything that
+// is not valid and is written to be shown as-is.
+export interface SMIMESignature {
+  // one of SMIMEStatus. typed as string to match the generated dto, the same
+  // way pgp is, and narrowed at the point of use.
+  status: string
+  signer: string
+  email: string
+  issuer: string
+  detail: string
+}
+
+export type SMIMEStatus = '' | 'valid' | 'untrusted' | 'invalid'
 
 export interface MessageDetail extends MessageSummary {
   toAddresses: string

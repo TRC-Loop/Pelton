@@ -7,6 +7,7 @@ import (
 
 	"github.com/emersion/go-imap/v2"
 
+	"github.com/TRC-Loop/Pelton/internal/crypto"
 	pimap "github.com/TRC-Loop/Pelton/internal/imap"
 	"github.com/TRC-Loop/Pelton/internal/storage"
 )
@@ -72,6 +73,11 @@ func (e *Engine) fetchAndStore(ctx context.Context, folder storage.Folder, uid u
 
 		ListUnsubscribe:     msg.ListUnsubscribe,
 		ListUnsubscribePost: msg.ListUnsubscribePost,
+
+		// verified here because this is the only place the raw bytes exist: they
+		// are not cached, so a later check would have to refetch the message and
+		// would report nothing at all offline.
+		SMIME: verifySignature(msg),
 	}
 
 	atts := make([]storage.IncomingAttachment, 0, len(msg.Attachments))
@@ -101,6 +107,26 @@ func (e *Engine) deleteLocal(ctx context.Context, folder storage.Folder, state s
 		return fmt.Errorf("sync: remove attachment files for uid %d: %w", state.UID, err)
 	}
 	return nil
+}
+
+// verifySignature checks a freshly fetched message's s/mime signature. Mail
+// that carries none, which is nearly all of it, produces a zero value and costs
+// only the header scan that establishes there is nothing to check.
+func verifySignature(msg *pimap.Message) storage.SMIMESignature {
+	if len(msg.Raw) == 0 {
+		return storage.SMIMESignature{}
+	}
+	sig := crypto.VerifySMIME(msg.Raw, msg.From)
+	if sig.Status == crypto.SigNone {
+		return storage.SMIMESignature{}
+	}
+	return storage.SMIMESignature{
+		Status: string(sig.Status),
+		Signer: sig.SignerName,
+		Email:  sig.SignerEmail,
+		Issuer: sig.Issuer,
+		Detail: sig.Detail,
+	}
 }
 
 // adoptServerFlags stores the server's flags for a message that changed on the
