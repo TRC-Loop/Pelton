@@ -32,4 +32,8 @@ Pelton is a free, open source email client for macOS, Windows and Linux, built a
 
     The Pelton website, with screenshots and a feature tour.
 
+- **[Discord](https://discord.gg/UzPNGZYy6V)**
+
+    Ask questions, report oddities and follow what is being worked on.
+
 </div>
