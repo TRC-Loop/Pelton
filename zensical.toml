@@ -83,6 +83,10 @@ icon = "tabler/brand-github"
 link = "https://github.com/TRC-Loop/Pelton"
 
 [[project.extra.social]]
+icon = "tabler/brand-discord"
+link = "https://discord.gg/UzPNGZYy6V"
+
+[[project.extra.social]]
 icon = "tabler/world"
 link = "https://pelton.app"
 
