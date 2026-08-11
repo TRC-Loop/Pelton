@@ -809,6 +809,42 @@ export namespace desktop {
 	        this.createdAt = source["createdAt"];
 	    }
 	}
+	export class PGPKeyDTO {
+	    fingerprint: string;
+	    name: string;
+	    email: string;
+	    emails: string[];
+	    created: string;
+	    expires: string;
+	    expired: boolean;
+	    hasPrivate: boolean;
+	    locked: boolean;
+	    unlocked: boolean;
+	    remembered: boolean;
+	    algorithm: string;
+	    bits: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new PGPKeyDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.fingerprint = source["fingerprint"];
+	        this.name = source["name"];
+	        this.email = source["email"];
+	        this.emails = source["emails"];
+	        this.created = source["created"];
+	        this.expires = source["expires"];
+	        this.expired = source["expired"];
+	        this.hasPrivate = source["hasPrivate"];
+	        this.locked = source["locked"];
+	        this.unlocked = source["unlocked"];
+	        this.remembered = source["remembered"];
+	        this.algorithm = source["algorithm"];
+	        this.bits = source["bits"];
+	    }
+	}
 	export class PendingMailtoDTO {
 	    present: boolean;
 	    draft: MailtoDraft;
@@ -920,17 +956,17 @@ export namespace desktop {
 	export class SearchResultDTO {
 	    messages: MessageSummaryDTO[];
 	    total: number;
-
+	
 	    static createFrom(source: any = {}) {
 	        return new SearchResultDTO(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.messages = this.convertValues(source["messages"], MessageSummaryDTO);
 	        this.total = source["total"];
 	    }
-
+	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
 		    if (!a) {
 		        return a;
@@ -1408,43 +1444,6 @@ export namespace desktop {
 	        this.totalCount = source["totalCount"];
 	    }
 	}
-	export class PGPKeyDTO {
-	    fingerprint: string;
-	    name: string;
-	    email: string;
-	    emails: string[];
-	    created: string;
-	    expires: string;
-	    expired: boolean;
-	    hasPrivate: boolean;
-	    locked: boolean;
-	    unlocked: boolean;
-	    remembered: boolean;
-	    algorithm: string;
-	    bits: number;
-
-	    static createFrom(source: any = {}) {
-	        return new PGPKeyDTO(source);
-	    }
-
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.fingerprint = source["fingerprint"];
-	        this.name = source["name"];
-	        this.email = source["email"];
-	        this.emails = source["emails"];
-	        this.created = source["created"];
-	        this.expires = source["expires"];
-	        this.expired = source["expired"];
-	        this.hasPrivate = source["hasPrivate"];
-	        this.locked = source["locked"];
-	        this.unlocked = source["unlocked"];
-	        this.remembered = source["remembered"];
-	        this.algorithm = source["algorithm"];
-	        this.bits = source["bits"];
-	    }
-	}
-
 	export class VirusTotalConfigDTO {
 	    enabled: boolean;
 	    hasApiKey: boolean;
