@@ -128,6 +128,8 @@ function msg(
     offline: false,
     snoozeUntil: '',
     senderVip: false,
+    // the demo mail is not signed, so there is no verdict to show.
+    smime: { status: '', signer: '', email: '', issuer: '', detail: '' },
     ...opts,
   }
 }

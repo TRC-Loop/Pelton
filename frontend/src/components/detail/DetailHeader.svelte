@@ -147,6 +147,7 @@
       folderName={detail.folderName}
       pgp={detail.pgp}
       auth={detail.auth}
+      smime={detail.smime}
     />
     {#if unsub}
       <button type="button" class="unsub" class:confirming disabled={done || working} on:click={onUnsubscribe}>

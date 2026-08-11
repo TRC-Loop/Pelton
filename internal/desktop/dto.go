@@ -86,6 +86,20 @@ type MessageSummaryDTO struct {
 	// SenderVIP is true when this message's from-address is on the VIP list, so
 	// the ui can mark it with a star (#126).
 	SenderVIP bool `json:"senderVip"`
+	// SMIME is the s/mime signature verdict recorded when the message synced.
+	// Empty status means unsigned, which is most mail.
+	SMIME SMIMEDTO `json:"smime"`
+}
+
+// SMIMEDTO is a message's s/mime signature verdict for display. Status is one
+// of "", "valid", "untrusted" or "invalid"; Detail explains anything that is
+// not valid, in a sentence written for the reader.
+type SMIMEDTO struct {
+	Status string `json:"status"`
+	Signer string `json:"signer"`
+	Email  string `json:"email"`
+	Issuer string `json:"issuer"`
+	Detail string `json:"detail"`
 }
 
 // MessageListDTO is a page of summaries plus the unfiltered total for paging.
@@ -259,6 +273,13 @@ func toSummaryDTO(m storage.Message, accountEmail, folderName string) MessageSum
 		FlagColor:      m.FlagColor,
 		Offline:        m.Offline,
 		SnoozeUntil:    m.SnoozeUntil,
+		SMIME: SMIMEDTO{
+			Status: m.SMIME.Status,
+			Signer: m.SMIME.Signer,
+			Email:  m.SMIME.Email,
+			Issuer: m.SMIME.Issuer,
+			Detail: m.SMIME.Detail,
+		},
 	}
 }
 

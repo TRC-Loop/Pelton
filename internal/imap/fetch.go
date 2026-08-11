@@ -50,6 +50,11 @@ type Message struct {
 	HTML        string
 	Size        int64 // raw rfc822 byte length
 	Attachments []Attachment
+	// Raw is the message exactly as the server sent it. A signature is computed
+	// over these bytes, so verifying one means checking them rather than
+	// anything reassembled from the parsed fields above. It is handed to the
+	// sync layer and dropped once the message is stored; nothing caches it.
+	Raw []byte
 	// ListUnsubscribe carries the raw List-Unsubscribe header value, and
 	// ListUnsubscribePost whether the message declares RFC 8058 one-click
 	// support via List-Unsubscribe-Post.
@@ -141,7 +146,7 @@ func (c *Client) FetchMessage(uid imap.UID) (*Message, error) {
 		return nil, fmt.Errorf("imap: message uid %d returned no body", uid)
 	}
 
-	msg := &Message{UID: buf.UID, Flags: buf.Flags, Size: int64(len(raw))}
+	msg := &Message{UID: buf.UID, Flags: buf.Flags, Size: int64(len(raw)), Raw: raw}
 	if buf.Envelope != nil {
 		msg.MessageID = buf.Envelope.MessageID
 		msg.Subject = buf.Envelope.Subject

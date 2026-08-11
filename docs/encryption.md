@@ -64,3 +64,23 @@ With more than one key that can sign, **Signing keys** at the bottom of the pane
 Left on **Match by address**, Pelton looks for a private key whose user id carries that account's address. That is the right answer when each account has its own key. Pin one explicitly when it is not, for instance when several addresses share a single key.
 
 Deleting a key that an account was pinned to resets that account to matching by address, rather than leaving it pointing at a key that no longer exists.
+
+## S/MIME signatures
+
+S/MIME is the other way mail gets signed, and the one corporate and government senders normally use. Instead of a key you exchange with someone directly, it uses a certificate issued by a certificate authority, the same kind of authority that vouches for websites.
+
+Pelton checks those signatures on mail you receive. It cannot send S/MIME signed or encrypted mail; PGP is the path for that.
+
+A signed message shows a badge in the reading pane, alongside the PGP one and controlled by the same setting:
+
+| Badge | Meaning |
+| --- | --- |
+| **Signature verified** | The message has not been altered, the certificate is valid and trusted by your system, and it belongs to the sender. |
+| **Signature unverified** | The certificate cannot be vouched for: an authority your computer does not trust, an expired certificate, or one issued to somebody other than the sender. Hover the badge for which. |
+| **Signature failed** | The message was altered after it was signed. |
+
+Mail with no signature shows no badge, which is nearly all of it.
+
+Checking happens while the mail is downloaded, so it works offline afterwards and adds no delay when you open a message. Messages already in your cache from before this existed show no badge until they sync again.
+
+Two limits worth knowing. Pelton does not ask the certificate authority whether a certificate has been revoked since it was issued, because that would tell the authority which mail you are reading; a revoked certificate still shows as verified. And the verdict is the one recorded when the message arrived, which is the right question for a signature: a certificate expiring later does not make an older message a forgery.
