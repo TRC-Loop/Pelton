@@ -4,7 +4,7 @@ Pelton stores OpenPGP keys so it can sign the mail you send and read the encrypt
 
 !!! note
 
-    Key management is the first half of PGP support. Signing, encrypting and decrypting mail build on it and land separately.
+    Pelton can read the protected mail you receive. Sending signed or encrypted mail is not built yet.
 
 ## Where keys come from
 
@@ -64,6 +64,24 @@ With more than one key that can sign, **Signing keys** at the bottom of the pane
 Left on **Match by address**, Pelton looks for a private key whose user id carries that account's address. That is the right answer when each account has its own key. Pin one explicitly when it is not, for instance when several addresses share a single key.
 
 Deleting a key that an account was pinned to resets that account to matching by address, rather than leaving it pointing at a key that no longer exists.
+
+## Reading protected mail
+
+Encrypted mail is decrypted when you open it, using whichever imported private key it was sent to. If that key is locked, the reading pane asks for the passphrase there rather than sending you to this page, and keeps it until you quit.
+
+Three things can go wrong, and each says which:
+
+| What you see | What it means |
+| --- | --- |
+| **This message is encrypted** | A key that can open it is present but locked. Type the passphrase. |
+| **This message cannot be decrypted** | It was encrypted to a key you have not imported. Import the matching private key above. |
+| **This message could not be read** | It claims to be PGP protected but the data is damaged. View the source to see it as it arrived. |
+
+Signed mail shows the same badge S/MIME uses: **verified** when the signature checks out against a key you hold, **unverified** when the signing key is not in your keyring, and **failed** when the message was altered after signing. Checking happens each time you open a message, so importing someone's key today makes their older mail verify immediately, with nothing to re-sync.
+
+**The decrypted text is never written to disk.** What Pelton stores is the message exactly as it arrived, still encrypted, so it can be opened again offline. Closing the message discards the plaintext.
+
+That is also why encrypted mail is not searchable by default: the search index is an ordinary file, and indexing the text would put it there. If you want it searchable anyway, **Searching encrypted mail** below turns it on, and turning it back off rebuilds the index so what was written is removed. Messages whose key is locked at the time are skipped.
 
 ## S/MIME signatures
 

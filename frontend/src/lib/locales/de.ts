@@ -485,6 +485,17 @@ const de: Record<string, string> = {
   'detail.attachments.noPreview': 'Keine In-App-Vorschau für diesen Dateityp.',
   'detail.attachments.saveInstead': 'Stattdessen speichern',
   'detail.noSubject': '(kein Betreff)',
+  'detail.pgp.locked.title': 'Diese Nachricht ist verschlüsselt',
+  'detail.pgp.locked.body':
+    'Gib die Passphrase deines Schlüssels ein, um sie zu lesen. Pelton behält sie bis zum Beenden, du wirst in dieser Sitzung nicht noch einmal gefragt.',
+  'detail.pgp.nokey.title': 'Diese Nachricht kann nicht entschlüsselt werden',
+  'detail.pgp.nokey.body':
+    'Sie wurde für einen Schlüssel verschlüsselt, den du nicht importiert hast. Füge den passenden privaten Schlüssel unter Einstellungen, Verschlüsselung hinzu und öffne die Nachricht erneut.',
+  'detail.pgp.failed.title': 'Diese Nachricht konnte nicht gelesen werden',
+  'detail.pgp.failed.body':
+    'Sie gibt an, PGP-geschützt zu sein, aber die Daten sind beschädigt oder in einer Form, die Pelton nicht versteht. Sieh dir den Quelltext an, um sie so zu sehen, wie sie ankam.',
+  'detail.pgp.passphrase': 'Passphrase',
+  'detail.pgp.unlock': 'Entsperren',
   'detail.header.to': 'an',
   'detail.header.cc': 'cc',
   'detail.infoModal.pgp.none': 'Keine PGP-Kennzeichnung',
@@ -1177,6 +1188,11 @@ const de: Record<string, string> = {
   'encryption.signingTitle': 'Signaturschlüssel',
   'encryption.signingHint': 'Mit welchem privaten Schlüssel jedes Konto signiert. Automatisch gleicht Pelton die Kontoadresse mit den vorhandenen Schlüsseln ab.',
   'encryption.signingAuto': 'Nach Adresse zuordnen',
+  'encryption.searchTitle': 'Verschlüsselte Mail durchsuchen',
+  'encryption.searchLabel': 'Suche darf in verschlüsselte Nachrichten sehen',
+  'encryption.searchHint':
+    'Standardmäßig aus. Verschlüsselte Mail ist normalerweise nur über Betreff, Absender und Datum auffindbar, denn ihren Text zu durchsuchen heißt, ihn in den Suchindex zu schreiben, in eine normale Datei auf diesem Rechner. Einschalten baut den Index neu auf; Ausschalten baut ihn erneut auf und entfernt das Geschriebene. Nachrichten mit gesperrtem Schlüssel werden übersprungen.',
+  'encryption.searchRebuilding': 'Suchindex wird im Hintergrund neu aufgebaut',
   'encryption.passphrase.title': 'Privaten Schlüssel entsperren',
   'encryption.passphrase.label': 'Passphrase',
   'encryption.passphrase.remember': 'Diese Passphrase merken',

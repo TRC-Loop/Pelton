@@ -24,7 +24,11 @@
     forgetPGPPassphrase,
     getAccountPGPKey,
     setAccountPGPKey,
+    getSetting,
+    setSetting,
+    SettingKeys,
   } from '../../lib/api'
+  import ToggleSwitch from '../common/ToggleSwitch.svelte'
   import { sidebar } from '../../stores/accounts'
   import { openPassphrase } from '../../stores/passphrase'
   import { errorMessage, toastError, toastSuccess, toastInfo } from '../../stores/toast'
@@ -38,14 +42,39 @@
   // the signing key each account is pinned to, by account id. '' means the
   // address is matched against the keys' user ids instead.
   let accountKeys: Record<number, string> = {}
+  // whether search may look inside encrypted mail. read from the backend rather
+  // than the prefs store, since it is not a display preference.
+  let indexDecrypted = false
+  let searchBusy = false
 
   $: accounts = $sidebar.data?.accounts ?? []
   $: signingKeys = keys.filter((k) => k.hasPrivate)
 
   onMount(async () => {
     await reload()
+    try {
+      indexDecrypted = (await getSetting(SettingKeys.indexDecrypted)).value === 'true'
+    } catch {
+      // never set: the default is off, which is what the toggle already shows.
+    }
     loading = false
   })
+
+  // onIndexDecrypted rebuilds the search index in the background either way,
+  // so switching this off removes the plaintext already written rather than
+  // only stopping new mail from being added.
+  async function onIndexDecrypted(next: boolean): Promise<void> {
+    searchBusy = true
+    try {
+      await setSetting(SettingKeys.indexDecrypted, next ? 'true' : 'false')
+      indexDecrypted = next
+      toastInfo($t('encryption.searchRebuilding'))
+    } catch (err) {
+      toastError(errorMessage(err))
+    } finally {
+      searchBusy = false
+    }
+  }
 
   async function reload(): Promise<void> {
     try {
@@ -274,6 +303,18 @@
       </div>
     {/each}
   {/if}
+
+  <h4>{$t('encryption.searchTitle')}</h4>
+  <div class="account">
+    <span class="row-label">{$t('encryption.searchLabel')}</span>
+    <ToggleSwitch
+      checked={indexDecrypted}
+      label={$t('encryption.searchLabel')}
+      disabled={searchBusy}
+      on:change={(e) => void onIndexDecrypted(e.detail)}
+    />
+  </div>
+  <p class="hint">{$t('encryption.searchHint')}</p>
 </div>
 
 <style>

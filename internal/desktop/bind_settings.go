@@ -17,6 +17,12 @@ const (
 	settingShowBadge      = "show_mailbox_badge"
 	settingShowDateTime   = "show_datetime"
 	settingShowPGP        = "show_pgp"
+	// settingIndexDecrypted lets search see inside encrypted mail. Off by
+	// default: the search index is an ordinary file on disk, so indexing
+	// decrypted text writes the plaintext there and gives up much of what the
+	// encryption was for. Toggling it rebuilds the index either way, so turning
+	// it off actually removes the plaintext rather than merely stopping additions.
+	settingIndexDecrypted = "search_index_decrypted"
 	settingShowAuth       = "show_auth"
 	settingToastPosition  = "toast_position"
 	settingPaneLocked     = "pane_locked"
@@ -409,6 +415,12 @@ func (a *App) SetSetting(key, value string) error {
 	}
 	if key == settingLanguage || key == settingMenuBarInApp || key == settingMenuBarNativeMinimal {
 		a.RebuildMenu()
+	}
+	if key == settingIndexDecrypted {
+		// rebuilt from scratch rather than re-indexed in place: switching this
+		// off has to remove the plaintext already written, and overwriting
+		// documents would leave it in the index's older segments.
+		go a.rebuildSearchIndex()
 	}
 	return nil
 }

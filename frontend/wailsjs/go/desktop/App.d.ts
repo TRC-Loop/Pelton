@@ -264,6 +264,8 @@ export function UnarchiveMessage(arg1:string,arg2:number):Promise<void>;
 
 export function UndoDelete(arg1:number):Promise<void>;
 
+export function UnlockMessage(arg1:number,arg2:string):Promise<void>;
+
 export function UnlockPGPKey(arg1:string,arg2:string,arg3:boolean):Promise<void>;
 
 export function UnmarkSenderVIP(arg1:number):Promise<void>;

@@ -526,6 +526,10 @@ export function UndoDelete(arg1) {
   return window['go']['desktop']['App']['UndoDelete'](arg1);
 }
 
+export function UnlockMessage(arg1, arg2) {
+  return window['go']['desktop']['App']['UnlockMessage'](arg1, arg2);
+}
+
 export function UnlockPGPKey(arg1, arg2, arg3) {
   return window['go']['desktop']['App']['UnlockPGPKey'](arg1, arg2, arg3);
 }

@@ -107,7 +107,13 @@ export interface MessageDetail extends MessageSummary {
   // account's smtp) or link (opened in the browser). null when none is on
   // record; the ui may still fall back to an unsubscribe link in the body.
   unsubscribe: UnsubscribeInfo | null
+  // pgpState is '' for ordinary mail. for protected mail it says what happened
+  // when it was opened, so the pane can offer the right next step rather than
+  // one generic error.
+  pgpState: PGPState
 }
+
+export type PGPState = '' | 'open' | 'locked' | 'nokey' | 'failed'
 
 export interface UnsubscribeInfo {
   kind: 'oneclick' | 'mailto' | 'link'
