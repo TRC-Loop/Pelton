@@ -293,7 +293,7 @@
     gap: var(--space-3);
     padding: var(--row-pad-y) var(--row-pad-x);
     border-bottom: var(--hairline) solid var(--border-subtle);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     background: var(--surface-raised);
   }
 

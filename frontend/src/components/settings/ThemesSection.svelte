@@ -297,7 +297,7 @@
     background: var(--surface-raised);
     color: var(--text-primary);
     font-size: var(--fz-label);
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
 
   .action-btn:hover {
@@ -322,7 +322,7 @@
   }
 
   button.card {
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
 
   .card.active {
@@ -336,7 +336,7 @@
     border: none;
     background: none;
     padding: 0;
-    cursor: pointer;
+    cursor: var(--cursor-action);
     text-align: left;
   }
 
@@ -426,7 +426,7 @@
     border: none;
     background: transparent;
     color: var(--text-tertiary);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     padding: var(--space-1) var(--space-2);
     border-radius: var(--radius-control);
   }

@@ -307,7 +307,7 @@
     border: none;
     background: transparent;
     color: var(--text-tertiary);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     border-radius: var(--radius-control);
     padding: var(--space-1);
   }
@@ -395,7 +395,7 @@
     border: none;
     background: transparent;
     color: var(--text-tertiary);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     padding: 0;
   }
 
@@ -443,7 +443,7 @@
     background: transparent;
     color: var(--text-secondary);
     border-radius: var(--radius-control);
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
 
   .icon-cell:hover {
@@ -467,7 +467,7 @@
     border-radius: 999px;
     border: 2px solid transparent;
     background: var(--sw);
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
 
   .swatch.on {
@@ -486,7 +486,7 @@
     gap: var(--space-2);
     font-size: var(--fz-label);
     color: var(--text-secondary);
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
 
   .btn {
@@ -494,7 +494,7 @@
     border-radius: var(--radius-control);
     font-size: var(--fz-label);
     font-weight: var(--fw-medium);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     border: var(--hairline) solid var(--border-default);
   }
 

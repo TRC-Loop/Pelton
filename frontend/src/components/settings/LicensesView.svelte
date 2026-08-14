@@ -107,7 +107,7 @@
     background: var(--surface-raised);
     color: var(--text-primary);
     font-size: var(--fz-label);
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
 
   .program span {
@@ -138,7 +138,7 @@
     background: transparent;
     color: var(--text-primary);
     font-size: var(--fz-label);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     text-align: left;
     border-radius: var(--radius-control);
   }

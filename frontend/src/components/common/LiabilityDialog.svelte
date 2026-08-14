@@ -92,7 +92,7 @@
     font-family: inherit;
     font-size: var(--fz-body);
     font-weight: var(--fw-medium);
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
   .primary:disabled {
     opacity: 0.5;

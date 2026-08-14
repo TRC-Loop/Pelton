@@ -354,7 +354,7 @@
     background: var(--accent);
     border: none;
     border-radius: var(--radius-control);
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
   .primary:disabled {
     opacity: 0.5;
@@ -453,7 +453,7 @@
     background: transparent;
     border: var(--hairline) solid var(--border-default);
     border-radius: var(--radius-control);
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
   .ghost:hover {
     background: var(--surface-hover);

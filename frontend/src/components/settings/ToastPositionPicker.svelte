@@ -76,7 +76,7 @@
     border: var(--hairline) solid var(--border-default);
     border-radius: var(--radius-control);
     background: var(--surface-sunken);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     padding: 4px;
   }
 

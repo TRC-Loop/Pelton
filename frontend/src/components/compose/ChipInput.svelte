@@ -214,7 +214,7 @@
     border: none;
     background: transparent;
     color: var(--text-tertiary);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     padding: 1px;
     border-radius: 999px;
     flex-shrink: 0;
@@ -265,7 +265,7 @@
     flex-direction: column;
     padding: var(--space-2) var(--space-3);
     border-radius: var(--radius-control);
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
   .suggest-item.active {
     background: var(--surface-hover);

@@ -48,7 +48,7 @@
     border-radius: var(--radius-control);
     background: var(--surface-raised);
     color: var(--text-primary);
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
 
   .retry:hover {

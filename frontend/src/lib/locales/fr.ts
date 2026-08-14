@@ -1135,6 +1135,8 @@ const fr: Record<string, string> = {
   'settingsPanel.timeFormat.h24': '24 heures',
   'settingsPanel.toggle.reduceMotion': 'Réduire les animations',
   'settingsPanel.hint.reduceMotion': 'Désactive les animations et transitions de l\'interface. La préférence système de réduction des animations est aussi suivie automatiquement.',
+  'settingsPanel.toggle.handCursor': 'Curseur main sur les boutons',
+  'settingsPanel.hint.handCursor': 'Affiche le curseur main sur les boutons, les lignes et les onglets au lieu de la flèche habituelle. Les liens gardent toujours la main.',
   'settingsPanel.theme.schedule': 'Programmé',
   'settingsPanel.label.darkFrom': 'Sombre à partir de',
   'settingsPanel.label.darkUntil': 'Jusqu\'à',

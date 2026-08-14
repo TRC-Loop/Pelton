@@ -377,7 +377,7 @@
     gap: var(--space-3);
     padding: var(--space-2) var(--space-2);
     border-radius: var(--radius-control);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     color: var(--text-primary);
   }
   .row[data-active='true'] {

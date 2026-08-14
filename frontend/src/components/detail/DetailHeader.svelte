@@ -211,7 +211,7 @@
     background: none;
     border-radius: var(--radius-sm);
     color: var(--text-tertiary);
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
 
   .vip-toggle:hover {
@@ -266,7 +266,7 @@
     background: transparent;
     color: var(--text-secondary);
     font-size: var(--fz-meta);
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
 
   .unsub:hover:not(:disabled) {

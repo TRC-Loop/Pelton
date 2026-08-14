@@ -355,6 +355,9 @@ export interface UIPrefs {
   timeFormat: string
   // reduceMotion disables ui transitions and animations.
   reduceMotion: boolean
+  // handCursor shows the browser hand over clickable chrome instead of the
+  // native arrow. Hyperlinks keep the hand regardless.
+  handCursor: boolean
   // themeDarkStart/themeDarkEnd bound the dark window ("HH:MM") for the
   // schedule theme mode.
   themeDarkStart: string

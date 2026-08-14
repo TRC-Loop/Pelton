@@ -82,6 +82,9 @@ const (
 	// disable ui transitions and animations (the os-level preference is
 	// honored by the frontend css regardless).
 	settingReduceMotion = "reduce_motion"
+	// show the browser hand over clickable chrome instead of the native arrow.
+	// hyperlinks keep the hand either way.
+	settingHandCursor = "hand_cursor"
 	// dark window bounds ("HH:MM") for the schedule theme mode.
 	settingThemeDarkStart = "theme_dark_start"
 	settingThemeDarkEnd   = "theme_dark_end"
@@ -289,6 +292,9 @@ type UIPrefsDTO struct {
 	TimeFormat string `json:"timeFormat"`
 	// ReduceMotion disables ui transitions and animations.
 	ReduceMotion bool `json:"reduceMotion"`
+	// HandCursor shows the browser hand over clickable chrome instead of the
+	// native arrow.
+	HandCursor bool `json:"handCursor"`
 	// ThemeDarkStart/ThemeDarkEnd bound the dark window ("HH:MM") for the
 	// schedule theme mode.
 	ThemeDarkStart string `json:"themeDarkStart"`
@@ -391,6 +397,7 @@ func (a *App) GetUIPrefs() (UIPrefsDTO, error) {
 		MenuBarIcons:               a.boolSetting(settingMenuBarIcons, false),
 		TimeFormat:                 a.stringSetting(settingTimeFormat, "auto"),
 		ReduceMotion:               a.boolSetting(settingReduceMotion, false),
+		HandCursor:                 a.boolSetting(settingHandCursor, false),
 		ThemeDarkStart:             a.stringSetting(settingThemeDarkStart, "19:00"),
 		ThemeDarkEnd:               a.stringSetting(settingThemeDarkEnd, "07:00"),
 		BodyFont:                   a.stringSetting(settingBodyFont, "default"),

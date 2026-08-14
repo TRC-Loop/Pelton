@@ -260,7 +260,7 @@
       linear-gradient(45deg, #cccccc 25%, transparent 25%, transparent 75%, #cccccc 75%);
     background-size: 8px 8px;
     background-position: 0 0, 4px 4px;
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
 
   .swatch {
@@ -307,7 +307,7 @@
     position: relative;
     height: 12px;
     border-radius: 999px;
-    cursor: pointer;
+    cursor: var(--cursor-action);
     touch-action: none;
   }
 

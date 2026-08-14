@@ -578,6 +578,10 @@ export function TestProxy(arg1) {
   return window['go']['desktop']['App']['TestProxy'](arg1);
 }
 
+export function TitleBarDoubleClick() {
+  return window['go']['desktop']['App']['TitleBarDoubleClick']();
+}
+
 export function TriggerSync() {
   return window['go']['desktop']['App']['TriggerSync']();
 }

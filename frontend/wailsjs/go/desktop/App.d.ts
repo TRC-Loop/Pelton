@@ -290,6 +290,8 @@ export function TestConnection(arg1:desktop.TestConnectionRequest):Promise<void>
 
 export function TestProxy(arg1:desktop.ProxyConfigDTO):Promise<void>;
 
+export function TitleBarDoubleClick():Promise<void>;
+
 export function TriggerSync():Promise<void>;
 
 export function TrustSenderImages(arg1:number):Promise<void>;

@@ -620,7 +620,7 @@
     background: var(--surface-raised);
     color: var(--text-primary);
     font-size: var(--fz-label);
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
 
   .remote-btn:hover {
@@ -792,6 +792,6 @@
   .plain-link {
     color: var(--accent);
     text-decoration: underline;
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
 </style>

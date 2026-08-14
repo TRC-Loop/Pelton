@@ -7,7 +7,7 @@
 import { writable } from 'svelte/store'
 import type { UIPrefs, ThemePref, DensityPref, EditorMode, ViewsPlacement, CloseAction, LogLevel } from '../lib/types'
 import { getUIPrefs, setSetting, SettingKeys, systemColorScheme, setWindowTheme, getThemeApply } from '../lib/api'
-import { applyTheme, applyDensity, applyAccent, applyScale, applyReduceMotion, setThemeSchedule, applyUIFont, applyMonoFont, applyCorners, watchSystemTheme, setSystemSchemeOverride, resolveTheme } from '../theme/theme'
+import { applyTheme, applyDensity, applyAccent, applyScale, applyReduceMotion, applyHandCursor, setThemeSchedule, applyUIFont, applyMonoFont, applyCorners, watchSystemTheme, setSystemSchemeOverride, resolveTheme } from '../theme/theme'
 import { applyUserTheme } from '../theme/usertheme'
 import { uiFontStack, monoFontStack } from '../lib/fonts'
 import { setLocale } from '../lib/i18n'
@@ -69,6 +69,7 @@ const defaults: UIPrefs = {
   menuBarIcons: false,
   timeFormat: 'auto',
   reduceMotion: false,
+  handCursor: false,
   themeDarkStart: '19:00',
   themeDarkEnd: '07:00',
   bodyFont: 'default',
@@ -103,6 +104,7 @@ function applyAll(p: UIPrefs): void {
   applyAccent(p.accent)
   applyScale(p.uiScale)
   applyReduceMotion(p.reduceMotion)
+  applyHandCursor(p.handCursor)
   applyUIFont(uiFontStack(p.uiFont))
   applyMonoFont(monoFontStack(p.monoFont))
   applyCorners(p.cornerStyle)
@@ -413,6 +415,14 @@ export function setReduceMotion(value: boolean): void {
   prefs.update((p) => ({ ...p, reduceMotion: value }))
   applyReduceMotion(value)
   void setSetting(SettingKeys.reduceMotion, String(value))
+}
+
+// setHandCursor switches clickable chrome between the native arrow and the
+// browser hand.
+export function setHandCursor(value: boolean): void {
+  prefs.update((p) => ({ ...p, handCursor: value }))
+  applyHandCursor(value)
+  void setSetting(SettingKeys.handCursor, String(value))
 }
 
 // setUIFont / setMonoFont override the interface and monospace font tokens,

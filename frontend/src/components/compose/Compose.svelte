@@ -580,6 +580,9 @@
   .compose.fullscreen {
     position: fixed;
     inset: 24px;
+    /* clears the macOS traffic lights, which the 24px inset alone runs into;
+       zero on every other platform. */
+    top: calc(24px + var(--titlebar-lights));
     width: auto;
     height: auto;
     max-height: none;
@@ -630,7 +633,7 @@
     border: none;
     background: transparent;
     color: var(--text-tertiary);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     border-radius: var(--radius-control);
   }
 
@@ -750,7 +753,7 @@
     color: var(--text-secondary);
     font-size: var(--fz-label);
     padding: var(--space-1) var(--space-2);
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
 
   .send,
@@ -763,7 +766,7 @@
     border-radius: var(--radius-control);
     background: var(--surface-raised);
     color: var(--text-primary);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     font-size: var(--fz-label);
   }
 
@@ -797,7 +800,7 @@
     border-radius: 0 var(--radius-control) var(--radius-control) 0;
     background: var(--surface-raised);
     color: var(--text-secondary);
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
 
   .send-caret:hover:not(:disabled) {
@@ -851,7 +854,7 @@
     border-radius: var(--radius-control);
     background: transparent;
     color: var(--text-primary);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     text-align: left;
     font-size: var(--fz-label);
   }
@@ -934,7 +937,7 @@
     border-radius: var(--radius-control);
     background: var(--surface-raised);
     color: var(--text-primary);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     font-size: var(--fz-label);
   }
 

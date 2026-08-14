@@ -267,7 +267,7 @@
     border: none;
     background: transparent;
     color: var(--text-tertiary);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     padding: var(--space-1);
     border-radius: var(--radius-control);
   }
@@ -314,7 +314,7 @@
     gap: var(--space-2);
     padding: var(--space-2) var(--space-3);
     border-radius: var(--radius-control);
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
   .role:hover {
     background: var(--surface-hover);
@@ -371,7 +371,7 @@
     background: transparent;
     border: var(--hairline) solid var(--border-default);
     border-radius: var(--radius-control);
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
   .cancel:hover {
     background: var(--surface-hover);
@@ -386,7 +386,7 @@
     background: var(--accent);
     border: none;
     border-radius: var(--radius-control);
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
   .go.danger {
     color: var(--text-inverse);
