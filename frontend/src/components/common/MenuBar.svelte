@@ -13,7 +13,8 @@
   import MenuGlyph from './MenuGlyph.svelte'
   import MenuBarEditor from './MenuBarEditor.svelte'
   import { IconChevronRight } from '@tabler/icons-svelte'
-  import { t, shortcutLabel } from '../../lib/i18n'
+  import { t, shortcutLabel, isMac } from '../../lib/i18n'
+  import { matchShortcut } from '../../lib/shortcuts'
   import { prefs } from '../../stores/prefs'
   import { bindings } from '../../stores/shortcuts'
   import { openMessageId } from '../../stores/selection'
@@ -28,6 +29,42 @@
   let openKey: string | null = null
   let openSub: string | null = null
   let barEl: HTMLElement
+
+  // access keys: Alt+F for File and so on, the way every Windows and GTK menu
+  // bar works. macOS has no such convention, so the whole thing is off there
+  // even when the in-app bar is turned on.
+  const accessKeysEnabled = !isMac
+
+  // altArmed tracks a press of Alt on its own, which focuses the bar on release.
+  // any other key, or a click, means Alt was a modifier and not a request.
+  let altArmed = false
+  // showAccessKeys reveals the underlines. Windows keeps them hidden until Alt
+  // is involved rather than underlining a letter in every title at rest.
+  let showAccessKeys = false
+
+  $: titles = menus.map((m) => (m.labelKey ? $t(m.labelKey) : (m.label ?? '')))
+  $: accessKeys = accessKeysEnabled ? deriveAccessKeys(titles) : titles.map(() => -1)
+
+  // deriveAccessKeys picks one letter per title, as the index of the character
+  // to underline, or -1 when every letter is already spoken for. Taking the
+  // first free letter rather than a table in the locale files means custom
+  // menus, which carry whatever label the user typed, and every translation get
+  // access keys for free; the cost is that a title whose first letter is taken
+  // gets its second, so Mail lands on 'a' when Mailbox already holds 'm'.
+  function deriveAccessKeys(labels: string[]): number[] {
+    const taken = new Set<string>()
+    return labels.map((label) => {
+      for (let i = 0; i < label.length; i += 1) {
+        const ch = label[i].toLowerCase()
+        if (!/\p{Letter}|\p{Number}/u.test(ch) || taken.has(ch)) {
+          continue
+        }
+        taken.add(ch)
+        return i
+      }
+      return -1
+    })
+  }
 
   function itemLabel(item: RenderItem, tFn: (key: string) => string): string {
     if (item.kind === 'custom' || item.kind === 'submenu') {
@@ -64,6 +101,7 @@
   function close(): void {
     openKey = null
     openSub = null
+    showAccessKeys = false
   }
 
   function run(item: RenderItem): void {
@@ -102,6 +140,59 @@
     openSub = null
   }
 
+  // focusTitle moves keyboard focus onto a top-level title, so the bar's own
+  // arrow-key handling takes over from there.
+  function focusTitle(index: number): void {
+    const titleEls = barEl?.querySelectorAll<HTMLButtonElement>('.title')
+    titleEls?.[index]?.focus()
+  }
+
+  // onWindowKeydown implements the Alt conventions. A user binding wins over an
+  // access key, since that one was asked for explicitly.
+  function onWindowKeydown(event: KeyboardEvent): void {
+    if (!accessKeysEnabled || $menuBarEditing) {
+      return
+    }
+    if (event.key === 'Alt') {
+      altArmed = !event.ctrlKey && !event.shiftKey && !event.metaKey
+      return
+    }
+    altArmed = false
+    if (!event.altKey || event.ctrlKey || event.metaKey) {
+      return
+    }
+    if (matchShortcut(event, $bindings)) {
+      return
+    }
+    const key = event.key.toLowerCase()
+    const index = accessKeys.findIndex(
+      (at, i) => at >= 0 && titles[i][at].toLowerCase() === key,
+    )
+    if (index === -1) {
+      return
+    }
+    event.preventDefault()
+    showAccessKeys = true
+    openKey = menus[index].id
+    openSub = null
+    focusTitle(index)
+  }
+
+  // a bare Alt press and release focuses the bar without opening anything,
+  // which is what it does natively; the underlines appear with it.
+  function onWindowKeyup(event: KeyboardEvent): void {
+    if (!accessKeysEnabled || event.key !== 'Alt' || !altArmed) {
+      return
+    }
+    altArmed = false
+    if ($menuBarEditing) {
+      return
+    }
+    event.preventDefault()
+    showAccessKeys = true
+    focusTitle(0)
+  }
+
   function onBarKeydown(event: KeyboardEvent): void {
     if (openKey === null) {
       return
@@ -130,6 +221,15 @@
   }
 </script>
 
+<!-- blur matters: alt-tabbing away swallows the keyup, and without this the bar
+     would take focus on the stray release when the window comes back. -->
+<svelte:window
+  on:keydown={onWindowKeydown}
+  on:keyup={onWindowKeyup}
+  on:mousedown={() => (altArmed = false)}
+  on:blur={() => (altArmed = false)}
+/>
+
 {#if $menuBarEditing}
   <MenuBarEditor />
 {:else}
@@ -140,8 +240,9 @@
 
   <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
   <nav class="menubar" class:raised={openKey !== null} aria-label="Pelton" bind:this={barEl} on:keydown={onBarKeydown}>
-    {#each menus as m (m.id)}
-      {@const label = m.labelKey ? $t(m.labelKey) : (m.label ?? '')}
+    {#each menus as m, mi (m.id)}
+      {@const label = titles[mi] ?? ''}
+      {@const at = accessKeys[mi] ?? -1}
       <div class="menu-wrap">
         <button
           type="button"
@@ -150,10 +251,15 @@
           role="menuitem"
           aria-haspopup="menu"
           aria-expanded={openKey === m.id}
+          aria-keyshortcuts={at >= 0 ? `Alt+${label[at].toUpperCase()}` : undefined}
           on:click={() => toggle(m.id)}
           on:mouseenter={() => hoverTitle(m.id)}
         >
-          {label}
+          {#if showAccessKeys && at >= 0}
+            {label.slice(0, at)}<u>{label[at]}</u>{label.slice(at + 1)}
+          {:else}
+            {label}
+          {/if}
         </button>
         {#if openKey === m.id}
           <div class="dropdown" role="menu" aria-label={label}>
@@ -280,6 +386,12 @@
     font-size: var(--fz-label);
     border-radius: var(--radius-control);
     cursor: default;
+  }
+
+  /* the access-key underline, shown only once Alt is in play. */
+  .title u {
+    text-decoration-thickness: 1px;
+    text-underline-offset: 2px;
   }
 
   .title:hover,
