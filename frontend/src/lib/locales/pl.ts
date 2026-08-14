@@ -1090,6 +1090,8 @@ const pl: Record<string, string> = {
   'settingsPanel.hint.reduceMotion': 'Wyłącza animacje i przejścia interfejsu. Podąża też automatycznie za systemowym ustawieniem ograniczenia ruchu.',
   'settingsPanel.toggle.handCursor': 'Kursor dłoni na przyciskach',
   'settingsPanel.hint.handCursor': 'Pokazuje kursor dłoni nad przyciskami, wierszami i kartami zamiast zwykłej strzałki. Odnośniki zawsze zachowują dłoń.',
+  'settingsPanel.toggle.dockBadge': 'Liczba nieprzeczytanych na ikonie w Docku',
+  'settingsPanel.hint.dockBadge': 'Pokazuje na ikonie aplikacji w Docku, ile nieprzeczytanych wiadomości jest w skrzynce odbiorczej.',
   'settingsPanel.theme.schedule': 'Zaplanowany',
   'settingsPanel.label.darkFrom': 'Ciemny od',
   'settingsPanel.label.darkUntil': 'Do',

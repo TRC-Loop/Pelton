@@ -1383,6 +1383,7 @@ export namespace desktop {
 	    timeFormat: string;
 	    reduceMotion: boolean;
 	    handCursor: boolean;
+	    dockBadge: boolean;
 	    themeDarkStart: string;
 	    themeDarkEnd: string;
 	    bodyFont: string;
@@ -1460,6 +1461,7 @@ export namespace desktop {
 	        this.timeFormat = source["timeFormat"];
 	        this.reduceMotion = source["reduceMotion"];
 	        this.handCursor = source["handCursor"];
+	        this.dockBadge = source["dockBadge"];
 	        this.themeDarkStart = source["themeDarkStart"];
 	        this.themeDarkEnd = source["themeDarkEnd"];
 	        this.bodyFont = source["bodyFont"];
