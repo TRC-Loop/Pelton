@@ -57,6 +57,11 @@ func (a *App) buildMenu() *menu.Menu {
 		// the reduced menu carries no message items; drop stale pointers so
 		// SetMailActionsEnabled does not update items of a discarded menu.
 		a.mailMenuItems = nil
+		// the view menu survives here, carrying only the fullscreen toggle, for
+		// the same reason the edit menu below does: the accelerator exists only
+		// while its item does. the in-app bar cannot pick it up either, since
+		// its combo grammar has no way to say ctrl on macOS.
+		a.addFullscreenItem(root.AddSubmenu(s.viewMenu), s)
 	} else {
 		// file menu: composing new mail and exporting the open message.
 		fileMenu := root.AddSubmenu(s.fileMenu)
@@ -95,13 +100,7 @@ func (a *App) buildMenu() *menu.Menu {
 		// view menu: a reliable fullscreen toggle (the native green button can
 		// be inconsistent in some setups) plus the low-power mode toggle.
 		viewMenu := root.AddSubmenu(s.viewMenu)
-		viewMenu.AddText(s.toggleFullscreen, keys.Combo("f", keys.CmdOrCtrlKey, keys.ControlKey), func(_ *menu.CallbackData) {
-			if wailsruntime.WindowIsFullscreen(a.ctx) {
-				wailsruntime.WindowUnfullscreen(a.ctx)
-			} else {
-				wailsruntime.WindowFullscreen(a.ctx)
-			}
-		})
+		a.addFullscreenItem(viewMenu, s)
 		viewMenu.AddSeparator()
 		viewMenu.AddText(s.lowPowerMode, nil, a.menuAction("toggle-low-power"))
 	}
@@ -113,6 +112,18 @@ func (a *App) buildMenu() *menu.Menu {
 	root.Append(menu.EditMenu())
 
 	return root
+}
+
+// addFullscreenItem adds the fullscreen toggle and its accelerator to a menu.
+// Shared so the reduced menu keeps the binding without duplicating the toggle.
+func (a *App) addFullscreenItem(m *menu.Menu, s menuStrings) {
+	m.AddText(s.toggleFullscreen, keys.Combo("f", keys.CmdOrCtrlKey, keys.ControlKey), func(_ *menu.CallbackData) {
+		if wailsruntime.WindowIsFullscreen(a.ctx) {
+			wailsruntime.WindowUnfullscreen(a.ctx)
+		} else {
+			wailsruntime.WindowFullscreen(a.ctx)
+		}
+	})
 }
 
 // RebuildMenu rebuilds and applies the native menubar in the current language
