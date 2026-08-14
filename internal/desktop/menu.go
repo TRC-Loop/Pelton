@@ -63,6 +63,11 @@ func (a *App) buildMenu() *menu.Menu {
 		fileMenu.AddText(s.compose, keys.CmdOrCtrl("n"), a.menuAction("compose"))
 		fileMenu.AddSeparator()
 		fileMenu.AddText(s.exportPDF, keys.CmdOrCtrl("p"), a.menuAction("export-pdf"))
+		fileMenu.AddSeparator()
+		// dispatched to the frontend rather than hiding the window here: what
+		// Cmd+W closes depends on what is on screen, and only the frontend
+		// knows that.
+		fileMenu.AddText(s.closeWindow, keys.CmdOrCtrl("w"), a.menuAction("close-window"))
 
 		// mailbox menu: mailbox-level operations - syncing and managing accounts.
 		mailboxMenu := root.AddSubmenu(s.mailboxMenu)

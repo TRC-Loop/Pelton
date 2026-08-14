@@ -16,6 +16,7 @@ Pelton uses ++cmd++ on macOS and ++ctrl++ on Windows and Linux for the same bind
 | ++cmd+z++ | Undo the last send, delete or archive |
 | ++ctrl+cmd+f++ | Toggle fullscreen |
 | ++cmd+h++ | Hide window (macOS) |
+| ++cmd+w++ | Close the front compose window, settings, or the window itself |
 | ++cmd+q++ | Quit |
 
 ## Message actions

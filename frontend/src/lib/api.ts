@@ -731,6 +731,12 @@ export function setWindowTitle(title: string): void {
   void App.SetWindowTitle(title)
 }
 
+// closeWindow does what the window's close button does, following the close
+// action setting: hide and keep syncing, or quit.
+export function closeWindow(): void {
+  void App.CloseWindow()
+}
+
 // setWindowTheme matches the native window chrome (the Windows caption bar) to
 // the resolved ui theme. No-op on macOS/Linux.
 export function setWindowTheme(dark: boolean): void {
