@@ -42,7 +42,10 @@ func (a *App) buildMenu() *menu.Menu {
 	appMenu.AddText(s.preferences, keys.CmdOrCtrl(","), a.menuAction("preferences"))
 	appMenu.AddSeparator()
 	appMenu.AddText(s.hide, keys.CmdOrCtrl("h"), func(_ *menu.CallbackData) {
-		wailsruntime.WindowHide(a.ctx)
+		// Hide, not WindowHide: see the note in beforeClose. Ordering the window
+		// out on macOS strands it, since wails has no reopen handler, so the
+		// dock icon cannot bring it back.
+		wailsruntime.Hide(a.ctx)
 	})
 	appMenu.AddText(s.quit, keys.CmdOrCtrl("q"), func(_ *menu.CallbackData) {
 		a.quitApp()

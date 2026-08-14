@@ -63,7 +63,7 @@
   import { loadViews, editingView, closeViewEditor, openViewEditor, views as savedViews } from './stores/views'
   import { selectSavedView } from './stores/selection'
   import { isMac } from './lib/i18n'
-  import { Quit, WindowHide, WindowIsFullscreen, WindowFullscreen, WindowUnfullscreen } from '../wailsjs/runtime/runtime'
+  import { Quit, Hide, WindowIsFullscreen, WindowFullscreen, WindowUnfullscreen } from '../wailsjs/runtime/runtime'
   import { matchShortcut, comboHasModifier, type ShortcutAction } from './lib/shortcuts'
   import { bindings, recording, initShortcuts } from './stores/shortcuts'
   import { initMenuBar } from './stores/menubar'
@@ -554,7 +554,9 @@
         void toggleFullscreen()
         break
       case 'hide-window':
-        WindowHide()
+        // Hide, not WindowHide: on macOS ordering the window out strands it,
+        // because wails has no reopen handler for the dock icon to trigger.
+        Hide()
         break
       case 'quit':
         Quit()
