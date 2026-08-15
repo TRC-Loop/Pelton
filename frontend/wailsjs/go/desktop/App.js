@@ -46,6 +46,10 @@ export function ClearSentOutbox() {
   return window['go']['desktop']['App']['ClearSentOutbox']();
 }
 
+export function CloseWindow() {
+  return window['go']['desktop']['App']['CloseWindow']();
+}
+
 export function ConfirmThemeImport(arg1, arg2, arg3, arg4) {
   return window['go']['desktop']['App']['ConfirmThemeImport'](arg1, arg2, arg3, arg4);
 }

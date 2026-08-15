@@ -21,6 +21,7 @@ export type ShortcutAction =
   | 'add-mailbox'
   | 'export-pdf'
   | 'toggle-fullscreen'
+  | 'close-window'
   | 'quit'
   | 'reply'
   | 'reply-all'
@@ -72,6 +73,10 @@ export const shortcuts: Shortcut[] = [
   // elsewhere the in-app menu bar relies on these frontend bindings.
   { action: 'toggle-fullscreen', combo: isMac ? '' : 'f11', labelKey: 'shortcut.toggleFullscreen' },
   { action: 'quit', combo: isMac ? '' : 'mod+q', labelKey: 'shortcut.quit' },
+  // bound on every platform, macOS included: the native File menu accelerator
+  // consumes Cmd+W before the webview sees it, so this never double-fires, and
+  // it keeps working in the reduced-native-menu mode where File is dropped.
+  { action: 'close-window', combo: 'mod+w', labelKey: 'shortcut.closeWindow' },
   // message-level actions, unbound by default.
   { action: 'reply', combo: '', labelKey: 'shortcut.reply' },
   { action: 'reply-all', combo: '', labelKey: 'shortcut.replyAll' },

@@ -33,7 +33,7 @@
   import { selection, applyStartupSelection, searchQuery } from './stores/selection'
   import { loadList, messageList } from './stores/messages'
   import { initProgress } from './stores/progress'
-  import { composeSessions, openCompose, openComposeWith, initComposePrefs, openReply, openForward } from './stores/compose'
+  import { composeSessions, openCompose, openComposeWith, initComposePrefs, openReply, openForward, requestComposeClose } from './stores/compose'
   import { openSnooze } from './stores/snooze'
   import { patchInList, removeFromList } from './stores/messages'
   import {
@@ -54,6 +54,7 @@
     isNightly,
     unsubscribeMessage,
     consumePendingMailto,
+    closeWindow,
   } from './lib/api'
   import { BrowserOpenURL } from '../wailsjs/runtime/runtime'
   import { liabilityAccepted } from './lib/liability'
@@ -556,6 +557,9 @@
       case 'hide-window':
         WindowHide()
         break
+      case 'close-window':
+        closeFrontmost()
+        break
       case 'quit':
         Quit()
         break
@@ -798,6 +802,30 @@
     }
     const v = list[next]
     selectSavedView(v.id, v.name)
+  }
+
+  // closeFrontmost is what Cmd+W means on a desktop: it shuts the thing you are
+  // looking at, not always the window. the nightly warning, the liability
+  // acknowledgement and onboarding are deliberately absent, since they are
+  // unskippable by design and this must not become a way around them.
+  function closeFrontmost(): void {
+    const composeEl = document.activeElement?.closest('[data-compose-id]')
+    if (composeEl instanceof HTMLElement && composeEl.dataset.composeId) {
+      requestComposeClose(Number(composeEl.dataset.composeId))
+      return
+    }
+    if (settingsOpen) {
+      settingsOpen = false
+      return
+    }
+    if (wizardOpen) {
+      wizardOpen = false
+      return
+    }
+    // nothing layered on top, so this closes the window itself. the backend owns
+    // what that means: it follows the close action setting, and hides through
+    // the same call the close button uses, which the dock icon can undo.
+    closeWindow()
   }
 
   async function toggleFullscreen(): Promise<void> {
