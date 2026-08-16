@@ -51,6 +51,7 @@
     setAvatarStyle,
     setAvatarSource,
     setAlwaysLoadImages,
+    setBlockTrackingPixels,
     setMessageFontSize,
     setFlagHighlight,
     setLanguage,
@@ -116,15 +117,18 @@
   // privacyMode is derived straight from the two settings it controls, not a
   // separate stored field, so it always reflects what's actually active (and
   // so re-running onboarding shows the real current choice, not a guess).
-  $: privacyMode = $prefs.avatarSource === 'pfp' && !$prefs.alwaysLoadImages ? 'private' : 'normal'
+  $: privacyMode =
+    $prefs.avatarSource === 'pfp' && !$prefs.alwaysLoadImages && $prefs.blockTrackingPixels ? 'private' : 'normal'
 
   function selectPrivacy(mode: 'private' | 'normal'): void {
     if (mode === 'private') {
       setAvatarSource('pfp')
       setAlwaysLoadImages(false)
+      setBlockTrackingPixels(true)
     } else {
       setAvatarSource('bimi_gravatar')
       setAlwaysLoadImages(true)
+      setBlockTrackingPixels(false)
     }
   }
 

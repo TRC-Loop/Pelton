@@ -31,6 +31,7 @@ const defaults: UIPrefs = {
   showShortcutHints: false,
   showAccountEmail: false,
   alwaysLoadImages: false,
+  blockTrackingPixels: false,
   avatarSource: 'bimi_gravatar',
   avatarStyle: 'initials',
   multiSelectEnabled: true,
@@ -503,6 +504,15 @@ export function setShowAccountEmail(value: boolean): void {
 export function setAlwaysLoadImages(value: boolean): void {
   prefs.update((p) => ({ ...p, alwaysLoadImages: value }))
   void setSetting(SettingKeys.alwaysLoadImages, String(value))
+}
+
+// setBlockTrackingPixels keeps images that look like tracking pixels blocked
+// even once the rest of a message's remote content is loaded. Off by default,
+// because the detection is a heuristic that will sometimes be wrong; each load
+// button offers to load them anyway when it is.
+export function setBlockTrackingPixels(value: boolean): void {
+  prefs.update((p) => ({ ...p, blockTrackingPixels: value }))
+  void setSetting(SettingKeys.blockTrackingPixels, String(value))
 }
 
 // setAvatarSource selects the sender-photo fallback chain (bimi_gravatar,

@@ -162,8 +162,8 @@ export function GetMessage(arg1) {
   return window['go']['desktop']['App']['GetMessage'](arg1);
 }
 
-export function GetMessageHTML(arg1, arg2) {
-  return window['go']['desktop']['App']['GetMessageHTML'](arg1, arg2);
+export function GetMessageHTML(arg1, arg2, arg3) {
+  return window['go']['desktop']['App']['GetMessageHTML'](arg1, arg2, arg3);
 }
 
 export function GetMessageSource(arg1) {

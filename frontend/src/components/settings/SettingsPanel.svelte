@@ -54,6 +54,7 @@
     setShortcutHints,
     setShowAccountEmail,
     setAlwaysLoadImages,
+    setBlockTrackingPixels,
     setAvatarSource,
     setAvatarStyle,
     setMultiSelectEnabled,
@@ -200,6 +201,7 @@
     { cat: 'gestures', label: $t('settingsPanel.label.swipeLeft'), kw: 'swipe left' },
     { cat: 'gestures', label: $t('settingsPanel.label.swipeRight'), kw: 'swipe right' },
     { cat: 'privacy', label: $t('settingsPanel.toggle.alwaysLoadImages'), kw: 'remote images tracking' },
+    { cat: 'privacy', label: $t('settingsPanel.toggle.blockTrackingPixels'), kw: 'tracking pixel spy pixel read receipt open tracking' },
     { cat: 'privacy', label: $t('settingsPanel.label.manageWhitelist'), kw: 'trusted senders allowlist' },
     { cat: 'privacy', label: $t('settingsPanel.category.network'), kw: 'proxy connection tls socks' },
     { cat: 'mailboxes', label: $t('settingsPanel.category.mailboxes'), kw: 'accounts imap smtp servers' },
@@ -1011,6 +1013,16 @@
               </div>
             </div>
           {/if}
+
+          <div class="toggle" title={$t('settingsPanel.hint.blockTrackingPixels')}>
+            <span class="row-label">{$t('settingsPanel.toggle.blockTrackingPixels')}</span>
+            <ToggleSwitch
+              checked={$prefs.blockTrackingPixels}
+              label={$t('settingsPanel.toggle.blockTrackingPixels')}
+              on:change={(e) => setBlockTrackingPixels(e.detail)}
+            />
+          </div>
+          <p class="hint">{$t('settingsPanel.hint.blockTrackingPixelsDetail')}</p>
 
           <div class="field">
             <span class="row-label">{$t('settingsPanel.label.manageWhitelist')}</span>

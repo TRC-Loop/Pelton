@@ -193,6 +193,7 @@ export function demoMessage(id: number): MessageDetail {
     hasRemoteContent: false,
     remoteAllowed: true,
     remoteHosts: [],
+    trackingPixels: [],
     attachments: summary.hasAttachments
       ? [{ id: id * 10, filename: 'q4-potato-yields.xlsx', contentType: 'application/vnd.ms-excel', sizeBytes: 48213, inline: false }]
       : [],

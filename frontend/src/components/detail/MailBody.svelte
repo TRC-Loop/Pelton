@@ -10,7 +10,7 @@
   import { onDestroy } from 'svelte'
   import { get } from 'svelte/store'
   import { BrowserOpenURL } from '../../../wailsjs/runtime/runtime'
-  import { IconPhoto, IconUserCheck, IconWorldCheck, IconMailCheck, IconShieldSearch } from '@tabler/icons-svelte'
+  import { IconPhoto, IconUserCheck, IconWorldCheck, IconMailCheck, IconShieldSearch, IconChevronDown, IconEyeOff } from '@tabler/icons-svelte'
   import { prefs } from '../../stores/prefs'
   import { getMessageHtml, trustSenderImages, allowDomainImages, allowRemoteForMessage, scanUrl } from '../../lib/api'
   import { setBodyHtml } from '../../stores/message'
@@ -367,33 +367,59 @@
     window.removeEventListener('message', onWindowMessage)
   })
 
-  async function loadRemote(): Promise<void> {
+  // tracking pixels (#205). they are only reported when the setting is on, so
+  // an empty list means either a clean message or detection turned off.
+  $: trackers = detail.trackingPixels ?? []
+  // pixelsBlocked flips once remote content has been loaded with the pixels
+  // held back, so the reader is told what was withheld instead of it happening
+  // quietly. Detection is a heuristic: the wording says "look like" and the
+  // menu on each button loads them anyway.
+  let pixelsBlocked = false
+  // which load button has its "load them too" menu open, by index.
+  let pixelMenu: number | null = null
+  // whether the per-pixel breakdown under the banner is expanded.
+  let pixelDetails = false
+
+  // trackerHosts is the deduplicated list of who the pixels would report to.
+  $: trackerHosts = [...new Set(trackers.map((p) => p.host))]
+
+  // reasonText turns the backend's signal names into the sentence shown under
+  // a pixel. An unknown signal falls back to its raw name rather than vanishing.
+  function reasonText(reason: string, tFn: (key: string) => string): string {
+    const key = `detail.mailBody.pixelReason.${reason}`
+    const text = tFn(key)
+    return text === key ? reason : text
+  }
+
+  async function loadRemote(includeTrackers = false): Promise<void> {
     try {
-      const html = await getMessageHtml(detail.id, true)
+      const html = await getMessageHtml(detail.id, true, includeTrackers)
       setBodyHtml(html)
       remoteLoaded = true
+      pixelsBlocked = !includeTrackers && trackers.length > 0
+      pixelMenu = null
     } catch (err) {
       toastError(errorMessage(err))
     }
   }
 
   // trust the sender permanently, then show this message's remote content now.
-  async function trustSender(): Promise<void> {
+  async function trustSender(includeTrackers = false): Promise<void> {
     try {
       await trustSenderImages(detail.id)
       toastSuccess($t('detail.mailBody.imagesTrusted').replace('{who}', senderLabel))
-      await loadRemote()
+      await loadRemote(includeTrackers)
     } catch (err) {
       toastError(errorMessage(err))
     }
   }
 
   // trust the whole sender domain permanently, then show remote content now.
-  async function trustDomain(): Promise<void> {
+  async function trustDomain(includeTrackers = false): Promise<void> {
     try {
       await allowDomainImages(detail.id)
       toastSuccess($t('detail.mailBody.imagesTrusted').replace('{who}', senderDomain ?? ''))
-      await loadRemote()
+      await loadRemote(includeTrackers)
     } catch (err) {
       toastError(errorMessage(err))
     }
@@ -401,14 +427,51 @@
 
   // allow remote content for this one message only (persists), then show it now.
   // nothing else from the sender or domain is trusted.
-  async function trustThisEmail(): Promise<void> {
+  async function trustThisEmail(includeTrackers = false): Promise<void> {
     try {
       await allowRemoteForMessage(detail.id)
-      await loadRemote()
+      await loadRemote(includeTrackers)
     } catch (err) {
       toastError(errorMessage(err))
     }
   }
+
+  // the load buttons, built as data so the split control that carries the
+  // "load the pixels too" menu is written once rather than four times.
+  $: loadActions = [
+    {
+      key: 'once',
+      icon: IconPhoto,
+      label: $t('detail.mailBody.loadOnce'),
+      title: '',
+      run: (withPixels: boolean) => loadRemote(withPixels),
+    },
+    {
+      key: 'email',
+      icon: IconMailCheck,
+      label: $t('detail.mailBody.thisEmail'),
+      title: $t('detail.mailBody.thisEmailTitle'),
+      run: (withPixels: boolean) => trustThisEmail(withPixels),
+    },
+    {
+      key: 'sender',
+      icon: IconUserCheck,
+      label: $t('detail.mailBody.thisSender'),
+      title: $t('detail.mailBody.alwaysLoadFrom').replace('{who}', senderLabel),
+      run: (withPixels: boolean) => trustSender(withPixels),
+    },
+    ...(senderDomain
+      ? [
+          {
+            key: 'domain',
+            icon: IconWorldCheck,
+            label: $t('detail.mailBody.thisDomain'),
+            title: $t('detail.mailBody.alwaysLoadFrom').replace('{who}', senderDomain),
+            run: (withPixels: boolean) => trustDomain(withPixels),
+          },
+        ]
+      : []),
+  ]
 </script>
 
 {#if detail.hasRemoteContent && !remoteLoaded}
@@ -422,25 +485,67 @@
       {/if}
     </div>
     <div class="remote-actions">
-      <button type="button" class="remote-btn" on:click={loadRemote}>
-        <IconPhoto size={14} stroke={1.6} />
-        {$t('detail.mailBody.loadOnce')}
-      </button>
-      <button type="button" class="remote-btn" on:click={trustThisEmail} title={$t('detail.mailBody.thisEmailTitle')}>
-        <IconMailCheck size={14} stroke={1.6} />
-        {$t('detail.mailBody.thisEmail')}
-      </button>
-      <button type="button" class="remote-btn" on:click={trustSender} title={$t('detail.mailBody.alwaysLoadFrom').replace('{who}', senderLabel)}>
-        <IconUserCheck size={14} stroke={1.6} />
-        {$t('detail.mailBody.thisSender')}
-      </button>
-      {#if senderDomain}
-        <button type="button" class="remote-btn" on:click={trustDomain} title={$t('detail.mailBody.alwaysLoadFrom').replace('{who}', senderDomain)}>
-          <IconWorldCheck size={14} stroke={1.6} />
-          {$t('detail.mailBody.thisDomain')}
-        </button>
-      {/if}
+      {#each loadActions as action, i (action.key)}
+        <span class="split">
+          <button type="button" class="remote-btn" class:has-caret={trackers.length > 0} title={action.title} on:click={() => action.run(false)}>
+            <svelte:component this={action.icon} size={14} stroke={1.6} />
+            {action.label}
+          </button>
+          {#if trackers.length > 0}
+            <button
+              type="button"
+              class="remote-caret"
+              aria-label={$t('detail.mailBody.pixelMenuLabel')}
+              aria-expanded={pixelMenu === i}
+              on:click={() => (pixelMenu = pixelMenu === i ? null : i)}
+            >
+              <IconChevronDown size={12} stroke={2} />
+            </button>
+            {#if pixelMenu === i}
+              <div class="pixel-menu">
+                <button type="button" on:click={() => action.run(true)}>
+                  {$t('detail.mailBody.loadWithPixels')}
+                </button>
+              </div>
+            {/if}
+          {/if}
+        </span>
+      {/each}
     </div>
+  </div>
+{/if}
+
+{#if detail.hasRemoteContent && !remoteLoaded && trackers.length > 0}
+  <div class="pixel-bar">
+    <button type="button" class="pixel-summary" aria-expanded={pixelDetails} on:click={() => (pixelDetails = !pixelDetails)}>
+      <IconEyeOff size={14} stroke={1.6} />
+      {$t('detail.mailBody.pixelSummary').replace('{count}', String(trackers.length))}
+      <IconChevronDown size={12} stroke={2} class={pixelDetails ? 'flip' : ''} />
+    </button>
+    {#if pixelDetails}
+      <ul class="pixel-list">
+        {#each trackers as pixel (pixel.url)}
+          <li>
+            <span class="pixel-host">{pixel.host}</span>
+            <span class="pixel-why">{pixel.reasons.map((r) => reasonText(r, $t)).join(', ')}</span>
+          </li>
+        {/each}
+      </ul>
+      <p class="pixel-note">{$t('detail.mailBody.pixelNote')}</p>
+    {/if}
+  </div>
+{/if}
+
+{#if remoteLoaded && pixelsBlocked}
+  <div class="pixel-bar done">
+    <span class="pixel-done-text">
+      <IconEyeOff size={14} stroke={1.6} />
+      {$t('detail.mailBody.pixelsKeptBlocked').replace('{count}', String(trackers.length))}
+      <span class="pixel-hosts" title={trackerHosts.join(', ')}>{trackerHosts.slice(0, 2).join(', ')}</span>
+    </span>
+    <button type="button" class="remote-btn" on:click={() => loadRemote(true)}>
+      {$t('detail.mailBody.loadWithPixels')}
+    </button>
   </div>
 {/if}
 
@@ -520,6 +625,138 @@
 
   .remote-btn:hover {
     background: var(--surface-hover);
+  }
+
+  /* a split control: the button does the safe thing, the caret next to it
+     offers to load the tracking pixels as well. */
+  .split {
+    position: relative;
+    display: inline-flex;
+  }
+
+  .remote-btn.has-caret {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+    border-right: none;
+  }
+
+  .remote-caret {
+    display: inline-flex;
+    align-items: center;
+    padding: 0 var(--space-1);
+    border: var(--hairline) solid var(--border-default);
+    border-top-right-radius: var(--radius-control);
+    border-bottom-right-radius: var(--radius-control);
+    background: var(--surface-raised);
+    color: var(--text-secondary);
+    cursor: pointer;
+  }
+
+  .remote-caret:hover {
+    background: var(--surface-hover);
+    color: var(--text-primary);
+  }
+
+  .pixel-menu {
+    position: absolute;
+    top: calc(100% + var(--space-1));
+    right: 0;
+    z-index: 30;
+    border: var(--hairline) solid var(--border-default);
+    border-radius: var(--radius-control);
+    background: var(--surface-overlay);
+    box-shadow: var(--shadow-overlay);
+    white-space: nowrap;
+  }
+
+  .pixel-menu button {
+    display: block;
+    width: 100%;
+    padding: var(--space-2) var(--space-3);
+    border: none;
+    background: transparent;
+    color: var(--text-primary);
+    font-size: var(--fz-label);
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .pixel-menu button:hover {
+    background: var(--surface-hover);
+  }
+
+  /* the tracking-pixel line sits under the blocked-content banner, and after
+     loading it replaces it with what stayed behind. */
+  .pixel-bar {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    border: var(--hairline) solid var(--border-subtle);
+    border-radius: var(--radius-control);
+    margin-bottom: var(--space-2);
+  }
+
+  .pixel-bar.done {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    flex-wrap: wrap;
+  }
+
+  .pixel-summary,
+  .pixel-done-text {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    border: none;
+    background: transparent;
+    padding: 0;
+    color: var(--text-secondary);
+    font-size: var(--fz-meta);
+    text-align: left;
+  }
+
+  .pixel-summary {
+    cursor: pointer;
+  }
+
+  .pixel-summary:hover {
+    color: var(--text-primary);
+  }
+
+  .pixel-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+
+  .pixel-list li {
+    display: flex;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+    font-size: var(--fz-meta);
+  }
+
+  .pixel-host {
+    font-family: var(--font-mono);
+    color: var(--text-primary);
+    word-break: break-all;
+  }
+
+  .pixel-why,
+  .pixel-hosts {
+    color: var(--text-tertiary);
+  }
+
+  .pixel-note {
+    margin: 0;
+    font-size: var(--fz-meta);
+    color: var(--text-tertiary);
   }
 
   /* height is set inline from the measured content height so the pane has a single
