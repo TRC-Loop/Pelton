@@ -240,3 +240,42 @@ func TestSanitizeStripsRemoteBackgroundAttribute(t *testing.T) {
 		t.Errorf("the cell content went with it:\n%s", got)
 	}
 }
+
+// newsletterBody is a whole message rather than one img at a time: the
+// lone-image signal depends on what else the message loads, so the per-signal
+// cases above cannot show what a real newsletter comes out as.
+const newsletterBody = `
+<img src="https://cdn.example.com/hero.jpg" width="600" height="200" alt="hero">
+<img src="https://cdn.example.com/logo.png" width="120" height="40" alt="logo">
+<img src="https://signed.example.com/i/aGVyb2ltYWdlc2lnbmVkMTIz.jpg" width="600">
+<img src="https://signed.example.com/i/Zm9vdGVyaW1hZ2VzaWduZWQ.jpg" width="600">
+<img src="https://track.example.net/open.gif" width="1" height="1">
+<img src="https://beacon.example.net/p.png" style="display:none" width="50">
+<img src="https://ct.sendgrid.net/wf/open?upn=abc" width="40" height="40">
+<img src="https://mail.example.org/o?to=arne%40example.org" width="500">
+<img src="https://lonely.example.org/i?c=Zm9vYmFyYmF6cXV1eDEyMw" width="500">`
+
+func TestScanOnARealisticNewsletter(t *testing.T) {
+	scan := ScanRemoteImages(newsletterBody)
+
+	if len(scan.Images) != 9 {
+		t.Fatalf("found %d images, want 9", len(scan.Images))
+	}
+	wantTrackers := []string{
+		"track.example.net",
+		"beacon.example.net",
+		"ct.sendgrid.net",
+		"mail.example.org",
+		"lonely.example.org",
+	}
+	var got []string
+	for _, tr := range scan.Trackers {
+		got = append(got, tr.Host)
+	}
+	if !slices.Equal(got, wantTrackers) {
+		t.Errorf("trackers = %v, want %v", got, wantTrackers)
+	}
+	if scan.OtherCount() != 4 {
+		t.Errorf("OtherCount() = %d, want 4", scan.OtherCount())
+	}
+}
