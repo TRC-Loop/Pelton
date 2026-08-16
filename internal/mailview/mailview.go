@@ -92,6 +92,12 @@ func buildPolicy(allowRemote bool) *bluemonday.Policy {
 	// tables are heavily used by html mail.
 	p.AllowTables()
 
+	// urls have to be parsed before any scheme rule applies at all.
+	// Relative urls go with it: mail has no base to be relative to, so a
+	// relative src was never going to resolve to anything.
+	p.RequireParseableURLs(true)
+	p.AllowRelativeURLs(false)
+
 	if allowRemote {
 		p.AllowURLSchemes("http", "https", "mailto", "data", "cid")
 	} else {
@@ -107,13 +113,23 @@ func buildPolicy(allowRemote bool) *bluemonday.Policy {
 }
 
 // Sanitize cleans untrusted mail html for display. When allowRemote is false
-// (the default for first view) remote resources are removed. The result is safe
-// to inject into a sandboxed renderer.
+// (the default for first view) remote images are removed. The result is safe to
+// inject into a sandboxed renderer.
+//
+// The removal is done here rather than by the policy's url scheme list, which
+// cannot do it: UGCPolicy and AllowImages both call AllowStandardURLs, that
+// allows http and https, and AllowURLSchemes only ever adds to the list. The
+// blocked policy was therefore keeping every remote src it was documented to
+// strip, leaving the reading iframe's img-src csp as the only thing stopping
+// them loading. Withdrawing the schemes with a deny policy does work, but it
+// applies to links as well, and it would take every href in a message with it
+// until the reader loaded images. A link is not a leak: it goes nowhere until
+// it is clicked.
 func Sanitize(html string, allowRemote bool) string {
 	if allowRemote {
 		return allowRemotePolicy.Sanitize(html)
 	}
-	return blockRemotePolicy.Sanitize(html)
+	return blockRemotePolicy.Sanitize(stripRemoteImages(html))
 }
 
 // HasRemoteContent reports whether the raw html references any remote http(s)

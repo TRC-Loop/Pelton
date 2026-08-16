@@ -82,7 +82,7 @@ export function GetMCPConfig():Promise<desktop.MCPConfigDTO>;
 
 export function GetMessage(arg1:number):Promise<desktop.MessageDetailDTO>;
 
-export function GetMessageHTML(arg1:number,arg2:boolean):Promise<string>;
+export function GetMessageHTML(arg1:number,arg2:boolean,arg3:boolean):Promise<string>;
 
 export function GetMessageSource(arg1:number):Promise<string>;
 

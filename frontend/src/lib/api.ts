@@ -314,8 +314,10 @@ export function getMessageSource(id: number): Promise<string> {
 }
 
 // getMessageHtml re-renders a body with the chosen remote-image policy.
-export function getMessageHtml(id: number, allowRemote: boolean): Promise<string> {
-  return App.GetMessageHTML(id, allowRemote)
+// includeTrackers additionally loads the images detection flagged as tracking
+// pixels, which the setting otherwise keeps blocked even here.
+export function getMessageHtml(id: number, allowRemote: boolean, includeTrackers = false): Promise<string> {
+  return App.GetMessageHTML(id, allowRemote, includeTrackers)
 }
 
 // setSeen / setFlagged toggle a flag and queue the change for sync.
@@ -858,6 +860,7 @@ export const SettingKeys = {
   startupSelection: 'startup_selection',
   lastSelection: 'last_selection',
   liabilityAccepted: 'liability_accepted',
+  blockTrackingPixels: 'block_tracking_pixels',
 } as const
 
 // listSystemFonts returns the installed font family names for the body font

@@ -631,6 +631,7 @@ export namespace desktop {
 	    hasRemoteContent: boolean;
 	    remoteAllowed: boolean;
 	    remoteHosts: string[];
+	    trackingPixels: TrackingPixelDTO[];
 	    attachments: AttachmentDTO[];
 	    pgpState: string;
 	    unsubscribe?: UnsubscribeDTO;
@@ -669,6 +670,7 @@ export namespace desktop {
 	        this.hasRemoteContent = source["hasRemoteContent"];
 	        this.remoteAllowed = source["remoteAllowed"];
 	        this.remoteHosts = source["remoteHosts"];
+	        this.trackingPixels = this.convertValues(source["trackingPixels"], TrackingPixelDTO);
 	        this.attachments = this.convertValues(source["attachments"], AttachmentDTO);
 	        this.pgpState = source["pgpState"];
 	        this.unsubscribe = this.convertValues(source["unsubscribe"], UnsubscribeDTO);
@@ -1203,6 +1205,22 @@ export namespace desktop {
 		}
 	}
 	
+	export class TrackingPixelDTO {
+	    host: string;
+	    url: string;
+	    reasons: string[];
+	
+	    static createFrom(source: any = {}) {
+	        return new TrackingPixelDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.host = source["host"];
+	        this.url = source["url"];
+	        this.reasons = source["reasons"];
+	    }
+	}
 	export class UIPrefsDTO {
 	    theme: string;
 	    accent: string;

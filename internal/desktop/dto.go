@@ -154,8 +154,12 @@ type MessageDetailDTO struct {
 	RemoteAllowed bool `json:"remoteAllowed"`
 	// RemoteHosts lists the hosts the blocked remote content would load from, so
 	// the banner can show the user where.
-	RemoteHosts []string        `json:"remoteHosts"`
-	Attachments []AttachmentDTO `json:"attachments"`
+	RemoteHosts []string `json:"remoteHosts"`
+	// TrackingPixels are the remote images that look like they exist to report
+	// the open rather than to be seen (#205). They stay blocked even when the
+	// rest of the remote content is loaded, unless the user turns detection off.
+	TrackingPixels []TrackingPixelDTO `json:"trackingPixels"`
+	Attachments    []AttachmentDTO    `json:"attachments"`
 	// PGPState is empty for ordinary mail, and otherwise says what happened when
 	// the message was opened: "open" (decrypted, body below is the plaintext),
 	// "locked" (a passphrase is needed), "nokey" (no imported key can open it)
@@ -165,6 +169,17 @@ type MessageDetailDTO struct {
 	// Unsubscribe describes the unsubscribe mechanism the message advertises
 	// via its List-Unsubscribe headers, nil when it has none on record.
 	Unsubscribe *UnsubscribeDTO `json:"unsubscribe"`
+}
+
+// TrackingPixelDTO is one remote image the scan thinks exists to report the
+// open. Reasons carries the signals that led to that (tiny, hidden,
+// known-host, recipient, opaque-id, lone-image) so the ui can say why rather
+// than asking the reader to take its word for it. Detection is a guess and
+// will sometimes be wrong.
+type TrackingPixelDTO struct {
+	Host    string   `json:"host"`
+	URL     string   `json:"url"`
+	Reasons []string `json:"reasons"`
 }
 
 // authUnavailable is the placeholder auth status. The backend does not yet parse
