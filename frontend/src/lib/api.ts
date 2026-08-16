@@ -465,6 +465,18 @@ export function clearSentOutbox(): Promise<void> {
   return App.ClearSentOutbox()
 }
 
+// retrySend puts a failed message back in the send queue with a fresh attempt
+// budget. Resolves false when it was no longer failed.
+export function retrySend(id: number): Promise<boolean> {
+  return App.RetrySend(id)
+}
+
+// discardFailedSend removes a failed message from the outbox. The message is
+// gone afterwards, so the caller confirms first.
+export function discardFailedSend(id: number): Promise<boolean> {
+  return App.DiscardFailedSend(id)
+}
+
 // trustSenderImages permanently allows remote content from a message's sender.
 export function trustSenderImages(messageId: number): Promise<void> {
   return App.TrustSenderImages(messageId)

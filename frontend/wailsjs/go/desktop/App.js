@@ -102,6 +102,10 @@ export function DeleteView(arg1) {
   return window['go']['desktop']['App']['DeleteView'](arg1);
 }
 
+export function DiscardFailedSend(arg1) {
+  return window['go']['desktop']['App']['DiscardFailedSend'](arg1);
+}
+
 export function DiscoverConfig(arg1) {
   return window['go']['desktop']['App']['DiscoverConfig'](arg1);
 }
@@ -364,6 +368,10 @@ export function ReorderViews(arg1) {
 
 export function ResumePendingDownload() {
   return window['go']['desktop']['App']['ResumePendingDownload']();
+}
+
+export function RetrySend(arg1) {
+  return window['go']['desktop']['App']['RetrySend'](arg1);
 }
 
 export function SaveAllAttachments(arg1) {
