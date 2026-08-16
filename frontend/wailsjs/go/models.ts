@@ -9,8 +9,11 @@ export namespace desktop {
 	    imapPort: number;
 	    smtpHost: string;
 	    smtpPort: number;
+	    imapTls: string;
+	    smtpTls: string;
 	    local: boolean;
 	
+
 	    static createFrom(source: any = {}) {
 	        return new AccountDTO(source);
 	    }
@@ -25,6 +28,8 @@ export namespace desktop {
 	        this.imapPort = source["imapPort"];
 	        this.smtpHost = source["smtpHost"];
 	        this.smtpPort = source["smtpPort"];
+	        this.imapTls = source["imapTls"];
+	        this.smtpTls = source["smtpTls"];
 	        this.local = source["local"];
 	    }
 	}
@@ -50,6 +55,8 @@ export namespace desktop {
 	    imapPort: number;
 	    smtpHost: string;
 	    smtpPort: number;
+	    imapTls: string;
+	    smtpTls: string;
 	    password: string;
 	    provider: string;
 	    clientId: string;
@@ -68,6 +75,8 @@ export namespace desktop {
 	        this.imapPort = source["imapPort"];
 	        this.smtpHost = source["smtpHost"];
 	        this.smtpPort = source["smtpPort"];
+	        this.imapTls = source["imapTls"];
+	        this.smtpTls = source["smtpTls"];
 	        this.password = source["password"];
 	        this.provider = source["provider"];
 	        this.clientId = source["clientId"];
@@ -355,9 +364,11 @@ export namespace desktop {
 	    imapPort: number;
 	    smtpHost: string;
 	    smtpPort: number;
+	    imapTls: string;
+	    smtpTls: string;
 	    oauth: boolean;
 	    source: string;
-	
+
 	    static createFrom(source: any = {}) {
 	        return new DiscoveredDTO(source);
 	    }
@@ -368,6 +379,8 @@ export namespace desktop {
 	        this.imapPort = source["imapPort"];
 	        this.smtpHost = source["smtpHost"];
 	        this.smtpPort = source["smtpPort"];
+	        this.imapTls = source["imapTls"];
+	        this.smtpTls = source["smtpTls"];
 	        this.oauth = source["oauth"];
 	        this.source = source["source"];
 	    }
@@ -1113,8 +1126,9 @@ export namespace desktop {
 	    username: string;
 	    imapHost: string;
 	    imapPort: number;
+	    imapTls: string;
 	    password: string;
-	
+
 	    static createFrom(source: any = {}) {
 	        return new TestConnectionRequest(source);
 	    }
@@ -1125,6 +1139,7 @@ export namespace desktop {
 	        this.username = source["username"];
 	        this.imapHost = source["imapHost"];
 	        this.imapPort = source["imapPort"];
+	        this.imapTls = source["imapTls"];
 	        this.password = source["password"];
 	    }
 	}
@@ -1507,6 +1522,8 @@ export namespace desktop {
 	    smtpHost: string;
 	    smtpPort: number;
 	    password: string;
+	    imapTls: string;
+	    smtpTls: string;
 
 	    static createFrom(source: any = {}) {
 	        return new UpdateAccountRequest(source);
@@ -1522,6 +1539,8 @@ export namespace desktop {
 	        this.smtpHost = source["smtpHost"];
 	        this.smtpPort = source["smtpPort"];
 	        this.password = source["password"];
+	        this.imapTls = source["imapTls"];
+	        this.smtpTls = source["smtpTls"];
 	    }
 	}
 	export class UpdateCheckResult {

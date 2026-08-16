@@ -9,7 +9,7 @@
   import { listAccounts, updateAccount, deleteAccount, getLogStatus, deleteLogs, accountsNeedingPassword } from '../../lib/api'
   import { refreshSidebar } from '../../stores/accounts'
   import { errorMessage, toastError, pushAction } from '../../stores/toast'
-  import type { Account } from '../../lib/types'
+  import type { Account, TLSMode } from '../../lib/types'
   import { t } from '../../lib/i18n'
 
   let accounts: Account[] = []
@@ -52,8 +52,25 @@
   function startEdit(account: Account): void {
     confirmingId = null
     editingId = account.id
+    // the backend already reports the security an account actually connects
+    // with, resolving the empty value an older account carries, so the control
+    // shows the truth and saving pins it.
     draft = { ...account }
     passwordDraft = ''
+  }
+
+  // the security setters take the null check out of the template: inside an
+  // event handler the draft's narrowing from the enclosing block is lost.
+  function setIMAPTLS(mode: TLSMode): void {
+    if (draft) {
+      draft.imapTls = mode
+    }
+  }
+
+  function setSMTPTLS(mode: TLSMode): void {
+    if (draft) {
+      draft.smtpTls = mode
+    }
   }
 
   function cancelEdit(): void {
@@ -77,6 +94,8 @@
         smtpHost: draft.smtpHost,
         smtpPort: draft.smtpPort,
         password: passwordDraft,
+        imapTls: draft.imapTls as TLSMode,
+        smtpTls: draft.smtpTls as TLSMode,
       })
       accounts = accounts.map((a) => (a.id === updated.id ? updated : a))
       if (passwordDraft !== '') {
@@ -166,8 +185,26 @@
               <label class="field narrow"><span>{$t('wizard.field.port')}</span><input type="number" bind:value={draft.imapPort} /></label>
             </div>
             <div class="servers">
+              <span class="field">
+                <span>{$t('wizard.advanced.imapSecurity')}</span>
+                <div class="seg" role="radiogroup" aria-label={$t('wizard.advanced.imapSecurity')}>
+                  <button type="button" class:on={draft.imapTls === 'ssl'} on:click={() => setIMAPTLS('ssl')}>SSL / TLS</button>
+                  <button type="button" class:on={draft.imapTls === 'starttls'} on:click={() => setIMAPTLS('starttls')}>STARTTLS</button>
+                </div>
+              </span>
+            </div>
+            <div class="servers">
               <label class="field"><span>{$t('wizard.field.smtpHost')}</span><input type="text" bind:value={draft.smtpHost} /></label>
               <label class="field narrow"><span>{$t('wizard.field.port')}</span><input type="number" bind:value={draft.smtpPort} /></label>
+            </div>
+            <div class="servers">
+              <span class="field">
+                <span>{$t('wizard.advanced.smtpSecurity')}</span>
+                <div class="seg" role="radiogroup" aria-label={$t('wizard.advanced.smtpSecurity')}>
+                  <button type="button" class:on={draft.smtpTls === 'ssl'} on:click={() => setSMTPTLS('ssl')}>SSL / TLS</button>
+                  <button type="button" class:on={draft.smtpTls === 'starttls'} on:click={() => setSMTPTLS('starttls')}>STARTTLS</button>
+                </div>
+              </span>
             </div>
             <label class="field">
               <span>{$t('wizard.field.password')}</span>
@@ -378,6 +415,30 @@
   }
   .servers .field {
     flex: 1;
+  }
+
+  /* the security picker, matching the one in the add-mailbox wizard. */
+  .seg {
+    display: inline-flex;
+    align-self: flex-start;
+    border: var(--hairline) solid var(--border-default);
+    border-radius: var(--radius-control);
+    overflow: hidden;
+  }
+  .seg button {
+    border: none;
+    background: var(--surface-raised);
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: var(--space-2) var(--space-4);
+    font-size: var(--fz-label);
+  }
+  .seg button + button {
+    border-left: var(--hairline) solid var(--border-default);
+  }
+  .seg button.on {
+    background: var(--accent);
+    color: var(--accent-fg);
   }
   .servers .field.narrow {
     flex: 0 0 88px;

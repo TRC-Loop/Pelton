@@ -43,6 +43,8 @@ const accounts: Account[] = [
     smtpHost: 'smtp.pelton.email',
     smtpPort: 465,
     local: false,
+    imapTls: 'ssl',
+    smtpTls: 'ssl',
   },
   {
     id: 2,
@@ -54,6 +56,8 @@ const accounts: Account[] = [
     smtpHost: 'smtp.pelton-potato.island',
     smtpPort: 465,
     local: false,
+    imapTls: 'ssl',
+    smtpTls: 'ssl',
   },
 ]
 

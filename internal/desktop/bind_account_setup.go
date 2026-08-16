@@ -25,8 +25,12 @@ type DiscoveredDTO struct {
 	IMAPPort int    `json:"imapPort"`
 	SMTPHost string `json:"smtpHost"`
 	SMTPPort int    `json:"smtpPort"`
-	OAuth    bool   `json:"oauth"`
-	Source   string `json:"source"`
+	// IMAPTLS and SMTPTLS are the security the source stated ("ssl" or
+	// "starttls"), empty when it said nothing usable.
+	IMAPTLS string `json:"imapTls"`
+	SMTPTLS string `json:"smtpTls"`
+	OAuth   bool   `json:"oauth"`
+	Source  string `json:"source"`
 }
 
 // DiscoverConfig resolves likely imap/smtp settings for an email address using
@@ -42,6 +46,8 @@ func (a *App) DiscoverConfig(email string) (DiscoveredDTO, error) {
 		IMAPPort: d.IMAPPort,
 		SMTPHost: d.SMTPHost,
 		SMTPPort: d.SMTPPort,
+		IMAPTLS:  d.IMAPTLS,
+		SMTPTLS:  d.SMTPTLS,
 		OAuth:    d.OAuth,
 		Source:   d.Source,
 	}, nil
@@ -62,6 +68,10 @@ type TestConnectionRequest struct {
 	Username string `json:"username"`
 	IMAPHost string `json:"imapHost"`
 	IMAPPort int    `json:"imapPort"`
+	// IMAPTLS pins the connection security: "ssl", "starttls", or empty to
+	// derive it from the port. Sent so the test uses the same transport the
+	// account will, instead of testing a different one.
+	IMAPTLS  string `json:"imapTls"`
 	Password string `json:"password"`
 }
 
@@ -77,6 +87,7 @@ func (a *App) TestConnection(req TestConnectionRequest) error {
 		Port:     req.IMAPPort,
 		Username: username,
 		Password: req.Password,
+		TLS:      imapTLSMode(req.IMAPTLS),
 		Dial:     a.proxyDial(),
 	})
 	if err != nil {
@@ -97,10 +108,14 @@ type AddAccountRequest struct {
 	// Username is the login name when it differs from the email; empty logs in
 	// with Email.
 	Username    string `json:"username"`
-	IMAPHost    string `json:"imapHost"`
-	IMAPPort    int    `json:"imapPort"`
-	SMTPHost    string `json:"smtpHost"`
-	SMTPPort    int    `json:"smtpPort"`
+	IMAPHost string `json:"imapHost"`
+	IMAPPort int    `json:"imapPort"`
+	SMTPHost string `json:"smtpHost"`
+	SMTPPort int    `json:"smtpPort"`
+	// IMAPTLS and SMTPTLS pin the connection security: "ssl", "starttls", or
+	// empty to derive it from the port.
+	IMAPTLS string `json:"imapTls"`
+	SMTPTLS string `json:"smtpTls"`
 	// auth
 	Password string `json:"password"`
 	Provider string `json:"provider"`
@@ -160,6 +175,9 @@ func (a *App) AddOAuthAccount(req AddAccountRequest) (AccountDTO, error) {
 // the secret, discover folders, sync, and start idling. On any failure after the
 // row is created it rolls the account back so a half-created account is not left.
 func (a *App) createAccount(req AddAccountRequest, secret credentials.Secret) (AccountDTO, error) {
+	if !validTLSMode(req.IMAPTLS) || !validTLSMode(req.SMTPTLS) {
+		return AccountDTO{}, errUnknownTLSMode
+	}
 	account := &storage.Account{
 		Email:       req.Email,
 		DisplayName: req.DisplayName,
@@ -168,6 +186,8 @@ func (a *App) createAccount(req AddAccountRequest, secret credentials.Secret) (A
 		IMAPPort:    req.IMAPPort,
 		SMTPHost:    req.SMTPHost,
 		SMTPPort:    req.SMTPPort,
+		IMAPTLS:     req.IMAPTLS,
+		SMTPTLS:     req.SMTPTLS,
 	}
 	id, err := a.store.CreateAccount(a.ctx, account)
 	if err != nil {
