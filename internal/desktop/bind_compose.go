@@ -110,6 +110,40 @@ func (a *App) CancelSend(id int64) (bool, error) {
 	return cancelled, nil
 }
 
+// RetrySend puts a failed message back in the send queue, returning whether it
+// was requeued. False means it is no longer failed, which the ui treats as
+// "already handled" rather than an error.
+func (a *App) RetrySend(id int64) (bool, error) {
+	if err := a.ready(); err != nil {
+		return false, err
+	}
+	retried, err := a.queue.Retry(a.ctx, id)
+	if err != nil {
+		return false, err
+	}
+	if retried {
+		a.emit(EventOutboxChanged, nil)
+	}
+	return retried, nil
+}
+
+// DiscardFailedSend removes a failed message from the outbox, returning whether
+// it was removed. The message is not recoverable afterwards, so the ui confirms
+// before calling this.
+func (a *App) DiscardFailedSend(id int64) (bool, error) {
+	if err := a.ready(); err != nil {
+		return false, err
+	}
+	discarded, err := a.queue.Discard(a.ctx, id)
+	if err != nil {
+		return false, err
+	}
+	if discarded {
+		a.emit(EventOutboxChanged, nil)
+	}
+	return discarded, nil
+}
+
 // ClearSentOutbox removes rows already marked sent. The ui calls it after showing
 // the brief "sent" confirmation so the queue does not keep completed messages.
 func (a *App) ClearSentOutbox() error {

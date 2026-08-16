@@ -52,6 +52,8 @@ export function DeleteTheme(arg1:string):Promise<void>;
 
 export function DeleteView(arg1:number):Promise<void>;
 
+export function DiscardFailedSend(arg1:number):Promise<boolean>;
+
 export function DiscoverConfig(arg1:string):Promise<desktop.DiscoveredDTO>;
 
 export function DownloadMessageOffline(arg1:number):Promise<void>;
@@ -183,6 +185,8 @@ export function ReorderUnifiedViews(arg1:Array<string>):Promise<void>;
 export function ReorderViews(arg1:Array<number>):Promise<void>;
 
 export function ResumePendingDownload():Promise<void>;
+
+export function RetrySend(arg1:number):Promise<boolean>;
 
 export function SaveAllAttachments(arg1:number):Promise<string>;
 

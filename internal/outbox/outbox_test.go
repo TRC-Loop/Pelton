@@ -148,6 +148,101 @@ func TestMessageFailsAfterMaxAttempts(t *testing.T) {
 	}
 }
 
+// failOne drives a message all the way to the failed state without waiting out
+// the real backoff windows.
+func failOne(t *testing.T, q *Queue, id int64, cause string) {
+	t.Helper()
+	ctx := context.Background()
+	for range MaxAttempts {
+		m := findByID(t, q, id)
+		if _, err := q.markAttemptFailed(ctx, m, cause); err != nil {
+			t.Fatalf("mark attempt failed: %v", err)
+		}
+	}
+	if got := findByID(t, q, id); got.State != StateFailed {
+		t.Fatalf("setup: state = %q, want %q", got.State, StateFailed)
+	}
+}
+
+func TestRetryRequeuesAFailedMessage(t *testing.T) {
+	ctx := context.Background()
+	q, accountID := newTestQueue(t)
+
+	id, err := q.Enqueue(ctx, sampleMessage(accountID))
+	if err != nil {
+		t.Fatalf("enqueue: %v", err)
+	}
+	failOne(t, q, id, "smtp said no")
+
+	retried, err := q.Retry(ctx, id)
+	if err != nil {
+		t.Fatalf("retry: %v", err)
+	}
+	if !retried {
+		t.Fatal("retry reported no change on a failed message")
+	}
+
+	got := findByID(t, q, id)
+	if got.State != StateQueued {
+		t.Errorf("state = %q, want %q", got.State, StateQueued)
+	}
+	if got.Attempts != 0 {
+		t.Errorf("attempts = %d, want 0 so the retry gets the full budget again", got.Attempts)
+	}
+	if got.LastError != "" {
+		t.Errorf("last error = %q, want it cleared", got.LastError)
+	}
+	if got.NextAttemptAt.After(time.Now().UTC().Add(time.Second)) {
+		t.Errorf("next attempt = %v, want due now", got.NextAttemptAt)
+	}
+
+	// a second retry finds it queued, not failed, and leaves it alone.
+	retried, err = q.Retry(ctx, id)
+	if err != nil {
+		t.Fatalf("second retry: %v", err)
+	}
+	if retried {
+		t.Error("retry reported a change on a message that is no longer failed")
+	}
+}
+
+func TestDiscardOnlyRemovesFailedMessages(t *testing.T) {
+	ctx := context.Background()
+	q, accountID := newTestQueue(t)
+
+	queued, err := q.Enqueue(ctx, sampleMessage(accountID))
+	if err != nil {
+		t.Fatalf("enqueue: %v", err)
+	}
+	discarded, err := q.Discard(ctx, queued)
+	if err != nil {
+		t.Fatalf("discard queued: %v", err)
+	}
+	if discarded {
+		t.Error("discard removed a message that was still queued")
+	}
+	if got := findByID(t, q, queued); got.State != StateQueued {
+		t.Errorf("state = %q, want the queued message untouched", got.State)
+	}
+
+	failOne(t, q, queued, "boom")
+	discarded, err = q.Discard(ctx, queued)
+	if err != nil {
+		t.Fatalf("discard failed: %v", err)
+	}
+	if !discarded {
+		t.Fatal("discard did not remove a failed message")
+	}
+
+	list, err := q.List(ctx)
+	if err != nil {
+		t.Fatalf("list: %v", err)
+	}
+	if len(list) != 0 {
+		t.Errorf("outbox still holds %d rows after discarding the only one", len(list))
+	}
+}
+
 func TestRequeueStuckRecoversSendingRows(t *testing.T) {
 	ctx := context.Background()
 	q, accountID := newTestQueue(t)
