@@ -30,7 +30,7 @@ func (a *App) SetFlagColor(id int64, color int) error {
 		return err
 	}
 	if a.boolSetting(settingFlagColorSync, false) {
-		go a.pushColorKeyword(id, color)
+		goSafe("syncing a flag color", func() { a.pushColorKeyword(id, color) })
 	}
 	return nil
 }

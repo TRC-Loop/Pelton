@@ -221,7 +221,7 @@ func (a *App) updateFlag(id int64, flag storage.Flag, on bool) error {
 	}
 	// read/flag changes move messages in and out of unread-only and flagged-only
 	// views, so refresh the view badges without waiting for the next sync.
-	go a.refreshViewCounts()
+	goSafe("counting unread mail", a.refreshViewCounts)
 	return nil
 }
 
@@ -235,7 +235,7 @@ func (a *App) DeleteMessage(id int64) error {
 	if err := a.store.MarkDeletePending(a.ctx, id); err != nil {
 		return err
 	}
-	go a.refreshViewCounts()
+	goSafe("counting unread mail", a.refreshViewCounts)
 	return nil
 }
 
@@ -248,7 +248,7 @@ func (a *App) UndoDelete(id int64) error {
 	if err := a.store.ClearDeletePending(a.ctx, id); err != nil {
 		return err
 	}
-	go a.refreshViewCounts()
+	goSafe("counting unread mail", a.refreshViewCounts)
 	return nil
 }
 

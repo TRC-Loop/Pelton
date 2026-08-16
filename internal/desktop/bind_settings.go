@@ -5,6 +5,7 @@ import (
 
 	wailsruntime "github.com/wailsapp/wails/v2/pkg/runtime"
 
+	"github.com/TRC-Loop/Pelton/internal/logging"
 	"github.com/TRC-Loop/Pelton/internal/storage"
 )
 
@@ -308,6 +309,15 @@ type UIPrefsDTO struct {
 	// the previous session. A target that no longer exists falls back to the
 	// unified inbox.
 	StartupSelection string `json:"startupSelection"`
+	// LogToFile writes the app's own log to a rotating file in the data
+	// directory, at LogLevel. LogMessageMetadata additionally allows subjects
+	// and senders into it for debugging sync. CrashLogs leaves a stack behind
+	// when the app panics. All off by default on a stable build; a nightly
+	// defaults the file log and crash reports on. Nothing is ever uploaded.
+	LogToFile          bool   `json:"logToFile"`
+	LogLevel           string `json:"logLevel"`
+	LogMessageMetadata bool   `json:"logMessageMetadata"`
+	CrashLogs          bool   `json:"crashLogs"`
 }
 
 // GetUIPrefs returns all ui preferences with defaults filled in, so startup is a
@@ -382,6 +392,10 @@ func (a *App) GetUIPrefs() (UIPrefsDTO, error) {
 		SyncMessageLimit:           a.syncMessageLimit(),
 		SyncAutoBackfill:           a.boolSetting(settingSyncAutoBackfill, true),
 		StartupSelection:           a.stringSetting(settingStartupSelection, defaultStartupSelection),
+		LogToFile:                  a.logsOn(),
+		LogLevel:                   logging.LevelName(a.logLevel()),
+		LogMessageMetadata:         a.boolSetting(settingLogMessageMetadata, false),
+		CrashLogs:                  a.crashLogsOn(),
 	}, nil
 }
 
@@ -416,11 +430,14 @@ func (a *App) SetSetting(key, value string) error {
 	if key == settingLanguage || key == settingMenuBarInApp || key == settingMenuBarNativeMinimal {
 		a.RebuildMenu()
 	}
+	if key == settingLogToFile || key == settingLogLevel || key == settingLogMessageMetadata || key == settingCrashLogs {
+		a.applyLogSettings()
+	}
 	if key == settingIndexDecrypted {
 		// rebuilt from scratch rather than re-indexed in place: switching this
 		// off has to remove the plaintext already written, and overwriting
 		// documents would leave it in the index's older segments.
-		go a.rebuildSearchIndex()
+		goSafe("rebuilding the search index", a.rebuildSearchIndex)
 	}
 	return nil
 }

@@ -24,13 +24,13 @@ var syncMu sync.Mutex
 // per-account idle loops. Credentials come from the keyring (added by the
 // wizard) with an environment fallback for the legacy cli account.
 func (a *App) startBackgroundServices() {
-	go a.runOutboxWorker()
-	go a.runInitialSyncAndIdle()
-	go a.runSnoozePoller()
-	go a.harvestAddressBook()
-	go a.runAutoSyncLoop()
+	goSafe("sending queued mail", a.runOutboxWorker)
+	goSafe("the first sync", a.runInitialSyncAndIdle)
+	goSafe("waking snoozed mail", a.runSnoozePoller)
+	goSafe("collecting addresses", a.harvestAddressBook)
+	goSafe("the periodic sync", a.runAutoSyncLoop)
 	a.startMCPIfEnabled()
-	go a.refreshViewCounts()
+	goSafe("counting unread mail", a.refreshViewCounts)
 }
 
 // runAutoSyncLoop periodically runs a full sync pass across every account, on
@@ -116,7 +116,7 @@ func (a *App) runInitialSyncAndIdle() {
 		if err := a.syncAccount(account); err != nil && !errors.Is(err, errNoCredentials) {
 			a.log.Error("initial sync", "account", account.Email, "err", err)
 		}
-		go a.idleLoop(account)
+		goSafe("waiting for new mail", func() { a.idleLoop(account) })
 	}
 }
 
@@ -216,7 +216,7 @@ func (a *App) syncFolders(client *pimap.Client, accountID int64) error {
 		if res.New > 0 {
 			newTotal += res.New
 			a.emit(EventMailNew, MailNewEvent{AccountID: accountID, FolderID: f.ID, Count: res.New})
-			go a.notifyNewMail(f, res.NewIDs)
+			goSafe("announcing new mail", func() { a.notifyNewMail(f, res.NewIDs) })
 		}
 	}
 	a.emit(EventSyncProgress, SyncProgressEvent{
@@ -226,10 +226,10 @@ func (a *App) syncFolders(client *pimap.Client, accountID int64) error {
 	// index the freshly synced mail so it becomes searchable. run it off the sync
 	// path so the search backfill never holds up the next sync.
 	if newTotal > 0 {
-		go a.indexNewMessages()
-		go a.refreshViewCounts()
+		goSafe("indexing new mail", func() { _ = a.indexNewMessages() })
+		goSafe("counting unread mail", a.refreshViewCounts)
 		if !a.lowPowerMode() {
-			go a.harvestAddressBook()
+			goSafe("collecting addresses", a.harvestAddressBook)
 		}
 	}
 	return nil
@@ -265,11 +265,11 @@ func (a *App) syncOneFolder(client *pimap.Client, folder storage.Folder) error {
 	}
 	if res.New > 0 {
 		a.emit(EventMailNew, MailNewEvent{AccountID: folder.AccountID, FolderID: folder.ID, Count: res.New})
-		go a.notifyNewMail(folder, res.NewIDs)
-		go a.indexNewMessages()
-		go a.refreshViewCounts()
+		goSafe("announcing new mail", func() { a.notifyNewMail(folder, res.NewIDs) })
+		goSafe("indexing new mail", func() { _ = a.indexNewMessages() })
+		goSafe("counting unread mail", a.refreshViewCounts)
 		if !a.lowPowerMode() {
-			go a.harvestAddressBook()
+			goSafe("collecting addresses", a.harvestAddressBook)
 		}
 	}
 	return nil

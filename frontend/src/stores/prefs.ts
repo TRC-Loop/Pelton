@@ -5,7 +5,7 @@
 // source of truth.
 
 import { writable } from 'svelte/store'
-import type { UIPrefs, ThemePref, DensityPref, EditorMode, ViewsPlacement, CloseAction } from '../lib/types'
+import type { UIPrefs, ThemePref, DensityPref, EditorMode, ViewsPlacement, CloseAction, LogLevel } from '../lib/types'
 import { getUIPrefs, setSetting, SettingKeys, systemColorScheme, setWindowTheme, getThemeApply } from '../lib/api'
 import { applyTheme, applyDensity, applyAccent, applyScale, applyReduceMotion, setThemeSchedule, applyUIFont, applyMonoFont, applyCorners, watchSystemTheme, setSystemSchemeOverride, resolveTheme } from '../theme/theme'
 import { applyUserTheme } from '../theme/usertheme'
@@ -79,6 +79,10 @@ const defaults: UIPrefs = {
   syncMessageLimit: 50,
   syncAutoBackfill: true,
   startupSelection: 'view:inbox',
+  logToFile: false,
+  logLevel: 'info',
+  logMessageMetadata: false,
+  crashLogs: false,
 }
 
 export const prefs = writable<UIPrefs>(defaults)
@@ -537,6 +541,34 @@ export function setShowSelectedCount(value: boolean): void {
 export function setStartupSelection(value: string): void {
   prefs.update((p) => ({ ...p, startupSelection: value }))
   void setSetting(SettingKeys.startupSelection, value)
+}
+
+// setLogToFile turns the rotating log file on or off. Off stops writing but
+// leaves what is already on disk; deleting it is a separate, explicit action.
+export function setLogToFile(value: boolean): void {
+  prefs.update((p) => ({ ...p, logToFile: value }))
+  void setSetting(SettingKeys.logToFile, String(value))
+}
+
+// setLogLevel picks how much detail the log records.
+export function setLogLevel(value: LogLevel): void {
+  prefs.update((p) => ({ ...p, logLevel: value }))
+  void setSetting(SettingKeys.logLevel, value)
+}
+
+// setLogMessageMetadata allows subjects and senders into the log for debugging
+// sync. Its own opt-in, since it is the one logging switch that writes anything
+// about the user's mail.
+export function setLogMessageMetadata(value: boolean): void {
+  prefs.update((p) => ({ ...p, logMessageMetadata: value }))
+  void setSetting(SettingKeys.logMessageMetadata, String(value))
+}
+
+// setCrashLogs toggles leaving a file with the stack behind when Pelton
+// crashes.
+export function setCrashLogs(value: boolean): void {
+  prefs.update((p) => ({ ...p, crashLogs: value }))
+  void setSetting(SettingKeys.crashLogs, String(value))
 }
 
 // setSidebarIndentGuides toggles the nested-folder guide lines.

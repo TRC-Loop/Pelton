@@ -91,8 +91,8 @@ func (a *App) FetchOlderMessages(req ListMessagesRequest) (FetchOlderResult, err
 	}
 
 	if res.Fetched > 0 {
-		go a.indexNewMessages()
-		go a.refreshViewCounts()
+		goSafe("indexing new mail", func() { _ = a.indexNewMessages() })
+		goSafe("counting unread mail", a.refreshViewCounts)
 	}
 	return res, nil
 }

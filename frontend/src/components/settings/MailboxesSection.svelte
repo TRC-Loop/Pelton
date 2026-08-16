@@ -6,9 +6,9 @@
   // account; changing it is a re-add.
   import { onMount } from 'svelte'
   import { IconPencil, IconTrash, IconCheck, IconX, IconPlus } from '@tabler/icons-svelte'
-  import { listAccounts, updateAccount, deleteAccount } from '../../lib/api'
+  import { listAccounts, updateAccount, deleteAccount, getLogStatus, deleteLogs } from '../../lib/api'
   import { refreshSidebar } from '../../stores/accounts'
-  import { errorMessage, toastError } from '../../stores/toast'
+  import { errorMessage, toastError, pushAction } from '../../stores/toast'
   import type { Account } from '../../lib/types'
   import { t } from '../../lib/i18n'
 
@@ -84,9 +84,36 @@
       accounts = accounts.filter((a) => a.id !== id)
       confirmingId = null
       void refreshSidebar()
+      void offerLogCleanup()
     } catch (err) {
       toastError(errorMessage(err))
     }
+  }
+
+  // a log written while a mailbox existed is still a record of using it, so
+  // deleting the mailbox offers to take the logs with it (#211). Nothing is
+  // removed without the click: the logs may be the reason logging was on.
+  async function offerLogCleanup(): Promise<void> {
+    let status
+    try {
+      status = await getLogStatus()
+    } catch {
+      return
+    }
+    if (status.sizeBytes === 0) {
+      return
+    }
+    pushAction(
+      'info',
+      $t('mailboxes.deleteLogsOffer'),
+      {
+        label: $t('settingsPanel.button.deleteLogs'),
+        run: () => {
+          deleteLogs().catch((err) => toastError(errorMessage(err)))
+        },
+      },
+      8000,
+    )
   }
 </script>
 

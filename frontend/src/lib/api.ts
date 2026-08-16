@@ -49,6 +49,7 @@ import type {
   Selection,
   FetchOlderResult,
   PGPKey,
+  LogStatus,
 } from './types'
 
 // isDemoMode reports whether the app launched in the cosmetic --potatoes-are-nice
@@ -846,6 +847,10 @@ export const SettingKeys = {
   startupSelection: 'startup_selection',
   lastSelection: 'last_selection',
   liabilityAccepted: 'liability_accepted',
+  logToFile: 'log_to_file',
+  logLevel: 'log_level',
+  logMessageMetadata: 'log_message_metadata',
+  crashLogs: 'crash_logs',
 } as const
 
 // listSystemFonts returns the installed font family names for the body font
@@ -1084,4 +1089,40 @@ export function scanAttachment(messageId: number, attachmentId: number): Promise
 // back per target, so one failed lookup does not lose the others.
 export function scanMessage(messageId: number, links: boolean, attachments: boolean): Promise<MessageScan> {
   return App.ScanMessage(messageId, links, attachments) as Promise<MessageScan>
+}
+
+// --- logs and crash reports (#211) ---
+
+// getLogStatus reports where the log folder is, whether anything is being
+// written to it, and whether the last run left a crash report behind.
+export function getLogStatus(): Promise<LogStatus> {
+  return App.GetLogStatus() as Promise<LogStatus>
+}
+
+// openLogFolder shows the log folder in the system file manager, creating it
+// first so the button works before anything has been logged.
+export function openLogFolder(): Promise<void> {
+  return App.OpenLogFolder()
+}
+
+// deleteLogs removes every log and crash file.
+export function deleteLogs(): Promise<void> {
+  return App.DeleteLogs()
+}
+
+// openCrashReport opens the pending crash file and marks it seen.
+export function openCrashReport(): Promise<void> {
+  return App.OpenCrashReport()
+}
+
+// dismissCrashReport marks the pending crash seen without opening it. The file
+// stays on disk.
+export function dismissCrashReport(): Promise<void> {
+  return App.DismissCrashReport()
+}
+
+// getDiagnostics returns the build and platform summary the about section
+// copies to the clipboard. It never contains mail or addresses.
+export function getDiagnostics(): Promise<string> {
+  return App.GetDiagnostics()
 }

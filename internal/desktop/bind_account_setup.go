@@ -186,12 +186,12 @@ func (a *App) createAccount(req AddAccountRequest, secret credentials.Secret) (A
 	}
 
 	// initial sync and idle in the background so the wizard returns promptly.
-	go func() {
+	goSafe("syncing a new mailbox", func() {
 		if err := a.syncAccount(*account); err != nil {
 			a.log.Error("initial sync after add", "account", account.Email, "err", err)
 		}
-		go a.idleLoop(*account)
-	}()
+		goSafe("waiting for new mail", func() { a.idleLoop(*account) })
+	})
 
 	return toAccountDTO(*account), nil
 }
