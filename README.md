@@ -125,7 +125,11 @@ A `.zip` of the raw `.app` (`Pelton-<version>-macos-<arch>-app.zip`) is also att
 
 Windows on ARM is not built yet.
 
-### Linux (Fedora)
+### Linux
+
+[![Packaging status](https://repology.org/badge/vertical-allrepos/pelton.svg)](https://repology.org/project/pelton/versions)
+
+#### fedora
 
 Two ways to install, pick one:
 
