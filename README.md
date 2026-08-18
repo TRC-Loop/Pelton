@@ -29,6 +29,15 @@
 
 <h3 align="center">An open-source email client built around your privacy, cross-platform with zero telemetry, fully yours.</h3>
 
+<h3 align="center">Install Guides</h3>
+
+<div align="center">
+
+| <img src="https://api.iconify.design/tabler/brand-apple.svg?color=white" width="18" style="vertical-align: -4px;"> [macOS](#-macos) | <img src="https://api.iconify.design/tabler/brand-windows.svg?color=white" width="18" style="vertical-align: -4px;"> [Windows](#-windows) | <img src="https://api.iconify.design/tabler/terminal-2.svg?color=white" width="18" style="vertical-align: -4px;"> [Linux](#-linux) |
+|:---:|:---:|:---:|
+
+</div>
+
 ***
 
 ## <img src="https://api.iconify.design/tabler/info-circle.svg?color=white" width="26" style="vertical-align: -4px;"> About Pelton
@@ -39,15 +48,12 @@ Pelton is a modern, Free and Open-Source Software (FOSS) email client written in
 
 * <img src="https://api.iconify.design/tabler/shield-lock.svg?color=white" width="18" style="vertical-align: -4px;"> **Full Privacy:** Your data stays on your machine. Zero tracking, zero telemetry, and complete control over your inbox.
 * <img src="https://api.iconify.design/tabler/bolt.svg?color=white" width="18" style="vertical-align: -4px;"> **Fast Search:** Find what you need instantly. The search engine is optimized for speed and handles large local mailboxes with ease.
-* <img src="https://api.iconify.design/tabler/palette.svg?color=white" width="18" style="vertical-align: -4px;"> **Highly Customizable:** Tailor the client to fit your exact workflow and aesthetic preferences.
+* <img src="https://api.iconify.design/tabler/palette.svg?color=white" width="18" style="vertical-align: -4px;"> **Highly Customizable:** Tailor the client to fit your exact workflow and aesthetic preferences. See https://themes.pelton.app
 * <img src="https://api.iconify.design/tabler/file-export.svg?color=white" width="18" style="vertical-align: -4px;"> **Portable Configuration:** Export your entire setup, including accounts, preferences, and custom layouts, into a single easily transferable file.
 * <img src="https://api.iconify.design/tabler/code.svg?color=white" width="18" style="vertical-align: -4px;"> **FOSS & Cross-Platform:** Truly open source and built to run beautifully across different operating systems.
 * <img src="https://api.iconify.design/tabler/flag.svg?color=white" width="18" style="vertical-align: -4px;"> **Colored flags** with eight colors, kept local by default and optionally synced to the server as IMAP keywords so other clients see them.
 * <img src="https://api.iconify.design/tabler/eye.svg?color=white" width="18" style="vertical-align: -4px;"> **In-app previewer** for PDFs, images, and text/code/markdown, so attachments open without leaving Pelton.
-* <img src="https://api.iconify.design/tabler/download.svg?color=white" width="18" style="vertical-align: -4px;"> **Save all** attachments from a message to a folder in one click, each with a progress bar.
 * <img src="https://api.iconify.design/tabler/clock.svg?color=white" width="18" style="vertical-align: -4px;"> **Snooze** a message from the right-click menu with a friendly date-time picker; it resurfaces marked unread, and can optionally hide from the inbox until then.
-* <img src="https://api.iconify.design/tabler/cloud-off.svg?color=white" width="18" style="vertical-align: -4px;"> **Offline downloads**: pin a single message, or bulk-download every message since a chosen date (with a per-run choice to include attachments) for fast offline search, with a live progress bar and ETA in the status bar.
-* <img src="https://api.iconify.design/tabler/hand-finger.svg?color=white" width="18" style="vertical-align: -4px;"> **Trackpad swipe gestures** on messages (configurable; left deletes, right marks unread by default).
 * <img src="https://api.iconify.design/tabler/address-book.svg?color=white" width="18" style="vertical-align: -4px;"> **Address book autocomplete** in the composer, learned from mail you send and receive, manageable in settings.
 * <img src="https://api.iconify.design/tabler/keyboard.svg?color=white" width="18" style="vertical-align: -4px;"> **Vim mode** in the compose editor for modal editing, plus **customizable keyboard shortcuts** throughout.
 
@@ -101,9 +107,11 @@ Pelton is a modern, Free and Open-Source Software (FOSS) email client written in
 
 ## <img src="https://api.iconify.design/tabler/download.svg?color=white" width="26" style="vertical-align: -4px;"> Installation
 
-Every [GitHub release](https://github.com/TRC-Loop/Pelton/releases) ships installers for macOS (Apple Silicon), Windows, and Fedora Linux. All builds are unsigned (no Apple notarization, no Windows code signing), so first launch needs one extra step on macOS and Windows - see below.
+| <img src="https://api.iconify.design/tabler/brand-apple.svg?color=white" width="18" style="vertical-align: -4px;"> [macOS](#-macos) | <img src="https://api.iconify.design/tabler/brand-windows.svg?color=white" width="18" style="vertical-align: -4px;"> [Windows](#-windows) | <img src="https://api.iconify.design/tabler/terminal-2.svg?color=white" width="18" style="vertical-align: -4px;"> [Linux](#-linux) |
+|:---:|:---:|:---:|
 
-### macOS
+
+### <img src="https://api.iconify.design/tabler/brand-apple.svg?color=white" width="26" style="vertical-align: -4px;"> macOS
 
 1. Download `Pelton-<version>-macos-applesilicon.dmg` (Apple Silicon / M-series Macs).
 2. Open the `.dmg` and drag `Pelton.app` into `Applications`.
@@ -111,21 +119,22 @@ Every [GitHub release](https://github.com/TRC-Loop/Pelton/releases) ships instal
 
 A `.zip` of the raw `.app` (`Pelton-<version>-macos-<arch>-app.zip`) is also attached to each release if you'd rather not use the `.dmg`.
 
-### Windows
+### <img src="https://api.iconify.design/tabler/brand-windows.svg?color=white" width="26" style="vertical-align: -4px;"> Windows
 
-1. Download `Pelton-<version>-windows-amd64-installer.exe`.
-2. Run it. Since the build is unsigned, Windows SmartScreen may show an "unrecognized app" warning the first time - click **More info** then **Run anyway**. This warning fades on its own as the file builds up download reputation.
+1. Download the latest installer from https://github.com/TRC-Loop/Pelton/releases/latest.
+2. Run it. Since the build is unsigned, Windows SmartScreen may show an "unrecognized app" warning the first time. Click **More info** then **Run anyway**. This warning fades on its own as the file builds up download reputation.
 3. The installer walks you through:
-   - an installer-language picker (matches Pelton's own UI languages: English, German, French, Dutch, Spanish)
    - the GPL-3.0 license
    - the warranty and liability terms
-   - **install for all users** (needs admin) or **just me** (no admin needed)
+   - **install for all users** (needs admin, installs to Program Files) or **just me** (installs to AppData) (no admin needed)
    - an optional desktop shortcut (Start Menu shortcut is always created)
    - a "Launch Pelton" checkbox on the last page
 
-Windows on ARM is not built yet.
+Windows on ARM is not supported yet.
 
-### Linux
+### <img src="https://api.iconify.design/tabler/brand-linux.svg?color=white" width="26" style="vertical-align: -4px;"> Linux
+
+**Currently supported:** `fedora (copr/dnf)`, `Arch (AUR)` – Thanks 
 
 [![Packaging status](https://repology.org/badge/vertical-allrepos/pelton.svg)](https://repology.org/project/pelton/versions)
 
@@ -149,21 +158,9 @@ sudo dnf install pelton
 > 
 > Update your System folks! (You have to do it anyway so ig)
 
-**Via the standalone `.rpm`:**
-
-Download `Pelton-<version>-linux-fedora-x86_64.rpm` from the release and install it directly:
-
-```sh
-sudo dnf install ./Pelton-<version>-linux-fedora-x86_64.rpm
-```
-
-This won't auto-update; you'll need to download and install each new version's `.rpm` by hand.
-
-To uninstall either way, run `sudo dnf remove pelton` (or use the Remove button in GNOME Software / KDE Discover).
-
 ### Other Linux distributions
 
-Only a Fedora package is published right now. On other distributions, build from source (needs Go, Node/pnpm, and the Wails CLI - see `make run` / `make build-linux` in the `Makefile`):
+On other distributions, build from source (needs Go, Node/pnpm, and the Wails CLI - see `make run` / `make build-linux` in the `Makefile`):
 
 ```sh
 git clone https://github.com/TRC-Loop/Pelton.git
