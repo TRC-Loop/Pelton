@@ -2,6 +2,7 @@
   <img src="https://raw.githubusercontent.com/TRC-Loop/Pelton/13f56136136bc00b9c8721dc2042fc9c84e1b3a7/.github/pelton-large-bg.png" alt="Pelton Banner">
 </p>
 
+
 <p align="center">
   <a href="https://github.com/TRC-Loop/Pelton/blob/main/LICENSE">
     <img src="https://img.shields.io/github/license/TRC-Loop/Pelton?style=for-the-badge&color=blue" alt="License: GPL-3.0">
@@ -37,6 +38,12 @@
 |:---:|:---:|:---:|
 
 </div>
+
+<p align="center">
+  <a href="https://discord.gg/UzPNGZYy6V">
+    <img src="https://discord.com/api/guilds/1535688892689162260/widget.png?style=banner2" alt="Discord Banner">
+  </a>
+</p>
 
 ***
 
@@ -103,7 +110,20 @@ Pelton is a modern, Free and Open-Source Software (FOSS) email client written in
 
 ## <img src="https://api.iconify.design/tabler/photo.svg?color=white" width="26" style="vertical-align: -4px;"> Gallery
 
-*(Screenshots and UI previews will be placed here soon!)*
+<table>
+  <tr>
+    <td><img src="https://github.com/user-attachments/assets/02ea4fa1-9ea1-418a-99a7-6a48eca4e360" width="100%" alt="Pelton screenshot 1"></td>
+    <td><img src="https://github.com/user-attachments/assets/848d8103-bb4b-4922-8da5-1b254fa5a524" width="100%" alt="Pelton screenshot 2"></td>
+  </tr>
+  <tr>
+    <td><img src="https://github.com/user-attachments/assets/653067d7-ae16-4fa0-98eb-9d7e7dd1c412" width="100%" alt="Pelton screenshot 3"></td>
+    <td><img src="https://github.com/user-attachments/assets/a31342b4-74a8-45b1-9591-381cc8da4ee6" width="100%" alt="Pelton screenshot 4"></td>
+  </tr>
+  <tr>
+    <td><img src="https://github.com/user-attachments/assets/ae530434-d06a-4d52-83a9-2f16664beb59" width="100%" alt="Pelton screenshot 5"></td>
+    <td><img src="https://github.com/user-attachments/assets/7c5dd0c0-7915-4cc7-a4d8-3cb32c3d3d80" width="100%" alt="Pelton screenshot 6"></td>
+  </tr>
+</table>
 
 ## <img src="https://api.iconify.design/tabler/download.svg?color=white" width="26" style="vertical-align: -4px;"> Installation
 
@@ -132,9 +152,9 @@ A `.zip` of the raw `.app` (`Pelton-<version>-macos-<arch>-app.zip`) is also att
 
 Windows on ARM is not supported yet.
 
-### <img src="https://api.iconify.design/tabler/brand-linux.svg?color=white" width="26" style="vertical-align: -4px;"> Linux
+### <img src="https://api.iconify.design/tabler/terminal-2.svg?color=white" width="26" style="vertical-align: -4px;"> Linux
 
-**Currently supported:** `fedora (copr/dnf)`, `Arch (AUR)` – Thanks 
+**Currently supported:** `fedora (copr/dnf)`, `Arch (AUR)` – Thanks to [leeteral (AUR Maintainer)](https://leeism.com) [(Github)](https://github.com/leeteral)
 
 [![Packaging status](https://repology.org/badge/vertical-allrepos/pelton.svg)](https://repology.org/project/pelton/versions)
 
@@ -160,7 +180,7 @@ sudo dnf install pelton
 
 ### Other Linux distributions
 
-On other distributions, build from source (needs Go, Node/pnpm, and the Wails CLI - see `make run` / `make build-linux` in the `Makefile`):
+On other distributions, build from source (needs Go, Node/pnpm, and the Wails CLI. See `make run` / `make build-linux` in the `Makefile`):
 
 ```sh
 git clone https://github.com/TRC-Loop/Pelton.git
@@ -207,3 +227,9 @@ Pelton is distributed under the **[GPL-3.0 License](https://github.com/TRC-Loop/
 Warranty and liability are set out in **[DISCLAIMER.md](DISCLAIMER.md)**, an additional term under GPLv3 section 7(a), published as well at [pelton.app/terms](https://pelton.app/terms). Pelton comes without warranty and you use it at your own risk: it connects to your real mailboxes, deletions can be permanent, and it is not a backup tool. Keep your own backup of anything you cannot afford to lose.
 
 Security issues belong in [SECURITY.md](SECURITY.md), not in a public issue.
+
+## Other Info
+
+Arne/TRC-Loop's timezone is `CET/CEST` or `UTC+2` or `Europe/Berlin`
+<br>
+![Time Badge](https://readmeme.eu.cc/api/time.svg?timezone=Europe%2FBerlin&theme=classic&timeFormat=24h&showSeconds=1&showDate=1&showDay=1&label=Arne%27s+Local+Time)
