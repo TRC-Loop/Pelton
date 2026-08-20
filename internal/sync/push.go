@@ -43,16 +43,18 @@ func (e *Engine) clearPending(ctx context.Context, state storage.MessageState, f
 	return nil
 }
 
-// pushDeletes deletes the given messages on the server, then removes them from
-// the cache. the whole batch goes in one DeleteMessages call, so a folder with
-// many local deletions costs a couple of round trips rather than a couple per
-// message, and the imap layer keeps the removal scoped to exactly these uids.
+// pushDeletes applies the user's deletions on the server, then removes them
+// from the cache. the whole batch goes in one call, so a folder with many local
+// deletions costs a couple of round trips rather than a couple per message.
 //
-// decision: delete means \Deleted + EXPUNGE here, not move-to-Trash. it is the
-// standard, provider neutral delete. the known divergence is gmail, where this
-// only removes a label inside an ordinary mailbox, see DeleteMessages in the
-// imap package. moving to the account's Trash folder is the cleaner gmail
-// behaviour and is a candidate for a later version.
+// deleting a message moves it to the account's trash. that is what people mean
+// by delete, it is recoverable, and on gmail it is the only thing that deletes
+// at all: \Deleted plus EXPUNGE inside an ordinary label only removes the
+// label there.
+//
+// the permanent delete is \Deleted plus a scoped expunge, and it happens in
+// exactly two cases: the message is already in the trash (emptying it, or
+// deleting from inside it), or the account has no trash folder to move to.
 func (e *Engine) pushDeletes(ctx context.Context, folder storage.Folder, states []storage.MessageState) error {
 	if len(states) == 0 {
 		return nil
@@ -63,9 +65,14 @@ func (e *Engine) pushDeletes(ctx context.Context, folder storage.Folder, states 
 		uids = append(uids, imap.UID(s.UID))
 	}
 
-	// scoped to exactly these uids by the imap layer, which will not issue an
-	// expunge that could take a message another client merely flagged.
-	if err := e.client.DeleteMessages(uids...); err != nil {
+	// both paths are scoped to exactly these uids by the imap layer, which will
+	// not issue an expunge that could take a message another client merely
+	// flagged.
+	if e.trashable(folder) {
+		if err := e.client.MoveMessages(uids, e.TrashPath); err != nil {
+			return fmt.Errorf("sync: move to trash on server: %w", err)
+		}
+	} else if err := e.client.DeleteMessages(uids...); err != nil {
 		return fmt.Errorf("sync: delete on server: %w", err)
 	}
 
@@ -76,4 +83,14 @@ func (e *Engine) pushDeletes(ctx context.Context, folder storage.Folder, states 
 		}
 	}
 	return nil
+}
+
+// trashable reports whether deletions from this folder should move to the trash
+// rather than be expunged. Comparing the id as well as the path keeps a folder
+// merely named like the trash from being mistaken for it.
+func (e *Engine) trashable(folder storage.Folder) bool {
+	if e.TrashPath == "" {
+		return false
+	}
+	return folder.ID != e.TrashFolderID && folder.IMAPPath != e.TrashPath
 }
