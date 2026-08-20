@@ -37,6 +37,7 @@
   } from '../../stores/folderdialog'
   import { startFolderDrag, endFolderDrag } from '../../stores/sidebardrag'
   import { refreshSidebar } from '../../stores/accounts'
+  import { prefs } from '../../stores/prefs'
   import { reorderFolders, setFolderPinned, setFolderSyncExcluded } from '../../lib/api'
   import { toastError, errorMessage } from '../../stores/toast'
   import { t } from '../../lib/i18n'
@@ -155,11 +156,18 @@
     normal: IconFolder,
   }
   $: Icon = roleIcons[folder.role] ?? IconFolder
+
+  // a folder the user took out of sync looks identical to one that simply has
+  // no new mail, which is how somebody forgets they excluded it. The marker is
+  // a setting because a mailbox with many excluded folders does not need a row
+  // of icons repeating what its owner already knows.
+  $: unsynced = folder.syncExcluded && $prefs.showUnsyncedFolder
 </script>
 
 <div class="node" data-reorder-id={folder.id}>
   <SidebarRow
     label={folder.name}
+    title={unsynced ? $t('folders.notSyncing') : ''}
     count={folder.unreadCount}
     active={isActive}
     {depth}
@@ -171,6 +179,11 @@
     on:contextmenu={(e) => onContext(e.detail)}
   >
     <svelte:component this={Icon} size={15} stroke={1.6} />
+    <span slot="badge" class="unsynced" aria-hidden="true">
+      {#if unsynced}
+        <IconRefreshOff size={13} stroke={1.6} />
+      {/if}
+    </span>
   </SidebarRow>
 
   {#if expanded && children.length > 0}
@@ -186,3 +199,14 @@
     </div>
   {/if}
 </div>
+
+<style>
+  /* sits between the folder name and its unread count, in the muted tone the
+     other secondary marks use. */
+  .unsynced {
+    display: inline-flex;
+    align-items: center;
+    color: var(--text-tertiary);
+    flex-shrink: 0;
+  }
+</style>

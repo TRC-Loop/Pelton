@@ -55,6 +55,7 @@ const (
 	// newer feature settings.
 	settingFlagColorSync       = "flag_color_sync"
 	settingShowOffline         = "show_offline_indicator"
+	settingShowUnsyncedFolder  = "show_unsynced_folder"
 	settingSwipeEnabled        = "swipe_enabled"
 	settingSwipeLeft           = "swipe_left_action"
 	settingSwipeRight          = "swipe_right_action"
@@ -236,6 +237,9 @@ type UIPrefsDTO struct {
 	// ShowOfflineIndicator shows the little downloaded/offline badge on pinned
 	// messages. On by default; can be hidden.
 	ShowOfflineIndicator bool `json:"showOfflineIndicator"`
+	// ShowUnsyncedFolder marks folders the user excluded from sync in the
+	// sidebar, so a folder that stopped receiving new mail says why.
+	ShowUnsyncedFolder bool `json:"showUnsyncedFolder"`
 	// Swipe gestures on message rows (trackpad only). SwipeEnabled turns them on;
 	// SwipeLeftAction/SwipeRightAction pick what each direction does
 	// (delete, unread, read, flag, archive, snooze, none).
@@ -379,6 +383,7 @@ func (a *App) GetUIPrefs() (UIPrefsDTO, error) {
 
 		FlagColorSync:              a.boolSetting(settingFlagColorSync, false),
 		ShowOfflineIndicator:       a.boolSetting(settingShowOffline, true),
+		ShowUnsyncedFolder:         a.boolSetting(settingShowUnsyncedFolder, true),
 		SwipeEnabled:               a.boolSetting(settingSwipeEnabled, true),
 		SwipeLeftAction:            a.stringSetting(settingSwipeLeft, "delete"),
 		SwipeRightAction:           a.stringSetting(settingSwipeRight, "unread"),

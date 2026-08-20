@@ -629,6 +629,7 @@ const de: Record<string, string> = {
   'folders.emptyTrashConfirm': 'Alle löschen',
   'folders.roleAction': 'Verwenden als…',
   'folders.stopSync': 'Diesen Ordner nicht mehr synchronisieren',
+  'folders.notSyncing': 'Wird nicht synchronisiert. Neue Mails in diesem Ordner werden erst wieder abgerufen, wenn du die Synchronisierung einschaltest.',
   'folders.resumeSync': 'Diesen Ordner wieder synchronisieren',
   'folders.roleTitle': '{name} verwenden als',
   'folders.roleHint':
@@ -1074,7 +1075,9 @@ const de: Record<string, string> = {
   'settingsPanel.toggle.showSelectedCount': 'Anzahl „N ausgewählt" anzeigen',
   'settingsPanel.toggle.showSelectedCountAria': 'Anzahl der Auswahl anzeigen',
   'settingsPanel.hint.indentGuides': 'Zeichnet vertikale Hilfslinien, die verschachtelte Ordner verbinden.',
+  'settingsPanel.hint.unsyncedFolder': 'Zeigt ein kleines Symbol bei jedem Ordner, den du von der Synchronisierung ausgenommen hast, damit klar ist, warum dort nichts Neues ankommt.',
   'settingsPanel.toggle.indentGuides': 'Einrückungslinien für Ordner anzeigen',
+  'settingsPanel.toggle.unsyncedFolder': 'Nicht synchronisierte Ordner markieren',
   'settingsPanel.hint.flaggedCount': 'Blendet die Anzahl und die Fettschrift in der Ansicht „Markiert" aus (der Eintrag bleibt bestehen).',
   'settingsPanel.toggle.flaggedCount': 'Anzahl markierter Nachrichten anzeigen',
   'settingsPanel.label.startupSelection': 'Beim Start öffnen',

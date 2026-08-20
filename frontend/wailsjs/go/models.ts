@@ -1389,6 +1389,7 @@ export namespace desktop {
 	    showFlaggedCount: boolean;
 	    flagColorSync: boolean;
 	    showOfflineIndicator: boolean;
+	    showUnsyncedFolder: boolean;
 	    swipeEnabled: boolean;
 	    swipeLeftAction: string;
 	    swipeRightAction: string;
@@ -1467,6 +1468,7 @@ export namespace desktop {
 	        this.showFlaggedCount = source["showFlaggedCount"];
 	        this.flagColorSync = source["flagColorSync"];
 	        this.showOfflineIndicator = source["showOfflineIndicator"];
+	        this.showUnsyncedFolder = source["showUnsyncedFolder"];
 	        this.swipeEnabled = source["swipeEnabled"];
 	        this.swipeLeftAction = source["swipeLeftAction"];
 	        this.swipeRightAction = source["swipeRightAction"];

@@ -925,6 +925,7 @@ export const SettingKeys = {
   viewsPlacement: 'views_placement',
   flagColorSync: 'flag_color_sync',
   showOfflineIndicator: 'show_offline_indicator',
+  showUnsyncedFolder: 'show_unsynced_folder',
   swipeEnabled: 'swipe_enabled',
   swipeLeftAction: 'swipe_left_action',
   swipeRightAction: 'swipe_right_action',

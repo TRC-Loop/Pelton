@@ -325,6 +325,9 @@ export interface UIPrefs {
   flagColorSync: boolean
   // showOfflineIndicator shows the little downloaded badge on pinned messages.
   showOfflineIndicator: boolean
+  // showUnsyncedFolder marks folders excluded from sync in the sidebar, so a
+  // folder that stopped receiving new mail says why.
+  showUnsyncedFolder: boolean
   // swipe gestures on message rows (trackpad only).
   swipeEnabled: boolean
   swipeLeftAction: string

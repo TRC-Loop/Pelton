@@ -629,6 +629,7 @@ const en: Record<string, string> = {
   'folders.emptyTrashConfirm': 'Delete them all',
   'folders.roleAction': 'Use as…',
   'folders.stopSync': 'Stop syncing this folder',
+  'folders.notSyncing': 'Not syncing. New mail in this folder is not fetched until you turn sync back on.',
   'folders.resumeSync': 'Sync this folder again',
   'folders.roleTitle': 'Use {name} as',
   'folders.roleHint':
@@ -1074,7 +1075,9 @@ const en: Record<string, string> = {
   'settingsPanel.toggle.showSelectedCount': 'Show "N selected" count',
   'settingsPanel.toggle.showSelectedCountAria': 'Show selected count',
   'settingsPanel.hint.indentGuides': 'Draw vertical guide lines connecting nested folders.',
+  'settingsPanel.hint.unsyncedFolder': 'Shows a small icon on any folder you took out of sync, so it is clear why no new mail arrives there.',
   'settingsPanel.toggle.indentGuides': 'Show folder indent guides',
+  'settingsPanel.toggle.unsyncedFolder': 'Mark folders that are not syncing',
   'settingsPanel.hint.flaggedCount': 'Hide the count and bold styling on the Flagged view (the entry stays).',
   'settingsPanel.toggle.flaggedCount': 'Show flagged count',
   'settingsPanel.label.startupSelection': 'Open on launch',
