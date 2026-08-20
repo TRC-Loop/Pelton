@@ -57,6 +57,7 @@
     closeWindow,
     getLogStatus,
     openCrashReport,
+    accountsNeedingPassword,
   } from './lib/api'
   import { BrowserOpenURL } from '../wailsjs/runtime/runtime'
   import { liabilityAccepted } from './lib/liability'
@@ -114,7 +115,8 @@
     paletteMail,
     paletteQuery,
   } from './stores/palette'
-  import type { EditorMode, MessageSummary, ThemePref, ThemeInfo, Folder } from './lib/types'
+  import AccountPasswordDialog from './components/settings/AccountPasswordDialog.svelte'
+  import type { EditorMode, MessageSummary, ThemePref, ThemeInfo, Folder, Account } from './lib/types'
 
   let settingsOpen = false
   // the settings category to open on; set by menu actions that deep-link into a
@@ -374,7 +376,51 @@
     }
   }
 
+  // the account currently being asked for a password, and the resolver waiting
+  // on the answer. Only one prompt is shown at a time.
+  let passwordPromptAccount: Account | null = null
+  let passwordPromptResolve: ((saved: boolean) => void) | null = null
+  // accounts the user skipped this session, so cancelling once does not mean
+  // being asked again on every automatic sync.
+  const skippedPasswordAccounts = new Set<number>()
+
+  function askForPassword(account: Account): Promise<boolean> {
+    passwordPromptAccount = account
+    return new Promise<boolean>((resolve) => {
+      passwordPromptResolve = resolve
+    })
+  }
+
+  function onPasswordPromptDone(saved: boolean): void {
+    const resolve = passwordPromptResolve
+    passwordPromptAccount = null
+    passwordPromptResolve = null
+    resolve?.(saved)
+  }
+
+  // promptForMissingPasswords asks about every account that has no stored
+  // password before a sync runs. An account imported from another mail client
+  // arrives without one, and previously that meant it silently never synced.
+  async function promptForMissingPasswords(): Promise<void> {
+    let pending: Account[]
+    try {
+      pending = await accountsNeedingPassword()
+    } catch {
+      // the sync itself will report whatever is actually wrong.
+      return
+    }
+    for (const account of pending) {
+      if (skippedPasswordAccounts.has(account.id)) {
+        continue
+      }
+      if (!(await askForPassword(account))) {
+        skippedPasswordAccounts.add(account.id)
+      }
+    }
+  }
+
   async function runSync(): Promise<void> {
+    await promptForMissingPasswords()
     syncing.set(true)
     try {
       await triggerSync()
@@ -1140,6 +1186,8 @@
 <MoveDialog />
 
 <CommandPalette commands={paletteCommands} mail={paletteMailCommands} />
+
+<AccountPasswordDialog account={passwordPromptAccount} onDone={onPasswordPromptDone} />
 
 <style>
   .shell {

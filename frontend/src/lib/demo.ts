@@ -42,6 +42,7 @@ const accounts: Account[] = [
     imapPort: 993,
     smtpHost: 'smtp.pelton.email',
     smtpPort: 465,
+    local: false,
   },
   {
     id: 2,
@@ -52,6 +53,7 @@ const accounts: Account[] = [
     imapPort: 993,
     smtpHost: 'smtp.pelton-potato.island',
     smtpPort: 465,
+    local: false,
   },
 ]
 

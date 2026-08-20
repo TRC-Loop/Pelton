@@ -286,9 +286,31 @@ func (a *App) updateFlag(id int64, flag storage.Flag, on bool) error {
 // DeleteMessage marks a message for deletion. The row is kept and hidden from
 // the list until the next sync expunges it on the server, then it is purged
 // locally. This is the safe path: nothing is lost if the server rejects it.
+//
+// Imported mail is deleted outright instead. There is no server to confirm the
+// deletion, so a pending marker would never be resolved and the message would
+// sit hidden forever.
 func (a *App) DeleteMessage(id int64) error {
 	if err := a.ready(); err != nil {
 		return err
+	}
+	m, err := a.store.GetMessage(a.ctx, id)
+	if err != nil {
+		return err
+	}
+	account, err := a.store.GetAccount(a.ctx, m.AccountID)
+	if err != nil {
+		return err
+	}
+	if account.Local {
+		if err := a.store.DeleteAttachmentFilesForMessage(m.AccountID, m.ID); err != nil {
+			return err
+		}
+		if err := a.store.DeleteMessage(a.ctx, id); err != nil {
+			return err
+		}
+		go a.refreshViewCounts()
+		return nil
 	}
 	if err := a.store.MarkDeletePending(a.ctx, id); err != nil {
 		return err

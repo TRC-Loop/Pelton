@@ -1,27 +1,82 @@
 name: Release builds
 
-# Builds Pelton for every published GitHub Release and attaches the installers
-# as release assets. All builds are unsigned (no Apple notarization, no
-# Windows code signing) - see README/CI notes for what that means for users.
-# workflow_dispatch is there so the build steps can be tested without cutting
-# a real release; it just skips the upload step.
+# Builds Pelton and attaches the installers to the release for a version tag.
+# All builds are unsigned (no Apple notarization, no Windows code signing) -
+# see README/CI notes for what that means for users.
+#
+# The builds run on the *tag push*, not on publish, so the assets are already
+# sitting on the draft by the time anyone looks at it: pushing v1.2.3 has
+# draft-release.yml write the changelog into a draft while this workflow fills
+# it with installers. Publishing then stays a manual, instant act with nothing
+# left to wait for, and it rebuilds nothing.
+#
+# The one thing that does wait for publishing is the Copr submission, which
+# pushes to a live dnf repo real users install from. That must not happen while
+# the release is still an unpublished draft.
+#
+# workflow_dispatch takes an optional tag: with one it builds and uploads into
+# that tag's existing release (repairing a draft whose build failed, or one
+# tagged before this workflow existed), without one it only exercises the build
+# steps and uploads nothing.
 on:
+  push:
+    tags:
+      - "v*"
   release:
     types: [published]
   workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to build and upload into, e.g. v2026.3.3. Empty builds without uploading."
+        required: false
+        default: ""
 
 permissions:
   contents: write
 
 env:
   GO_VERSION: "1.25"
+  # The release these installers belong to, empty when the run is only
+  # exercising the build steps. Job-level `if:` cannot read env, so the same
+  # condition is spelled out on the jobs that need it.
+  RELEASE_TAG: ${{ inputs.tag || (startsWith(github.ref, 'refs/tags/v') && github.ref_name) || '' }}
 
 jobs:
+  # ---------------------------------------------------------------------------
+  # Give the build jobs somewhere to upload to. draft-release.yml reacts to the
+  # same tag push and normally has the draft up within seconds, so this just
+  # waits for it; it only creates one itself if that job never got there, which
+  # would otherwise lose a whole build to a missing release.
+  #
+  # It runs even with no tag (a plain dispatch) and does nothing, so the build
+  # jobs can depend on it unconditionally.
+  # ---------------------------------------------------------------------------
+  draft:
+    if: github.event_name != 'release'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait for the release to exist
+        if: env.RELEASE_TAG != ''
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          for _ in $(seq 1 30); do
+            if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+              echo "release $RELEASE_TAG exists, builds can upload into it"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "no release for $RELEASE_TAG after five minutes, creating an empty draft"
+          gh release create "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --draft --title "$RELEASE_TAG" --notes ""
+
   # ---------------------------------------------------------------------------
   # macOS: Apple Silicon only. Intel builds were dropped (no runner coverage
   # to keep validating them, and the target audience has moved to arm64).
   # ---------------------------------------------------------------------------
   macos:
+    needs: draft
+    if: github.event_name != 'release'
     strategy:
       fail-fast: false
       matrix:
@@ -56,7 +111,7 @@ jobs:
 
       - name: Resolve version
         id: version
-        run: echo "version=${GITHUB_REF_NAME:-dev}" >> "$GITHUB_OUTPUT"
+        run: echo "version=${RELEASE_TAG:-dev}" >> "$GITHUB_OUTPUT"
 
       # Stamp info.productVersion so the bundle's Info.plist
       # (CFBundleVersion / CFBundleShortVersionString, i.e. Finder's Get
@@ -119,11 +174,11 @@ jobs:
             "build/bin/Pelton.app"
 
       - name: Upload to release
-        if: github.event_name == 'release'
+        if: env.RELEASE_TAG != ''
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release upload "${{ github.event.release.tag_name }}" \
+          gh release upload "$RELEASE_TAG" \
             "build/bin/Pelton-${{ steps.version.outputs.version }}-macos-${{ matrix.label }}.dmg" \
             "build/bin/Pelton-${{ steps.version.outputs.version }}-macos-${{ matrix.label }}-app.zip" \
             --clobber
@@ -133,6 +188,8 @@ jobs:
   # no signing). windows-latest ships NSIS preinstalled.
   # ---------------------------------------------------------------------------
   windows:
+    needs: draft
+    if: github.event_name != 'release'
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -171,7 +228,7 @@ jobs:
       - name: Resolve version
         id: version
         shell: bash
-        run: echo "version=${GITHUB_REF_NAME:-dev}" >> "$GITHUB_OUTPUT"
+        run: echo "version=${RELEASE_TAG:-dev}" >> "$GITHUB_OUTPUT"
 
       # Stamp info.productVersion into the exe's version resources and the
       # NSIS installer metadata, same reasoning as the macOS job (#83).
@@ -200,12 +257,12 @@ jobs:
         run: mv "build/bin/Pelton-amd64-installer.exe" "build/bin/Pelton-${{ steps.version.outputs.version }}-windows-amd64-installer.exe"
 
       - name: Upload to release
-        if: github.event_name == 'release'
+        if: env.RELEASE_TAG != ''
         shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release upload "${{ github.event.release.tag_name }}" \
+          gh release upload "$RELEASE_TAG" \
             "build/bin/Pelton-${{ steps.version.outputs.version }}-windows-amd64-installer.exe" \
             --clobber
 
@@ -215,6 +272,8 @@ jobs:
   # Package metadata lives in .github/nfpm/pelton.yaml.
   # ---------------------------------------------------------------------------
   linux:
+    needs: draft
+    if: github.event_name != 'release'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -251,7 +310,7 @@ jobs:
       - name: Resolve version
         id: version
         run: |
-          raw="${GITHUB_REF_NAME:-0.0.0-dev}"
+          raw="${RELEASE_TAG:-0.0.0-dev}"
           echo "version=$raw" >> "$GITHUB_OUTPUT"
           # package managers reject a leading "v", so strip it for .deb/.rpm.
           echo "pkg_version=${raw#v}" >> "$GITHUB_OUTPUT"
@@ -273,11 +332,11 @@ jobs:
         run: nfpm package --config .github/nfpm/pelton.yaml --packager rpm --target "build/bin/Pelton-${{ steps.version.outputs.version }}-linux-fedora-x86_64.rpm"
 
       - name: Upload to release
-        if: github.event_name == 'release'
+        if: env.RELEASE_TAG != ''
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release upload "${{ github.event.release.tag_name }}" \
+          gh release upload "$RELEASE_TAG" \
             "build/bin/Pelton-${{ steps.version.outputs.version }}-linux-amd64" \
             "build/bin/Pelton-${{ steps.version.outputs.version }}-linux-amd64.deb" \
             "build/bin/Pelton-${{ steps.version.outputs.version }}-linux-fedora-x86_64.rpm" \
@@ -333,7 +392,7 @@ jobs:
       - name: Resolve version
         id: version
         run: |
-          raw="${GITHUB_REF_NAME:-0.0.0-dev}"
+          raw="${RELEASE_TAG:-0.0.0-dev}"
           echo "rpm_version=${raw#v}" >> "$GITHUB_OUTPUT"
 
       - name: Build

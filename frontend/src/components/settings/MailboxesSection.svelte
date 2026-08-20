@@ -6,7 +6,7 @@
   // account; changing it is a re-add.
   import { onMount } from 'svelte'
   import { IconPencil, IconTrash, IconCheck, IconX, IconPlus } from '@tabler/icons-svelte'
-  import { listAccounts, updateAccount, deleteAccount, getLogStatus, deleteLogs } from '../../lib/api'
+  import { listAccounts, updateAccount, deleteAccount, getLogStatus, deleteLogs, accountsNeedingPassword } from '../../lib/api'
   import { refreshSidebar } from '../../stores/accounts'
   import { errorMessage, toastError, pushAction } from '../../stores/toast'
   import type { Account } from '../../lib/types'
@@ -19,6 +19,12 @@
   let saving = false
   // the working copy of the account being edited, so cancelling discards edits.
   let draft: Account | null = null
+  // the password is not part of the account row (it lives in the keyring and is
+  // never sent back), so it is drafted separately. Empty means "leave it".
+  let passwordDraft = ''
+  // accounts with nothing in the keyring. An account imported from another mail
+  // client arrives like this: it can never sync until a password is entered.
+  let needsPassword = new Set<number>()
   // the add-mailbox wizard is code-split like the other settings modals, so
   // it only loads once the user actually asks to add a mailbox.
   let wizardOpen = false
@@ -35,6 +41,7 @@
     loading = true
     try {
       accounts = await listAccounts()
+      needsPassword = new Set((await accountsNeedingPassword()).map((a) => a.id))
     } catch (err) {
       toastError(errorMessage(err))
     } finally {
@@ -46,11 +53,13 @@
     confirmingId = null
     editingId = account.id
     draft = { ...account }
+    passwordDraft = ''
   }
 
   function cancelEdit(): void {
     editingId = null
     draft = null
+    passwordDraft = ''
   }
 
   async function save(): Promise<void> {
@@ -67,8 +76,13 @@
         imapPort: draft.imapPort,
         smtpHost: draft.smtpHost,
         smtpPort: draft.smtpPort,
+        password: passwordDraft,
       })
       accounts = accounts.map((a) => (a.id === updated.id ? updated : a))
+      if (passwordDraft !== '') {
+        needsPassword.delete(updated.id)
+        needsPassword = needsPassword
+      }
       void refreshSidebar()
       cancelEdit()
     } catch (err) {
@@ -155,6 +169,22 @@
               <label class="field"><span>{$t('wizard.field.smtpHost')}</span><input type="text" bind:value={draft.smtpHost} /></label>
               <label class="field narrow"><span>{$t('wizard.field.port')}</span><input type="number" bind:value={draft.smtpPort} /></label>
             </div>
+            <label class="field">
+              <span>{$t('wizard.field.password')}</span>
+              <input
+                type="password"
+                bind:value={passwordDraft}
+                autocomplete="off"
+                placeholder={$t(
+                  needsPassword.has(account.id)
+                    ? 'mailboxes.passwordMissing'
+                    : 'mailboxes.passwordUnchanged',
+                )}
+              />
+            </label>
+            {#if needsPassword.has(account.id)}
+              <p class="server-hint warn">{$t('mailboxes.passwordNeededHint')}</p>
+            {/if}
             <p class="server-hint">{$t('mailboxes.serverChangeHint')}</p>
             <div class="edit-actions">
               <button type="button" class="ghost" on:click={cancelEdit}>{$t('mailboxes.cancel')}</button>
