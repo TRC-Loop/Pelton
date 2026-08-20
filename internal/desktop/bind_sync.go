@@ -224,9 +224,7 @@ func (a *App) syncFolders(client *pimap.Client, accountID int64) error {
 			folders = append(folders, f)
 		}
 	}
-	engine := psync.NewEngine(client, a.store, a.log)
-	engine.ColorSync = a.boolSetting(settingFlagColorSync, false)
-	engine.InitialLimit = a.syncMessageLimit()
+	engine := a.newSyncEngine(client, accountID)
 
 	newTotal := 0
 	for i, f := range folders {
@@ -285,9 +283,7 @@ func (a *App) syncOneFolder(client *pimap.Client, folder storage.Folder) error {
 	if folder.SyncExcluded {
 		return nil
 	}
-	engine := psync.NewEngine(client, a.store, a.log)
-	engine.ColorSync = a.boolSetting(settingFlagColorSync, false)
-	engine.InitialLimit = a.syncMessageLimit()
+	engine := a.newSyncEngine(client, folder.AccountID)
 
 	res, err := engine.SyncFolder(a.ctx, folder)
 	if err != nil {
@@ -383,4 +379,35 @@ func (a *App) idleSession(account storage.Account) error {
 		}
 	}
 	return nil
+}
+
+// newSyncEngine builds a sync engine for one account with the settings every
+// caller needs, including where deleted mail goes. Roles are resolved here
+// because the sync package does not know about them.
+func (a *App) newSyncEngine(client *pimap.Client, accountID int64) *psync.Engine {
+	engine := psync.NewEngine(client, a.store, a.log)
+	engine.ColorSync = a.boolSetting(settingFlagColorSync, false)
+	engine.InitialLimit = a.syncMessageLimit()
+	if trash, ok := a.findTrashFolder(accountID); ok {
+		engine.TrashPath = trash.IMAPPath
+		engine.TrashFolderID = trash.ID
+	}
+	return engine
+}
+
+// findTrashFolder returns the account's trash-role folder. Without one, a
+// delete has nowhere to go and falls back to a permanent expunge, so the caller
+// has to know whether there is one.
+func (a *App) findTrashFolder(accountID int64) (storage.Folder, bool) {
+	folders, err := a.store.ListFolders(a.ctx, accountID)
+	if err != nil {
+		a.log.Error("find trash folder", "account", accountID, "err", err)
+		return storage.Folder{}, false
+	}
+	for _, f := range folders {
+		if folderRole(f) == roleTrash {
+			return f, true
+		}
+	}
+	return storage.Folder{}, false
 }
