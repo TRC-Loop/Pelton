@@ -629,6 +629,7 @@ const fr: Record<string, string> = {
   'folders.emptyTrashConfirm': 'Tout supprimer',
   'folders.roleAction': 'Utiliser comme…',
   'folders.stopSync': 'Ne plus synchroniser ce dossier',
+  'folders.notSyncing': 'Pas de synchronisation. Les nouveaux messages de ce dossier ne sont pas récupérés tant que vous ne la réactivez pas.',
   'folders.resumeSync': 'Synchroniser à nouveau ce dossier',
   'folders.roleTitle': 'Utiliser {name} comme',
   'folders.roleHint':
@@ -1074,7 +1075,9 @@ const fr: Record<string, string> = {
   'settingsPanel.toggle.showSelectedCount': 'Afficher le compteur « N sélectionnés »',
   'settingsPanel.toggle.showSelectedCountAria': 'Afficher le nombre sélectionné',
   'settingsPanel.hint.indentGuides': 'Trace des lignes de guidage verticales reliant les dossiers imbriqués.',
+  'settingsPanel.hint.unsyncedFolder': 'Affiche une petite icône sur chaque dossier exclu de la synchronisation, pour comprendre pourquoi rien de nouveau n’y arrive.',
   'settingsPanel.toggle.indentGuides': 'Afficher les guides d\'indentation des dossiers',
+  'settingsPanel.toggle.unsyncedFolder': 'Marquer les dossiers non synchronisés',
   'settingsPanel.hint.flaggedCount': 'Masque le compteur et le style gras sur la vue Marqués (l\'entrée reste).',
   'settingsPanel.toggle.flaggedCount': 'Afficher le nombre de messages marqués',
   'settingsPanel.label.startupSelection': 'Ouvrir au démarrage',

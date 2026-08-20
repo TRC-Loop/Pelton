@@ -629,6 +629,7 @@ const nl: Record<string, string> = {
   'folders.emptyTrashConfirm': 'Alles verwijderen',
   'folders.roleAction': 'Gebruiken als…',
   'folders.stopSync': 'Deze map niet meer synchroniseren',
+  'folders.notSyncing': 'Synchroniseert niet. Nieuwe berichten in deze map worden pas opgehaald als je synchronisatie weer aanzet.',
   'folders.resumeSync': 'Deze map weer synchroniseren',
   'folders.roleTitle': '{name} gebruiken als',
   'folders.roleHint':
@@ -1074,7 +1075,9 @@ const nl: Record<string, string> = {
   'settingsPanel.toggle.showSelectedCount': 'Aantal "N geselecteerd" tonen',
   'settingsPanel.toggle.showSelectedCountAria': 'Aantal geselecteerde items tonen',
   'settingsPanel.hint.indentGuides': 'Teken verticale hulplijnen die geneste mappen verbinden.',
+  'settingsPanel.hint.unsyncedFolder': 'Toont een klein pictogram bij elke map die je van synchronisatie hebt uitgesloten, zodat duidelijk is waarom daar niets nieuws binnenkomt.',
   'settingsPanel.toggle.indentGuides': 'Inspringhulplijnen voor mappen tonen',
+  'settingsPanel.toggle.unsyncedFolder': 'Niet-synchroniserende mappen markeren',
   'settingsPanel.hint.flaggedCount': 'Verberg het aantal en de vetgedrukte opmaak bij de weergave Gemarkeerd (de vermelding blijft staan).',
   'settingsPanel.toggle.flaggedCount': 'Aantal gemarkeerd tonen',
   'settingsPanel.label.startupSelection': 'Openen bij starten',

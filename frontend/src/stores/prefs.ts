@@ -47,6 +47,7 @@ const defaults: UIPrefs = {
   viewsPlacement: 'hidden',
   flagColorSync: false,
   showOfflineIndicator: true,
+  showUnsyncedFolder: true,
   swipeEnabled: true,
   swipeLeftAction: 'delete',
   swipeRightAction: 'unread',
@@ -259,6 +260,12 @@ export function setNotifyNewMail(value: boolean): void {
 export function setShowOfflineIndicator(value: boolean): void {
   prefs.update((p) => ({ ...p, showOfflineIndicator: value }))
   void setSetting(SettingKeys.showOfflineIndicator, String(value))
+}
+
+// setShowUnsyncedFolder toggles the marker on folders excluded from sync.
+export function setShowUnsyncedFolder(value: boolean): void {
+  prefs.update((p) => ({ ...p, showUnsyncedFolder: value }))
+  void setSetting(SettingKeys.showUnsyncedFolder, String(value))
 }
 
 // setSwipeEnabled toggles trackpad swipe gestures on message rows.

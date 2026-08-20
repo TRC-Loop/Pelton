@@ -73,6 +73,7 @@
   >
     <span class="icon" aria-hidden="true"><slot /></span>
     <span class="label">{label}</span>
+    <slot name="badge" />
     {#if count > 0}
       <span class="count" aria-label={`${count} ${$t('sidebar.unreadSuffix')}`}>{count}</span>
     {/if}

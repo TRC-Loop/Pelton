@@ -61,6 +61,7 @@
     setMultiSelectEnabled,
     setShowSelectedCount,
     setSidebarIndentGuides,
+    setShowUnsyncedFolder,
     setStartupSelection,
     setShowFlaggedCount,
     setViewsPlacement,
@@ -1004,6 +1005,14 @@
               checked={$prefs.sidebarIndentGuides}
               label={$t('settingsPanel.toggle.indentGuides')}
               on:change={(e) => setSidebarIndentGuides(e.detail)}
+            />
+          </div>
+          <div class="toggle" title={$t('settingsPanel.hint.unsyncedFolder')}>
+            <span class="row-label">{$t('settingsPanel.toggle.unsyncedFolder')}</span>
+            <ToggleSwitch
+              checked={$prefs.showUnsyncedFolder}
+              label={$t('settingsPanel.toggle.unsyncedFolder')}
+              on:change={(e) => setShowUnsyncedFolder(e.detail)}
             />
           </div>
           <div class="toggle" title={$t('settingsPanel.hint.flaggedCount')}>

@@ -629,6 +629,7 @@ const es: Record<string, string> = {
   'folders.emptyTrashConfirm': 'Eliminarlos todos',
   'folders.roleAction': 'Usar como…',
   'folders.stopSync': 'Dejar de sincronizar esta carpeta',
+  'folders.notSyncing': 'No se sincroniza. El correo nuevo de esta carpeta no se descarga hasta que vuelvas a activar la sincronización.',
   'folders.resumeSync': 'Volver a sincronizar esta carpeta',
   'folders.roleTitle': 'Usar {name} como',
   'folders.roleHint':
@@ -1074,7 +1075,9 @@ const es: Record<string, string> = {
   'settingsPanel.toggle.showSelectedCount': 'Mostrar el recuento "N seleccionados"',
   'settingsPanel.toggle.showSelectedCountAria': 'Mostrar recuento de seleccionados',
   'settingsPanel.hint.indentGuides': 'Dibuja líneas guía verticales que conectan las carpetas anidadas.',
+  'settingsPanel.hint.unsyncedFolder': 'Muestra un icono pequeño en cada carpeta que hayas excluido de la sincronización, para que quede claro por qué no llega nada nuevo.',
   'settingsPanel.toggle.indentGuides': 'Mostrar guías de sangría de carpetas',
+  'settingsPanel.toggle.unsyncedFolder': 'Marcar las carpetas que no se sincronizan',
   'settingsPanel.hint.flaggedCount': 'Oculta el recuento y el estilo en negrita en la vista Marcados (la entrada permanece).',
   'settingsPanel.toggle.flaggedCount': 'Mostrar recuento de marcados',
   'settingsPanel.label.startupSelection': 'Abrir al iniciar',

@@ -627,6 +627,7 @@ const pl: Record<string, string> = {
   'folders.emptyTrashConfirm': 'Usuń wszystkie',
   'folders.roleAction': 'Używaj jako…',
   'folders.stopSync': 'Przestań synchronizować ten folder',
+  'folders.notSyncing': 'Bez synchronizacji. Nowe wiadomości w tym folderze nie będą pobierane, dopóki nie włączysz jej z powrotem.',
   'folders.resumeSync': 'Znów synchronizuj ten folder',
   'folders.roleTitle': 'Używaj {name} jako',
   'folders.roleHint':
@@ -1027,7 +1028,9 @@ const pl: Record<string, string> = {
   'settingsPanel.toggle.showSelectedCount': 'Pokazuj licznik „N zaznaczono”',
   'settingsPanel.toggle.showSelectedCountAria': 'Pokazuj licznik zaznaczonych',
   'settingsPanel.hint.indentGuides': 'Rysuj pionowe linie prowadzące łączące zagnieżdżone foldery.',
+  'settingsPanel.hint.unsyncedFolder': 'Pokazuje małą ikonę przy każdym folderze wyłączonym z synchronizacji, żeby było jasne, dlaczego nic w nim nie przybywa.',
   'settingsPanel.toggle.indentGuides': 'Pokazuj prowadnice wcięć folderów',
+  'settingsPanel.toggle.unsyncedFolder': 'Oznaczaj foldery bez synchronizacji',
   'settingsPanel.hint.flaggedCount': 'Ukryj licznik i pogrubienie w widoku Oznaczone (pozycja pozostaje).',
   'settingsPanel.toggle.flaggedCount': 'Pokazuj licznik oznaczonych',
   'settingsPanel.label.startupSelection': 'Otwórz przy starcie',
