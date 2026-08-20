@@ -171,6 +171,10 @@ func (a *App) startup(ctx context.Context) {
 	a.loadProxy()
 	close(a.storeReady)
 
+	// as early as the store allows, so the window settles at its remembered size
+	// before the frontend has painted anything into it.
+	a.restoreGeometry()
+
 	// the Windows tray icon (no-op elsewhere). started after the store is up
 	// so its menu labels can follow the language setting.
 	a.startTray()
@@ -231,6 +235,8 @@ func (a *App) domReady(ctx context.Context) {
 // shutdown is the wails OnShutdown hook. It closes the store so the sqlite wal
 // is checkpointed cleanly.
 func (a *App) shutdown(ctx context.Context) {
+	// before the store closes, and before anything else can fail on the way out.
+	a.saveGeometry()
 	a.stopTray()
 	a.stopMCP()
 	if a.index != nil {
