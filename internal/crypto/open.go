@@ -194,16 +194,20 @@ func (p *PGP) decrypt(ciphertext, passphrase []byte) (*Opened, error) {
 		return nil, ErrMalformedArmor
 	}
 
-	// prompt is called once per candidate key. Returning an error rather than
-	// nil on the second call stops go-crypto retrying the same wrong passphrase
-	// against every key in the ring.
-	var asked bool
+	// the keys are unlocked here rather than through go-crypto's prompt
+	// callback. That callback is invoked once per candidate key, and the primary
+	// key is tried before the encryption subkey the message actually names, so a
+	// passphrase handed to the first call never reached the key that needed it
+	// and a locked key could not open anything even with the right passphrase.
+	if err := unlockRing(private, passphrase); err != nil {
+		return nil, err
+	}
+
+	// nothing is left to ask for: any key that could be unlocked has been. A
+	// prompt at this point would be go-crypto looping over keys the passphrase
+	// does not fit.
 	prompt := func(keys []openpgp.Key, symmetric bool) ([]byte, error) {
-		if asked || len(passphrase) == 0 {
-			return nil, ErrPassphraseRequired
-		}
-		asked = true
-		return passphrase, nil
+		return nil, ErrPassphraseRequired
 	}
 
 	md, err := openpgp.ReadMessage(block.Body, keyring, prompt, cryptoConfig())
@@ -316,4 +320,38 @@ func decryptError(err error) error {
 		return ErrNoDecryptionKey
 	}
 	return fmt.Errorf("crypto: decrypt: %w", err)
+}
+
+// unlockRing decrypts every locked private key the passphrase fits, in memory
+// only: the store reloads from disk on the next call, so nothing stays unlocked
+// beyond this operation.
+//
+// It reports a problem only when no usable key is left. A ring holding one
+// unlocked key and one belonging to another passphrase is fine, since the
+// message names the key it wants and go-crypto will find it.
+func unlockRing(private openpgp.EntityList, passphrase []byte) error {
+	var usable, locked int
+	for _, ent := range private {
+		if !entityLocked(ent) {
+			usable++
+			continue
+		}
+		locked++
+		if len(passphrase) == 0 {
+			continue
+		}
+		if err := ent.DecryptPrivateKeys(passphrase); err == nil {
+			usable++
+		}
+	}
+	switch {
+	case usable > 0:
+		return nil
+	case locked > 0 && len(passphrase) == 0:
+		return ErrPassphraseRequired
+	case locked > 0:
+		return ErrWrongPassphrase
+	default:
+		return ErrNoDecryptionKey
+	}
 }
