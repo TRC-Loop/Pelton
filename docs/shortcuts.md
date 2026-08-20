@@ -19,6 +19,14 @@ Pelton uses ++cmd++ on macOS and ++ctrl++ on Windows and Linux for the same bind
 | ++cmd+w++ | Close the front compose window, settings, or the window itself |
 | ++cmd+q++ | Quit |
 
+## Menu bar access keys
+
+On Windows and Linux, where the in-app menu bar is the only menu there is, ++alt++ on its own focuses the bar and underlines one letter in each menu title. ++alt++ plus that letter opens the menu straight away. Arrow keys move between menus and items from there, ++esc++ leaves.
+
+The letters are worked out from the titles themselves, so they follow your language and any menu you have renamed or added. A binding you set under **Settings, Shortcuts** always wins over an access key using the same combination.
+
+macOS has no such convention and does not use them.
+
 ## Message actions
 
 Reply, reply all, forward, mark read or unread, flag, snooze, archive, delete and download-for-offline ship unbound so they cannot collide with anything. Bind them to whatever you like under **Settings, Shortcuts**; each one acts on the currently open message.
