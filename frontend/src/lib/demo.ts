@@ -69,6 +69,7 @@ function foldersFor(accountId: number, inboxUnread: number, inboxTotal: number):
     imapPath: name,
     delimiter: '/',
     parentId: null,
+    syncExcluded: false,
     role,
     unreadCount: unread,
     totalCount: total,

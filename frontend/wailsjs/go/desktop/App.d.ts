@@ -260,6 +260,8 @@ export function SetFolderPinned(arg1:number,arg2:boolean):Promise<void>;
 
 export function SetFolderRole(arg1:number,arg2:string):Promise<void>;
 
+export function SetFolderSyncExcluded(arg1:number,arg2:boolean):Promise<void>;
+
 export function SetMCPEnabled(arg1:boolean):Promise<void>;
 
 export function SetMCPPort(arg1:number):Promise<void>;
@@ -283,6 +285,8 @@ export function SetVirusTotalEnabled(arg1:boolean):Promise<void>;
 export function SetWindowTheme(arg1:boolean):Promise<void>;
 
 export function SetWindowTitle(arg1:string):Promise<void>;
+
+export function StartAccountSync(arg1:number):Promise<void>;
 
 export function SnoozeMessage(arg1:number,arg2:string,arg3:boolean):Promise<void>;
 

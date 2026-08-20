@@ -295,6 +295,19 @@ export function setFolderPinned(folderId: number, pinned: boolean): Promise<void
   return App.SetFolderPinned(folderId, pinned)
 }
 
+// setFolderSyncExcluded turns syncing for one folder off or on. Excluding does
+// not delete cached mail, it only stops the folder being updated (#173).
+export function setFolderSyncExcluded(folderId: number, excluded: boolean): Promise<void> {
+  return App.SetFolderSyncExcluded(folderId, excluded)
+}
+
+// startAccountSync runs a newly added account's first sync and parks it on
+// idle. Adding an account no longer does this on its own, so the wizard can
+// show the folder list before anything is fetched.
+export function startAccountSync(accountId: number): Promise<void> {
+  return App.StartAccountSync(accountId)
+}
+
 // assignableFolderRoles are the roles a user may give a folder by hand. Inbox is
 // absent on purpose: every account has exactly one, named by the protocol, and a
 // second would break the unified inbox.

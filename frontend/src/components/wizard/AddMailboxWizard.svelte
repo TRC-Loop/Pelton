@@ -10,10 +10,10 @@
   import WizardProviders from './WizardProviders.svelte'
   import Spinner from '../common/Spinner.svelte'
   import { BrowserOpenURL } from '../../../wailsjs/runtime/runtime'
-  import { discoverConfig, testConnection, addPasswordAccount, addOAuthAccount } from '../../lib/api'
-  import { errorMessage } from '../../stores/toast'
+  import { discoverConfig, testConnection, addPasswordAccount, addOAuthAccount, listFolders, setFolderSyncExcluded, startAccountSync } from '../../lib/api'
+  import { errorMessage, toastError } from '../../stores/toast'
   import { providerPresets, type ProviderPreset } from '../../lib/providers'
-  import type { AddAccountRequest, Account, TLSMode } from '../../lib/types'
+  import type { AddAccountRequest, Account, Folder, TLSMode } from '../../lib/types'
   import { t } from '../../lib/i18n'
 
   const dispatch = createEventDispatcher<{ close: void; added: Account }>()
@@ -28,7 +28,7 @@
   // the user has already been past.
   export let offerImport = true
 
-  type Step = 'start' | 'provider' | 'config' | 'oauth' | 'working' | 'done' | 'error'
+  type Step = 'start' | 'provider' | 'config' | 'oauth' | 'working' | 'folders' | 'done' | 'error'
   let step: Step = offerImport ? 'start' : 'provider'
 
   // the import modal, opened over the wizard from the start step.
@@ -169,7 +169,7 @@
     workingMessage = get(t)('wizard.working.connecting')
     try {
       const account = await addPasswordAccount(draft)
-      finish(account)
+      await finish(account)
     } catch (err) {
       fail(err)
     }
@@ -181,15 +181,75 @@
     workingMessage = get(t)('wizard.working.signIn')
     try {
       const account = await addOAuthAccount(draft)
-      finish(account)
+      await finish(account)
     } catch (err) {
       fail(err)
     }
   }
 
-  function finish(account: Account): void {
-    step = 'done'
+  // the folder picker (#173). The account exists and its folders are discovered
+  // by now, but nothing has synced yet: AddAccount deliberately does not start,
+  // so a 30k-message archive can be unchecked before it is ever fetched.
+  let addedAccount: Account | null = null
+  let folders: Folder[] = []
+  // ids the user unchecked. Everything starts checked, which is what the issue
+  // asked for and keeps the default behaviour unchanged.
+  let unchecked = new Set<number>()
+  let applying = false
+
+  async function finish(account: Account): Promise<void> {
+    addedAccount = account
     dispatch('added', account)
+    try {
+      folders = await listFolders(account.id)
+    } catch {
+      // discovery failed or the server has no folders worth choosing from.
+      // Never block the wizard on it: sync and let the next one find them.
+      folders = []
+    }
+    if (folders.length < 2) {
+      // one folder, or none, is not a choice worth a screen.
+      await beginSync()
+      return
+    }
+    unchecked = new Set()
+    step = 'folders'
+  }
+
+  function toggleFolder(id: number): void {
+    const next = new Set(unchecked)
+    if (next.has(id)) {
+      next.delete(id)
+    } else {
+      next.add(id)
+    }
+    unchecked = next
+  }
+
+  // beginSync applies the folder choice and starts the first sync. It runs on
+  // every route out of the folder step, including skipping it, because the
+  // account is already saved and would otherwise sit there never syncing.
+  async function beginSync(): Promise<void> {
+    const account = addedAccount
+    if (!account) {
+      step = 'done'
+      return
+    }
+    applying = true
+    try {
+      for (const id of unchecked) {
+        await setFolderSyncExcluded(id, true)
+      }
+      await startAccountSync(account.id)
+    } catch (err) {
+      // the account exists either way, so a failure here is not worth throwing
+      // the user back to the form. It syncs everything, which is the old
+      // behaviour, and the folders stay unswitchable only until settings.
+      toastError(errorMessage(err))
+    } finally {
+      applying = false
+      step = 'done'
+    }
   }
 
   function fail(err: unknown): void {
@@ -408,6 +468,33 @@
         {/if}
       {:else if step === 'working'}
         <Spinner label={workingMessage} />
+      {:else if step === 'folders'}
+        <div class="folders-step">
+          <h3>{$t('wizard.folders.title')}</h3>
+          <p class="note">{$t('wizard.folders.body')}</p>
+          <ul class="folder-list">
+            {#each folders as folder (folder.id)}
+              <li>
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={!unchecked.has(folder.id)}
+                    on:change={() => toggleFolder(folder.id)}
+                  />
+                  <span class="folder-name">{folder.name}</span>
+                </label>
+              </li>
+            {/each}
+          </ul>
+          <div class="folder-actions">
+            <button type="button" class="ghost" disabled={applying} on:click={() => { unchecked = new Set(); void beginSync() }}>
+              {$t('wizard.folders.skip')}
+            </button>
+            <button type="button" class="primary" disabled={applying} on:click={() => void beginSync()}>
+              {applying ? $t('wizard.folders.applying') : $t('wizard.folders.confirm')}
+            </button>
+          </div>
+        </div>
       {:else if step === 'done'}
         <div class="result">
           <IconCheck size={32} stroke={1.6} />
@@ -437,6 +524,45 @@
 {/if}
 
 <style>
+  /* the folder picker: a plain checklist, since the point is to scan a long
+     list of server folders and untick the heavy ones. */
+  .folders-step {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .folder-list {
+    list-style: none;
+    margin: 0;
+    padding: var(--space-2);
+    max-height: 260px;
+    overflow-y: auto;
+    border: var(--hairline) solid var(--border-subtle);
+    border-radius: var(--radius-control);
+  }
+
+  .folder-list label {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-1) var(--space-2);
+    font-size: var(--fz-body);
+    cursor: pointer;
+  }
+
+  .folder-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .folder-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--space-2);
+  }
+
   /* the start step: two equal choices, styled like the onboarding provider rows
      so the two entry points into this flow look the same. */
   .start-choices {

@@ -55,6 +55,9 @@ type FolderDTO struct {
 	// above was detected. The ui needs the two apart to show which entry is
 	// ticked and whether "detect automatically" is the current state.
 	RoleOverride string `json:"roleOverride"`
+	// SyncExcluded means the user unchecked this folder, so sync skips it.
+	// Whatever was already cached stays readable (#173).
+	SyncExcluded bool `json:"syncExcluded"`
 }
 
 // UnifiedViewDTO is a cross account view (inbox/flagged/sent/drafts). The ui
@@ -254,6 +257,7 @@ func toFolderDTO(f storage.Folder) FolderDTO {
 		Attributes:   f.Attributes,
 		Pinned:       f.PinnedPosition > 0,
 		RoleOverride: f.RoleOverride,
+		SyncExcluded: f.SyncExcluded,
 	}
 }
 

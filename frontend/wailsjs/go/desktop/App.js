@@ -518,6 +518,10 @@ export function SetFolderRole(arg1, arg2) {
   return window['go']['desktop']['App']['SetFolderRole'](arg1, arg2);
 }
 
+export function SetFolderSyncExcluded(arg1, arg2) {
+  return window['go']['desktop']['App']['SetFolderSyncExcluded'](arg1, arg2);
+}
+
 export function SetMCPEnabled(arg1) {
   return window['go']['desktop']['App']['SetMCPEnabled'](arg1);
 }
@@ -564,6 +568,10 @@ export function SetWindowTheme(arg1) {
 
 export function SetWindowTitle(arg1) {
   return window['go']['desktop']['App']['SetWindowTitle'](arg1);
+}
+
+export function StartAccountSync(arg1) {
+  return window['go']['desktop']['App']['StartAccountSync'](arg1);
 }
 
 export function SnoozeMessage(arg1, arg2, arg3) {
