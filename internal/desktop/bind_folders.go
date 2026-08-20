@@ -203,7 +203,7 @@ func (a *App) DeleteFolder(id int64) error {
 			return err
 		}
 	}
-	go a.refreshViewCounts()
+	goSafe("counting unread mail", a.refreshViewCounts)
 	return nil
 }
 
@@ -241,14 +241,14 @@ func (a *App) EmptyTrash(folderID int64) (int, error) {
 		return 0, nil
 	}
 
-	go a.refreshViewCounts()
-	go func() {
+	goSafe("counting unread mail", a.refreshViewCounts)
+	goSafe("emptying the trash", func() {
 		if err := a.withAccountIMAP(folder.AccountID, func(client *pimap.Client) error {
 			return a.syncOneFolder(client, *folder)
 		}); err != nil {
 			a.log.Error("push emptied trash", "folder", folder.ID, "err", err)
 		}
-	}()
+	})
 	return marked, nil
 }
 

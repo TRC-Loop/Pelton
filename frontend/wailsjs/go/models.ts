@@ -526,6 +526,28 @@ export namespace desktop {
 	        this.offset = source["offset"];
 	    }
 	}
+	export class LogStatusDTO {
+	    dir: string;
+	    writing: boolean;
+	    forced: boolean;
+	    sizeBytes: number;
+	    crashName: string;
+	    crashTime: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new LogStatusDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.dir = source["dir"];
+	        this.writing = source["writing"];
+	        this.forced = source["forced"];
+	        this.sizeBytes = source["sizeBytes"];
+	        this.crashName = source["crashName"];
+	        this.crashTime = source["crashTime"];
+	    }
+	}
 	export class MCPConfigDTO {
 	    enabled: boolean;
 	    port: number;
@@ -1288,6 +1310,10 @@ export namespace desktop {
 	    syncMessageLimit: number;
 	    syncAutoBackfill: boolean;
 	    startupSelection: string;
+	    logToFile: boolean;
+	    logLevel: string;
+	    logMessageMetadata: boolean;
+	    crashLogs: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new UIPrefsDTO(source);
@@ -1360,6 +1386,10 @@ export namespace desktop {
 	        this.syncMessageLimit = source["syncMessageLimit"];
 	        this.syncAutoBackfill = source["syncAutoBackfill"];
 	        this.startupSelection = source["startupSelection"];
+	        this.logToFile = source["logToFile"];
+	        this.logLevel = source["logLevel"];
+	        this.logMessageMetadata = source["logMessageMetadata"];
+	        this.crashLogs = source["crashLogs"];
 	    }
 	}
 	export class UnifiedViewDTO {

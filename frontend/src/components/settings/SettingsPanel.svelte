@@ -96,15 +96,19 @@
     setBodyFont,
     setUIFont,
     setMonoFont,
+    setLogToFile,
+    setLogLevel,
+    setLogMessageMetadata,
+    setCrashLogs,
   } from '../../stores/prefs'
   import peltonLogo from '../../assets/images/icons/pelton-logo.png'
   import { isMac } from '../../lib/i18n'
-  import { downloadRange, cancelDownload, openLocalesFolder, saveLocaleTemplate } from '../../lib/api'
+  import { downloadRange, cancelDownload, openLocalesFolder, saveLocaleTemplate, getLogStatus, openLogFolder, deleteLogs } from '../../lib/api'
   import en from '../../lib/locales/en'
   import { downloadProgress } from '../../stores/progress'
   import { toastInfo, toastError, errorMessage } from '../../stores/toast'
   import { t } from '../../lib/i18n'
-  import type { ThemePref, DensityPref, EditorMode, ViewsPlacement, CloseAction } from '../../lib/types'
+  import type { ThemePref, DensityPref, EditorMode, ViewsPlacement, CloseAction, LogLevel, LogStatus } from '../../lib/types'
 
   let editorModeOptions: { key: EditorMode; label: string }[] = []
   $: editorModeOptions = [
@@ -204,6 +208,8 @@
     { cat: 'privacy', label: $t('settingsPanel.toggle.blockTrackingPixels'), kw: 'tracking pixel spy pixel read receipt open tracking' },
     { cat: 'privacy', label: $t('settingsPanel.label.manageWhitelist'), kw: 'trusted senders allowlist' },
     { cat: 'privacy', label: $t('settingsPanel.category.network'), kw: 'proxy connection tls socks' },
+    { cat: 'privacy', label: $t('settingsPanel.toggle.logToFile'), kw: 'log logging debug file troubleshooting' },
+    { cat: 'privacy', label: $t('settingsPanel.toggle.crashLogs'), kw: 'crash report stack trace panic' },
     { cat: 'mailboxes', label: $t('settingsPanel.category.mailboxes'), kw: 'accounts imap smtp servers' },
     { cat: 'mailboxes', label: $t('settingsPanel.category.contacts'), kw: 'address book people' },
     { cat: 'external', label: $t('settingsPanel.category.external'), kw: 'default mail client links browser' },
@@ -472,6 +478,72 @@
   function confirmEnableImages(): void {
     setAlwaysLoadImages(true)
     confirmImages = false
+  }
+
+  // logging (#211). the status comes from the backend rather than the prefs
+  // store because it describes the disk (folder, size, an unread crash report)
+  // and because --debug can have logging on with the setting off.
+  let logStatus: LogStatus | null = null
+  let confirmDeleteLogs = false
+
+  let logLevelOptions: { key: LogLevel; label: string }[] = []
+  $: logLevelOptions = [
+    { key: 'debug', label: $t('settingsPanel.logLevel.debug') },
+    { key: 'info', label: $t('settingsPanel.logLevel.info') },
+    { key: 'warn', label: $t('settingsPanel.logLevel.warn') },
+    { key: 'error', label: $t('settingsPanel.logLevel.error') },
+  ]
+
+  async function refreshLogStatus(): Promise<void> {
+    try {
+      logStatus = await getLogStatus()
+    } catch {
+      logStatus = null
+    }
+  }
+
+  // re-read whenever the privacy section is shown, so the size and the folder
+  // are current rather than whatever they were at startup.
+  $: if (active === 'privacy') {
+    void refreshLogStatus()
+  }
+
+  function onLogToFile(checked: boolean): void {
+    setLogToFile(checked)
+    // the backend opens or closes the file as part of saving the setting, so
+    // give it a moment before reading the state back.
+    setTimeout(refreshLogStatus, 200)
+  }
+
+  async function onOpenLogFolder(): Promise<void> {
+    try {
+      await openLogFolder()
+    } catch (err) {
+      toastError(errorMessage(err))
+    }
+  }
+
+  async function onDeleteLogs(): Promise<void> {
+    confirmDeleteLogs = false
+    try {
+      await deleteLogs()
+      await refreshLogStatus()
+      toastInfo($t('settingsPanel.logs.deleted'))
+    } catch (err) {
+      toastError(errorMessage(err))
+    }
+  }
+
+  // formatBytes keeps the size next to the folder readable without pulling in a
+  // formatting library for one number.
+  function formatBytes(bytes: number): string {
+    if (bytes < 1024) {
+      return `${bytes} B`
+    }
+    if (bytes < 1024 * 1024) {
+      return `${Math.round(bytes / 1024)} KB`
+    }
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
   }
 
   // the remote-image allowlist manager (trusted senders/domains) opens in a modal.
@@ -1031,6 +1103,78 @@
               {$t('settingsPanel.button.manageWhitelist')}
             </button>
           </div>
+
+          <h4 class="subhead">{$t('settingsPanel.category.logs')}</h4>
+          <p class="hint">{$t('settingsPanel.hint.logsIntro')}</p>
+          <div class="toggle" title={$t('settingsPanel.hint.logToFile')}>
+            <span class="row-label">{$t('settingsPanel.toggle.logToFile')}</span>
+            <ToggleSwitch
+              checked={$prefs.logToFile}
+              label={$t('settingsPanel.toggle.logToFile')}
+              on:change={(e) => onLogToFile(e.detail)}
+            />
+          </div>
+          {#if logStatus?.forced}
+            <p class="hint">{$t('settingsPanel.hint.logForced')}</p>
+          {/if}
+          {#if $prefs.logToFile}
+            <SegmentedSetting
+              label={$t('settingsPanel.label.logLevel')}
+              value={$prefs.logLevel}
+              options={logLevelOptions}
+              on:change={(e) => setLogLevel(e.detail as LogLevel)}
+            />
+            <p class="hint">{$t('settingsPanel.hint.logLevel')}</p>
+            <div class="toggle" title={$t('settingsPanel.hint.logMessageMetadata')}>
+              <span class="row-label">{$t('settingsPanel.toggle.logMessageMetadata')}</span>
+              <ToggleSwitch
+                checked={$prefs.logMessageMetadata}
+                label={$t('settingsPanel.toggle.logMessageMetadata')}
+                on:change={(e) => setLogMessageMetadata(e.detail)}
+              />
+            </div>
+            <p class="hint">{$t('settingsPanel.hint.logMessageMetadataDetail')}</p>
+          {/if}
+          <div class="toggle" title={$t('settingsPanel.hint.crashLogs')}>
+            <span class="row-label">{$t('settingsPanel.toggle.crashLogs')}</span>
+            <ToggleSwitch
+              checked={$prefs.crashLogs}
+              label={$t('settingsPanel.toggle.crashLogs')}
+              on:change={(e) => setCrashLogs(e.detail)}
+            />
+          </div>
+          <p class="hint">{$t('settingsPanel.hint.crashLogs')}</p>
+          {#if logStatus}
+            <div class="field">
+              <span class="row-label">{$t('settingsPanel.label.logFolder')}</span>
+              <p class="hint path">{logStatus.dir}</p>
+              <p class="hint">
+                {$t('settingsPanel.hint.logSize').replace('{size}', formatBytes(logStatus.sizeBytes))}
+              </p>
+              <div class="log-actions">
+                <button type="button" class="action-btn" on:click={onOpenLogFolder}>
+                  {$t('settingsPanel.button.openLogFolder')}
+                </button>
+                <button
+                  type="button"
+                  class="action-btn"
+                  disabled={logStatus.sizeBytes === 0}
+                  on:click={() => (confirmDeleteLogs = true)}
+                >
+                  {$t('settingsPanel.button.deleteLogs')}
+                </button>
+              </div>
+            </div>
+            {#if confirmDeleteLogs}
+              <div class="warn">
+                <p>{$t('settingsPanel.warn.deleteLogs')}</p>
+                <div class="warn-actions">
+                  <button type="button" class="ghost-btn" on:click={() => (confirmDeleteLogs = false)}>{$t('settingsPanel.button.cancel')}</button>
+                  <button type="button" class="danger-btn" on:click={onDeleteLogs}>{$t('settingsPanel.button.deleteLogs')}</button>
+                </div>
+              </div>
+            {/if}
+          {/if}
 
           <div class="merged-block">
             <NetworkSection />
@@ -1627,6 +1771,19 @@
 
   .field {
     padding: var(--space-3) 0;
+  }
+
+  /* the log folder path, shown so it can be read and typed somewhere else. */
+  .hint.path {
+    font-family: var(--font-mono);
+    word-break: break-all;
+  }
+
+  .log-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    margin-top: var(--space-2);
   }
 
   .row-label {

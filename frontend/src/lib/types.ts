@@ -343,6 +343,31 @@ export interface UIPrefs {
   // 'folder:<id>' for one account folder, or 'last' to restore the previous
   // session. A target that no longer exists falls back to the unified inbox.
   startupSelection: string
+  // logToFile writes Pelton's own log to a rotating file in the data folder,
+  // at logLevel. logMessageMetadata additionally lets subjects and senders into
+  // it for debugging sync. crashLogs leaves a stack behind when the app
+  // crashes. All off by default; nothing is ever uploaded.
+  logToFile: boolean
+  logLevel: LogLevel
+  logMessageMetadata: boolean
+  crashLogs: boolean
+}
+
+// how much detail the log records.
+export type LogLevel = 'debug' | 'info' | 'warn' | 'error'
+
+// LogStatus is what the settings ui shows about logging: where the files are,
+// whether anything is being written, and whether the last run crashed.
+export interface LogStatus {
+  dir: string
+  // writing is the live state, which is not the setting: --debug and
+  // PELTON_DEBUG force logging on regardless of it, and forced says so.
+  writing: boolean
+  forced: boolean
+  sizeBytes: number
+  // crashName is empty when there is no crash the user has not seen yet.
+  crashName: string
+  crashTime: string
 }
 
 // what the window's close button does.

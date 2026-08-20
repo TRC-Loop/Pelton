@@ -206,7 +206,7 @@ func (a *App) DownloadRange(startDateRFC3339 string, includeAttachments bool) er
 	// and completion are reported entirely through events. the job gets its own
 	// cancellable context so CancelDownload can stop it without shutting the app.
 	ctx := a.beginDownload()
-	go a.runRangeDownload(ctx, since, includeAttachments)
+	goSafe("downloading mail for offline use", func() { a.runRangeDownload(ctx, since, includeAttachments) })
 	return nil
 }
 
@@ -267,7 +267,7 @@ func (a *App) ResumePendingDownload() {
 		return
 	}
 	ctx := a.beginDownload()
-	go a.runRangeDownload(ctx, since, includeAttachments)
+	goSafe("downloading mail for offline use", func() { a.runRangeDownload(ctx, since, includeAttachments) })
 }
 
 // runRangeDownload performs the plan-and-fetch passes off the calling goroutine.

@@ -42,6 +42,8 @@ export function DeleteDraft(arg1:number):Promise<void>;
 
 export function DeleteFolder(arg1:number):Promise<void>;
 
+export function DeleteLogs():Promise<void>;
+
 export function DeleteMessage(arg1:number):Promise<void>;
 
 export function DeletePGPKey(arg1:string):Promise<void>;
@@ -55,6 +57,8 @@ export function DeleteView(arg1:number):Promise<void>;
 export function DiscardFailedSend(arg1:number):Promise<boolean>;
 
 export function DiscoverConfig(arg1:string):Promise<desktop.DiscoveredDTO>;
+
+export function DismissCrashReport():Promise<void>;
 
 export function DownloadMessageOffline(arg1:number):Promise<void>;
 
@@ -77,6 +81,10 @@ export function ForgetPGPPassphrase(arg1:string):Promise<void>;
 export function GetAccountPGPKey(arg1:number):Promise<string>;
 
 export function GetAccountSignatures(arg1:number):Promise<desktop.AccountSignaturesDTO>;
+
+export function GetDiagnostics():Promise<string>;
+
+export function GetLogStatus():Promise<desktop.LogStatusDTO>;
 
 export function GetMCPConfig():Promise<desktop.MCPConfigDTO>;
 
@@ -152,7 +160,11 @@ export function MarkSenderVIP(arg1:number):Promise<void>;
 
 export function MoveMessage(arg1:number,arg2:number):Promise<desktop.ArchiveUndoDTO>;
 
+export function OpenCrashReport():Promise<void>;
+
 export function OpenLocalesFolder():Promise<void>;
+
+export function OpenLogFolder():Promise<void>;
 
 export function OpenThemesFolder():Promise<void>;
 

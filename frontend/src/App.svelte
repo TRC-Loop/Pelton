@@ -55,6 +55,8 @@
     unsubscribeMessage,
     consumePendingMailto,
     closeWindow,
+    getLogStatus,
+    openCrashReport,
   } from './lib/api'
   import { BrowserOpenURL } from '../wailsjs/runtime/runtime'
   import { liabilityAccepted } from './lib/liability'
@@ -72,7 +74,7 @@
   import { recordDeleted, triggerUndoDelete } from './stores/undodelete'
   import { triggerUndoArchive } from './stores/undoarchive'
   import { openMessageId, openMessage } from './stores/selection'
-  import { errorMessage, toastError, toastInfo } from './stores/toast'
+  import { errorMessage, toastError, toastInfo, pushAction } from './stores/toast'
   import { friendlyError } from './lib/errors'
   import { setOnline } from './stores/network'
   import { moveTarget } from './stores/move'
@@ -174,6 +176,34 @@
     setWindowTitle(title)
   }
 
+  // offerCrashReport says so when the last run ended in a crash and there is a
+  // file about it (#211). It stays up until it is closed, since a crash is not
+  // something to notice out of the corner of an eye. Closing it without opening
+  // the report leaves the report unread, so the offer comes back next launch.
+  async function offerCrashReport(): Promise<void> {
+    let status
+    try {
+      status = await getLogStatus()
+    } catch {
+      return
+    }
+    if (!status.crashName) {
+      return
+    }
+    const when = status.crashTime || status.crashName
+    pushAction(
+      'error',
+      $t('crash.toast').replace('{when}', when),
+      {
+        label: $t('crash.open'),
+        run: () => {
+          openCrashReport().catch((err) => toastError(errorMessage(err)))
+        },
+      },
+      0,
+    )
+  }
+
   onMount(async () => {
     // cosmetic demo mode (--potatoes-are-nice): flip the data layer to sample
     // data before anything loads, so the whole ui fills with the potato inbox.
@@ -220,6 +250,7 @@
       // onboarding collects the acknowledgement itself, so only ask separately
       // when the flow is not going to run.
       liabilityOpen = !onboardingOpen && !(await liabilityAccepted())
+      void offerCrashReport()
     }
 
     unsubscribers.push(

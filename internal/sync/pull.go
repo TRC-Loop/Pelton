@@ -9,6 +9,7 @@ import (
 
 	"github.com/TRC-Loop/Pelton/internal/crypto"
 	pimap "github.com/TRC-Loop/Pelton/internal/imap"
+	"github.com/TRC-Loop/Pelton/internal/logging"
 	"github.com/TRC-Loop/Pelton/internal/storage"
 )
 
@@ -103,6 +104,17 @@ func (e *Engine) fetchAndStore(ctx context.Context, folder storage.Folder, uid u
 		if err := e.store.SetMessagePGPSource(ctx, id, msg.Raw); err != nil {
 			e.log.Error("store pgp source", "uid", uid, "err", err)
 		}
+	}
+
+	// this is the only point in a sync that holds a message's sender and
+	// subject, which is what tracking down "the wrong mail arrived" or "one
+	// message never showed up" needs. It writes something about the user's
+	// mail to disk, so it is behind its own opt-in and off even when file
+	// logging is on. Without it a sync log has uids and counts.
+	if logging.MessageMetadata() {
+		e.log.Debug("message stored",
+			"folder", folder.IMAPPath, "uid", uid, "id", id,
+			"from", msg.From, "subject", msg.Subject, "date", msg.Date)
 	}
 	return id, nil
 }

@@ -82,6 +82,10 @@ export function DeleteFolder(arg1) {
   return window['go']['desktop']['App']['DeleteFolder'](arg1);
 }
 
+export function DeleteLogs() {
+  return window['go']['desktop']['App']['DeleteLogs']();
+}
+
 export function DeleteMessage(arg1) {
   return window['go']['desktop']['App']['DeleteMessage'](arg1);
 }
@@ -108,6 +112,10 @@ export function DiscardFailedSend(arg1) {
 
 export function DiscoverConfig(arg1) {
   return window['go']['desktop']['App']['DiscoverConfig'](arg1);
+}
+
+export function DismissCrashReport() {
+  return window['go']['desktop']['App']['DismissCrashReport']();
 }
 
 export function DownloadMessageOffline(arg1) {
@@ -152,6 +160,14 @@ export function GetAccountPGPKey(arg1) {
 
 export function GetAccountSignatures(arg1) {
   return window['go']['desktop']['App']['GetAccountSignatures'](arg1);
+}
+
+export function GetDiagnostics() {
+  return window['go']['desktop']['App']['GetDiagnostics']();
+}
+
+export function GetLogStatus() {
+  return window['go']['desktop']['App']['GetLogStatus']();
 }
 
 export function GetMCPConfig() {
@@ -302,8 +318,16 @@ export function MoveMessage(arg1, arg2) {
   return window['go']['desktop']['App']['MoveMessage'](arg1, arg2);
 }
 
+export function OpenCrashReport() {
+  return window['go']['desktop']['App']['OpenCrashReport']();
+}
+
 export function OpenLocalesFolder() {
   return window['go']['desktop']['App']['OpenLocalesFolder']();
+}
+
+export function OpenLogFolder() {
+  return window['go']['desktop']['App']['OpenLogFolder']();
 }
 
 export function OpenThemesFolder() {

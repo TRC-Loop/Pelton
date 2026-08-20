@@ -339,12 +339,12 @@ func (a *App) ImportData(path string, categories []string, credentialPassword st
 		// without credentials drop out of both with errNoCredentials, which is
 		// not an error here.
 		for _, acc := range ready {
-			go func(acc storage.Account) {
+			goSafe("syncing an imported mailbox", func() {
 				if err := a.syncAccount(acc); err != nil && !errors.Is(err, errNoCredentials) {
 					a.log.Error("sync imported account", "account", acc.Email, "err", err)
 				}
-				go a.idleLoop(acc)
-			}(acc)
+				goSafe("waiting for new mail", func() { a.idleLoop(acc) })
+			})
 		}
 	}
 	if want[backupCategorySignatures] {

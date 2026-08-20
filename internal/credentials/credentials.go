@@ -13,7 +13,24 @@ import (
 	"time"
 
 	keyring "github.com/zalando/go-keyring"
+
+	"github.com/TRC-Loop/Pelton/internal/logging"
 )
+
+// remember hands a secret to the log redactor so it can never appear in a log
+// or crash file, whatever error string it ends up inside. Every path that
+// stores or loads a secret calls it, so the redactor knows a value from the
+// moment the process first holds it.
+func remember(values ...string) {
+	for _, v := range values {
+		logging.Register(v)
+	}
+}
+
+// rememberSecret registers every field of an account secret that is a secret.
+func rememberSecret(s Secret) {
+	remember(s.Password, s.ClientSecret, s.RefreshToken, s.AccessToken)
+}
 
 // service is the keyring service name all pelton secrets are filed under.
 const service = "Pelton"
@@ -60,6 +77,7 @@ type Secret struct {
 // from a previous, larger secret is removed, so a failed write never leaves
 // the account's secret unreadable.
 func Store(accountID int64, s Secret) error {
+	rememberSecret(s)
 	encoded, err := json.Marshal(s)
 	if err != nil {
 		return fmt.Errorf("credentials: encode secret: %w", err)
@@ -111,6 +129,7 @@ func Load(accountID int64) (Secret, error) {
 	if err := json.Unmarshal([]byte(raw), &s); err != nil {
 		return Secret{}, fmt.Errorf("credentials: decode secret for account %d: %w", accountID, err)
 	}
+	rememberSecret(s)
 	return s, nil
 }
 
@@ -136,6 +155,7 @@ func StoreProxyPassword(password string) error {
 	if password == "" {
 		return DeleteProxyPassword()
 	}
+	remember(password)
 	if err := keyring.Set(service, proxyPasswordKey, password); err != nil {
 		return fmt.Errorf("credentials: store proxy password: %w", err)
 	}
@@ -151,6 +171,7 @@ func LoadProxyPassword() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("credentials: load proxy password: %w", err)
 	}
+	remember(raw)
 	return raw, nil
 }
 
@@ -174,6 +195,7 @@ func StoreVirusTotalKey(apiKey string) error {
 	if apiKey == "" {
 		return DeleteVirusTotalKey()
 	}
+	remember(apiKey)
 	if err := keyring.Set(service, virusTotalKeyName, apiKey); err != nil {
 		return fmt.Errorf("credentials: store virustotal key: %w", err)
 	}
@@ -189,6 +211,7 @@ func LoadVirusTotalKey() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("credentials: load virustotal key: %w", err)
 	}
+	remember(raw)
 	return raw, nil
 }
 
@@ -213,6 +236,7 @@ func StorePGPPassphrase(fingerprint, passphrase string) error {
 	if passphrase == "" {
 		return DeletePGPPassphrase(fingerprint)
 	}
+	remember(passphrase)
 	if err := keyring.Set(service, pgpPassphrasePrefix+fingerprint, passphrase); err != nil {
 		return fmt.Errorf("credentials: store pgp passphrase: %w", err)
 	}
@@ -229,6 +253,7 @@ func LoadPGPPassphrase(fingerprint string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("credentials: load pgp passphrase: %w", err)
 	}
+	remember(raw)
 	return raw, nil
 }
 
