@@ -142,10 +142,15 @@ type AttachmentDTO struct {
 // offer "load remote images".
 type MessageDetailDTO struct {
 	MessageSummaryDTO
-	ToAddresses      string `json:"toAddresses"`
-	CcAddresses      string `json:"ccAddresses"`
-	BodyPlain        string `json:"bodyPlain"`
-	BodyHTMLSafe     string `json:"bodyHtmlSafe"`
+	ToAddresses  string `json:"toAddresses"`
+	CcAddresses  string `json:"ccAddresses"`
+	BodyPlain    string `json:"bodyPlain"`
+	BodyHTMLSafe string `json:"bodyHtmlSafe"`
+	// BodyQuote is the message as plain text for a reply or forward to quote.
+	// It is BodyPlain when the message has a text part, and the html rendered
+	// down to text when it does not, which is the case BodyPlain is empty for
+	// and replies to html-only mail used to come out blank (#239).
+	BodyQuote        string `json:"bodyQuote"`
 	IsHTML           bool   `json:"isHtml"`
 	HasRemoteContent bool   `json:"hasRemoteContent"`
 	// RemoteAllowed is true when this message's remote content was rendered

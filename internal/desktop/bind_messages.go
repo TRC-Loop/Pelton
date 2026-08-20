@@ -105,6 +105,7 @@ func (a *App) GetMessage(id int64) (MessageDetailDTO, error) {
 		ToAddresses:       m.ToAddresses,
 		CcAddresses:       m.CcAddresses,
 		BodyPlain:         m.BodyPlain,
+		BodyQuote:         quoteText(m.BodyPlain, m.BodyHTML),
 		IsHTML:            m.BodyHTML != "",
 		HasRemoteContent:  mailview.HasRemoteContent(m.BodyHTML),
 		RemoteAllowed:     autoAllow,
@@ -125,6 +126,7 @@ func (a *App) GetMessage(id int64) (MessageDetailDTO, error) {
 			if isHTML {
 				detail.IsHTML = true
 				detail.BodyPlain = ""
+				detail.BodyQuote = quoteText("", body)
 				detail.BodyHTMLSafe = a.renderHTML(body, atts, autoAllow)
 				detail.HasRemoteContent = mailview.HasRemoteContent(body)
 				detail.RemoteHosts = mailview.RemoteHosts(body)
@@ -132,6 +134,7 @@ func (a *App) GetMessage(id int64) (MessageDetailDTO, error) {
 			} else {
 				detail.IsHTML = false
 				detail.BodyPlain = body
+				detail.BodyQuote = body
 				detail.BodyHTMLSafe = ""
 			}
 		}
@@ -447,4 +450,15 @@ func trimSuffixByte(s string, b byte) string {
 		return s[:len(s)-1]
 	}
 	return s
+}
+
+// quoteText is the message as text for a reply or forward to quote: the text
+// part when there is one, and otherwise the html rendered down to text. An
+// html-only message has no text part at all, which is why replying to one used
+// to quote nothing (#239).
+func quoteText(plain, html string) string {
+	if strings.TrimSpace(plain) != "" {
+		return plain
+	}
+	return mailview.TextForQuote(html)
 }

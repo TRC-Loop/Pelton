@@ -665,6 +665,7 @@ export namespace desktop {
 	    ccAddresses: string;
 	    bodyPlain: string;
 	    bodyHtmlSafe: string;
+	    bodyQuote: string;
 	    isHtml: boolean;
 	    hasRemoteContent: boolean;
 	    remoteAllowed: boolean;
@@ -704,6 +705,7 @@ export namespace desktop {
 	        this.ccAddresses = source["ccAddresses"];
 	        this.bodyPlain = source["bodyPlain"];
 	        this.bodyHtmlSafe = source["bodyHtmlSafe"];
+	        this.bodyQuote = source["bodyQuote"];
 	        this.isHtml = source["isHtml"];
 	        this.hasRemoteContent = source["hasRemoteContent"];
 	        this.remoteAllowed = source["remoteAllowed"];
