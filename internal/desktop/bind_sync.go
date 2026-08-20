@@ -210,9 +210,19 @@ func (a *App) syncAccount(account storage.Account) error {
 // emitting a progress event per folder and a new-mail event when one gained
 // messages.
 func (a *App) syncFolders(client *pimap.Client, accountID int64) error {
-	folders, err := a.store.ListFolders(a.ctx, accountID)
+	all, err := a.store.ListFolders(a.ctx, accountID)
 	if err != nil {
 		return err
+	}
+	// folders the user unchecked are skipped here rather than inside the engine,
+	// so they never reach a SELECT and never cost a round trip. They are also
+	// left out of the progress total, since counting folders that are not being
+	// synced makes the bar lie (#173).
+	folders := make([]storage.Folder, 0, len(all))
+	for _, f := range all {
+		if !f.SyncExcluded {
+			folders = append(folders, f)
+		}
 	}
 	engine := psync.NewEngine(client, a.store, a.log)
 	engine.ColorSync = a.boolSetting(settingFlagColorSync, false)
@@ -270,6 +280,11 @@ func (a *App) findInboxFolder(accountID int64) (*storage.Folder, error) {
 // folder on the account. Used by the idle push handler so a single INBOX
 // update does not pay for a full-account resync.
 func (a *App) syncOneFolder(client *pimap.Client, folder storage.Folder) error {
+	// the idle push path reaches this directly, so it has to honour the
+	// exclusion too. An excluded INBOX is unusual but it is the user's call.
+	if folder.SyncExcluded {
+		return nil
+	}
 	engine := psync.NewEngine(client, a.store, a.log)
 	engine.ColorSync = a.boolSetting(settingFlagColorSync, false)
 	engine.InitialLimit = a.syncMessageLimit()

@@ -372,6 +372,11 @@ func (a *App) planAccount(ctx context.Context, account storage.Account, since ti
 		if err := ctx.Err(); err != nil {
 			return nil, err
 		}
+		// an unchecked folder is not synced, so downloading it for offline use
+		// would fetch mail the user asked not to keep up to date (#173).
+		if folder.SyncExcluded {
+			continue
+		}
 		if _, err := client.Select(folder.IMAPPath); err != nil {
 			a.log.Error("plan select", "folder", folder.IMAPPath, "err", err)
 			continue

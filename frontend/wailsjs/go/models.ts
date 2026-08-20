@@ -446,6 +446,7 @@ export namespace desktop {
 	    attributes: string[];
 	    pinned: boolean;
 	    roleOverride: string;
+	    syncExcluded: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new FolderDTO(source);
@@ -465,6 +466,7 @@ export namespace desktop {
 	        this.attributes = source["attributes"];
 	        this.pinned = source["pinned"];
 	        this.roleOverride = source["roleOverride"];
+	        this.syncExcluded = source["syncExcluded"];
 	    }
 	}
 	export class ImageAllowEntryDTO {

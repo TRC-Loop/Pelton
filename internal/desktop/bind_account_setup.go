@@ -205,15 +205,33 @@ func (a *App) createAccount(req AddAccountRequest, secret credentials.Secret) (A
 		a.log.Error("discover folders", "account", account.Email, "err", err)
 	}
 
-	// initial sync and idle in the background so the wizard returns promptly.
+	// no sync yet. The wizard shows the discovered folders next so a huge
+	// archive can be unchecked before anything is fetched, and calls
+	// StartAccountSync once that choice is made (#173). Starting here would
+	// download the folders the user is about to say they do not want.
+	return toAccountDTO(*account), nil
+}
+
+// StartAccountSync runs the first sync of an account and parks it on idle, in
+// the background. The wizard calls it after the folder choice, which is why
+// adding an account no longer starts syncing on its own. Calling it for an
+// account that is already syncing is harmless: syncAccount serializes on the
+// same lock every other sync uses.
+func (a *App) StartAccountSync(accountID int64) error {
+	if err := a.ready(); err != nil {
+		return err
+	}
+	account, err := a.store.GetAccount(a.ctx, accountID)
+	if err != nil {
+		return err
+	}
 	goSafe("syncing a new mailbox", func() {
 		if err := a.syncAccount(*account); err != nil {
 			a.log.Error("initial sync after add", "account", account.Email, "err", err)
 		}
 		goSafe("waiting for new mail", func() { a.idleLoop(*account) })
 	})
-
-	return toAccountDTO(*account), nil
+	return nil
 }
 
 // discoverFolders lists the server's mailboxes and creates the storage folder

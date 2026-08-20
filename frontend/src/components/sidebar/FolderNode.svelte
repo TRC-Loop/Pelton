@@ -19,6 +19,8 @@
     IconPin,
     IconPinnedOff,
     IconTags,
+    IconRefresh,
+    IconRefreshOff,
   } from '@tabler/icons-svelte'
   import SidebarRow from './SidebarRow.svelte'
   import Self from './FolderNode.svelte'
@@ -35,7 +37,7 @@
   } from '../../stores/folderdialog'
   import { startFolderDrag, endFolderDrag } from '../../stores/sidebardrag'
   import { refreshSidebar } from '../../stores/accounts'
-  import { reorderFolders, setFolderPinned } from '../../lib/api'
+  import { reorderFolders, setFolderPinned, setFolderSyncExcluded } from '../../lib/api'
   import { toastError, errorMessage } from '../../stores/toast'
   import { t } from '../../lib/i18n'
 
@@ -75,6 +77,17 @@
     }
   }
 
+  // unchecking a folder stops it syncing. It keeps whatever is already cached,
+  // so this is reversible and costs nothing but a resync (#173).
+  async function toggleSync(): Promise<void> {
+    try {
+      await setFolderSyncExcluded(folder.id, !folder.syncExcluded)
+      await refreshSidebar()
+    } catch (err) {
+      toastError(errorMessage(err))
+    }
+  }
+
   function onContext(event: MouseEvent): void {
     const entries: MenuEntry[] = [
       {
@@ -88,6 +101,11 @@
         label: $t('folders.roleAction'),
         icon: IconTags,
         action: () => openFolderRole(folder),
+      },
+      {
+        label: folder.syncExcluded ? $t('folders.resumeSync') : $t('folders.stopSync'),
+        icon: folder.syncExcluded ? IconRefresh : IconRefreshOff,
+        action: () => void toggleSync(),
       },
     ]
     if (emptiable) {

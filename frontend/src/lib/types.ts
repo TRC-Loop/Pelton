@@ -82,6 +82,9 @@ export interface Folder {
   // kept apart from role so the picker can show whether the current state is a
   // choice or automatic detection.
   roleOverride: string
+  // syncExcluded means the user unchecked this folder, so sync skips it. What
+  // was already fetched stays readable; it just stops being updated (#173).
+  syncExcluded: boolean
 }
 
 export interface UnifiedView {

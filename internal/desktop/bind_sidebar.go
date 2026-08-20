@@ -74,6 +74,17 @@ func (a *App) SetFolderPinned(folderID int64, pinned bool) error {
 	return a.store.SetFolderPinned(a.ctx, folderID, pinned)
 }
 
+// SetFolderSyncExcluded turns syncing for one folder off or on. Excluding a
+// folder does not delete what is already cached: it stops being updated and
+// stays readable offline, so a mistaken uncheck costs nothing but a resync
+// (#173).
+func (a *App) SetFolderSyncExcluded(folderID int64, excluded bool) error {
+	if err := a.ready(); err != nil {
+		return err
+	}
+	return a.store.SetFolderSyncExcluded(a.ctx, folderID, excluded)
+}
+
 // ReorderPinnedFolders persists a new order for the Pinned group. Ids that are
 // not pinned are ignored rather than pinned implicitly.
 func (a *App) ReorderPinnedFolders(orderedIDs []int64) error {

@@ -74,6 +74,10 @@ func (e *Engine) SyncAccount(ctx context.Context, accountID int64) error {
 		if err := ctx.Err(); err != nil {
 			return err
 		}
+		// a folder the user unchecked is never opened at all (#173).
+		if folder.SyncExcluded {
+			continue
+		}
 		res, err := e.SyncFolder(ctx, folder)
 		if err != nil {
 			e.log.Error("folder sync failed", "folder", folder.IMAPPath, "err", err)
