@@ -48,6 +48,7 @@
     setMessageFontSize,
     setToastPosition,
     setNotifyNewMail,
+    setDockBadgeEnabled,
     setPaneLocked,
     setSendDelay,
     setFlagHighlight,
@@ -202,6 +203,7 @@
     { cat: 'signatures', label: $t('settingsPanel.category.signatures'), kw: 'signature footer' },
     { cat: 'notifications', label: $t('settings.toastPosition'), kw: 'notification position' },
     { cat: 'notifications', label: $t('vip.notifyNewMail'), kw: 'new mail notification' },
+    ...(isMac ? [{ cat: 'notifications', label: $t('settingsPanel.toggle.dockBadge'), kw: 'dock badge unread count icon' }] : []),
     { cat: 'notifications', label: $t('vip.manageLabel'), kw: 'vip senders' },
     { cat: 'gestures', label: $t('settingsPanel.toggle.swipeEnabled'), kw: 'swipe gesture' },
     { cat: 'gestures', label: $t('settingsPanel.label.swipeLeft'), kw: 'swipe left' },
@@ -1210,6 +1212,19 @@
               on:change={(e) => setNotifyNewMail(e.detail)}
             />
           </div>
+          <!-- only macOS has a dock tile to badge, so the row would be a dead
+               switch on Windows and Linux. -->
+          {#if isMac}
+            <div class="toggle">
+              <span class="row-label">{$t('settingsPanel.toggle.dockBadge')}</span>
+              <ToggleSwitch
+                checked={$prefs.dockBadge}
+                label={$t('settingsPanel.toggle.dockBadge')}
+                on:change={(e) => setDockBadgeEnabled(e.detail)}
+              />
+            </div>
+            <p class="hint">{$t('settingsPanel.hint.dockBadge')}</p>
+          {/if}
           <div class="field">
             <span class="row-label">{$t('vip.manageLabel')}</span>
             <p class="hint">{$t('vip.manageHint')}</p>

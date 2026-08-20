@@ -250,6 +250,8 @@ export function SetAccountSignatures(arg1:number,arg2:number,arg3:number):Promis
 
 export function SetDefaultMailClient():Promise<void>;
 
+export function SetDockBadge(arg1:number):Promise<void>;
+
 export function SetFlagColor(arg1:number,arg2:number):Promise<void>;
 
 export function SetFlagged(arg1:number,arg2:boolean):Promise<void>;

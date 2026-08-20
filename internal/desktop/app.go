@@ -104,6 +104,12 @@ type App struct {
 	// mailto holds a mailto: draft the app was launched with (or received from a
 	// second launch) until the frontend consumes it. See mailto.go.
 	mailto mailtoState
+
+	// badgeMu guards unreadBadge, the last unread count the frontend reported
+	// for the dock icon. Kept so toggling the setting can re-apply it without
+	// waiting for the next sidebar refresh.
+	badgeMu     sync.Mutex
+	unreadBadge int
 }
 
 // IsDemoMode reports whether the app was launched in the cosmetic demo mode. The

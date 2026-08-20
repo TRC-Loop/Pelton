@@ -498,6 +498,10 @@ export function SetDefaultMailClient() {
   return window['go']['desktop']['App']['SetDefaultMailClient']();
 }
 
+export function SetDockBadge(arg1) {
+  return window['go']['desktop']['App']['SetDockBadge'](arg1);
+}
+
 export function SetFlagColor(arg1, arg2) {
   return window['go']['desktop']['App']['SetFlagColor'](arg1, arg2);
 }

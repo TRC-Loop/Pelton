@@ -1137,6 +1137,8 @@ const es: Record<string, string> = {
   'settingsPanel.hint.reduceMotion': 'Desactiva las animaciones y transiciones de la interfaz. La preferencia del sistema de movimiento reducido también se sigue automáticamente.',
   'settingsPanel.toggle.handCursor': 'Cursor de mano en los botones',
   'settingsPanel.hint.handCursor': 'Muestra el cursor de mano sobre botones, filas y pestañas en lugar de la flecha normal. Los enlaces siempre conservan la mano.',
+  'settingsPanel.toggle.dockBadge': 'Número de no leídos en el icono del Dock',
+  'settingsPanel.hint.dockBadge': 'Muestra en el icono de la aplicación en el Dock cuántos mensajes sin leer hay en la bandeja de entrada.',
   'settingsPanel.theme.schedule': 'Programado',
   'settingsPanel.label.darkFrom': 'Oscuro desde',
   'settingsPanel.label.darkUntil': 'Hasta',

@@ -59,6 +59,7 @@
     openCrashReport,
     accountsNeedingPassword,
     titleBarDoubleClick,
+    setDockBadge,
   } from './lib/api'
   import { BrowserOpenURL } from '../wailsjs/runtime/runtime'
   import { liabilityAccepted } from './lib/liability'
@@ -174,6 +175,11 @@
   // the native Mail menu's message actions are only usable while a message is
   // open; keep them greyed in step with the open message.
   $: setMailActionsEnabled($openMessageId != null)
+
+  // the dock badge follows the unified inbox, which the sidebar already
+  // recomputes after a sync and after anything that changes read state, so
+  // there is no second count to keep in step.
+  $: setDockBadge($sidebar.data?.views?.find((v) => v.key === 'inbox')?.unreadCount ?? 0)
 
   // keep the native window title in sync with context: "Settings" while the
   // settings screen is open, the open message's subject when reading, otherwise

@@ -1137,6 +1137,8 @@ const de: Record<string, string> = {
   'settingsPanel.hint.reduceMotion': 'Schaltet Animationen und Übergänge der Oberfläche aus. Die Systemeinstellung für reduzierte Bewegung wird automatisch berücksichtigt.',
   'settingsPanel.toggle.handCursor': 'Handzeiger auf Schaltflächen',
   'settingsPanel.hint.handCursor': 'Zeigt über Schaltflächen, Zeilen und Tabs den Handzeiger statt des normalen Pfeils. Links behalten die Hand immer.',
+  'settingsPanel.toggle.dockBadge': 'Ungelesene im Dock-Symbol',
+  'settingsPanel.hint.dockBadge': 'Zeigt am App-Symbol im Dock, wie viele ungelesene Nachrichten im Posteingang liegen.',
   'settingsPanel.theme.schedule': 'Zeitgesteuert',
   'settingsPanel.label.darkFrom': 'Dunkel ab',
   'settingsPanel.label.darkUntil': 'Bis',
