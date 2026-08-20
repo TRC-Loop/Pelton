@@ -101,6 +101,11 @@ export interface MessageDetail extends MessageSummary {
   remoteAllowed: boolean
   // remoteHosts lists the hosts blocked remote content would load from.
   remoteHosts: string[]
+  // trackingPixels are the blocked remote images that look like they exist to
+  // report the open rather than to be seen. Empty when detection is off.
+  // Detection is a guess and will sometimes be wrong, so the ui says "look
+  // like" and offers to load them anyway.
+  trackingPixels: TrackingPixel[]
   attachments: Attachment[]
   // unsubscribe describes the List-Unsubscribe mechanism the message
   // advertises: oneclick (RFC 8058 background POST), mailto (sent via the
@@ -114,6 +119,16 @@ export interface MessageDetail extends MessageSummary {
 }
 
 export type PGPState = '' | 'open' | 'locked' | 'nokey' | 'failed'
+
+// TrackingPixel is one remote image that looks like it exists to report the
+// open. reasons carries the signals behind that (tiny, hidden, known-host,
+// recipient, opaque-id, lone-image) so the ui can show its working instead of
+// asking to be believed.
+export interface TrackingPixel {
+  host: string
+  url: string
+  reasons: string[]
+}
 
 export interface UnsubscribeInfo {
   kind: 'oneclick' | 'mailto' | 'link'
@@ -214,6 +229,10 @@ export interface UIPrefs {
   showAccountEmail: boolean
   // alwaysLoadImages disables remote-image blocking globally (off by default).
   alwaysLoadImages: boolean
+  // blockTrackingPixels keeps images detected as tracking pixels blocked even
+  // once the rest of a message's remote content is loaded. Off by default; the
+  // private preset in onboarding turns it on.
+  blockTrackingPixels: boolean
   // avatarSource selects the sender-photo fallback chain: bimi_gravatar,
   // gravatar_bimi, or pfp (generated only). avatarStyle picks the generated
   // placeholder look: initials, mono, pixel, or geometric.

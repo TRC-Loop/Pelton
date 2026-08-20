@@ -54,6 +54,8 @@ export function DeleteTheme(arg1:string):Promise<void>;
 
 export function DeleteView(arg1:number):Promise<void>;
 
+export function DiscardFailedSend(arg1:number):Promise<boolean>;
+
 export function DiscoverConfig(arg1:string):Promise<desktop.DiscoveredDTO>;
 
 export function DismissCrashReport():Promise<void>;
@@ -88,7 +90,7 @@ export function GetMCPConfig():Promise<desktop.MCPConfigDTO>;
 
 export function GetMessage(arg1:number):Promise<desktop.MessageDetailDTO>;
 
-export function GetMessageHTML(arg1:number,arg2:boolean):Promise<string>;
+export function GetMessageHTML(arg1:number,arg2:boolean,arg3:boolean):Promise<string>;
 
 export function GetMessageSource(arg1:number):Promise<string>;
 
@@ -195,6 +197,8 @@ export function ReorderUnifiedViews(arg1:Array<string>):Promise<void>;
 export function ReorderViews(arg1:Array<number>):Promise<void>;
 
 export function ResumePendingDownload():Promise<void>;
+
+export function RetrySend(arg1:number):Promise<boolean>;
 
 export function SaveAllAttachments(arg1:number):Promise<string>;
 

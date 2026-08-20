@@ -106,6 +106,10 @@ export function DeleteView(arg1) {
   return window['go']['desktop']['App']['DeleteView'](arg1);
 }
 
+export function DiscardFailedSend(arg1) {
+  return window['go']['desktop']['App']['DiscardFailedSend'](arg1);
+}
+
 export function DiscoverConfig(arg1) {
   return window['go']['desktop']['App']['DiscoverConfig'](arg1);
 }
@@ -174,8 +178,8 @@ export function GetMessage(arg1) {
   return window['go']['desktop']['App']['GetMessage'](arg1);
 }
 
-export function GetMessageHTML(arg1, arg2) {
-  return window['go']['desktop']['App']['GetMessageHTML'](arg1, arg2);
+export function GetMessageHTML(arg1, arg2, arg3) {
+  return window['go']['desktop']['App']['GetMessageHTML'](arg1, arg2, arg3);
 }
 
 export function GetMessageSource(arg1) {
@@ -388,6 +392,10 @@ export function ReorderViews(arg1) {
 
 export function ResumePendingDownload() {
   return window['go']['desktop']['App']['ResumePendingDownload']();
+}
+
+export function RetrySend(arg1) {
+  return window['go']['desktop']['App']['RetrySend'](arg1);
 }
 
 export function SaveAllAttachments(arg1) {

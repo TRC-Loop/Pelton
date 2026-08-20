@@ -34,6 +34,11 @@ const (
 	settingShortcutHints  = "show_shortcut_hints"
 	settingAccountEmail   = "show_account_email"
 	settingRemoteAlways   = "remote_images_always"
+	// settingBlockTrackers keeps images that look like tracking pixels blocked
+	// even once remote content is loaded, so seeing a newsletter's pictures does
+	// not also confirm the open to the sender (#205). Off by default, since the
+	// detection is a heuristic that will sometimes be wrong.
+	settingBlockTrackers = "block_tracking_pixels"
 	settingAvatarSource   = "avatar_source"
 	settingAvatarStyle    = "avatar_style"
 	settingMultiSelect    = "multi_select_enabled"
@@ -185,6 +190,10 @@ type UIPrefsDTO struct {
 	// AlwaysLoadImages disables remote-image blocking globally. Off by default;
 	// the ui guards turning it on with a tracking warning.
 	AlwaysLoadImages bool `json:"alwaysLoadImages"`
+	// BlockTrackingPixels keeps detected tracking pixels blocked even when the
+	// rest of a message's remote content is loaded. Off by default; the private
+	// preset in onboarding turns it on.
+	BlockTrackingPixels bool `json:"blockTrackingPixels"`
 	// AvatarSource selects the sender-photo fallback chain: bimi_gravatar,
 	// gravatar_bimi, or pfp (generated only). AvatarStyle picks the generated
 	// placeholder look: initials, mono, pixel, or geometric.
@@ -343,6 +352,7 @@ func (a *App) GetUIPrefs() (UIPrefsDTO, error) {
 		ShowShortcutHints:   a.boolSetting(settingShortcutHints, false),
 		ShowAccountEmail:    a.boolSetting(settingAccountEmail, false),
 		AlwaysLoadImages:    a.boolSetting(settingRemoteAlways, false),
+		BlockTrackingPixels: a.blockTrackers(),
 		AvatarSource:        a.stringSetting(settingAvatarSource, defaultAvatarSource),
 		AvatarStyle:         a.stringSetting(settingAvatarStyle, defaultAvatarStyle),
 		MultiSelectEnabled:  a.boolSetting(settingMultiSelect, true),

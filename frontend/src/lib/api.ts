@@ -315,8 +315,10 @@ export function getMessageSource(id: number): Promise<string> {
 }
 
 // getMessageHtml re-renders a body with the chosen remote-image policy.
-export function getMessageHtml(id: number, allowRemote: boolean): Promise<string> {
-  return App.GetMessageHTML(id, allowRemote)
+// includeTrackers additionally loads the images detection flagged as tracking
+// pixels, which the setting otherwise keeps blocked even here.
+export function getMessageHtml(id: number, allowRemote: boolean, includeTrackers = false): Promise<string> {
+  return App.GetMessageHTML(id, allowRemote, includeTrackers)
 }
 
 // setSeen / setFlagged toggle a flag and queue the change for sync.
@@ -464,6 +466,18 @@ export function cancelSend(id: number): Promise<boolean> {
 // brief sent confirmation.
 export function clearSentOutbox(): Promise<void> {
   return App.ClearSentOutbox()
+}
+
+// retrySend puts a failed message back in the send queue with a fresh attempt
+// budget. Resolves false when it was no longer failed.
+export function retrySend(id: number): Promise<boolean> {
+  return App.RetrySend(id)
+}
+
+// discardFailedSend removes a failed message from the outbox. The message is
+// gone afterwards, so the caller confirms first.
+export function discardFailedSend(id: number): Promise<boolean> {
+  return App.DiscardFailedSend(id)
 }
 
 // trustSenderImages permanently allows remote content from a message's sender.
@@ -851,6 +865,7 @@ export const SettingKeys = {
   logLevel: 'log_level',
   logMessageMetadata: 'log_message_metadata',
   crashLogs: 'crash_logs',
+  blockTrackingPixels: 'block_tracking_pixels',
 } as const
 
 // listSystemFonts returns the installed font family names for the body font
