@@ -14,7 +14,13 @@ package desktop
 // down rather than fail to notify. A `go run` or an unbundled dev build has
 // none, so the caller falls back to beeep there.
 static bool peltonCanNotify(void) {
-	return [[NSBundle mainBundle] bundleIdentifier] != nil;
+	// UserNotifications arrived in 10.14 and the deployment target is older, so
+	// every use of it is inside an @available guard. On anything older the
+	// framework is simply absent and the caller keeps the old path.
+	if (@available(macOS 10.14, *)) {
+		return [[NSBundle mainBundle] bundleIdentifier] != nil;
+	}
+	return false;
 }
 
 // peltonNotify posts one notification through UserNotifications.
@@ -29,36 +35,38 @@ static bool peltonCanNotify(void) {
 // means the prompt appears the first time a notification would actually be
 // shown rather than at launch.
 static void peltonNotify(const char *title, const char *body) {
-	NSString *t = [NSString stringWithUTF8String:title];
-	NSString *b = [NSString stringWithUTF8String:body];
-	UNUserNotificationCenter *center = [UNUserNotificationCenter currentNotificationCenter];
+	if (@available(macOS 10.14, *)) {
+		NSString *t = [NSString stringWithUTF8String:title];
+		NSString *b = [NSString stringWithUTF8String:body];
+		UNUserNotificationCenter *center = [UNUserNotificationCenter currentNotificationCenter];
 
-	[center requestAuthorizationWithOptions:UNAuthorizationOptionAlert
-	                      completionHandler:^(BOOL granted, NSError *error) {
-		if (!granted) {
-			// the only signal there is: delivery is asynchronous and the Go
-			// caller has already returned. Without this a user whose
-			// notifications never arrive has nothing at all to look at.
-			NSLog(@"pelton: notification authorization denied: %@", error);
-			return;
-		}
-		UNMutableNotificationContent *content = [[UNMutableNotificationContent alloc] init];
-		content.title = t;
-		content.body = b;
-		// no sound: this change is about the icon, and what Pelton should make
-		// a noise about is its own question (#240).
-		UNNotificationRequest *request =
-		    [UNNotificationRequest requestWithIdentifier:[[NSUUID UUID] UUIDString]
-		                                         content:content
-		                                         trigger:nil];
-		[center addNotificationRequest:request
-		         withCompletionHandler:^(NSError *addError) {
-			if (addError != nil) {
-				NSLog(@"pelton: notification not posted: %@", addError);
+		[center requestAuthorizationWithOptions:UNAuthorizationOptionAlert
+		                      completionHandler:^(BOOL granted, NSError *error) {
+			if (!granted) {
+				// the only signal there is: delivery is asynchronous and the Go
+				// caller has already returned. Without this a user whose
+				// notifications never arrive has nothing at all to look at.
+				NSLog(@"pelton: notification authorization denied: %@", error);
+				return;
 			}
+			UNMutableNotificationContent *content = [[UNMutableNotificationContent alloc] init];
+			content.title = t;
+			content.body = b;
+			// no sound: this change is about the icon, and what Pelton should make
+			// a noise about is its own question (#240).
+			UNNotificationRequest *request =
+			    [UNNotificationRequest requestWithIdentifier:[[NSUUID UUID] UUIDString]
+			                                         content:content
+			                                         trigger:nil];
+			[center addNotificationRequest:request
+			         withCompletionHandler:^(NSError *addError) {
+				if (addError != nil) {
+					NSLog(@"pelton: notification not posted: %@", addError);
+				}
+			}];
+			[content release];
 		}];
-		[content release];
-	}];
+	}
 }
 */
 import "C"
@@ -76,7 +84,8 @@ import (
 // use the bundle icon on its own.
 //
 // A process with no bundle (a dev run, a cli tool) cannot use the framework at
-// all, so it keeps the old path. Delivery is asynchronous once handed over, so
+// all, and neither can macOS before 10.14, where it does not exist. Both keep
+// the old path and so keep the wrong icon. Delivery is asynchronous once handed over, so
 // a rejected authorization or a failed post is not reported back here; a
 // notification is not worth failing a sync over.
 func deliverNotification(title, body string) error {
