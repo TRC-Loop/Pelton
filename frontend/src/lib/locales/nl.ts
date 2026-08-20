@@ -801,6 +801,7 @@ const nl: Record<string, string> = {
   'external.hint': 'Integraties die Pelton verbinden met externe diensten en agents.',
   'mcp.title': 'MCP-server',
   'mcp.hint': 'Laat een AI-agent je e-mail lezen en doorzoeken via het Model Context Protocol. Alleen-lezen: versturen, verplaatsen of verwijderen kan niet. Standaard uit en draait alleen op je eigen apparaat.',
+  'mcp.injectionHint': 'E-mail is onbetrouwbare tekst. Een bericht kan zo geschreven zijn dat het op een instructie lijkt voor de agent die het leest. Pelton markeert alles wat het doorgeeft als onbetrouwbaar, maar een agent die ook tools heeft om te verzenden, kopen of verwijderen kan alsnog door een mail gestuurd worden. Geef hem waar mogelijk alleen leestools.',
   'mcp.running': 'Actief',
   'mcp.stopped': 'Gestopt',
   'mcp.port': 'Poort',

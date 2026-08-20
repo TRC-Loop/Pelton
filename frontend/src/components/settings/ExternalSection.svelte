@@ -150,6 +150,7 @@
       <ToggleSwitch checked={cfg.enabled} label={$t('mcp.title')} disabled={busy} on:change={(e) => onToggle(e.detail)} />
     </div>
     <p class="hint">{$t('mcp.hint')}</p>
+    <p class="hint">{$t('mcp.injectionHint')}</p>
 
     {#if cfg.enabled}
       <div class="servers">

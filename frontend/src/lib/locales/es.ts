@@ -801,6 +801,7 @@ const es: Record<string, string> = {
   'external.hint': 'Integraciones que conectan Pelton con servicios y agentes externos.',
   'mcp.title': 'Servidor MCP',
   'mcp.hint': 'Deja que un agente de IA lea y busque tu correo mediante el Model Context Protocol. Solo lectura: no puede enviar, mover ni eliminar nada. Desactivado por defecto y se ejecuta solo en tu equipo.',
+  'mcp.injectionHint': 'El correo es texto no fiable. Un mensaje puede estar escrito para parecer una instrucción al agente que lo lee. Pelton marca como no fiable todo lo que entrega, pero un agente que además tenga herramientas para enviar, comprar o borrar podría acabar dirigido por un correo. Dale herramientas de solo lectura si puedes.',
   'mcp.running': 'En ejecución',
   'mcp.stopped': 'Detenido',
   'mcp.port': 'Puerto',

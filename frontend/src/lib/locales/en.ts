@@ -801,6 +801,7 @@ const en: Record<string, string> = {
   'external.hint': 'Integrations that connect Pelton to outside services and agents.',
   'mcp.title': 'MCP server',
   'mcp.hint': 'Let an AI agent read and search your mail over the Model Context Protocol. Read-only: it cannot send, move or delete anything. Off by default, and it runs on your machine only.',
+  'mcp.injectionHint': 'Mail is untrusted text. A message can be written to look like an instruction to the agent reading it. Pelton labels everything it hands over as untrusted content, but an agent that also holds tools which can send, buy or delete things could still be steered by a mail it reads. Give it read-only tools if you can.',
   'mcp.running': 'Running',
   'mcp.stopped': 'Stopped',
   'mcp.port': 'Port',

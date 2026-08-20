@@ -801,6 +801,7 @@ const de: Record<string, string> = {
   'external.hint': 'Integrationen, die Pelton mit externen Diensten und Agenten verbinden.',
   'mcp.title': 'MCP-Server',
   'mcp.hint': 'Lass einen KI-Agenten deine E-Mails über das Model Context Protocol lesen und durchsuchen. Nur Lesezugriff: senden, verschieben oder löschen ist nicht möglich. Standardmäßig aus und läuft nur auf deinem Gerät.',
+  'mcp.injectionHint': 'E-Mails sind nicht vertrauenswürdiger Text. Eine Nachricht kann so geschrieben sein, dass sie für den lesenden Agenten wie eine Anweisung aussieht. Pelton kennzeichnet alles, was es herausgibt, als nicht vertrauenswürdig, aber ein Agent, der zusätzlich Werkzeuge zum Senden, Kaufen oder Löschen hat, könnte sich trotzdem von einer Mail steuern lassen. Gib ihm nach Möglichkeit nur lesende Werkzeuge.',
   'mcp.running': 'Läuft',
   'mcp.stopped': 'Gestoppt',
   'mcp.port': 'Port',
