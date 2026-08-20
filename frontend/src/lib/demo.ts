@@ -202,6 +202,7 @@ export function demoMessage(id: number): MessageDetail {
     bodyPlain: 'Hey, quick one about the potato shipment...',
     bodyQuote: 'Hey, quick one about the potato shipment...',
     bodyHtmlSafe: sharedBodyHtml,
+    phishing: { level: 'none' },
     unsubscribe: null,
     // the demo mail is not protected, so there is nothing to decrypt.
     pgpState: '',

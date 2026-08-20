@@ -61,6 +61,24 @@ type Message struct {
 	// SMIME describes the message's s/mime signature as verified when it was
 	// synced. The zero value means no signature, which is most mail.
 	SMIME SMIMESignature
+	// ReplyTo is the Reply-To header ('' when the message has none), and Auth
+	// is what the receiving server reported about spf, dkim and dmarc. Both are
+	// read at fetch time, since the raw headers are not kept afterwards. An
+	// empty Auth means the server said nothing, or the message predates the
+	// columns; neither is a failure.
+	ReplyTo string
+	Auth    MessageAuth
+}
+
+// MessageAuth is the stored Authentication-Results verdict for one message.
+// The domains are what the passing method vouched for, which is what alignment
+// against the visible From is judged on.
+type MessageAuth struct {
+	SPF        string
+	DKIM       string
+	DMARC      string
+	SPFDomain  string
+	DKIMDomain string
 }
 
 // SMIMESignature is a stored verification verdict. Status is '' for unsigned
@@ -137,14 +155,16 @@ INSERT INTO messages (
     account_id, folder_id, uid, message_id, subject, from_address, from_name,
     to_addresses, cc_addresses, date, flags, body_plain, body_html,
     has_attachments, size_bytes, list_unsubscribe, list_unsubscribe_post,
-    smime_status, smime_signer, smime_email, smime_issuer, smime_detail
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    smime_status, smime_signer, smime_email, smime_issuer, smime_detail,
+    reply_to, auth_spf, auth_dkim, auth_dmarc, auth_spf_domain, auth_dkim_domain
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 	res, err := ex.ExecContext(ctx, query,
 		m.AccountID, m.FolderID, m.UID, m.MessageID, m.Subject, m.FromAddress,
 		m.FromName, m.ToAddresses, m.CcAddresses, formatTime(m.Date), uint8(m.Flags),
 		m.BodyPlain, m.BodyHTML, boolToInt(m.HasAttachments), m.SizeBytes,
 		m.ListUnsubscribe, boolToInt(m.ListUnsubscribePost),
-		m.SMIME.Status, m.SMIME.Signer, m.SMIME.Email, m.SMIME.Issuer, m.SMIME.Detail)
+		m.SMIME.Status, m.SMIME.Signer, m.SMIME.Email, m.SMIME.Issuer, m.SMIME.Detail,
+		m.ReplyTo, m.Auth.SPF, m.Auth.DKIM, m.Auth.DMARC, m.Auth.SPFDomain, m.Auth.DKIMDomain)
 	if err != nil {
 		return 0, fmt.Errorf("storage: insert message uid %d: %w", m.UID, err)
 	}
@@ -244,7 +264,9 @@ SELECT id, account_id, folder_id, uid, message_id, subject, from_address,
        from_name, to_addresses, cc_addresses, date, flags, body_plain,
        body_html, has_attachments, size_bytes, flag_color, snooze_until,
        snooze_hidden, offline, list_unsubscribe, list_unsubscribe_post,
-       smime_status, smime_signer, smime_email, smime_issuer, smime_detail`
+       smime_status, smime_signer, smime_email, smime_issuer, smime_detail,
+       reply_to, auth_spf, auth_dkim, auth_dmarc, auth_spf_domain,
+       auth_dkim_domain`
 
 const selectMessageByID = selectMessageColumns + `
 FROM messages WHERE id = ?`
@@ -265,7 +287,8 @@ func scanMessage(row rowScanner) (*Message, error) {
 		&m.FlagColor, &m.SnoozeUntil, &snoozeHidden, &offline,
 		&m.ListUnsubscribe, &unsubPost,
 		&m.SMIME.Status, &m.SMIME.Signer, &m.SMIME.Email, &m.SMIME.Issuer,
-		&m.SMIME.Detail); err != nil {
+		&m.SMIME.Detail, &m.ReplyTo, &m.Auth.SPF, &m.Auth.DKIM, &m.Auth.DMARC,
+		&m.Auth.SPFDomain, &m.Auth.DKIMDomain); err != nil {
 		return nil, err
 	}
 	t, err := parseTime(date)

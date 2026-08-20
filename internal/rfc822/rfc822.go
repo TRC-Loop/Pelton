@@ -41,6 +41,11 @@ type Message struct {
 	// support via List-Unsubscribe-Post.
 	ListUnsubscribe     string
 	ListUnsubscribePost bool
+	// ReplyTo is the Reply-To header, and AuthResults every
+	// Authentication-Results header in the order the message carries them: the
+	// first was added by the receiving server and is the only trustworthy one.
+	ReplyTo     string
+	AuthResults []string
 	// Header is the message's top-level header, for the fields Pelton reads
 	// only in one place and so does not promote above (a client's own
 	// X- headers, for instance).
@@ -109,6 +114,8 @@ func reader(raw []byte) (*mail.Reader, error) {
 // unsubscribe headers.
 func parts(mr *mail.Reader, msg *Message) error {
 	msg.Header = mr.Header
+	msg.ReplyTo = addressList(&mr.Header, "Reply-To")
+	msg.AuthResults = headerValues(&mr.Header, "Authentication-Results")
 	msg.ListUnsubscribe = mr.Header.Get("List-Unsubscribe")
 	msg.ListUnsubscribePost = strings.Contains(strings.ToLower(mr.Header.Get("List-Unsubscribe-Post")), "one-click")
 
@@ -159,6 +166,24 @@ func parts(mr *mail.Reader, msg *Message) error {
 // how the imap path formats the server's ENVELOPE so both look the same in the
 // message list. An unparseable header falls back to its raw value rather than
 // dropping the sender entirely.
+// headerValues returns every occurrence of a header, in order. go-message only
+// exposes repeated fields through the field iterator, so Get is not enough for
+// a header a message can carry once per hop.
+func headerValues(h *mail.Header, key string) []string {
+	var out []string
+	fields := h.FieldsByKey(key)
+	for fields.Next() {
+		value, err := fields.Text()
+		if err != nil {
+			value = fields.Value()
+		}
+		if value = strings.TrimSpace(value); value != "" {
+			out = append(out, value)
+		}
+	}
+	return out
+}
+
 func addressList(h *mail.Header, key string) string {
 	addrs, err := h.AddressList(key)
 	if err != nil {

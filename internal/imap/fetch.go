@@ -54,6 +54,12 @@ type Message struct {
 	// support via List-Unsubscribe-Post.
 	ListUnsubscribe     string
 	ListUnsubscribePost bool
+	// ReplyTo is the Reply-To header value ('' when there is none), and
+	// AuthResults every Authentication-Results header in the order they appear.
+	// Both are read here because the raw bytes are dropped after storing, so
+	// nothing downstream can go back for them.
+	ReplyTo     string
+	AuthResults []string
 }
 
 // Attachment holds attachment metadata and its decoded content. It is the
@@ -230,5 +236,7 @@ func parseBody(raw []byte, msg *Message) error {
 	msg.Attachments = parsed.Attachments
 	msg.ListUnsubscribe = parsed.ListUnsubscribe
 	msg.ListUnsubscribePost = parsed.ListUnsubscribePost
+	msg.ReplyTo = parsed.ReplyTo
+	msg.AuthResults = parsed.AuthResults
 	return nil
 }

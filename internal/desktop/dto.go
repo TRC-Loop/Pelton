@@ -79,8 +79,8 @@ type UnifiedViewDTO struct {
 
 // MessageSummaryDTO is one row in the message list. It carries the badge data
 // (account email, folder name) so the list is self contained for unified views.
-// Auth is always "unavailable" for now: Authentication-Results parsing is a
-// documented backend follow-up (see bind_messages.go).
+// Auth is what the receiving server reported about spf/dkim/dmarc, or
+// "unavailable" when it reported nothing.
 type MessageSummaryDTO struct {
 	ID             int64  `json:"id"`
 	AccountID      int64  `json:"accountId"`
@@ -183,6 +183,10 @@ type MessageDetailDTO struct {
 	// rest of the remote content is loaded, unless the user turns detection off.
 	TrackingPixels []TrackingPixelDTO `json:"trackingPixels"`
 	Attachments    []AttachmentDTO    `json:"attachments"`
+	// Phishing is what the local checks made of the message: sender spoofing,
+	// authentication failures and links that do not go where they say (#206).
+	// Level "none" means nothing was found and the ui shows nothing.
+	Phishing PhishingDTO `json:"phishing"`
 	// PGPState is empty for ordinary mail, and otherwise says what happened when
 	// the message was opened: "open" (decrypted, body below is the plaintext),
 	// "locked" (a passphrase is needed), "nokey" (no imported key can open it)
@@ -204,12 +208,6 @@ type TrackingPixelDTO struct {
 	URL     string   `json:"url"`
 	Reasons []string `json:"reasons"`
 }
-
-// authUnavailable is the placeholder auth status. The backend does not yet parse
-// Authentication-Results headers into storage, so spf/dkim/dmarc are unknown.
-// TODO(backend): parse Authentication-Results during sync into a new column and
-// return a structured status here instead of this placeholder.
-const authUnavailable = "unavailable"
 
 // folder roles. These match storage's known folder name constants and the
 // special-use imap attributes.
@@ -336,7 +334,7 @@ func toSummaryDTO(m storage.Message, accountEmail, folderName string) MessageSum
 		Flagged:        m.Flags.Has(storage.FlagFlagged),
 		HasAttachments: m.HasAttachments,
 		PGP:            string(mailview.DetectPGP(m.BodyPlain, m.BodyHTML)),
-		Auth:           authUnavailable,
+		Auth:           authStatus(m.Auth),
 		FlagColor:      m.FlagColor,
 		Offline:        m.Offline,
 		SnoozeUntil:    m.SnoozeUntil,

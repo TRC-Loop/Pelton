@@ -52,6 +52,9 @@ type App struct {
 	// searchMu serializes index backfills so a startup pass and a post-sync pass
 	// do not advance the watermark concurrently.
 	searchMu sync.Mutex
+	// contacts caches the address book the phishing checks compare senders
+	// against, so reading down a folder does not requery it per message.
+	contacts correspondentCache
 	queue    *outbox.Queue
 	version  string
 	// channel is the build channel: "" for a normal build, storage.ChannelNightly

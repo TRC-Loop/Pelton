@@ -10,6 +10,7 @@ import (
 	"github.com/TRC-Loop/Pelton/internal/crypto"
 	pimap "github.com/TRC-Loop/Pelton/internal/imap"
 	"github.com/TRC-Loop/Pelton/internal/logging"
+	"github.com/TRC-Loop/Pelton/internal/phishing"
 	"github.com/TRC-Loop/Pelton/internal/storage"
 )
 
@@ -75,6 +76,12 @@ func (e *Engine) fetchAndStore(ctx context.Context, folder storage.Folder, uid u
 		ListUnsubscribe:     msg.ListUnsubscribe,
 		ListUnsubscribePost: msg.ListUnsubscribePost,
 
+		// parsed here for the same reason as the signature below: the headers
+		// are gone once the message is stored, so a later check would have to
+		// refetch and would report nothing offline.
+		ReplyTo: msg.ReplyTo,
+		Auth:    storedAuth(msg.AuthResults),
+
 		// verified here because this is the only place the raw bytes exist: they
 		// are not cached, so a later check would have to refetch the message and
 		// would report nothing at all offline.
@@ -129,6 +136,20 @@ func (e *Engine) deleteLocal(ctx context.Context, folder storage.Folder, state s
 		return fmt.Errorf("sync: remove attachment files for uid %d: %w", state.UID, err)
 	}
 	return nil
+}
+
+// storedAuth folds the message's Authentication-Results headers into the
+// columns. Nothing is inferred: a header that says nothing about a method
+// leaves that field empty, which reads as unknown rather than as a failure.
+func storedAuth(headers []string) storage.MessageAuth {
+	auth := phishing.ParseAuth(headers)
+	return storage.MessageAuth{
+		SPF:        auth.SPF,
+		DKIM:       auth.DKIM,
+		DMARC:      auth.DMARC,
+		SPFDomain:  auth.SPFDomain,
+		DKIMDomain: auth.DKIMDomain,
+	}
 }
 
 // verifySignature checks a freshly fetched message's s/mime signature. Mail
