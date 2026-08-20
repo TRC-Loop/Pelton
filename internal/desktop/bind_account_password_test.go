@@ -69,6 +69,17 @@ func TestEnvBackedAccountDoesNotNeedAPassword(t *testing.T) {
 	}
 }
 
+// Local Folders holds imported mail and has no server, so an empty keyring is
+// its normal state rather than a missing password.
+func TestLocalAccountDoesNotNeedAPassword(t *testing.T) {
+	a := newAccountTestApp(t)
+	acct := storage.Account{ID: 1, Email: storage.LocalAccountEmail, Local: true}
+
+	if a.needsPassword(acct, credentials.ErrNotFound) {
+		t.Error("the Local Folders account was reported as needing a password")
+	}
+}
+
 func TestEmptyPasswordIsRefused(t *testing.T) {
 	a := newAccountTestApp(t)
 	if err := a.SetAccountPassword(1, ""); !errors.Is(err, errEmptyPassword) {

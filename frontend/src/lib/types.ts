@@ -35,6 +35,9 @@ export interface Account {
   // how this account starts a new message: '' unprotected, 'sign', or 'auto'
   // to sign and encrypt whenever every recipient has a key.
   pgpDefault: string
+  // the user told the missing-password prompt to stop asking about this
+  // account. It still cannot sync; the ui marks it instead of interrupting.
+  passwordPromptDismissed: boolean
 }
 
 // ThunderbirdAccount is one account read out of a Thunderbird profile. There is

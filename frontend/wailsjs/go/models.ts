@@ -17,6 +17,7 @@ export namespace desktop {
 	    exportSubfolders: string;
 	    exportNameTemplate: string;
 	    pgpDefault: string;
+	    passwordPromptDismissed: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new AccountDTO(source);
@@ -40,6 +41,7 @@ export namespace desktop {
 	        this.exportSubfolders = source["exportSubfolders"];
 	        this.exportNameTemplate = source["exportNameTemplate"];
 	        this.pgpDefault = source["pgpDefault"];
+	        this.passwordPromptDismissed = source["passwordPromptDismissed"];
 	    }
 	}
 	export class AccountSignaturesDTO {

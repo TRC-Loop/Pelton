@@ -2,7 +2,7 @@
   // one account's section in the sidebar: a header with the address and the full
   // folder tree below it. the header chevron collapses the whole account. root
   // folders are those without a parent; the rest nest via FolderNode recursion.
-  import { IconChevronRight, IconFolderPlus } from '@tabler/icons-svelte'
+  import { IconChevronRight, IconFolderPlus, IconAlertTriangle } from '@tabler/icons-svelte'
   import FolderNode from './FolderNode.svelte'
   import DragGrip from './DragGrip.svelte'
   import { prefs } from '../../stores/prefs'
@@ -11,6 +11,7 @@
   import { folderDragAccount, startFolderDrag, endFolderDrag } from '../../stores/sidebardrag'
   import { reorder, type ReorderDetail } from '../../lib/reorder'
   import { refreshSidebar } from '../../stores/accounts'
+  import { missingPassword, askForPassword } from '../../stores/passwordprompt'
   import { reorderFolders } from '../../lib/api'
   import { toastError, errorMessage } from '../../stores/toast'
   import type { Account, Folder } from '../../lib/types'
@@ -47,6 +48,10 @@
     : $prefs.showAccountEmail
       ? account.email
       : account.displayName || account.email
+
+  // an account with nothing in the keyring cannot sync at all. The prompt can be
+  // dismissed (#290), so this marker is what is left saying so.
+  $: needsPassword = $missingPassword.has(account.id)
 </script>
 
 <section class="account" class:dimmed data-reorder-id={account.id}>
@@ -62,6 +67,17 @@
       <span class="account-caret" aria-hidden="true"><IconChevronRight size={13} stroke={1.9} /></span>
       <span class="account-name">{label}</span>
     </button>
+    {#if needsPassword}
+      <button
+        type="button"
+        class="needs-password"
+        title={$t('mailboxes.passwordPrompt.marker')}
+        aria-label={$t('mailboxes.passwordPrompt.marker')}
+        on:click={() => askForPassword(account)}
+      >
+        <IconAlertTriangle size={14} stroke={1.9} />
+      </button>
+    {/if}
     <button
       type="button"
       class="new-folder"
@@ -128,6 +144,25 @@
 
   .account-row:hover {
     background: var(--surface-hover);
+  }
+
+  /* unlike the new-folder button this one is always visible: it reports a state
+     the user has to be able to see without hovering. */
+  .needs-password {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    padding: var(--space-1);
+    border: none;
+    background: transparent;
+    color: var(--warning);
+    border-radius: var(--radius-control);
+    cursor: var(--cursor-action);
+  }
+
+  .needs-password:hover {
+    background: var(--surface-sunken);
   }
 
   .new-folder {

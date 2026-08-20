@@ -57,7 +57,6 @@
     closeWindow,
     getLogStatus,
     openCrashReport,
-    accountsNeedingPassword,
     titleBarDoubleClick,
     setDockBadge,
   } from './lib/api'
@@ -119,6 +118,12 @@
     paletteQuery,
   } from './stores/palette'
   import AccountPasswordDialog from './components/settings/AccountPasswordDialog.svelte'
+  import {
+    passwordPrompt,
+    answerPasswordPrompt,
+    promptForMissingPasswords,
+    refreshMissingPasswords,
+  } from './stores/passwordprompt'
   import type { EditorMode, MessageSummary, ThemePref, ThemeInfo, Folder, Account } from './lib/types'
 
   let settingsOpen = false
@@ -258,6 +263,9 @@
     void loadSignatures()
     void loadVIPSenders()
     void loadVirusTotalConfig()
+    // the sidebar marks mailboxes with no stored password, so the markers have
+    // to be known before the first sync raises any prompt.
+    void refreshMissingPasswords()
     initProgress()
     await loadSidebar()
     // the sidebar data has to be here first: a configured or remembered folder
@@ -406,49 +414,6 @@
       const draft = pendingMailto
       pendingMailto = null
       openComposeWith(composeAccountId() as number, editorMode, draft)
-    }
-  }
-
-  // the account currently being asked for a password, and the resolver waiting
-  // on the answer. Only one prompt is shown at a time.
-  let passwordPromptAccount: Account | null = null
-  let passwordPromptResolve: ((saved: boolean) => void) | null = null
-  // accounts the user skipped this session, so cancelling once does not mean
-  // being asked again on every automatic sync.
-  const skippedPasswordAccounts = new Set<number>()
-
-  function askForPassword(account: Account): Promise<boolean> {
-    passwordPromptAccount = account
-    return new Promise<boolean>((resolve) => {
-      passwordPromptResolve = resolve
-    })
-  }
-
-  function onPasswordPromptDone(saved: boolean): void {
-    const resolve = passwordPromptResolve
-    passwordPromptAccount = null
-    passwordPromptResolve = null
-    resolve?.(saved)
-  }
-
-  // promptForMissingPasswords asks about every account that has no stored
-  // password before a sync runs. An account imported from another mail client
-  // arrives without one, and previously that meant it silently never synced.
-  async function promptForMissingPasswords(): Promise<void> {
-    let pending: Account[]
-    try {
-      pending = await accountsNeedingPassword()
-    } catch {
-      // the sync itself will report whatever is actually wrong.
-      return
-    }
-    for (const account of pending) {
-      if (skippedPasswordAccounts.has(account.id)) {
-        continue
-      }
-      if (!(await askForPassword(account))) {
-        skippedPasswordAccounts.add(account.id)
-      }
     }
   }
 
@@ -1237,7 +1202,7 @@
 
 <CommandPalette commands={paletteCommands} mail={paletteMailCommands} />
 
-<AccountPasswordDialog account={passwordPromptAccount} onDone={onPasswordPromptDone} />
+<AccountPasswordDialog account={$passwordPrompt} onDone={answerPasswordPrompt} />
 
 <style>
   .shell {

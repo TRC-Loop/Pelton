@@ -111,10 +111,30 @@ func (a *App) SetAccountPassword(accountID int64, password string) error {
 	if existing, err := credentials.Load(accountID); err == nil && existing.Method == credentials.MethodOAuth {
 		return errAccountUsesOAuth
 	}
-	return credentials.Store(accountID, credentials.Secret{
+	if err := credentials.Store(accountID, credentials.Secret{
 		Method:   credentials.MethodPassword,
 		Password: password,
-	})
+	}); err != nil {
+		return err
+	}
+	// a dismissal answers "stop asking about this missing password". The
+	// password is no longer missing, so the next one that goes missing gets its
+	// own prompt rather than inheriting this answer.
+	if err := a.store.SetAccountPasswordPromptDismissed(a.ctx, accountID, false); err != nil {
+		a.log.Error("clear password prompt dismissal", "account", accountID, "err", err)
+	}
+	return nil
+}
+
+// DismissPasswordPrompt stops the missing-password prompt from interrupting for
+// one account. The account still cannot sync without a password; the ui marks
+// it in the sidebar and in Settings instead, and clicking that marker brings the
+// prompt back.
+func (a *App) DismissPasswordPrompt(accountID int64) error {
+	if err := a.ready(); err != nil {
+		return err
+	}
+	return a.store.SetAccountPasswordPromptDismissed(a.ctx, accountID, true)
 }
 
 // needsPassword decides whether one account should be prompted for, given the
@@ -126,6 +146,11 @@ func (a *App) SetAccountPassword(accountID int64, password string) error {
 // password they already have.
 func (a *App) needsPassword(acct storage.Account, secretErr error) bool {
 	if !errors.Is(secretErr, credentials.ErrNotFound) {
+		return false
+	}
+	// Local Folders has no server to log in to, so it has no secret and is not
+	// missing one.
+	if acct.Local {
 		return false
 	}
 	// the legacy cli account takes its password from the environment and is
@@ -140,6 +165,10 @@ func (a *App) needsPassword(acct storage.Account, secretErr error) bool {
 // password was ever stored for them. Importing from another mail client creates
 // the account but cannot take its password, so those arrive here; the frontend
 // prompts for one instead of letting every sync fail quietly.
+//
+// Accounts whose prompt was dismissed stay in the list. They are still broken,
+// and the ui needs them to place the marker that says so; it reads
+// PasswordPromptDismissed to decide which ones to actually ask about.
 func (a *App) AccountsNeedingPassword() ([]AccountDTO, error) {
 	if err := a.ready(); err != nil {
 		return nil, err

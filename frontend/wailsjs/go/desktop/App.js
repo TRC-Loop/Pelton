@@ -138,6 +138,10 @@ export function DismissCrashReport() {
   return window['go']['desktop']['App']['DismissCrashReport']();
 }
 
+export function DismissPasswordPrompt(arg1) {
+  return window['go']['desktop']['App']['DismissPasswordPrompt'](arg1);
+}
+
 export function DownloadMessageOffline(arg1) {
   return window['go']['desktop']['App']['DownloadMessageOffline'](arg1);
 }

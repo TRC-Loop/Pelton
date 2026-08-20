@@ -70,6 +70,8 @@ export function DiscoverConfig(arg1:string):Promise<desktop.DiscoveredDTO>;
 
 export function DismissCrashReport():Promise<void>;
 
+export function DismissPasswordPrompt(arg1:number):Promise<void>;
+
 export function DownloadMessageOffline(arg1:number):Promise<void>;
 
 export function DownloadRange(arg1:string,arg2:boolean):Promise<void>;

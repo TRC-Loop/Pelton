@@ -143,9 +143,22 @@ export function setAccountPassword(accountId: number, password: string): Promise
 }
 
 // accountsNeedingPassword lists accounts with no stored password, which is the
-// state an account imported from another mail client arrives in.
+// state an account imported from another mail client arrives in. Accounts whose
+// prompt was dismissed are still listed, so the ui can mark them.
 export function accountsNeedingPassword(): Promise<Account[]> {
+  if (isDemoActive()) {
+    return Promise.resolve([])
+  }
   return App.AccountsNeedingPassword().then((list) => (list ?? []) as unknown as Account[])
+}
+
+// dismissPasswordPrompt stops the missing-password prompt from interrupting for
+// one account. The mailbox is marked in the sidebar and in Settings instead.
+export function dismissPasswordPrompt(accountId: number): Promise<void> {
+  if (isDemoActive()) {
+    return Promise.resolve()
+  }
+  return App.DismissPasswordPrompt(accountId)
 }
 
 // deleteAccount removes an account, its cached mail and its keyring secret.

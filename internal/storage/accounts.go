@@ -46,6 +46,10 @@ type Account struct {
 	// 'sign' to sign when the account has a key, 'auto' to sign and encrypt
 	// whenever every recipient has one.
 	PGPDefault string
+	// PasswordPromptDismissed records that the user asked the missing-password
+	// prompt to stop interrupting for this account. The account still cannot
+	// sync; the ui marks it instead of asking. Storing a password clears it.
+	PasswordPromptDismissed bool
 	// Local marks the Local Folders account, which holds imported mail and has
 	// no server behind it. Sync, idle and the mailbox backup all skip it, and
 	// its Email is LocalAccountEmail rather than a real address.
@@ -66,7 +70,7 @@ const LocalAccountName = "Local Folders"
 const accountColumns = `id, email, display_name, username, imap_host, imap_port,
        smtp_host, smtp_port, imap_tls, smtp_tls, created_at, position, is_local,
        export_on_archive, export_dir, export_subfolders, export_name_template,
-       pgp_default`
+       pgp_default, password_prompt_dismissed`
 
 // CreateAccount inserts an account and returns its new id. CreatedAt is set to
 // now if the caller left it zero.
@@ -186,6 +190,16 @@ func (d *DB) SetAccountPGPDefault(ctx context.Context, id int64, value string) e
 	return requireOneRow(res, ErrAccountNotFound)
 }
 
+// SetAccountPasswordPromptDismissed records whether the missing-password prompt
+// should stay quiet for an account.
+func (d *DB) SetAccountPasswordPromptDismissed(ctx context.Context, id int64, dismissed bool) error {
+	res, err := d.sql.ExecContext(ctx, `UPDATE accounts SET password_prompt_dismissed = ? WHERE id = ?`, boolToInt(dismissed), id)
+	if err != nil {
+		return fmt.Errorf("storage: set account %d password prompt dismissed: %w", id, err)
+	}
+	return requireOneRow(res, ErrAccountNotFound)
+}
+
 // SetAccountPositions rewrites the sidebar order of the account sections in one
 // transaction. Accounts not listed keep their current position. Positions start
 // at 1, since 0 means "never reordered".
@@ -200,18 +214,20 @@ type rowScanner interface {
 
 func scanAccount(row rowScanner) (*Account, error) {
 	var (
-		a        Account
-		created  string
-		local    int
-		exportOn int
+		a         Account
+		created   string
+		local     int
+		exportOn  int
+		dismissed int
 	)
 	if err := row.Scan(&a.ID, &a.Email, &a.DisplayName, &a.Username, &a.IMAPHost, &a.IMAPPort,
 		&a.SMTPHost, &a.SMTPPort, &a.IMAPTLS, &a.SMTPTLS, &created, &a.Position, &local,
 		&exportOn, &a.ExportDir, &a.ExportSubfolders, &a.ExportNameTemplate,
-		&a.PGPDefault); err != nil {
+		&a.PGPDefault, &dismissed); err != nil {
 		return nil, err
 	}
 	a.ExportOnArchive = exportOn != 0
+	a.PasswordPromptDismissed = dismissed != 0
 	t, err := parseTime(created)
 	if err != nil {
 		return nil, err
