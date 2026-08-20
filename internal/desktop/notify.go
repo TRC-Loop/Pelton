@@ -4,15 +4,15 @@ import (
 	"strings"
 
 	"github.com/TRC-Loop/Pelton/internal/storage"
-	"github.com/gen2brain/beeep"
 )
 
-// Native OS notifications for new mail (#126). beeep raises a real notification
-// on macOS (Notification Center), Windows (toast) and Linux (dbus). It has no
-// per-notification click callback, so a click does not open a specific message;
-// exact click-to-open would need platform-specific code and is tracked
-// separately. Notifications only fire for INBOX so sent/archived mail moved by
-// a sync never notifies.
+// Native OS notifications for new mail (#126). Delivery is per platform:
+// UserNotifications on macOS so the alert carries the app's own icon (#143),
+// and beeep elsewhere for a Windows toast or a Linux dbus notification. Neither
+// has a per-notification click callback, so a click does not open a specific
+// message; exact click-to-open would need more platform-specific code and is
+// tracked separately. Notifications only fire for INBOX so sent/archived mail
+// moved by a sync never notifies.
 
 // notifyStrings holds the localizable text of a new-mail notification. Like the
 // native menu (see menu_i18n.go), notifications are built in the Go process, so
@@ -104,8 +104,9 @@ func notifyBody(m *storage.Message, s notifyStrings) string {
 
 // sendNotification raises one native OS notification, logging (not failing) on
 // error so a notification backend that is missing or busy never disrupts sync.
+// The delivery itself is per platform: see notify_darwin.go and notify_other.go.
 func (a *App) sendNotification(title, body string) {
-	if err := beeep.Notify(title, body, ""); err != nil {
+	if err := deliverNotification(title, body); err != nil {
 		a.log.Warn("notify", "err", err)
 	}
 }
