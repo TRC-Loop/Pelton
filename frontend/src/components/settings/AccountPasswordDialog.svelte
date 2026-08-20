@@ -24,6 +24,16 @@
   let busy = false
   let seededFor: unknown = null
 
+  // the address, not the display name. Several mailboxes named "Work" and
+  // "Private" all look the same in this prompt, and the address is the part
+  // that says which login is being asked for, so it is the part that must
+  // never be the one dropped. The name comes along when there is one and it
+  // adds something.
+  $: who =
+    account && account.displayName && account.displayName !== account.email
+      ? `${account.displayName} (${account.email})`
+      : (account?.email ?? '')
+
   $: if (account !== seededFor) {
     seededFor = account
     password = ''
@@ -81,7 +91,7 @@
     </header>
 
     <p class="lead">
-      {$t('mailboxes.passwordPrompt.body').replace('{email}', account.displayName || account.email)}
+      {$t('mailboxes.passwordPrompt.body').replace('{email}', who)}
     </p>
 
     <form on:submit|preventDefault={submit}>
