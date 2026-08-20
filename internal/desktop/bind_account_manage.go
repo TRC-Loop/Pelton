@@ -46,6 +46,9 @@ type UpdateAccountRequest struct {
 	ExportDir          string `json:"exportDir"`
 	ExportSubfolders   string `json:"exportSubfolders"`
 	ExportNameTemplate string `json:"exportNameTemplate"`
+	// PGPDefault is the account's starting point for protecting outgoing mail:
+	// '' unprotected, 'sign', or 'auto'. An unknown value is treated as ''.
+	PGPDefault string `json:"pgpDefault"`
 }
 
 // UpdateAccount persists edits to an account's display name and server settings.
@@ -80,6 +83,10 @@ func (a *App) UpdateAccount(req UpdateAccountRequest) (AccountDTO, error) {
 	account.ExportNameTemplate = req.ExportNameTemplate
 	if err := a.store.SetAccountArchiveExport(a.ctx, account.ID, account.ExportOnArchive,
 		account.ExportDir, account.ExportSubfolders, account.ExportNameTemplate); err != nil {
+		return AccountDTO{}, err
+	}
+	account.PGPDefault = validPGPDefault(req.PGPDefault)
+	if err := a.store.SetAccountPGPDefault(a.ctx, account.ID, account.PGPDefault); err != nil {
 		return AccountDTO{}, err
 	}
 	if req.Password != "" {

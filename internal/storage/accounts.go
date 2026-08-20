@@ -42,6 +42,10 @@ type Account struct {
 	ExportDir          string
 	ExportSubfolders   string
 	ExportNameTemplate string
+	// PGPDefault is how this account starts a new message: '' unprotected,
+	// 'sign' to sign when the account has a key, 'auto' to sign and encrypt
+	// whenever every recipient has one.
+	PGPDefault string
 	// Local marks the Local Folders account, which holds imported mail and has
 	// no server behind it. Sync, idle and the mailbox backup all skip it, and
 	// its Email is LocalAccountEmail rather than a real address.
@@ -61,7 +65,8 @@ const LocalAccountName = "Local Folders"
 // scanAccount reads them.
 const accountColumns = `id, email, display_name, username, imap_host, imap_port,
        smtp_host, smtp_port, imap_tls, smtp_tls, created_at, position, is_local,
-       export_on_archive, export_dir, export_subfolders, export_name_template`
+       export_on_archive, export_dir, export_subfolders, export_name_template,
+       pgp_default`
 
 // CreateAccount inserts an account and returns its new id. CreatedAt is set to
 // now if the caller left it zero.
@@ -171,6 +176,16 @@ WHERE id = ?`
 	return requireOneRow(res, ErrAccountNotFound)
 }
 
+// SetAccountPGPDefault stores how an account starts a new message: ” for
+// unprotected, 'sign' or 'auto'. Validating the value is the caller's job.
+func (d *DB) SetAccountPGPDefault(ctx context.Context, id int64, value string) error {
+	res, err := d.sql.ExecContext(ctx, `UPDATE accounts SET pgp_default = ? WHERE id = ?`, value, id)
+	if err != nil {
+		return fmt.Errorf("storage: set account %d pgp default: %w", id, err)
+	}
+	return requireOneRow(res, ErrAccountNotFound)
+}
+
 // SetAccountPositions rewrites the sidebar order of the account sections in one
 // transaction. Accounts not listed keep their current position. Positions start
 // at 1, since 0 means "never reordered".
@@ -192,7 +207,8 @@ func scanAccount(row rowScanner) (*Account, error) {
 	)
 	if err := row.Scan(&a.ID, &a.Email, &a.DisplayName, &a.Username, &a.IMAPHost, &a.IMAPPort,
 		&a.SMTPHost, &a.SMTPPort, &a.IMAPTLS, &a.SMTPTLS, &created, &a.Position, &local,
-		&exportOn, &a.ExportDir, &a.ExportSubfolders, &a.ExportNameTemplate); err != nil {
+		&exportOn, &a.ExportDir, &a.ExportSubfolders, &a.ExportNameTemplate,
+		&a.PGPDefault); err != nil {
 		return nil, err
 	}
 	a.ExportOnArchive = exportOn != 0

@@ -59,6 +59,11 @@ export interface ComposeSession {
   // signaturesApplied guards the one-time insertion of the account's default
   // header/footer when a fresh compose opens, so editing never re-inserts them.
   signaturesApplied: boolean
+  // protection is the pgp treatment for this message: 'none', 'sign',
+  // 'encrypt' or 'signencrypt'. It starts from the account default resolved
+  // against the keys actually available, and the user can change it per
+  // message.
+  protection: string
 }
 
 export const composeSessions = writable<ComposeSession[]>([])
@@ -85,6 +90,7 @@ function blankSession(accountId: number, mode: EditorMode): ComposeSession {
     fullscreen: defaultFullscreen,
     minimized: false,
     signaturesApplied: false,
+    protection: 'none',
   }
 }
 

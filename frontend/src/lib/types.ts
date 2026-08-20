@@ -32,6 +32,9 @@ export interface Account {
   exportDir: string
   exportSubfolders: string
   exportNameTemplate: string
+  // how this account starts a new message: '' unprotected, 'sign', or 'auto'
+  // to sign and encrypt whenever every recipient has a key.
+  pgpDefault: string
 }
 
 // ThunderbirdAccount is one account read out of a Thunderbird profile. There is
@@ -270,12 +273,36 @@ export interface ComposeRequest {
   // optional RFC3339 timestamp for a scheduled ("send later") send. empty
   // means send immediately, subject to the undo-send delay.
   sendAt: string
+  // pgp treatment for this message: 'none', 'sign', 'encrypt' or
+  // 'signencrypt'. The send refuses rather than falling back to plaintext when
+  // it cannot do what was asked.
+  protection: string
+}
+
+// ProtectionStatus is what the compose window needs to offer the pgp controls
+// honestly for one account and one set of recipients.
+export interface ProtectionStatus {
+  canSign: boolean
+  // signerLocked means signing will ask for a passphrase before it can send.
+  signerLocked: boolean
+  canEncrypt: boolean
+  recipients: { email: string; hasKey: boolean }[]
+  // the account's configured starting point, and what this message should
+  // start as given the keys available.
+  default: string
+  suggested: string
 }
 
 export interface Draft {
   id: number
   savedAt: string
   request: ComposeRequest
+  // locked is true for a draft of an encrypted message that could not be
+  // opened with a passphrase Pelton currently holds. Its request is empty
+  // until unsealDraft opens it.
+  locked: boolean
+  accountId: number
+  protection: string
 }
 
 export interface OutboxRow {

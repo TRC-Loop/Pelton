@@ -49,6 +49,7 @@ const accounts: Account[] = [
     exportDir: '',
     exportSubfolders: 'none',
     exportNameTemplate: '',
+    pgpDefault: '',
   },
   {
     id: 2,
@@ -66,6 +67,7 @@ const accounts: Account[] = [
     exportDir: '',
     exportSubfolders: 'none',
     exportNameTemplate: '',
+    pgpDefault: '',
   },
 ]
 

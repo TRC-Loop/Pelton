@@ -208,6 +208,14 @@ func unlock(ent *openpgp.Entity, passphrase []byte) error {
 	return nil
 }
 
+// KeyLocked reports whether an entity's private material still needs a
+// passphrase. The compose window asks before offering to sign with it, so the
+// user is prompted at the point they chose to protect a message rather than at
+// the point it fails to go out.
+func KeyLocked(ent *openpgp.Entity) bool {
+	return entityLocked(ent)
+}
+
 // entityLocked reports whether the primary key or any subkey is still encrypted.
 func entityLocked(ent *openpgp.Entity) bool {
 	if ent.PrivateKey != nil && ent.PrivateKey.Encrypted {

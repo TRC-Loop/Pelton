@@ -37,6 +37,9 @@
   import { prefs } from '../../stores/prefs'
   import { bodyFontStack } from '../../lib/fonts'
   import { buildRequest, hasRecipients } from '../../lib/mailcompose'
+  import ProtectionPicker from './ProtectionPicker.svelte'
+  import { composeProtectionStatus } from '../../lib/api'
+  import type { ProtectionStatus } from '../../lib/types'
   import { atTime, addDays, nextWeekday } from '../../lib/datepresets'
   import { errorMessage, toastError, toastSuccess } from '../../stores/toast'
   import type CodeMirrorEditor from './CodeMirrorEditor.svelte'
@@ -52,6 +55,17 @@
   export let session: ComposeSession
 
   let sending = false
+  // what signing and encryption are possible for this account and the current
+  // recipients. It is refreshed as the recipient list changes, because a
+  // control that offers encryption to somebody with no key is a control that
+  // fails at send time.
+  let protectionStatus: ProtectionStatus | null = null
+  // the recipient list the status was fetched for, so an unchanged list does
+  // not refetch on every keystroke elsewhere in the form.
+  let statusFor = ''
+  // suggestedApplied keeps the account default from overriding a choice the
+  // user made: it is a starting point, once, not a correction.
+  let suggestedApplied = false
   let preview = false
   let confirmClose = false
 
@@ -338,6 +352,46 @@
   // hasContent decides whether closing needs a save/discard prompt: any
   // recipient, subject or body text counts, but a session that was only ever
   // opened and never touched should close silently.
+  // recipientList is every address currently typed in, which is what the
+  // status is about.
+  $: recipientList = [session.to, session.cc, session.bcc]
+    .join(',')
+    .split(/[,;]/)
+    .map((part) => {
+      const match = part.match(/<([^>]+)>/)
+      return (match ? match[1] : part).trim().toLowerCase()
+    })
+    .filter((email) => email.includes('@'))
+
+  $: void refreshProtection(session.accountId, recipientList.join(','))
+
+  // refreshProtection asks the backend what is possible. A failure leaves the
+  // controls as they were rather than pretending nothing can be protected.
+  async function refreshProtection(accountId: number, key: string): Promise<void> {
+    if (key === statusFor && protectionStatus !== null) {
+      return
+    }
+    statusFor = key
+    try {
+      const status = await composeProtectionStatus(accountId, recipientList)
+      protectionStatus = status as unknown as ProtectionStatus
+      if (!suggestedApplied) {
+        suggestedApplied = true
+        if (status.suggested !== 'none') {
+          updateCompose(session.id, { protection: status.suggested })
+        }
+      }
+      // the recipient list changed and encryption is no longer possible: drop
+      // it rather than leaving a control on that would fail the send.
+      if (!protectionStatus.canEncrypt && (session.protection === 'encrypt' || session.protection === 'signencrypt')) {
+        updateCompose(session.id, { protection: session.protection === 'signencrypt' ? 'sign' : 'none' })
+      }
+    } catch {
+      // leave whatever was last known; the send still refuses on its own if
+      // the keys are not there.
+    }
+  }
+
   function hasContent(): boolean {
     return (
       session.to.trim().length > 0 ||
@@ -511,6 +565,11 @@
           <IconChevronDown size={14} stroke={1.8} />
         </button>
       </div>
+      <ProtectionPicker
+        protection={session.protection}
+        status={protectionStatus}
+        on:change={(e) => updateCompose(session.id, { protection: e.detail })}
+      />
       <button type="button" class="save" on:click={save}>
         <IconDeviceFloppy size={15} stroke={1.6} />
         {$t('action.saveDraft')}
