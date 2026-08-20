@@ -206,6 +206,9 @@ type fakeClient struct {
 	// uidValidity defaults to 1; a test changes it to simulate a server-side
 	// mailbox reset.
 	uidValidity uint32
+	// deleted records every uid handed to DeleteMessages, so a test can assert
+	// that a sync only ever asks to delete what the user deleted.
+	deleted []imap.UID
 }
 
 func (c *fakeClient) Select(string) (*pimap.Mailbox, error) {
@@ -230,8 +233,10 @@ func (c *fakeClient) FetchMessage(uid imap.UID) (*pimap.Message, error) {
 }
 
 func (c *fakeClient) AddFlags(imap.UID, ...imap.Flag) error { return nil }
-func (c *fakeClient) MarkDeleted(...imap.UID) error         { return nil }
-func (c *fakeClient) Expunge(...imap.UID) error             { return nil }
+func (c *fakeClient) DeleteMessages(uids ...imap.UID) error {
+	c.deleted = append(c.deleted, uids...)
+	return nil
+}
 
 func newSyncTestFolder(t *testing.T) (*storage.DB, storage.Folder) {
 	t.Helper()

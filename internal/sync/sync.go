@@ -19,8 +19,7 @@ type mailClient interface {
 	FetchAllFlags() ([]pimap.MessageHeader, error)
 	FetchMessage(uid imap.UID) (*pimap.Message, error)
 	AddFlags(uid imap.UID, flags ...imap.Flag) error
-	MarkDeleted(uids ...imap.UID) error
-	Expunge(uids ...imap.UID) error
+	DeleteMessages(uids ...imap.UID) error
 }
 
 // Engine orchestrates one account's imap connection and the local store. It is
