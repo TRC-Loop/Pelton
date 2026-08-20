@@ -578,12 +578,12 @@ export function SetWindowTitle(arg1) {
   return window['go']['desktop']['App']['SetWindowTitle'](arg1);
 }
 
-export function StartAccountSync(arg1) {
-  return window['go']['desktop']['App']['StartAccountSync'](arg1);
-}
-
 export function SnoozeMessage(arg1, arg2, arg3) {
   return window['go']['desktop']['App']['SnoozeMessage'](arg1, arg2, arg3);
+}
+
+export function StartAccountSync(arg1) {
+  return window['go']['desktop']['App']['StartAccountSync'](arg1);
 }
 
 export function SystemColorScheme() {

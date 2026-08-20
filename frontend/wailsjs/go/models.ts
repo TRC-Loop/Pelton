@@ -9,15 +9,14 @@ export namespace desktop {
 	    imapPort: number;
 	    smtpHost: string;
 	    smtpPort: number;
+	    local: boolean;
 	    imapTls: string;
 	    smtpTls: string;
-	    local: boolean;
 	    exportOnArchive: boolean;
 	    exportDir: string;
 	    exportSubfolders: string;
 	    exportNameTemplate: string;
 	
-
 	    static createFrom(source: any = {}) {
 	        return new AccountDTO(source);
 	    }
@@ -32,9 +31,9 @@ export namespace desktop {
 	        this.imapPort = source["imapPort"];
 	        this.smtpHost = source["smtpHost"];
 	        this.smtpPort = source["smtpPort"];
+	        this.local = source["local"];
 	        this.imapTls = source["imapTls"];
 	        this.smtpTls = source["smtpTls"];
-	        this.local = source["local"];
 	        this.exportOnArchive = source["exportOnArchive"];
 	        this.exportDir = source["exportDir"];
 	        this.exportSubfolders = source["exportSubfolders"];
@@ -380,7 +379,7 @@ export namespace desktop {
 	    smtpTls: string;
 	    oauth: boolean;
 	    source: string;
-
+	
 	    static createFrom(source: any = {}) {
 	        return new DiscoveredDTO(source);
 	    }
@@ -633,6 +632,56 @@ export namespace desktop {
 	        this.done = source["done"];
 	    }
 	}
+	export class PhishingSignalDTO {
+	    kind: string;
+	    detail?: string;
+	    target?: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new PhishingSignalDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.kind = source["kind"];
+	        this.detail = source["detail"];
+	        this.target = source["target"];
+	    }
+	}
+	export class PhishingDTO {
+	    level: string;
+	    signals?: PhishingSignalDTO[];
+	    links?: string[];
+	
+	    static createFrom(source: any = {}) {
+	        return new PhishingDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.level = source["level"];
+	        this.signals = this.convertValues(source["signals"], PhishingSignalDTO);
+	        this.links = source["links"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
 	export class TrackingPixelDTO {
 	    host: string;
 	    url: string;
@@ -742,8 +791,8 @@ export namespace desktop {
 	        this.remoteHosts = source["remoteHosts"];
 	        this.trackingPixels = this.convertValues(source["trackingPixels"], TrackingPixelDTO);
 	        this.attachments = this.convertValues(source["attachments"], AttachmentDTO);
-	        this.pgpState = source["pgpState"];
 	        this.phishing = this.convertValues(source["phishing"], PhishingDTO);
+	        this.pgpState = source["pgpState"];
 	        this.unsubscribe = this.convertValues(source["unsubscribe"], UnsubscribeDTO);
 	    }
 	
@@ -994,56 +1043,8 @@ export namespace desktop {
 		    return a;
 		}
 	}
-	export class PhishingDTO {
-	    level: string;
-	    signals?: PhishingSignalDTO[];
-	    links?: string[];
 	
-	    static createFrom(source: any = {}) {
-	        return new PhishingDTO(source);
-	    }
 	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.level = source["level"];
-	        this.signals = this.convertValues(source["signals"], PhishingSignalDTO);
-	        this.links = source["links"];
-	    }
-	
-		convertValues(a: any, classs: any, asMap: boolean = false): any {
-		    if (!a) {
-		        return a;
-		    }
-		    if (a.slice && a.map) {
-		        return (a as any[]).map(elem => this.convertValues(elem, classs));
-		    } else if ("object" === typeof a) {
-		        if (asMap) {
-		            for (const key of Object.keys(a)) {
-		                a[key] = new classs(a[key]);
-		            }
-		            return a;
-		        }
-		        return new classs(a);
-		    }
-		    return a;
-		}
-	}
-	export class PhishingSignalDTO {
-	    kind: string;
-	    detail?: string;
-	    target?: string;
-	
-	    static createFrom(source: any = {}) {
-	        return new PhishingSignalDTO(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.kind = source["kind"];
-	        this.detail = source["detail"];
-	        this.target = source["target"];
-	    }
-	}
 	export class ProxyConfigDTO {
 	    mode: string;
 	    scheme: string;
@@ -1194,7 +1195,7 @@ export namespace desktop {
 	    imapPort: number;
 	    imapTls: string;
 	    password: string;
-
+	
 	    static createFrom(source: any = {}) {
 	        return new TestConnectionRequest(source);
 	    }
@@ -1408,6 +1409,7 @@ export namespace desktop {
 		    return a;
 		}
 	}
+	
 	export class UIPrefsDTO {
 	    theme: string;
 	    accent: string;
@@ -1596,11 +1598,11 @@ export namespace desktop {
 	    exportDir: string;
 	    exportSubfolders: string;
 	    exportNameTemplate: string;
-
+	
 	    static createFrom(source: any = {}) {
 	        return new UpdateAccountRequest(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.id = source["id"];
