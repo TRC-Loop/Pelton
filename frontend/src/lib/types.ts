@@ -93,6 +93,11 @@ export interface MessageDetail extends MessageSummary {
   toAddresses: string
   ccAddresses: string
   bodyPlain: string
+  // bodyQuote is the message as plain text for a reply or forward to quote:
+  // bodyPlain when the message has a text part, and the html rendered down to
+  // text when it does not. Replies to html-only mail quoted nothing before
+  // this existed (#239).
+  bodyQuote: string
   bodyHtmlSafe: string
   isHtml: boolean
   hasRemoteContent: boolean
