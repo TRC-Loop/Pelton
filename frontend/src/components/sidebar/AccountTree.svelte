@@ -40,8 +40,13 @@
   }
 
   // the header shows the display name, or the email when the user prefers it (or
-  // when there is no display name to show).
-  $: label = $prefs.showAccountEmail ? account.email : account.displayName || account.email
+  // when there is no display name to show). Local Folders has no real address,
+  // so it is named rather than addressed.
+  $: label = account.local
+    ? $t('sidebar.localFolders')
+    : $prefs.showAccountEmail
+      ? account.email
+      : account.displayName || account.email
 </script>
 
 <section class="account" class:dimmed data-reorder-id={account.id}>
@@ -50,7 +55,7 @@
       type="button"
       class="account-head"
       class:open={expanded}
-      title={account.email}
+      title={account.local ? $t('sidebar.localFoldersHint') : account.email}
       aria-expanded={expanded}
       on:click={() => toggleAccountCollapsed(account.id)}
     >

@@ -113,6 +113,9 @@ func (a *App) runInitialSyncAndIdle() {
 		return
 	}
 	for _, account := range accounts {
+		if account.Local {
+			continue
+		}
 		if err := a.syncAccount(account); err != nil && !errors.Is(err, errNoCredentials) {
 			a.log.Error("initial sync", "account", account.Email, "err", err)
 		}
@@ -133,7 +136,12 @@ func (a *App) TriggerSync() error {
 
 	synced := 0
 	netFailed := false
+	syncable := 0
 	for _, account := range accounts {
+		if account.Local {
+			continue
+		}
+		syncable++
 		if err := a.syncAccount(account); err != nil {
 			if errors.Is(err, errNoCredentials) {
 				continue
@@ -146,7 +154,9 @@ func (a *App) TriggerSync() error {
 		}
 		synced++
 	}
-	if synced == 0 && len(accounts) > 0 {
+	// the Local Folders account is not counted: an install holding only
+	// imported mail has nothing to sync, which is not a credentials problem.
+	if synced == 0 && syncable > 0 {
 		// a dropped connection must not masquerade as a credentials problem: if
 		// nothing synced and any account failed for the network, report offline.
 		if netFailed {
@@ -160,6 +170,11 @@ func (a *App) TriggerSync() error {
 // syncAccount connects with the account's resolved credentials, syncs every
 // folder emitting progress and new-mail events, then logs out.
 func (a *App) syncAccount(account storage.Account) error {
+	// Local Folders has no server behind it: imported mail is never uploaded,
+	// reconciled or expunged.
+	if account.Local {
+		return nil
+	}
 	cfg, err := a.resolveIMAP(account)
 	if err != nil {
 		return err
@@ -278,6 +293,9 @@ func (a *App) syncOneFolder(client *pimap.Client, folder storage.Folder) error {
 // idleLoop parks one account on imap idle and re-syncs when the server reports
 // activity, reconnecting with a short backoff and exiting on app shutdown.
 func (a *App) idleLoop(account storage.Account) {
+	if account.Local {
+		return
+	}
 	for a.ctx.Err() == nil {
 		if err := a.idleSession(account); err != nil && a.ctx.Err() == nil {
 			if errors.Is(err, errNoCredentials) {

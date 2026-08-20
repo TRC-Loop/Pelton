@@ -15,6 +15,42 @@ export interface Account {
   imapPort: number
   smtpHost: string
   smtpPort: number
+  // the Local Folders account, which holds imported mail and has no server:
+  // it never syncs, and the ui hides the server-side folder actions on it.
+  local: boolean
+}
+
+// ThunderbirdAccount is one account read out of a Thunderbird profile. There is
+// no password: Thunderbird keeps its own, so an imported account is
+// re-authenticated once.
+export interface ThunderbirdAccount {
+  email: string
+  displayName: string
+  username: string
+  imapHost: string
+  imapPort: number
+  smtpHost: string
+  smtpPort: number
+  // 'imap' or 'pop3'. Pelton speaks imap, so a pop3 account is listed but
+  // cannot be imported.
+  kind: string
+  // true when this address is already configured here.
+  exists: boolean
+}
+
+// ThunderbirdFolder is one mail folder found on disk in a profile.
+export interface ThunderbirdFolder {
+  name: string
+  path: string
+  sizeBytes: number
+}
+
+// ThunderbirdProfile is one discovered profile and everything it holds.
+export interface ThunderbirdProfile {
+  name: string
+  path: string
+  accounts: ThunderbirdAccount[]
+  localFolders: ThunderbirdFolder[]
 }
 
 export interface Folder {

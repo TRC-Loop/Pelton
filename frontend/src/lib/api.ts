@@ -50,6 +50,7 @@ import type {
   FetchOlderResult,
   PGPKey,
   LogStatus,
+  ThunderbirdProfile,
 } from './types'
 
 // isDemoMode reports whether the app launched in the cosmetic --potatoes-are-nice
@@ -100,7 +101,8 @@ export function listAccounts(): Promise<Account[]> {
   return App.ListAccounts()
 }
 
-// updateAccount persists edits to an account's display name and server settings.
+// updateAccount persists edits to an account's display name and server
+// settings. An empty password leaves the stored one alone.
 export function updateAccount(req: {
   id: number
   displayName: string
@@ -109,8 +111,21 @@ export function updateAccount(req: {
   imapPort: number
   smtpHost: string
   smtpPort: number
+  password: string
 }): Promise<Account> {
   return App.UpdateAccount(new desktop.UpdateAccountRequest(req))
+}
+
+// setAccountPassword stores a login password for an account, replacing any
+// existing one. Refused for accounts that sign in with OAuth.
+export function setAccountPassword(accountId: number, password: string): Promise<void> {
+  return App.SetAccountPassword(accountId, password)
+}
+
+// accountsNeedingPassword lists accounts with no stored password, which is the
+// state an account imported from another mail client arrives in.
+export function accountsNeedingPassword(): Promise<Account[]> {
+  return App.AccountsNeedingPassword().then((list) => (list ?? []) as unknown as Account[])
 }
 
 // deleteAccount removes an account, its cached mail and its keyring secret.
@@ -716,6 +731,45 @@ export function inspectBackupFile(): Promise<BackupInfo> {
 // credentials the file carries; a wrong password rejects with an error.
 export function importData(path: string, categories: string[], credentialPassword: string): Promise<void> {
   return App.ImportData(path, categories, credentialPassword)
+}
+
+// --- import from another mail client ---
+
+// findThunderbirdProfiles looks for Thunderbird profiles where it installs them
+// on this platform. An empty list means none were found there.
+export function findThunderbirdProfiles(): Promise<ThunderbirdProfile[]> {
+  return App.FindThunderbirdProfiles()
+}
+
+// chooseThunderbirdProfile opens a folder picker for a profile kept somewhere
+// discovery does not look. An empty list means the dialog was cancelled.
+export function chooseThunderbirdProfile(): Promise<ThunderbirdProfile[]> {
+  return App.ChooseThunderbirdProfile()
+}
+
+// importThunderbirdAccounts recreates the given addresses as mailboxes, reading
+// their server settings from the profile. Passwords cannot come across, so each
+// one needs its password entered once. Returns how many were created.
+export function importThunderbirdAccounts(profilePath: string, emails: string[]): Promise<number> {
+  return App.ImportThunderbirdAccounts(profilePath, emails)
+}
+
+// chooseMailFiles opens a picker for .eml and .mbox files. An empty list means
+// the dialog was cancelled.
+export function chooseMailFiles(): Promise<string[]> {
+  return App.ChooseMailFiles()
+}
+
+// importMailFiles imports the given files into Local Folders. It returns as soon
+// as the job starts; watch onImportProgress for progress and the final count.
+export function importMailFiles(paths: string[]): Promise<void> {
+  return App.ImportMailFiles(paths)
+}
+
+// importThunderbirdFolders imports mail folders found in a Thunderbird profile,
+// keeping their names. Like importMailFiles it runs in the background.
+export function importThunderbirdFolders(paths: string[]): Promise<void> {
+  return App.ImportThunderbirdFolders(paths)
 }
 
 // systemColorScheme returns the OS dark/light preference ("dark" | "light"), or

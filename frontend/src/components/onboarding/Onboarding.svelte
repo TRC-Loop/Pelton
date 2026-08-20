@@ -21,13 +21,11 @@
     IconPackageExport,
     IconBrandOpenSource,
     IconSparkles,
-    IconBrandGoogle,
-    IconBrandApple,
-    IconServer,
-    IconDots,
     IconPalette,
     IconWorld,
     IconMail,
+    IconMailbox,
+    IconPlus,
   } from '@tabler/icons-svelte'
   import Confetti from '../common/Confetti.svelte'
   import AppSkeleton from './AppSkeleton.svelte'
@@ -147,12 +145,6 @@
       recommended: false,
       body: $t('onboarding.privacy.normal.body'),
     },
-  ]
-
-  $: quickProviders = [
-    { id: 'gmail', label: 'Gmail', icon: IconBrandGoogle, sub: $t('onboarding.provider.gmailSub') },
-    { id: 'icloud', label: 'iCloud', icon: IconBrandApple, sub: $t('onboarding.provider.icloudSub') },
-    { id: 'custom', label: $t('onboarding.provider.customLabel'), icon: IconServer, sub: $t('onboarding.provider.customSub') },
   ]
 
   // the ordered steps. "done" is the finale and has no skip/progress chrome.
@@ -281,15 +273,6 @@
 
   const addMailboxHint = shortcutLabel('mod+m')
 
-  // the provider that the wizard should open straight into, or null for the full
-  // provider grid.
-  let wizardProvider: string | null = null
-
-  function openProvider(id: string | null): void {
-    wizardProvider = id
-    showWizard = true
-  }
-
   // custom accent: a popover color picker (hue square + slider + hex), opened from
   // the custom swatch. it applies live through the same accent setter.
   let pickerOpen = false
@@ -301,6 +284,11 @@
     dir = 1
     index = order.indexOf('done')
   }
+
+  // both choices open the same dialogs the rest of the app uses, so there is one
+  // flow of each to maintain. They open over the onboarding screen and close
+  // back to it.
+  let showImport = false
 
   function skipMailbox(): void {
     skippedMailbox = true
@@ -654,21 +642,19 @@
             <h2>{$t('onboarding.mailboxTitle')}</h2>
             <p class="sub">{$t('onboarding.mailboxSub')}</p>
             <div class="providers">
-              {#each quickProviders as p}
-                <button class="provider" on:click={() => openProvider(p.id)}>
-                  <span class="p-icon"><svelte:component this={p.icon} size={24} stroke={1.5} /></span>
-                  <span class="p-text">
-                    <span class="p-title">{p.label}</span>
-                    <span class="p-sub">{p.sub}</span>
-                  </span>
-                  <IconArrowRight size={16} stroke={1.8} />
-                </button>
-              {/each}
-              <button class="provider more" on:click={() => openProvider(null)}>
-                <span class="p-icon"><IconDots size={24} stroke={1.5} /></span>
+              <button class="provider" on:click={() => (showWizard = true)}>
+                <span class="p-icon"><IconPlus size={24} stroke={1.5} /></span>
                 <span class="p-text">
-                  <span class="p-title">{$t('onboarding.moreProviders')}</span>
-                  <span class="p-sub">{$t('onboarding.moreProvidersSub')}</span>
+                  <span class="p-title">{$t('wizard.start.addTitle')}</span>
+                  <span class="p-sub">{$t('wizard.start.addSub')}</span>
+                </span>
+                <IconArrowRight size={16} stroke={1.8} />
+              </button>
+              <button class="provider" on:click={() => (showImport = true)}>
+                <span class="p-icon"><IconMailbox size={24} stroke={1.5} /></span>
+                <span class="p-text">
+                  <span class="p-title">{$t('wizard.start.importTitle')}</span>
+                  <span class="p-sub">{$t('wizard.start.importSub')}</span>
                 </span>
                 <IconArrowRight size={16} stroke={1.8} />
               </button>
@@ -713,9 +699,15 @@
   <Confetti />
 {/if}
 
+{#if showImport}
+  {#await import('../settings/ImportClientModal.svelte') then m}
+    <svelte:component this={m.default} on:close={() => (showImport = false)} />
+  {/await}
+{/if}
+
 {#if showWizard}
   <AddMailboxWizard
-    initialProviderId={wizardProvider}
+    offerImport={false}
     on:close={() => (showWizard = false)}
     on:added={onMailboxAdded}
   />
@@ -1332,10 +1324,6 @@
   .provider:hover {
     transform: translateY(-2px);
     border-color: var(--accent);
-  }
-
-  .provider.more {
-    background: transparent;
   }
 
   .p-icon {

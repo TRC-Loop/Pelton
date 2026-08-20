@@ -83,7 +83,9 @@ VALUES (?, ?, ?, ?, ?, ?, ?)`
 
 // GetFolder returns one folder by id, or ErrFolderNotFound.
 func (d *DB) GetFolder(ctx context.Context, id int64) (*Folder, error) {
-	const query = `SELECT ` + folderColumns + ` FROM folders WHERE id = ?`
+	const query = `
+SELECT ` + folderColumns + `
+FROM folders WHERE id = ?`
 	f, err := scanFolder(d.sql.QueryRowContext(ctx, query, id))
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrFolderNotFound
@@ -97,7 +99,9 @@ func (d *DB) GetFolder(ctx context.Context, id int64) (*Folder, error) {
 // ListFolders returns every folder for an account in sidebar order: groups the
 // user has reordered first, in that order, then the rest by id.
 func (d *DB) ListFolders(ctx context.Context, accountID int64) ([]Folder, error) {
-	const query = `SELECT ` + folderColumns + ` FROM folders WHERE account_id = ? ` + folderOrder
+	const query = `
+SELECT ` + folderColumns + `
+FROM folders WHERE account_id = ? ` + folderOrder
 	rows, err := d.sql.QueryContext(ctx, query, accountID)
 	if err != nil {
 		return nil, fmt.Errorf("storage: list folders for account %d: %w", accountID, err)

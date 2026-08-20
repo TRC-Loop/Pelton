@@ -29,12 +29,25 @@ type Account struct {
 	// reorders them. Unpositioned accounts sort after positioned ones by id, so
 	// an install that never reordered keeps creation order.
 	Position int
+	// Local marks the Local Folders account, which holds imported mail and has
+	// no server behind it. Sync, idle and the mailbox backup all skip it, and
+	// its Email is LocalAccountEmail rather than a real address.
+	Local bool
 }
+
+// LocalAccountEmail is the reserved address of the Local Folders account. It is
+// not a routable address; it exists so the account row has the stable, unique
+// identifier every other lookup in the app keys off.
+const LocalAccountEmail = "local@pelton.invalid"
+
+// LocalAccountName is the Local Folders account's stored display name. The ui
+// localizes the label it shows, this is only the fallback.
+const LocalAccountName = "Local Folders"
 
 // accountColumns is the select list every account query shares, in the order
 // scanAccount reads them.
 const accountColumns = `id, email, display_name, username, imap_host, imap_port,
-       smtp_host, smtp_port, created_at, position`
+       smtp_host, smtp_port, created_at, position, is_local`
 
 // CreateAccount inserts an account and returns its new id. CreatedAt is set to
 // now if the caller left it zero.
@@ -45,10 +58,11 @@ func (d *DB) CreateAccount(ctx context.Context, a *Account) (int64, error) {
 	}
 
 	const query = `
-INSERT INTO accounts (email, display_name, username, imap_host, imap_port, smtp_host, smtp_port, created_at)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+INSERT INTO accounts (email, display_name, username, imap_host, imap_port, smtp_host, smtp_port, created_at, is_local)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
 	res, err := d.sql.ExecContext(ctx, query,
-		a.Email, a.DisplayName, a.Username, a.IMAPHost, a.IMAPPort, a.SMTPHost, a.SMTPPort, formatTime(created))
+		a.Email, a.DisplayName, a.Username, a.IMAPHost, a.IMAPPort, a.SMTPHost, a.SMTPPort,
+		formatTime(created), boolToInt(a.Local))
 	if err != nil {
 		return 0, fmt.Errorf("storage: insert account %q: %w", a.Email, err)
 	}
@@ -63,7 +77,9 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
 
 // GetAccount returns one account by id, or ErrAccountNotFound.
 func (d *DB) GetAccount(ctx context.Context, id int64) (*Account, error) {
-	const query = `SELECT ` + accountColumns + ` FROM accounts WHERE id = ?`
+	const query = `
+SELECT ` + accountColumns + `
+FROM accounts WHERE id = ?`
 	a, err := scanAccount(d.sql.QueryRowContext(ctx, query, id))
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrAccountNotFound
@@ -77,7 +93,9 @@ func (d *DB) GetAccount(ctx context.Context, id int64) (*Account, error) {
 // ListAccounts returns all accounts in sidebar order: the ones the user
 // reordered first, in that order, then the rest by id.
 func (d *DB) ListAccounts(ctx context.Context) ([]Account, error) {
-	const query = `SELECT ` + accountColumns + ` FROM accounts ORDER BY position = 0, position, id`
+	const query = `
+SELECT ` + accountColumns + `
+FROM accounts ORDER BY position = 0, position, id`
 	rows, err := d.sql.QueryContext(ctx, query)
 	if err != nil {
 		return nil, fmt.Errorf("storage: list accounts: %w", err)
@@ -138,9 +156,10 @@ func scanAccount(row rowScanner) (*Account, error) {
 	var (
 		a       Account
 		created string
+		local   int
 	)
 	if err := row.Scan(&a.ID, &a.Email, &a.DisplayName, &a.Username, &a.IMAPHost, &a.IMAPPort,
-		&a.SMTPHost, &a.SMTPPort, &created, &a.Position); err != nil {
+		&a.SMTPHost, &a.SMTPPort, &created, &a.Position, &local); err != nil {
 		return nil, err
 	}
 	t, err := parseTime(created)
@@ -148,6 +167,7 @@ func scanAccount(row rowScanner) (*Account, error) {
 		return nil, err
 	}
 	a.CreatedAt = t
+	a.Local = local != 0
 	return &a, nil
 }
 

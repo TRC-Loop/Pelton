@@ -6,7 +6,7 @@
   // user opens it, so its cost is not paid at startup.
   import { createEventDispatcher, onMount } from 'svelte'
   import { get } from 'svelte/store'
-  import { IconX, IconArrowLeft, IconCheck } from '@tabler/icons-svelte'
+  import { IconX, IconArrowLeft, IconCheck, IconArrowRight, IconMailbox, IconPlus } from '@tabler/icons-svelte'
   import WizardProviders from './WizardProviders.svelte'
   import Spinner from '../common/Spinner.svelte'
   import { BrowserOpenURL } from '../../../wailsjs/runtime/runtime'
@@ -22,8 +22,17 @@
   // provider's setup. used by the onboarding provider cards.
   export let initialProviderId: string | null = null
 
-  type Step = 'provider' | 'config' | 'oauth' | 'working' | 'done' | 'error'
-  let step: Step = 'provider'
+  // whether to open on the start step, which asks whether the user is setting up
+  // a mailbox or coming from another client. Onboarding turns it off: it offers
+  // importing as a step of its own, so asking again here would be a dead end
+  // the user has already been past.
+  export let offerImport = true
+
+  type Step = 'start' | 'provider' | 'config' | 'oauth' | 'working' | 'done' | 'error'
+  let step: Step = offerImport ? 'start' : 'provider'
+
+  // the import modal, opened over the wizard from the start step.
+  let showImport = false
   // the form the last submit came from, so the error screen returns there
   // (gmail can submit from either form since oauth is optional for it).
   let formStep: 'config' | 'oauth' = 'config'
@@ -178,6 +187,13 @@
     preset = null
   }
 
+  // the start step is only ever reachable backwards from the provider grid.
+  function backToStart(): void {
+    error = ''
+    step = 'start'
+    preset = null
+  }
+
   $: canSubmitPassword = draft.email.includes('@') && draft.password !== '' && draft.imapHost !== ''
   $: canSignIn = draft.email.includes('@') && draft.clientId !== ''
 
@@ -204,6 +220,10 @@
       <button type="button" class="icon" aria-label={$t('wizard.back')} on:click={back}>
         <IconArrowLeft size={18} stroke={1.8} />
       </button>
+    {:else if step === 'provider' && offerImport}
+      <button type="button" class="icon" aria-label={$t('wizard.back')} on:click={backToStart}>
+        <IconArrowLeft size={18} stroke={1.8} />
+      </button>
     {:else}
       <span class="icon-spacer"></span>
     {/if}
@@ -215,7 +235,28 @@
 
   <div class="body">
     <div class="content">
-      {#if step === 'provider'}
+      {#if step === 'start'}
+        <h3>{$t('wizard.start.title')}</h3>
+        <p class="note">{$t('wizard.start.sub')}</p>
+        <div class="start-choices">
+          <button type="button" class="choice" on:click={() => (step = 'provider')}>
+            <span class="choice-icon"><IconPlus size={22} stroke={1.6} /></span>
+            <span class="choice-text">
+              <span class="choice-title">{$t('wizard.start.addTitle')}</span>
+              <span class="choice-sub">{$t('wizard.start.addSub')}</span>
+            </span>
+            <IconArrowRight size={16} stroke={1.8} />
+          </button>
+          <button type="button" class="choice" on:click={() => (showImport = true)}>
+            <span class="choice-icon"><IconMailbox size={22} stroke={1.6} /></span>
+            <span class="choice-text">
+              <span class="choice-title">{$t('wizard.start.importTitle')}</span>
+              <span class="choice-sub">{$t('wizard.start.importSub')}</span>
+            </span>
+            <IconArrowRight size={16} stroke={1.8} />
+          </button>
+        </div>
+      {:else if step === 'provider'}
         <WizardProviders on:pick={pick} />
       {:else if step === 'config'}
         <h3>{preset?.label}</h3>
@@ -370,7 +411,66 @@
   </div>
 </div>
 
+<!-- the import flow is the same modal Settings uses, code-split so the wizard
+     does not carry it unless the user asks for it. -->
+{#if showImport}
+  {#await import('../settings/ImportClientModal.svelte') then m}
+    <svelte:component this={m.default} on:close={() => (showImport = false)} />
+  {/await}
+{/if}
+
 <style>
+  /* the start step: two equal choices, styled like the onboarding provider rows
+     so the two entry points into this flow look the same. */
+  .start-choices {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    margin-top: var(--space-4);
+  }
+
+  .choice {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    width: 100%;
+    padding: var(--space-4);
+    border: var(--hairline) solid var(--border-default);
+    border-radius: var(--radius-card);
+    background: var(--surface-raised);
+    color: var(--text-primary);
+    text-align: left;
+    cursor: pointer;
+  }
+  .choice:hover {
+    background: var(--surface-hover);
+    border-color: var(--accent);
+  }
+
+  .choice-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    color: var(--text-secondary);
+  }
+
+  .choice-text {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    flex: 1;
+    min-width: 0;
+  }
+  .choice-title {
+    font-size: var(--fz-body);
+    font-weight: var(--fw-medium);
+  }
+  .choice-sub {
+    font-size: var(--fz-label);
+    color: var(--text-tertiary);
+  }
+
   .screen {
     position: fixed;
     inset: 0;
