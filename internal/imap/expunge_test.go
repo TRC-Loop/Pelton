@@ -108,6 +108,11 @@ func newTestServer(t *testing.T, opts testOptions) (*Client, *wireLog) {
 	return c, wire
 }
 
+// createMailbox adds a mailbox to the running test server, for the move tests.
+func createMailbox(c *Client, name string) error {
+	return c.raw.Create(name, nil).Wait()
+}
+
 // discardLogger keeps the server's connection logging out of the test output.
 type discardLogger struct{}
 
@@ -198,10 +203,15 @@ func (s *brokenSession) Store(w *imapserver.FetchWriter, numSet imap.NumSet, fla
 	return s.Session.Store(w, numSet, flags, options)
 }
 
-// remainingSubjects returns the subjects still in the mailbox, in uid order.
-func remainingSubjects(t *testing.T, c *Client) []string {
+// mailboxSubjects returns the subjects a mailbox holds, in uid order. It
+// re-selects first: the client's cached message count follows the untagged
+// EXPUNGE responses, and those are not something a test should assert through.
+func mailboxSubjects(t *testing.T, c *Client, mailbox string) []string {
 	t.Helper()
-	headers, err := c.FetchRecentHeaders(100)
+	if _, err := c.Select(mailbox); err != nil {
+		t.Fatalf("select %q: %v", mailbox, err)
+	}
+	headers, err := c.FetchRecentHeaders(1000)
 	if err != nil {
 		t.Fatalf("fetch headers: %v", err)
 	}
@@ -213,10 +223,13 @@ func remainingSubjects(t *testing.T, c *Client) []string {
 	return out
 }
 
-// uidOf returns the uid of the message with the given subject.
+// uidOf returns the uid of the message with the given subject in INBOX.
 func uidOf(t *testing.T, c *Client, subject string) imap.UID {
 	t.Helper()
-	headers, err := c.FetchRecentHeaders(100)
+	if _, err := c.Select("INBOX"); err != nil {
+		t.Fatalf("select INBOX: %v", err)
+	}
+	headers, err := c.FetchRecentHeaders(1000)
 	if err != nil {
 		t.Fatalf("fetch headers: %v", err)
 	}
@@ -250,7 +263,7 @@ func TestDeleteMessagesLeavesAnotherClientsDeletedMail(t *testing.T) {
 		t.Fatalf("DeleteMessages: %v", err)
 	}
 
-	got := remainingSubjects(t, c)
+	got := mailboxSubjects(t, c, "INBOX")
 	want := []string{"theirs", "untouched"}
 	if !slices.Equal(got, want) {
 		t.Fatalf("mailbox holds %v, want %v", got, want)
@@ -299,7 +312,7 @@ func TestDeleteMessagesWithUIDPlus(t *testing.T) {
 		t.Fatalf("DeleteMessages: %v", err)
 	}
 
-	got := remainingSubjects(t, c)
+	got := mailboxSubjects(t, c, "INBOX")
 	want := []string{"theirs", "untouched"}
 	if !slices.Equal(got, want) {
 		t.Fatalf("mailbox holds %v, want %v", got, want)
@@ -319,7 +332,7 @@ func TestDeleteMessagesBatch(t *testing.T) {
 		t.Fatalf("DeleteMessages: %v", err)
 	}
 
-	got := remainingSubjects(t, c)
+	got := mailboxSubjects(t, c, "INBOX")
 	if !slices.Equal(got, []string{"keep"}) {
 		t.Fatalf("mailbox holds %v, want just [keep]", got)
 	}
@@ -340,7 +353,7 @@ func TestDeleteMessagesNoUIDsIsANoOp(t *testing.T) {
 		t.Fatalf("DeleteMessages: %v", err)
 	}
 
-	got := remainingSubjects(t, c)
+	got := mailboxSubjects(t, c, "INBOX")
 	if !slices.Equal(got, []string{"theirs", "keep"}) {
 		t.Fatalf("mailbox holds %v, want both messages", got)
 	}
@@ -363,7 +376,7 @@ func TestDeleteMessagesKeepsOurOwnEarlierMark(t *testing.T) {
 	if err := c.DeleteMessages(ours); err != nil {
 		t.Fatalf("DeleteMessages: %v", err)
 	}
-	if got := remainingSubjects(t, c); !slices.Equal(got, []string{"keep"}) {
+	if got := mailboxSubjects(t, c, "INBOX"); !slices.Equal(got, []string{"keep"}) {
 		t.Fatalf("mailbox holds %v, want just [keep]", got)
 	}
 }
@@ -430,7 +443,7 @@ func TestDeleteMessagesLargeMixedBatch(t *testing.T) {
 		t.Fatalf("DeleteMessages: %v", err)
 	}
 
-	if got := remainingSubjects(t, c); !slices.Equal(got, wantLeft) {
+	if got := mailboxSubjects(t, c, "INBOX"); !slices.Equal(got, wantLeft) {
 		t.Errorf("mailbox holds %v,\nwant %v", got, wantLeft)
 	}
 	deleted, err := c.searchDeleted()
@@ -456,7 +469,7 @@ func TestDeleteEveryMessageWithAForeignMark(t *testing.T) {
 	if err := c.DeleteMessages(ours...); err != nil {
 		t.Fatalf("DeleteMessages: %v", err)
 	}
-	if got := remainingSubjects(t, c); !slices.Equal(got, []string{"theirs"}) {
+	if got := mailboxSubjects(t, c, "INBOX"); !slices.Equal(got, []string{"theirs"}) {
 		t.Fatalf("mailbox holds %v, want just [theirs]", got)
 	}
 }
@@ -483,7 +496,7 @@ func TestDeleteMessagesRefusesWhenItCannotSeeWhatIsMarked(t *testing.T) {
 	if wire.hasBareExpunge() {
 		t.Errorf("expunged anyway after the search failed\n%s", wire.String())
 	}
-	if got := remainingSubjects(t, c); !slices.Equal(got, []string{"theirs", "ours", "keep"}) {
+	if got := mailboxSubjects(t, c, "INBOX"); !slices.Equal(got, []string{"theirs", "ours", "keep"}) {
 		t.Errorf("mailbox holds %v, want all three still there", got)
 	}
 }
@@ -512,7 +525,7 @@ func TestDeleteMessagesReportsAFailedRestore(t *testing.T) {
 		t.Errorf("error = %v, want it to say the marks could not be restored", err)
 	}
 	// the delete itself still happened, and nothing of theirs was lost with it.
-	if got := remainingSubjects(t, c); !slices.Equal(got, []string{"theirs", "keep"}) {
+	if got := mailboxSubjects(t, c, "INBOX"); !slices.Equal(got, []string{"theirs", "keep"}) {
 		t.Errorf("mailbox holds %v, want [theirs keep]", got)
 	}
 }
@@ -538,7 +551,7 @@ func TestDeleteMessagesStopsWhenItCannotLiftForeignMarks(t *testing.T) {
 	if wire.hasBareExpunge() {
 		t.Errorf("expunged with the foreign marks still on\n%s", wire.String())
 	}
-	if got := remainingSubjects(t, c); !slices.Equal(got, []string{"theirs", "ours", "keep"}) {
+	if got := mailboxSubjects(t, c, "INBOX"); !slices.Equal(got, []string{"theirs", "ours", "keep"}) {
 		t.Errorf("mailbox holds %v, want all three still there", got)
 	}
 }
@@ -560,7 +573,7 @@ func TestDeleteMessagesTwiceIsHarmless(t *testing.T) {
 	if err := c.DeleteMessages(ours); err != nil {
 		t.Fatalf("second DeleteMessages on a gone uid: %v", err)
 	}
-	if got := remainingSubjects(t, c); !slices.Equal(got, []string{"theirs", "keep"}) {
+	if got := mailboxSubjects(t, c, "INBOX"); !slices.Equal(got, []string{"theirs", "keep"}) {
 		t.Errorf("mailbox holds %v, want [theirs keep]", got)
 	}
 }
@@ -578,7 +591,7 @@ func TestDeleteMessagesUnknownUID(t *testing.T) {
 	if err := c.DeleteMessages(imap.UID(9999)); err != nil {
 		t.Fatalf("DeleteMessages: %v", err)
 	}
-	if got := remainingSubjects(t, c); !slices.Equal(got, []string{"theirs", "keep"}) {
+	if got := mailboxSubjects(t, c, "INBOX"); !slices.Equal(got, []string{"theirs", "keep"}) {
 		t.Errorf("mailbox holds %v, want both messages", got)
 	}
 }
