@@ -760,6 +760,7 @@ const pl: Record<string, string> = {
   'external.hint': 'Integracje łączące Pelton z zewnętrznymi usługami i agentami.',
   'mcp.title': 'Serwer MCP',
   'mcp.hint': 'Pozwól agentowi AI czytać i przeszukiwać Twoją pocztę przez Model Context Protocol. Tylko do odczytu: nie może niczego wysyłać, przenosić ani usuwać. Domyślnie wyłączony i działa wyłącznie na Twoim komputerze.',
+  'mcp.injectionHint': 'Poczta to niezaufany tekst. Wiadomość może być napisana tak, by wyglądała jak polecenie dla agenta, który ją czyta. Pelton oznacza wszystko, co przekazuje, jako niezaufaną treść, ale agent mający też narzędzia do wysyłania, kupowania czy usuwania nadal może zostać pokierowany przez wiadomość. Jeśli możesz, daj mu tylko narzędzia do odczytu.',
   'mcp.running': 'Działa',
   'mcp.stopped': 'Zatrzymany',
   'mcp.port': 'Port',

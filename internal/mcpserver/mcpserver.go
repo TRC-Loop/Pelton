@@ -90,7 +90,7 @@ func (s *Server) Start(cfg Config) error {
 		Name:    serverName,
 		Version: cfg.Version,
 		Title:   "Pelton",
-	}, nil)
+	}, &mcp.ServerOptions{Instructions: serverInstructions})
 	registerTools(mcpSrv, s.mb)
 
 	// Stateless: every request is self-contained. The read-only tools need no
