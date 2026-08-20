@@ -34,6 +34,8 @@ export function ClearSentOutbox():Promise<void>;
 
 export function CloseWindow():Promise<void>;
 
+export function ComposeProtectionStatus(arg1:number,arg2:Array<string>):Promise<desktop.ProtectionStatusDTO>;
+
 export function ConfirmThemeImport(arg1:string,arg2:boolean,arg3:boolean,arg4:boolean):Promise<desktop.ThemeInfoDTO>;
 
 export function ConsumePendingMailto():Promise<desktop.PendingMailtoDTO>;
@@ -290,6 +292,8 @@ export function SetWindowTheme(arg1:boolean):Promise<void>;
 
 export function SetWindowTitle(arg1:string):Promise<void>;
 
+export function SignerFingerprint(arg1:number):Promise<string>;
+
 export function SnoozeMessage(arg1:number,arg2:string,arg3:boolean):Promise<void>;
 
 export function StartAccountSync(arg1:number):Promise<void>;
@@ -317,6 +321,8 @@ export function UnlockPGPKey(arg1:string,arg2:string,arg3:boolean):Promise<void>
 export function UnmarkSenderVIP(arg1:number):Promise<void>;
 
 export function UnsnoozeMessage(arg1:number):Promise<void>;
+
+export function UnsealDraft(arg1:number,arg2:string):Promise<desktop.DraftDTO>;
 
 export function Unsubscribe(arg1:number):Promise<void>;
 

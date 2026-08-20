@@ -119,6 +119,7 @@ export function updateAccount(req: {
   exportDir: string
   exportSubfolders: string
   exportNameTemplate: string
+  pgpDefault: string
 }): Promise<Account> {
   return App.UpdateAccount(new desktop.UpdateAccountRequest(req))
 }
@@ -398,6 +399,27 @@ export interface ArchiveUndo {
   // expected: the archive itself still succeeded.
   exportPath: string
   exportError: string
+}
+
+// composeProtectionStatus reports what signing and encryption are possible for
+// a message from this account to these recipients, so the compose controls
+// never offer something that would fail at send time.
+export function composeProtectionStatus(
+  accountId: number,
+  recipients: string[],
+): Promise<desktop.ProtectionStatusDTO> {
+  return App.ComposeProtectionStatus(accountId, recipients)
+}
+
+// signerFingerprint is the key an account signs with, so the compose window can
+// point the passphrase prompt at the right one. '' when there is none.
+export function signerFingerprint(accountId: number): Promise<string> {
+  return App.SignerFingerprint(accountId)
+}
+
+// unsealDraft opens a draft of an encrypted message with a passphrase.
+export function unsealDraft(id: number, passphrase: string): Promise<desktop.DraftDTO> {
+  return App.UnsealDraft(id, passphrase)
 }
 
 // archiveMessage moves a message to its account's Archive folder on the server,

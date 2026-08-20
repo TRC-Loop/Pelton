@@ -16,6 +16,7 @@ export namespace desktop {
 	    exportDir: string;
 	    exportSubfolders: string;
 	    exportNameTemplate: string;
+	    pgpDefault: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new AccountDTO(source);
@@ -38,6 +39,7 @@ export namespace desktop {
 	        this.exportDir = source["exportDir"];
 	        this.exportSubfolders = source["exportSubfolders"];
 	        this.exportNameTemplate = source["exportNameTemplate"];
+	        this.pgpDefault = source["pgpDefault"];
 	    }
 	}
 	export class AccountSignaturesDTO {
@@ -302,6 +304,7 @@ export namespace desktop {
 	    references: string[];
 	    attachments: ComposeAttachment[];
 	    sendAt: string;
+	    protection: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new ComposeRequest(source);
@@ -320,6 +323,7 @@ export namespace desktop {
 	        this.references = source["references"];
 	        this.attachments = this.convertValues(source["attachments"], ComposeAttachment);
 	        this.sendAt = source["sendAt"];
+	        this.protection = source["protection"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
@@ -400,6 +404,9 @@ export namespace desktop {
 	    id: number;
 	    savedAt: string;
 	    request: ComposeRequest;
+	    locked: boolean;
+	    accountId: number;
+	    protection: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new DraftDTO(source);
@@ -410,6 +417,9 @@ export namespace desktop {
 	        this.id = source["id"];
 	        this.savedAt = source["savedAt"];
 	        this.request = this.convertValues(source["request"], ComposeRequest);
+	        this.locked = source["locked"];
+	        this.accountId = source["accountId"];
+	        this.protection = source["protection"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
@@ -696,6 +706,20 @@ export namespace desktop {
 	        this.host = source["host"];
 	        this.url = source["url"];
 	        this.reasons = source["reasons"];
+	    }
+	}
+	export class RecipientKeyDTO {
+	    email: string;
+	    hasKey: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new RecipientKeyDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.email = source["email"];
+	        this.hasKey = source["hasKey"];
 	    }
 	}
 	export class SMIMEDTO {
@@ -1045,6 +1069,46 @@ export namespace desktop {
 	}
 	
 	
+	export class ProtectionStatusDTO {
+	    canSign: boolean;
+	    signerLocked: boolean;
+	    canEncrypt: boolean;
+	    recipients: RecipientKeyDTO[];
+	    default: string;
+	    suggested: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new ProtectionStatusDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.canSign = source["canSign"];
+	        this.signerLocked = source["signerLocked"];
+	        this.canEncrypt = source["canEncrypt"];
+	        this.recipients = this.convertValues(source["recipients"], RecipientKeyDTO);
+	        this.default = source["default"];
+	        this.suggested = source["suggested"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
 	export class ProxyConfigDTO {
 	    mode: string;
 	    scheme: string;
@@ -1598,6 +1662,7 @@ export namespace desktop {
 	    exportDir: string;
 	    exportSubfolders: string;
 	    exportNameTemplate: string;
+	    pgpDefault: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new UpdateAccountRequest(source);
@@ -1619,6 +1684,7 @@ export namespace desktop {
 	        this.exportDir = source["exportDir"];
 	        this.exportSubfolders = source["exportSubfolders"];
 	        this.exportNameTemplate = source["exportNameTemplate"];
+	        this.pgpDefault = source["pgpDefault"];
 	    }
 	}
 	export class UpdateCheckResult {

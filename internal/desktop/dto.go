@@ -40,6 +40,9 @@ type AccountDTO struct {
 	ExportDir          string `json:"exportDir"`
 	ExportSubfolders   string `json:"exportSubfolders"`
 	ExportNameTemplate string `json:"exportNameTemplate"`
+	// PGPDefault is how this account starts a new message: '' unprotected,
+	// 'sign', or 'auto' to sign and encrypt whenever every recipient has a key.
+	PGPDefault string `json:"pgpDefault"`
 }
 
 // FolderDTO is one mailbox in an account's tree. ParentID is null at the root.
@@ -251,6 +254,7 @@ func toAccountDTO(a storage.Account) AccountDTO {
 		ExportDir:          a.ExportDir,
 		ExportSubfolders:   a.ExportSubfolders,
 		ExportNameTemplate: a.ExportNameTemplate,
+		PGPDefault:         a.PGPDefault,
 	}
 }
 

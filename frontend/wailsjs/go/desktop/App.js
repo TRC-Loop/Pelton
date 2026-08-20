@@ -66,6 +66,10 @@ export function CloseWindow() {
   return window['go']['desktop']['App']['CloseWindow']();
 }
 
+export function ComposeProtectionStatus(arg1, arg2) {
+  return window['go']['desktop']['App']['ComposeProtectionStatus'](arg1, arg2);
+}
+
 export function ConfirmThemeImport(arg1, arg2, arg3, arg4) {
   return window['go']['desktop']['App']['ConfirmThemeImport'](arg1, arg2, arg3, arg4);
 }
@@ -578,6 +582,10 @@ export function SetWindowTitle(arg1) {
   return window['go']['desktop']['App']['SetWindowTitle'](arg1);
 }
 
+export function SignerFingerprint(arg1) {
+  return window['go']['desktop']['App']['SignerFingerprint'](arg1);
+}
+
 export function SnoozeMessage(arg1, arg2, arg3) {
   return window['go']['desktop']['App']['SnoozeMessage'](arg1, arg2, arg3);
 }
@@ -632,6 +640,10 @@ export function UnmarkSenderVIP(arg1) {
 
 export function UnsnoozeMessage(arg1) {
   return window['go']['desktop']['App']['UnsnoozeMessage'](arg1);
+}
+
+export function UnsealDraft(arg1, arg2) {
+  return window['go']['desktop']['App']['UnsealDraft'](arg1, arg2);
 }
 
 export function Unsubscribe(arg1) {

@@ -45,6 +45,16 @@
   // the subfolder modes, in the order the picker shows them.
   const subfolderModes = ['none', 'year', 'month'] as const
 
+  // how this mailbox starts a new message: unprotected, signed, or signed and
+  // encrypted whenever every recipient has a key.
+  const pgpDefaults = ['', 'sign', 'auto'] as const
+
+  function setPGPDefault(value: string): void {
+    if (draft) {
+      draft.pgpDefault = value
+    }
+  }
+
   onMount(load)
 
   function onMailboxAdded(): void {
@@ -160,6 +170,7 @@
         exportDir: draft.exportDir,
         exportSubfolders: draft.exportSubfolders,
         exportNameTemplate: draft.exportNameTemplate,
+        pgpDefault: draft.pgpDefault,
       })
       accounts = accounts.map((a) => (a.id === updated.id ? updated : a))
       if (passwordDraft !== '') {
@@ -326,6 +337,18 @@
               />
             </label>
             <p class="server-hint">{$t('mailboxes.export.placeholders')}</p>
+            <span class="field">
+              <span>{$t('mailboxes.pgpDefault')}</span>
+              <div class="seg" role="radiogroup" aria-label={$t('mailboxes.pgpDefault')}>
+                {#each pgpDefaults as mode (mode)}
+                  <button type="button" class:on={draft.pgpDefault === mode} on:click={() => setPGPDefault(mode)}>
+                    {$t(`mailboxes.pgpDefault.${mode || 'off'}`)}
+                  </button>
+                {/each}
+              </div>
+            </span>
+            <p class="server-hint">{$t('mailboxes.pgpDefaultHint')}</p>
+
             {#if namePreview}
               <p class="server-hint preview">{$t('mailboxes.export.preview')} <code>{namePreview}</code></p>
             {/if}
