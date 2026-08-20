@@ -16,6 +16,7 @@ import {
   downloadMessageOffline,
   removeOffline,
 } from './api'
+import type { ArchiveUndo } from './api'
 import type { MessageSummary } from './types'
 import { patchInList, removeFromList } from '../stores/messages'
 import { openMessageId } from '../stores/selection'
@@ -99,10 +100,22 @@ export async function trashMessage(item: MessageSummary): Promise<void> {
   }
 }
 
+/**
+ * Reports a failed export-on-archive copy. The archive itself succeeded, so
+ * this is a warning about the copy and never a failed action: staying quiet
+ * would leave the user believing a local copy exists when it does not.
+ */
+export function reportArchiveExport(undo: ArchiveUndo): void {
+  if (undo.exportError) {
+    toastError(get(t)('mailboxes.export.failed').replace('{error}', undo.exportError))
+  }
+}
+
 /** Archives one message, recording it for undo and closing it if it was open. */
 export async function archive(item: MessageSummary): Promise<void> {
   try {
     const undo = await archiveMessage(item.id)
+    reportArchiveExport(undo)
     if (undo.messageId) {
       recordArchived(item, undo.messageId, undo.originalFolderId)
     }

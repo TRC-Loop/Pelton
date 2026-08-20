@@ -24,6 +24,14 @@ export interface Account {
   // carry the union.
   imapTls: string
   smtpTls: string
+  // write a local .eml copy of every message archived from this account.
+  // exportDir is where the files go, exportSubfolders is 'none' | 'year' |
+  // 'month', and exportNameTemplate is the file name pattern ('' for the
+  // default). typed as string to match the generated dto.
+  exportOnArchive: boolean
+  exportDir: string
+  exportSubfolders: string
+  exportNameTemplate: string
 }
 
 // ThunderbirdAccount is one account read out of a Thunderbird profile. There is

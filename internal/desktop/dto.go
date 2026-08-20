@@ -32,6 +32,14 @@ type AccountDTO struct {
 	// "starttls"), or empty when it is derived from the port.
 	IMAPTLS string `json:"imapTls"`
 	SMTPTLS string `json:"smtpTls"`
+	// ExportOnArchive and the three fields under it are the account's
+	// export-on-archive settings: write a local .eml copy of every archived
+	// message into ExportDir, grouped by ExportSubfolders ("none", "year" or
+	// "month") and named after ExportNameTemplate.
+	ExportOnArchive    bool   `json:"exportOnArchive"`
+	ExportDir          string `json:"exportDir"`
+	ExportSubfolders   string `json:"exportSubfolders"`
+	ExportNameTemplate string `json:"exportNameTemplate"`
 }
 
 // FolderDTO is one mailbox in an account's tree. ParentID is null at the root.
@@ -240,6 +248,11 @@ func toAccountDTO(a storage.Account) AccountDTO {
 		Local:       a.Local,
 		IMAPTLS:     effectiveIMAPTLS(a),
 		SMTPTLS:     effectiveSMTPTLS(a),
+
+		ExportOnArchive:    a.ExportOnArchive,
+		ExportDir:          a.ExportDir,
+		ExportSubfolders:   a.ExportSubfolders,
+		ExportNameTemplate: a.ExportNameTemplate,
 	}
 }
 

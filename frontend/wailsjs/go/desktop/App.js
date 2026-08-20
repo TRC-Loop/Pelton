@@ -46,6 +46,10 @@ export function CheckForUpdates() {
   return window['go']['desktop']['App']['CheckForUpdates']();
 }
 
+export function ChooseArchiveExportFolder() {
+  return window['go']['desktop']['App']['ChooseArchiveExportFolder']();
+}
+
 export function ChooseMailFiles() {
   return window['go']['desktop']['App']['ChooseMailFiles']();
 }
@@ -360,6 +364,10 @@ export function OpenLogFolder() {
 
 export function OpenThemesFolder() {
   return window['go']['desktop']['App']['OpenThemesFolder']();
+}
+
+export function PreviewArchiveExportName(arg1, arg2) {
+  return window['go']['desktop']['App']['PreviewArchiveExportName'](arg1, arg2);
 }
 
 export function PreviewThemeImport() {
