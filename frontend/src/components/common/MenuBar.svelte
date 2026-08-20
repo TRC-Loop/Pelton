@@ -8,12 +8,14 @@
   // (built-ins) or the user's text (custom entries) and live-update on a language
   // change; item state follows the open-message selection directly. In editor
   // mode the bar hands off to MenuBarEditor for in-place customization.
-  import { createEventDispatcher } from 'svelte'
+  import { createEventDispatcher, tick } from 'svelte'
   import ThemedIcon from './ThemedIcon.svelte'
   import MenuGlyph from './MenuGlyph.svelte'
   import MenuBarEditor from './MenuBarEditor.svelte'
   import { IconChevronRight } from '@tabler/icons-svelte'
   import { t, shortcutLabel, isMac } from '../../lib/i18n'
+  import { assignAccessKeys, splitAccessKey } from '../../lib/accesskeys'
+  import { matchShortcut } from '../../lib/shortcuts'
   import { titleBarDoubleClick } from '../../lib/api'
   import { prefs } from '../../stores/prefs'
   import { bindings } from '../../stores/shortcuts'
@@ -29,6 +31,20 @@
   let openKey: string | null = null
   let openSub: string | null = null
   let barEl: HTMLElement
+
+  // access keys are a Windows/Linux convention, and on those two platforms this
+  // bar is the only menu there is. macOS has no equivalent, so the whole thing
+  // stays off there even when the in-app bar is switched on.
+  const accessKeysEnabled = !isMac
+
+  // altActive reveals the underlines and marks keyboard use of the bar.
+  // altCandidate tracks an alt press that is still only alt: any other key
+  // clears it, so alt+tab or a bound alt shortcut never focuses the bar.
+  let altActive = false
+  let altCandidate = false
+
+  $: titles = menus.map((m) => (m.labelKey ? $t(m.labelKey) : (m.label ?? '')))
+  $: letters = accessKeysEnabled ? assignAccessKeys(titles) : []
 
   function itemLabel(item: RenderItem, tFn: (key: string) => string): string {
     if (item.kind === 'custom' || item.kind === 'submenu') {
@@ -99,8 +115,111 @@
     }
     const keys = menus.map((m) => m.id)
     const next = (keys.indexOf(openKey) + delta + keys.length) % keys.length
+    // the focused item belongs to the dropdown that is about to unmount, so the
+    // focus has to move with it or the next arrow key lands nowhere.
+    const inDropdown = !!document.activeElement?.closest('.dropdown')
     openKey = keys[next]
     openSub = null
+    if (inDropdown) {
+      void tick().then(() => focusItem(1))
+    }
+  }
+
+  function titleButtons(): HTMLButtonElement[] {
+    return Array.from(barEl?.querySelectorAll<HTMLButtonElement>('.title') ?? [])
+  }
+
+  function barHasFocus(): boolean {
+    return !!barEl && barEl.contains(document.activeElement)
+  }
+
+  // focusTitle moves the focus ring along the titles without opening anything,
+  // which is what alt on its own leaves the bar in.
+  function focusTitle(delta: number): void {
+    const buttons = titleButtons()
+    if (buttons.length === 0) {
+      return
+    }
+    const idx = buttons.findIndex((el) => el === document.activeElement)
+    const next = idx === -1 ? 0 : (idx + delta + buttons.length) % buttons.length
+    buttons[next].focus()
+  }
+
+  // the underlines are a hint about the keyboard state, so they go out with the
+  // window's focus even though the focused title stays where it is.
+  function onWindowBlur(): void {
+    altActive = false
+    altCandidate = false
+  }
+
+  function leaveKeyboardMode(): void {
+    altActive = false
+    altCandidate = false
+    if (barHasFocus()) {
+      ;(document.activeElement as HTMLElement).blur()
+    }
+  }
+
+  // openByAccessKey opens a menu from alt+letter and puts the focus on its first
+  // item, so the arrow keys carry on from there.
+  async function openByAccessKey(id: string): Promise<void> {
+    openKey = id
+    openSub = null
+    await tick()
+    focusItem(1)
+  }
+
+  function onWindowKeydown(event: KeyboardEvent): void {
+    if (!accessKeysEnabled || $menuBarEditing) {
+      return
+    }
+    if (event.key === 'Alt' && !event.ctrlKey && !event.metaKey && !event.shiftKey) {
+      altCandidate = true
+      altActive = true
+      return
+    }
+    altCandidate = false
+    if (event.key === 'Escape') {
+      altActive = false
+      return
+    }
+    // altGr reports itself as ctrl+alt, so requiring alt alone keeps the access
+    // keys out of the way of the characters it types.
+    if (!event.altKey || event.ctrlKey || event.metaKey || event.getModifierState('AltGraph')) {
+      return
+    }
+    // a user binding wins: somebody who deliberately bound alt+f in settings
+    // keeps it, and the access key only fires when the combo is free.
+    if (matchShortcut(event, $bindings)) {
+      return
+    }
+    const idx = letters.indexOf(event.key.toLowerCase())
+    if (idx === -1) {
+      return
+    }
+    event.preventDefault()
+    altActive = true
+    void openByAccessKey(menus[idx].id)
+  }
+
+  // a bare alt press toggles the bar's keyboard focus on release, the way a
+  // native menu bar does. releasing alt after a combo leaves the bar alone.
+  function onWindowKeyup(event: KeyboardEvent): void {
+    if (!accessKeysEnabled || $menuBarEditing || event.key !== 'Alt') {
+      return
+    }
+    if (!altCandidate) {
+      altActive = openKey !== null && altActive
+      return
+    }
+    altCandidate = false
+    if (openKey !== null || barHasFocus()) {
+      close()
+      leaveKeyboardMode()
+      return
+    }
+    altActive = true
+    focusTitle(0)
   }
 
   // the scrim that dismisses an open menu sits below the bar, so a click on the
@@ -121,13 +240,49 @@
     }
   }
 
+  function onBarFocusOut(event: FocusEvent): void {
+    const next = event.relatedTarget as Node | null
+    if (openKey === null && (!next || !barEl?.contains(next))) {
+      altActive = false
+    }
+  }
+
   function onBarKeydown(event: KeyboardEvent): void {
+    // alt on its own leaves a title focused with no menu open, so the arrows
+    // have to walk the titles in that state too.
     if (openKey === null) {
+      if (!barHasFocus()) {
+        return
+      }
+      switch (event.key) {
+        case 'Escape':
+          leaveKeyboardMode()
+          break
+        case 'ArrowLeft':
+          focusTitle(-1)
+          break
+        case 'ArrowRight':
+          focusTitle(1)
+          break
+        case 'ArrowDown': {
+          const id = (document.activeElement as HTMLElement)?.dataset.menuId
+          if (!id) {
+            return
+          }
+          void openByAccessKey(id)
+          break
+        }
+        default:
+          return
+      }
+      event.preventDefault()
+      event.stopPropagation()
       return
     }
     switch (event.key) {
       case 'Escape':
         close()
+        leaveKeyboardMode()
         break
       case 'ArrowDown':
         focusItem(1)
@@ -149,6 +304,8 @@
   }
 </script>
 
+<svelte:window on:keydown={onWindowKeydown} on:keyup={onWindowKeyup} on:blur={onWindowBlur} />
+
 {#if $menuBarEditing}
   <MenuBarEditor />
 {:else}
@@ -164,11 +321,13 @@
     aria-label="Pelton"
     bind:this={barEl}
     on:keydown={onBarKeydown}
+    on:focusout={onBarFocusOut}
     on:click={onBarClick}
     on:dblclick={onBarDblClick}
   >
-    {#each menus as m (m.id)}
+    {#each menus as m, i (m.id)}
       {@const label = m.labelKey ? $t(m.labelKey) : (m.label ?? '')}
+      {@const split = splitAccessKey(label, letters[i] ?? '')}
       <div class="menu-wrap">
         <button
           type="button"
@@ -177,10 +336,16 @@
           role="menuitem"
           aria-haspopup="menu"
           aria-expanded={openKey === m.id}
+          aria-keyshortcuts={letters[i] ? `Alt+${letters[i].toUpperCase()}` : undefined}
+          data-menu-id={m.id}
           on:click={() => toggle(m.id)}
           on:mouseenter={() => hoverTitle(m.id)}
         >
-          {label}
+          {#if altActive && split.letter}
+            {split.before}<span class="access">{split.letter}</span>{split.after}
+          {:else}
+            {label}
+          {/if}
         </button>
         {#if openKey === m.id}
           <div class="dropdown" role="menu" aria-label={label}>
@@ -326,9 +491,16 @@
   }
 
   .title:hover,
-  .title.open {
+  .title.open,
+  .title:focus-visible {
     background: var(--surface-hover);
     color: var(--text-primary);
+    outline: none;
+  }
+
+  /* only underlined while alt is in play, so the titles sit clean at rest. */
+  .access {
+    text-decoration: underline;
   }
 
   .scrim {
