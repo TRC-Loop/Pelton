@@ -24,6 +24,8 @@ export function CancelSend(arg1:number):Promise<boolean>;
 
 export function CheckForUpdates():Promise<desktop.UpdateCheckResult>;
 
+export function ChooseArchiveExportFolder():Promise<string>;
+
 export function ChooseMailFiles():Promise<Array<string>>;
 
 export function ChooseThunderbirdProfile():Promise<Array<desktop.ThunderbirdProfileDTO>>;
@@ -181,6 +183,8 @@ export function OpenLocalesFolder():Promise<void>;
 export function OpenLogFolder():Promise<void>;
 
 export function OpenThemesFolder():Promise<void>;
+
+export function PreviewArchiveExportName(arg1:string,arg2:string):Promise<string>;
 
 export function PreviewThemeImport():Promise<desktop.ThemeImportPreviewDTO>;
 

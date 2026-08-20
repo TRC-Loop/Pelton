@@ -19,7 +19,7 @@ type Account struct {
 	DisplayName string
 	// Username is the login name when it differs from the email address. Empty
 	// means authenticate with Email.
-	Username  string
+	Username string
 	IMAPHost string
 	IMAPPort int
 	SMTPHost string
@@ -34,6 +34,14 @@ type Account struct {
 	// reorders them. Unpositioned accounts sort after positioned ones by id, so
 	// an install that never reordered keeps creation order.
 	Position int
+	// ExportOnArchive writes a local .eml copy of every message archived from
+	// this account. ExportDir is where they go and must be set for the export to
+	// run; ExportSubfolders is one of the mailexport subfolder modes and
+	// ExportNameTemplate its file name pattern, both empty meaning the default.
+	ExportOnArchive    bool
+	ExportDir          string
+	ExportSubfolders   string
+	ExportNameTemplate string
 	// Local marks the Local Folders account, which holds imported mail and has
 	// no server behind it. Sync, idle and the mailbox backup all skip it, and
 	// its Email is LocalAccountEmail rather than a real address.
@@ -52,7 +60,8 @@ const LocalAccountName = "Local Folders"
 // accountColumns is the select list every account query shares, in the order
 // scanAccount reads them.
 const accountColumns = `id, email, display_name, username, imap_host, imap_port,
-       smtp_host, smtp_port, imap_tls, smtp_tls, created_at, position, is_local`
+       smtp_host, smtp_port, imap_tls, smtp_tls, created_at, position, is_local,
+       export_on_archive, export_dir, export_subfolders, export_name_template`
 
 // CreateAccount inserts an account and returns its new id. CreatedAt is set to
 // now if the caller left it zero.
@@ -147,6 +156,21 @@ func (d *DB) DeleteAccount(ctx context.Context, id int64) error {
 	return requireOneRow(res, ErrAccountNotFound)
 }
 
+// SetAccountArchiveExport stores an account's export-on-archive configuration.
+// Turning it on with an empty dir is allowed but exports nothing: the caller
+// decides whether to insist on a directory.
+func (d *DB) SetAccountArchiveExport(ctx context.Context, id int64, on bool, dir, subfolders, template string) error {
+	const query = `
+UPDATE accounts
+SET export_on_archive = ?, export_dir = ?, export_subfolders = ?, export_name_template = ?
+WHERE id = ?`
+	res, err := d.sql.ExecContext(ctx, query, boolToInt(on), dir, subfolders, template, id)
+	if err != nil {
+		return fmt.Errorf("storage: set account %d archive export: %w", id, err)
+	}
+	return requireOneRow(res, ErrAccountNotFound)
+}
+
 // SetAccountPositions rewrites the sidebar order of the account sections in one
 // transaction. Accounts not listed keep their current position. Positions start
 // at 1, since 0 means "never reordered".
@@ -161,14 +185,17 @@ type rowScanner interface {
 
 func scanAccount(row rowScanner) (*Account, error) {
 	var (
-		a       Account
-		created string
-		local   int
+		a        Account
+		created  string
+		local    int
+		exportOn int
 	)
 	if err := row.Scan(&a.ID, &a.Email, &a.DisplayName, &a.Username, &a.IMAPHost, &a.IMAPPort,
-		&a.SMTPHost, &a.SMTPPort, &a.IMAPTLS, &a.SMTPTLS, &created, &a.Position, &local); err != nil {
+		&a.SMTPHost, &a.SMTPPort, &a.IMAPTLS, &a.SMTPTLS, &created, &a.Position, &local,
+		&exportOn, &a.ExportDir, &a.ExportSubfolders, &a.ExportNameTemplate); err != nil {
 		return nil, err
 	}
+	a.ExportOnArchive = exportOn != 0
 	t, err := parseTime(created)
 	if err != nil {
 		return nil, err

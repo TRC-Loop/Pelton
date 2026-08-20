@@ -12,6 +12,10 @@ export namespace desktop {
 	    imapTls: string;
 	    smtpTls: string;
 	    local: boolean;
+	    exportOnArchive: boolean;
+	    exportDir: string;
+	    exportSubfolders: string;
+	    exportNameTemplate: string;
 	
 
 	    static createFrom(source: any = {}) {
@@ -31,6 +35,10 @@ export namespace desktop {
 	        this.imapTls = source["imapTls"];
 	        this.smtpTls = source["smtpTls"];
 	        this.local = source["local"];
+	        this.exportOnArchive = source["exportOnArchive"];
+	        this.exportDir = source["exportDir"];
+	        this.exportSubfolders = source["exportSubfolders"];
+	        this.exportNameTemplate = source["exportNameTemplate"];
 	    }
 	}
 	export class AccountSignaturesDTO {
@@ -120,6 +128,8 @@ export namespace desktop {
 	export class ArchiveUndoDTO {
 	    messageId: string;
 	    originalFolderId: number;
+	    exportPath: string;
+	    exportError: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new ArchiveUndoDTO(source);
@@ -129,6 +139,8 @@ export namespace desktop {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.messageId = source["messageId"];
 	        this.originalFolderId = source["originalFolderId"];
+	        this.exportPath = source["exportPath"];
+	        this.exportError = source["exportError"];
 	    }
 	}
 	export class AttachmentContentDTO {
@@ -1526,6 +1538,10 @@ export namespace desktop {
 	    password: string;
 	    imapTls: string;
 	    smtpTls: string;
+	    exportOnArchive: boolean;
+	    exportDir: string;
+	    exportSubfolders: string;
+	    exportNameTemplate: string;
 
 	    static createFrom(source: any = {}) {
 	        return new UpdateAccountRequest(source);
@@ -1543,6 +1559,10 @@ export namespace desktop {
 	        this.password = source["password"];
 	        this.imapTls = source["imapTls"];
 	        this.smtpTls = source["smtpTls"];
+	        this.exportOnArchive = source["exportOnArchive"];
+	        this.exportDir = source["exportDir"];
+	        this.exportSubfolders = source["exportSubfolders"];
+	        this.exportNameTemplate = source["exportNameTemplate"];
 	    }
 	}
 	export class UpdateCheckResult {

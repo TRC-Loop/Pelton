@@ -104,6 +104,7 @@
     bulkSetOffline,
     bulkTrash,
     bulkArchive,
+    reportArchiveExport,
   } from './lib/messageactions'
   import { buildCommands, mailCommands, type CommandContext, type MessageOp, type FolderOp } from './lib/commands'
   import { catalogByAction } from './lib/menuactions'
@@ -582,6 +583,7 @@
         }
         case 'archive': {
           const undo = await archiveMessage(msg.id)
+          reportArchiveExport(undo)
           if (undo.messageId) {
             recordArchived(msg, undo.messageId, undo.originalFolderId)
           }

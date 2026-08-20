@@ -76,6 +76,7 @@
     bulkMarkSeen,
     bulkMarkFlagged,
     bulkTrash,
+    reportArchiveExport,
   } from '../../lib/messageactions'
 
   // the meta-bar title. built-in unified views are localized by key (matching the
@@ -386,6 +387,7 @@
     }
     try {
       const undo = await archiveMessage(item.id)
+      reportArchiveExport(undo)
       if (undo.messageId) {
         recordArchived(item, undo.messageId, undo.originalFolderId)
       }

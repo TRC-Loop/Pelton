@@ -45,6 +45,10 @@ const accounts: Account[] = [
     local: false,
     imapTls: 'ssl',
     smtpTls: 'ssl',
+    exportOnArchive: false,
+    exportDir: '',
+    exportSubfolders: 'none',
+    exportNameTemplate: '',
   },
   {
     id: 2,
@@ -58,6 +62,10 @@ const accounts: Account[] = [
     local: false,
     imapTls: 'ssl',
     smtpTls: 'ssl',
+    exportOnArchive: false,
+    exportDir: '',
+    exportSubfolders: 'none',
+    exportNameTemplate: '',
   },
 ]
 

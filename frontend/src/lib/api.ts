@@ -115,8 +115,24 @@ export function updateAccount(req: {
   password: string
   imapTls: TLSMode
   smtpTls: TLSMode
+  exportOnArchive: boolean
+  exportDir: string
+  exportSubfolders: string
+  exportNameTemplate: string
 }): Promise<Account> {
   return App.UpdateAccount(new desktop.UpdateAccountRequest(req))
+}
+
+// chooseArchiveExportFolder opens a directory picker for the export-on-archive
+// location, returning '' when the user cancelled.
+export function chooseArchiveExportFolder(): Promise<string> {
+  return App.ChooseArchiveExportFolder()
+}
+
+// previewArchiveExportName renders a file name template against a fixed sample
+// message, so the settings screen can show what a pattern produces.
+export function previewArchiveExportName(template: string, subfolders: string): Promise<string> {
+  return App.PreviewArchiveExportName(template, subfolders)
 }
 
 // setAccountPassword stores a login password for an account, replacing any
@@ -377,6 +393,11 @@ export function undoDelete(id: number): Promise<void> {
 export interface ArchiveUndo {
   messageId: string
   originalFolderId: number
+  // the .eml copy the account's export-on-archive option wrote, '' when the
+  // option is off. exportError explains why no copy was written when one was
+  // expected: the archive itself still succeeded.
+  exportPath: string
+  exportError: string
 }
 
 // archiveMessage moves a message to its account's Archive folder on the server,

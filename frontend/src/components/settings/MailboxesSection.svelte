@@ -6,7 +6,17 @@
   // account; changing it is a re-add.
   import { onMount } from 'svelte'
   import { IconPencil, IconTrash, IconCheck, IconX, IconPlus } from '@tabler/icons-svelte'
-  import { listAccounts, updateAccount, deleteAccount, getLogStatus, deleteLogs, accountsNeedingPassword } from '../../lib/api'
+  import ToggleSwitch from '../common/ToggleSwitch.svelte'
+  import {
+    listAccounts,
+    updateAccount,
+    deleteAccount,
+    getLogStatus,
+    deleteLogs,
+    accountsNeedingPassword,
+    chooseArchiveExportFolder,
+    previewArchiveExportName,
+  } from '../../lib/api'
   import { refreshSidebar } from '../../stores/accounts'
   import { errorMessage, toastError, pushAction } from '../../stores/toast'
   import type { Account, TLSMode } from '../../lib/types'
@@ -28,6 +38,12 @@
   // the add-mailbox wizard is code-split like the other settings modals, so
   // it only loads once the user actually asks to add a mailbox.
   let wizardOpen = false
+  // the sample file name the export settings show, rendered by the backend so
+  // the ui never has a second copy of the naming rules.
+  let namePreview = ''
+
+  // the subfolder modes, in the order the picker shows them.
+  const subfolderModes = ['none', 'year', 'month'] as const
 
   onMount(load)
 
@@ -57,6 +73,50 @@
     // shows the truth and saving pins it.
     draft = { ...account }
     passwordDraft = ''
+    void refreshPreview()
+  }
+
+  // refreshPreview renders the current template through the backend. A failure
+  // only costs the preview line, so it falls back to empty rather than a toast.
+  async function refreshPreview(): Promise<void> {
+    if (!draft) {
+      return
+    }
+    try {
+      namePreview = await previewArchiveExportName(draft.exportNameTemplate, draft.exportSubfolders)
+    } catch {
+      namePreview = ''
+    }
+  }
+
+  function setExportOnArchive(on: boolean): void {
+    if (draft) {
+      draft.exportOnArchive = on
+    }
+  }
+
+  function setSubfolders(mode: string): void {
+    if (draft) {
+      draft.exportSubfolders = mode
+      void refreshPreview()
+    }
+  }
+
+  // pickExportFolder opens the native directory picker. Choosing a folder turns
+  // the export on, since that is plainly what the click meant.
+  async function pickExportFolder(): Promise<void> {
+    if (!draft) {
+      return
+    }
+    try {
+      const dir = await chooseArchiveExportFolder()
+      if (dir && draft) {
+        draft.exportDir = dir
+        draft.exportOnArchive = true
+      }
+    } catch (err) {
+      toastError(errorMessage(err))
+    }
   }
 
   // the security setters take the null check out of the template: inside an
@@ -96,6 +156,10 @@
         password: passwordDraft,
         imapTls: draft.imapTls as TLSMode,
         smtpTls: draft.smtpTls as TLSMode,
+        exportOnArchive: draft.exportOnArchive,
+        exportDir: draft.exportDir,
+        exportSubfolders: draft.exportSubfolders,
+        exportNameTemplate: draft.exportNameTemplate,
       })
       accounts = accounts.map((a) => (a.id === updated.id ? updated : a))
       if (passwordDraft !== '') {
@@ -223,6 +287,49 @@
               <p class="server-hint warn">{$t('mailboxes.passwordNeededHint')}</p>
             {/if}
             <p class="server-hint">{$t('mailboxes.serverChangeHint')}</p>
+
+            <div class="toggle">
+              <span>{$t('mailboxes.export.toggle')}</span>
+              <ToggleSwitch
+                checked={draft.exportOnArchive}
+                disabled={!draft.exportDir}
+                label={$t('mailboxes.export.toggle')}
+                on:change={(e) => setExportOnArchive(e.detail)}
+              />
+            </div>
+            <p class="server-hint">{$t('mailboxes.export.hint')}</p>
+            <div class="folder-row">
+              <span class="path" class:unset={!draft.exportDir}>
+                {draft.exportDir || $t('mailboxes.export.noFolder')}
+              </span>
+              <button type="button" class="ghost" on:click={pickExportFolder}>
+                {$t('mailboxes.export.choose')}
+              </button>
+            </div>
+            <span class="field">
+              <span>{$t('mailboxes.export.subfolders')}</span>
+              <div class="seg" role="radiogroup" aria-label={$t('mailboxes.export.subfolders')}>
+                {#each subfolderModes as mode (mode)}
+                  <button type="button" class:on={draft.exportSubfolders === mode} on:click={() => setSubfolders(mode)}>
+                    {$t(`mailboxes.export.subfolders.${mode}`)}
+                  </button>
+                {/each}
+              </div>
+            </span>
+            <label class="field">
+              <span>{$t('mailboxes.export.template')}</span>
+              <input
+                type="text"
+                bind:value={draft.exportNameTemplate}
+                on:input={refreshPreview}
+                placeholder="{'{date}'}_{'{subject}'}"
+              />
+            </label>
+            <p class="server-hint">{$t('mailboxes.export.placeholders')}</p>
+            {#if namePreview}
+              <p class="server-hint preview">{$t('mailboxes.export.preview')} <code>{namePreview}</code></p>
+            {/if}
+
             <div class="edit-actions">
               <button type="button" class="ghost" on:click={cancelEdit}>{$t('mailboxes.cancel')}</button>
               <button type="button" class="primary" disabled={saving} on:click={save}>
@@ -448,6 +555,46 @@
     margin: 0;
     font-size: var(--fz-meta);
     color: var(--text-tertiary);
+  }
+
+  /* the export-on-archive block: a switch, the chosen folder, and a preview of
+     the file name the template produces. */
+  .toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    font-size: var(--fz-label);
+    color: var(--text-primary);
+  }
+
+  .folder-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+
+  .path {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    direction: rtl;
+    text-align: left;
+    font-size: var(--fz-meta);
+    color: var(--text-secondary);
+  }
+
+  .path.unset {
+    color: var(--text-tertiary);
+    direction: ltr;
+  }
+
+  .preview code {
+    font-family: var(--font-mono);
+    color: var(--text-secondary);
+    overflow-wrap: anywhere;
   }
 
   .edit-actions {

@@ -39,6 +39,13 @@ type UpdateAccountRequest struct {
 	// empty to derive it from the port.
 	IMAPTLS string `json:"imapTls"`
 	SMTPTLS string `json:"smtpTls"`
+	// ExportOnArchive and the fields under it configure the local .eml copy
+	// written when a message is archived. An empty ExportDir turns the export
+	// off whatever the toggle says, since there would be nowhere to write.
+	ExportOnArchive    bool   `json:"exportOnArchive"`
+	ExportDir          string `json:"exportDir"`
+	ExportSubfolders   string `json:"exportSubfolders"`
+	ExportNameTemplate string `json:"exportNameTemplate"`
 }
 
 // UpdateAccount persists edits to an account's display name and server settings.
@@ -65,6 +72,14 @@ func (a *App) UpdateAccount(req UpdateAccountRequest) (AccountDTO, error) {
 	account.IMAPTLS = req.IMAPTLS
 	account.SMTPTLS = req.SMTPTLS
 	if err := a.store.UpdateAccount(a.ctx, account); err != nil {
+		return AccountDTO{}, err
+	}
+	account.ExportOnArchive = req.ExportOnArchive && req.ExportDir != ""
+	account.ExportDir = req.ExportDir
+	account.ExportSubfolders = validSubfolderMode(req.ExportSubfolders)
+	account.ExportNameTemplate = req.ExportNameTemplate
+	if err := a.store.SetAccountArchiveExport(a.ctx, account.ID, account.ExportOnArchive,
+		account.ExportDir, account.ExportSubfolders, account.ExportNameTemplate); err != nil {
 		return AccountDTO{}, err
 	}
 	if req.Password != "" {
