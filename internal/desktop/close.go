@@ -35,6 +35,21 @@ func (a *App) hideOnClose() bool {
 	return a.stringSetting(settingCloseAction, closeActionBackground) != closeActionQuit
 }
 
+// CloseWindow does what the window's close button does, for the Close Window
+// menu item and its Cmd+W accelerator: honour the close action setting, so the
+// two never disagree about what closing means. Hide rather than WindowHide for
+// the reason beforeClose gives below.
+func (a *App) CloseWindow() {
+	if a.ctx == nil {
+		return
+	}
+	if !a.hideOnClose() {
+		a.quitApp()
+		return
+	}
+	wailsruntime.Hide(a.ctx)
+}
+
 // beforeClose is wails' OnBeforeClose hook. Returning true prevents the quit,
 // which is how the window ends up hidden instead of the app exiting.
 func (a *App) beforeClose(_ context.Context) bool {

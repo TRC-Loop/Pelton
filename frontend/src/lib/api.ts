@@ -29,6 +29,7 @@ import type {
   Discovered,
   AddAccountRequest,
   TestConnectionRequest,
+  TLSMode,
   Signature,
   AccountSignatures,
   AddressBookEntry,
@@ -49,6 +50,8 @@ import type {
   Selection,
   FetchOlderResult,
   PGPKey,
+  LogStatus,
+  ThunderbirdProfile,
 } from './types'
 
 // isDemoMode reports whether the app launched in the cosmetic --potatoes-are-nice
@@ -99,7 +102,8 @@ export function listAccounts(): Promise<Account[]> {
   return App.ListAccounts()
 }
 
-// updateAccount persists edits to an account's display name and server settings.
+// updateAccount persists edits to an account's display name and server
+// settings. An empty password leaves the stored one alone.
 export function updateAccount(req: {
   id: number
   displayName: string
@@ -108,8 +112,39 @@ export function updateAccount(req: {
   imapPort: number
   smtpHost: string
   smtpPort: number
+  password: string
+  imapTls: TLSMode
+  smtpTls: TLSMode
+  exportOnArchive: boolean
+  exportDir: string
+  exportSubfolders: string
+  exportNameTemplate: string
 }): Promise<Account> {
   return App.UpdateAccount(new desktop.UpdateAccountRequest(req))
+}
+
+// chooseArchiveExportFolder opens a directory picker for the export-on-archive
+// location, returning '' when the user cancelled.
+export function chooseArchiveExportFolder(): Promise<string> {
+  return App.ChooseArchiveExportFolder()
+}
+
+// previewArchiveExportName renders a file name template against a fixed sample
+// message, so the settings screen can show what a pattern produces.
+export function previewArchiveExportName(template: string, subfolders: string): Promise<string> {
+  return App.PreviewArchiveExportName(template, subfolders)
+}
+
+// setAccountPassword stores a login password for an account, replacing any
+// existing one. Refused for accounts that sign in with OAuth.
+export function setAccountPassword(accountId: number, password: string): Promise<void> {
+  return App.SetAccountPassword(accountId, password)
+}
+
+// accountsNeedingPassword lists accounts with no stored password, which is the
+// state an account imported from another mail client arrives in.
+export function accountsNeedingPassword(): Promise<Account[]> {
+  return App.AccountsNeedingPassword().then((list) => (list ?? []) as unknown as Account[])
 }
 
 // deleteAccount removes an account, its cached mail and its keyring secret.
@@ -276,6 +311,19 @@ export function setFolderPinned(folderId: number, pinned: boolean): Promise<void
   return App.SetFolderPinned(folderId, pinned)
 }
 
+// setFolderSyncExcluded turns syncing for one folder off or on. Excluding does
+// not delete cached mail, it only stops the folder being updated (#173).
+export function setFolderSyncExcluded(folderId: number, excluded: boolean): Promise<void> {
+  return App.SetFolderSyncExcluded(folderId, excluded)
+}
+
+// startAccountSync runs a newly added account's first sync and parks it on
+// idle. Adding an account no longer does this on its own, so the wizard can
+// show the folder list before anything is fetched.
+export function startAccountSync(accountId: number): Promise<void> {
+  return App.StartAccountSync(accountId)
+}
+
 // assignableFolderRoles are the roles a user may give a folder by hand. Inbox is
 // absent on purpose: every account has exactly one, named by the protocol, and a
 // second would break the unified inbox.
@@ -314,8 +362,10 @@ export function getMessageSource(id: number): Promise<string> {
 }
 
 // getMessageHtml re-renders a body with the chosen remote-image policy.
-export function getMessageHtml(id: number, allowRemote: boolean): Promise<string> {
-  return App.GetMessageHTML(id, allowRemote)
+// includeTrackers additionally loads the images detection flagged as tracking
+// pixels, which the setting otherwise keeps blocked even here.
+export function getMessageHtml(id: number, allowRemote: boolean, includeTrackers = false): Promise<string> {
+  return App.GetMessageHTML(id, allowRemote, includeTrackers)
 }
 
 // setSeen / setFlagged toggle a flag and queue the change for sync.
@@ -343,6 +393,11 @@ export function undoDelete(id: number): Promise<void> {
 export interface ArchiveUndo {
   messageId: string
   originalFolderId: number
+  // the .eml copy the account's export-on-archive option wrote, '' when the
+  // option is off. exportError explains why no copy was written when one was
+  // expected: the archive itself still succeeded.
+  exportPath: string
+  exportError: string
 }
 
 // archiveMessage moves a message to its account's Archive folder on the server,
@@ -463,6 +518,18 @@ export function cancelSend(id: number): Promise<boolean> {
 // brief sent confirmation.
 export function clearSentOutbox(): Promise<void> {
   return App.ClearSentOutbox()
+}
+
+// retrySend puts a failed message back in the send queue with a fresh attempt
+// budget. Resolves false when it was no longer failed.
+export function retrySend(id: number): Promise<boolean> {
+  return App.RetrySend(id)
+}
+
+// discardFailedSend removes a failed message from the outbox. The message is
+// gone afterwards, so the caller confirms first.
+export function discardFailedSend(id: number): Promise<boolean> {
+  return App.DiscardFailedSend(id)
 }
 
 // trustSenderImages permanently allows remote content from a message's sender.
@@ -703,6 +770,45 @@ export function importData(path: string, categories: string[], credentialPasswor
   return App.ImportData(path, categories, credentialPassword)
 }
 
+// --- import from another mail client ---
+
+// findThunderbirdProfiles looks for Thunderbird profiles where it installs them
+// on this platform. An empty list means none were found there.
+export function findThunderbirdProfiles(): Promise<ThunderbirdProfile[]> {
+  return App.FindThunderbirdProfiles()
+}
+
+// chooseThunderbirdProfile opens a folder picker for a profile kept somewhere
+// discovery does not look. An empty list means the dialog was cancelled.
+export function chooseThunderbirdProfile(): Promise<ThunderbirdProfile[]> {
+  return App.ChooseThunderbirdProfile()
+}
+
+// importThunderbirdAccounts recreates the given addresses as mailboxes, reading
+// their server settings from the profile. Passwords cannot come across, so each
+// one needs its password entered once. Returns how many were created.
+export function importThunderbirdAccounts(profilePath: string, emails: string[]): Promise<number> {
+  return App.ImportThunderbirdAccounts(profilePath, emails)
+}
+
+// chooseMailFiles opens a picker for .eml and .mbox files. An empty list means
+// the dialog was cancelled.
+export function chooseMailFiles(): Promise<string[]> {
+  return App.ChooseMailFiles()
+}
+
+// importMailFiles imports the given files into Local Folders. It returns as soon
+// as the job starts; watch onImportProgress for progress and the final count.
+export function importMailFiles(paths: string[]): Promise<void> {
+  return App.ImportMailFiles(paths)
+}
+
+// importThunderbirdFolders imports mail folders found in a Thunderbird profile,
+// keeping their names. Like importMailFiles it runs in the background.
+export function importThunderbirdFolders(paths: string[]): Promise<void> {
+  return App.ImportThunderbirdFolders(paths)
+}
+
 // systemColorScheme returns the OS dark/light preference ("dark" | "light"), or
 // "" when it cannot be determined. Only meaningful on Linux, where WebKitGTK
 // does not expose it to CSS prefers-color-scheme; elsewhere it returns "".
@@ -729,6 +835,24 @@ export function deleteAddress(email: string): Promise<void> {
 // setWindowTitle updates the native window title to reflect context.
 export function setWindowTitle(title: string): void {
   void App.SetWindowTitle(title)
+}
+
+// closeWindow does what the window's close button does, following the close
+// action setting: hide and keep syncing, or quit.
+export function closeWindow(): void {
+  void App.CloseWindow()
+}
+
+// titleBarDoubleClick runs the system's title-bar double-click action (zoom,
+// minimise or nothing). Needed because the app draws its own title bar on
+// macOS, so the window server never sees the click.
+export function titleBarDoubleClick(): void {
+  void App.TitleBarDoubleClick()
+}
+
+// setDockBadge puts the unread count on the dock icon. No-op off macOS.
+export function setDockBadge(unread: number): void {
+  void App.SetDockBadge(unread)
 }
 
 // setWindowTheme matches the native window chrome (the Windows caption bar) to
@@ -827,6 +951,8 @@ export const SettingKeys = {
   menuBarNewItems: 'menu_bar_new_items',
   timeFormat: 'time_format',
   reduceMotion: 'reduce_motion',
+  handCursor: 'hand_cursor',
+  dockBadge: 'dock_badge',
   themeDarkStart: 'theme_dark_start',
   themeDarkEnd: 'theme_dark_end',
   bodyFont: 'body_font',
@@ -840,6 +966,11 @@ export const SettingKeys = {
   startupSelection: 'startup_selection',
   lastSelection: 'last_selection',
   liabilityAccepted: 'liability_accepted',
+  logToFile: 'log_to_file',
+  logLevel: 'log_level',
+  logMessageMetadata: 'log_message_metadata',
+  crashLogs: 'crash_logs',
+  blockTrackingPixels: 'block_tracking_pixels',
 } as const
 
 // listSystemFonts returns the installed font family names for the body font
@@ -1078,4 +1209,40 @@ export function scanAttachment(messageId: number, attachmentId: number): Promise
 // back per target, so one failed lookup does not lose the others.
 export function scanMessage(messageId: number, links: boolean, attachments: boolean): Promise<MessageScan> {
   return App.ScanMessage(messageId, links, attachments) as Promise<MessageScan>
+}
+
+// --- logs and crash reports (#211) ---
+
+// getLogStatus reports where the log folder is, whether anything is being
+// written to it, and whether the last run left a crash report behind.
+export function getLogStatus(): Promise<LogStatus> {
+  return App.GetLogStatus() as Promise<LogStatus>
+}
+
+// openLogFolder shows the log folder in the system file manager, creating it
+// first so the button works before anything has been logged.
+export function openLogFolder(): Promise<void> {
+  return App.OpenLogFolder()
+}
+
+// deleteLogs removes every log and crash file.
+export function deleteLogs(): Promise<void> {
+  return App.DeleteLogs()
+}
+
+// openCrashReport opens the pending crash file and marks it seen.
+export function openCrashReport(): Promise<void> {
+  return App.OpenCrashReport()
+}
+
+// dismissCrashReport marks the pending crash seen without opening it. The file
+// stays on disk.
+export function dismissCrashReport(): Promise<void> {
+  return App.DismissCrashReport()
+}
+
+// getDiagnostics returns the build and platform summary the about section
+// copies to the clipboard. It never contains mail or addresses.
+export function getDiagnostics(): Promise<string> {
+  return App.GetDiagnostics()
 }

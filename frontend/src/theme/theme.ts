@@ -130,6 +130,17 @@ export function applyReduceMotion(on: boolean): void {
   }
 }
 
+// applyHandCursor switches the cursor shown over buttons, rows and other
+// clickable chrome from the native arrow to the browser hand. Hyperlinks keep
+// the hand either way, so the two stay distinguishable.
+export function applyHandCursor(on: boolean): void {
+  if (on) {
+    document.documentElement.setAttribute('data-cursor', 'hand')
+  } else {
+    document.documentElement.removeAttribute('data-cursor')
+  }
+}
+
 // applyScale zooms the whole interface by a string multiplier ("1" = 100%).
 // zoom (rather than a root font-size) scales the px-based tokens and layout
 // together, and is supported in both WKWebView and WebView2. an invalid or

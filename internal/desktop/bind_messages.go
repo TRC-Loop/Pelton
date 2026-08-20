@@ -105,10 +105,12 @@ func (a *App) GetMessage(id int64) (MessageDetailDTO, error) {
 		ToAddresses:       m.ToAddresses,
 		CcAddresses:       m.CcAddresses,
 		BodyPlain:         m.BodyPlain,
+		BodyQuote:         quoteText(m.BodyPlain, m.BodyHTML),
 		IsHTML:            m.BodyHTML != "",
 		HasRemoteContent:  mailview.HasRemoteContent(m.BodyHTML),
 		RemoteAllowed:     autoAllow,
 		RemoteHosts:       mailview.RemoteHosts(m.BodyHTML),
+		TrackingPixels:    a.trackerDTOs(m.BodyHTML),
 		Attachments:       toAttachmentDTOs(atts, m.BodyHTML),
 		Unsubscribe:       a.unsubscribeInfo(m),
 	}
@@ -124,12 +126,15 @@ func (a *App) GetMessage(id int64) (MessageDetailDTO, error) {
 			if isHTML {
 				detail.IsHTML = true
 				detail.BodyPlain = ""
+				detail.BodyQuote = quoteText("", body)
 				detail.BodyHTMLSafe = a.renderHTML(body, atts, autoAllow)
 				detail.HasRemoteContent = mailview.HasRemoteContent(body)
 				detail.RemoteHosts = mailview.RemoteHosts(body)
+				detail.TrackingPixels = a.trackerDTOs(body)
 			} else {
 				detail.IsHTML = false
 				detail.BodyPlain = body
+				detail.BodyQuote = body
 				detail.BodyHTMLSafe = ""
 			}
 		}
@@ -139,7 +144,12 @@ func (a *App) GetMessage(id int64) (MessageDetailDTO, error) {
 
 // GetMessageHTML re-renders a message body with the chosen remote policy. The ui
 // calls it with allowRemote=true when the user clicks "load remote images".
-func (a *App) GetMessageHTML(id int64, allowRemote bool) (string, error) {
+//
+// includeTrackers additionally loads the images that look like tracking pixels,
+// which the tracking-pixel setting otherwise keeps out even here. It is the
+// "load them anyway" path behind each load button, for the case where the
+// detection got it wrong and the reader wants the picture (#205).
+func (a *App) GetMessageHTML(id int64, allowRemote, includeTrackers bool) (string, error) {
 	if err := a.ready(); err != nil {
 		return "", err
 	}
@@ -151,18 +161,66 @@ func (a *App) GetMessageHTML(id int64, allowRemote bool) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	if includeTrackers {
+		return a.renderHTMLWithTrackers(m.BodyHTML, atts), nil
+	}
 	return a.renderHTML(m.BodyHTML, atts, allowRemote), nil
 }
 
 // renderHTML resolves inline cid images to data urls then sanitizes with the
 // given remote policy. Inlining happens before sanitize so the cid scheme is
 // already gone and only trusted data urls remain.
+//
+// Images that look like tracking pixels are dropped before either step while
+// the block-trackers setting is on, so loading a newsletter's pictures does not
+// also confirm to the sender that it was opened. That holds however remote
+// content was allowed: a trusted sender gets its images shown, not a read
+// receipt (#205).
 func (a *App) renderHTML(html string, atts []storage.Attachment, allowRemote bool) string {
 	if html == "" {
 		return ""
 	}
+	if allowRemote && a.blockTrackers() {
+		html = mailview.StripTrackers(html, mailview.ScanRemoteImages(html).TrackerURLs())
+	}
 	resolved := mailview.ResolveCIDs(html, a.inlineDataURLs(atts))
 	return mailview.Sanitize(resolved, allowRemote)
+}
+
+// renderHTMLWithTrackers renders with remote content on and nothing held back,
+// for the reader who looked at what was detected and wants it loaded anyway.
+func (a *App) renderHTMLWithTrackers(html string, atts []storage.Attachment) string {
+	if html == "" {
+		return ""
+	}
+	return mailview.Sanitize(mailview.ResolveCIDs(html, a.inlineDataURLs(atts)), true)
+}
+
+// blockTrackers reports the block-tracking-pixels preference. Off by default:
+// the detection is a guess and will sometimes be wrong, so it is something the
+// user turns on (or picks up from the private preset in onboarding) rather than
+// something that starts quietly rewriting their mail.
+func (a *App) blockTrackers() bool {
+	return a.boolSetting(settingBlockTrackers, false)
+}
+
+// trackerDTOs describes the tracking pixels a body would have loaded, for the
+// blocked-remote banner. Empty when detection is off, since the banner would
+// otherwise name pixels the app is about to load anyway.
+func (a *App) trackerDTOs(html string) []TrackingPixelDTO {
+	if !a.blockTrackers() {
+		return nil
+	}
+	scan := mailview.ScanRemoteImages(html)
+	out := make([]TrackingPixelDTO, 0, len(scan.Trackers))
+	for _, t := range scan.Trackers {
+		reasons := make([]string, 0, len(t.Signals))
+		for _, s := range t.Signals {
+			reasons = append(reasons, string(s))
+		}
+		out = append(out, TrackingPixelDTO{Host: t.Host, URL: t.URL, Reasons: reasons})
+	}
+	return out
 }
 
 // inlineDataURLs builds a content-id to data-url map for inline attachments by
@@ -221,21 +279,43 @@ func (a *App) updateFlag(id int64, flag storage.Flag, on bool) error {
 	}
 	// read/flag changes move messages in and out of unread-only and flagged-only
 	// views, so refresh the view badges without waiting for the next sync.
-	go a.refreshViewCounts()
+	goSafe("counting unread mail", a.refreshViewCounts)
 	return nil
 }
 
 // DeleteMessage marks a message for deletion. The row is kept and hidden from
 // the list until the next sync expunges it on the server, then it is purged
 // locally. This is the safe path: nothing is lost if the server rejects it.
+//
+// Imported mail is deleted outright instead. There is no server to confirm the
+// deletion, so a pending marker would never be resolved and the message would
+// sit hidden forever.
 func (a *App) DeleteMessage(id int64) error {
 	if err := a.ready(); err != nil {
 		return err
 	}
+	m, err := a.store.GetMessage(a.ctx, id)
+	if err != nil {
+		return err
+	}
+	account, err := a.store.GetAccount(a.ctx, m.AccountID)
+	if err != nil {
+		return err
+	}
+	if account.Local {
+		if err := a.store.DeleteAttachmentFilesForMessage(m.AccountID, m.ID); err != nil {
+			return err
+		}
+		if err := a.store.DeleteMessage(a.ctx, id); err != nil {
+			return err
+		}
+		go a.refreshViewCounts()
+		return nil
+	}
 	if err := a.store.MarkDeletePending(a.ctx, id); err != nil {
 		return err
 	}
-	go a.refreshViewCounts()
+	goSafe("counting unread mail", a.refreshViewCounts)
 	return nil
 }
 
@@ -248,7 +328,7 @@ func (a *App) UndoDelete(id int64) error {
 	if err := a.store.ClearDeletePending(a.ctx, id); err != nil {
 		return err
 	}
-	go a.refreshViewCounts()
+	goSafe("counting unread mail", a.refreshViewCounts)
 	return nil
 }
 
@@ -392,4 +472,15 @@ func trimSuffixByte(s string, b byte) string {
 		return s[:len(s)-1]
 	}
 	return s
+}
+
+// quoteText is the message as text for a reply or forward to quote: the text
+// part when there is one, and otherwise the html rendered down to text. An
+// html-only message has no text part at all, which is why replying to one used
+// to quote nothing (#239).
+func quoteText(plain, html string) string {
+	if strings.TrimSpace(plain) != "" {
+		return plain
+	}
+	return mailview.TextForQuote(html)
 }

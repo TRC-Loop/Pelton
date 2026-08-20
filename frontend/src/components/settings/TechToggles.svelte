@@ -53,7 +53,7 @@
     justify-content: space-between;
     gap: var(--space-4);
     padding: var(--space-2) 0;
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
 
   .text {

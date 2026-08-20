@@ -56,7 +56,8 @@ func connect(t *testing.T, mb Mailbox) *mcp.ClientSession {
 	return cs
 }
 
-func callText(t *testing.T, cs *mcp.ClientSession, name string, args map[string]any) string {
+// call runs a tool and returns the whole result.
+func call(t *testing.T, cs *mcp.ClientSession, name string, args map[string]any) *mcp.CallToolResult {
 	t.Helper()
 	res, err := cs.CallTool(context.Background(), &mcp.CallToolParams{Name: name, Arguments: args})
 	if err != nil {
@@ -68,9 +69,35 @@ func callText(t *testing.T, cs *mcp.ClientSession, name string, args map[string]
 	if len(res.Content) == 0 {
 		t.Fatalf("call %s returned no content", name)
 	}
-	tc, ok := res.Content[0].(*mcp.TextContent)
+	return res
+}
+
+// callText joins every text block of a result, which is what an agent ends up
+// reading.
+func callText(t *testing.T, cs *mcp.ClientSession, name string, args map[string]any) string {
+	t.Helper()
+	var parts []string
+	for i, c := range call(t, cs, name, args).Content {
+		tc, ok := c.(*mcp.TextContent)
+		if !ok {
+			t.Fatalf("call %s: content[%d] is %T, want TextContent", name, i, c)
+		}
+		parts = append(parts, tc.Text)
+	}
+	return strings.Join(parts, "\n")
+}
+
+// callJSON returns the json block of a mail-carrying result, which is the
+// second one: the notice comes first.
+func callJSON(t *testing.T, cs *mcp.ClientSession, name string, args map[string]any) string {
+	t.Helper()
+	res := call(t, cs, name, args)
+	if len(res.Content) < 2 {
+		t.Fatalf("call %s returned %d content blocks, want the notice and the json", name, len(res.Content))
+	}
+	tc, ok := res.Content[1].(*mcp.TextContent)
 	if !ok {
-		t.Fatalf("call %s: content[0] is %T, want TextContent", name, res.Content[0])
+		t.Fatalf("call %s: content[1] is %T, want TextContent", name, res.Content[1])
 	}
 	return tc.Text
 }
@@ -106,10 +133,10 @@ func TestToolsExposeReadData(t *testing.T) {
 		t.Errorf("list_messages did not honor limit=1: %s", got)
 	}
 
-	// the JSON text content HTML-escapes angle brackets, so assert on
-	// escape-safe substrings; the structured-content test covers exact values.
+	// the bodies live in their own fenced blocks now, so this reads the whole
+	// result; TestGetMessageResultShape covers which block is which.
 	got = callText(t, cs, "get_message", map[string]any{"id": 100})
-	for _, want := range []string{"the body", "body_html", "a.pdf", "abc@example.com", "2048"} {
+	for _, want := range []string{"the body", "<p>the body</p>", "a.pdf", "abc@example.com", "2048"} {
 		if !strings.Contains(got, want) {
 			t.Errorf("get_message missing %q: %s", want, got)
 		}
@@ -123,9 +150,10 @@ func TestToolsExposeReadData(t *testing.T) {
 	}
 }
 
-// TestGetMessageResultShape confirms the result is a single text block of clean
-// JSON: no structured content (so no output-schema validation on the client) and
-// no HTML escaping of the body, so it stays readable.
+// TestGetMessageResultShape confirms the layout an agent receives: a notice,
+// then clean JSON of everything but the bodies, then one fenced block per body.
+// No structured content, so no output-schema validation on the client, and no
+// HTML escaping, so an html body stays readable.
 func TestGetMessageResultShape(t *testing.T) {
 	mb := &fakeMailbox{message: &Message{
 		MessageSummary: MessageSummary{ID: 5, Subject: "Subj"},
@@ -133,27 +161,37 @@ func TestGetMessageResultShape(t *testing.T) {
 		BodyHTML:       "<p>hi</p>",
 	}}
 	cs := connect(t, mb)
-	res, err := cs.CallTool(context.Background(), &mcp.CallToolParams{Name: "get_message", Arguments: map[string]any{"id": 5}})
-	if err != nil {
-		t.Fatal(err)
-	}
+	res := call(t, cs, "get_message", map[string]any{"id": 5})
+
 	if res.StructuredContent != nil {
 		t.Errorf("expected no structured content, got %v", res.StructuredContent)
 	}
-	if len(res.Content) != 1 {
-		t.Fatalf("expected one content block, got %d", len(res.Content))
+	if len(res.Content) != 4 {
+		t.Fatalf("expected notice, json, text body and html body, got %d blocks", len(res.Content))
 	}
-	text := res.Content[0].(*mcp.TextContent).Text
-	// the body must be parseable back and its html not escaped.
-	if !strings.Contains(text, "<p>hi</p>") {
-		t.Errorf("html body escaped or missing: %s", text)
+	if notice := res.Content[0].(*mcp.TextContent).Text; !strings.Contains(notice, "UNTRUSTED CONTENT") {
+		t.Errorf("first block is not the notice: %s", notice)
 	}
+
+	// the json block carries the headers and no body at all.
 	var got Message
-	if err := json.Unmarshal([]byte(text), &got); err != nil {
-		t.Fatalf("result text is not valid json: %v", err)
+	if err := json.Unmarshal([]byte(res.Content[1].(*mcp.TextContent).Text), &got); err != nil {
+		t.Fatalf("json block is not valid json: %v", err)
 	}
-	if got.BodyText != "body" || got.Subject != "Subj" {
+	if got.Subject != "Subj" {
 		t.Errorf("round-trip mismatch: %+v", got)
+	}
+	if got.BodyText != "" || got.BodyHTML != "" {
+		t.Errorf("bodies are still inside the json: %+v", got)
+	}
+
+	text := res.Content[2].(*mcp.TextContent)
+	if !strings.Contains(text.Text, "body") {
+		t.Errorf("text body missing: %s", text.Text)
+	}
+	html := res.Content[3].(*mcp.TextContent)
+	if !strings.Contains(html.Text, "<p>hi</p>") {
+		t.Errorf("html body escaped or missing: %s", html.Text)
 	}
 }
 

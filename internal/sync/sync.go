@@ -19,8 +19,8 @@ type mailClient interface {
 	FetchAllFlags() ([]pimap.MessageHeader, error)
 	FetchMessage(uid imap.UID) (*pimap.Message, error)
 	AddFlags(uid imap.UID, flags ...imap.Flag) error
-	MarkDeleted(uids ...imap.UID) error
-	Expunge(uids ...imap.UID) error
+	DeleteMessages(uids ...imap.UID) error
+	MoveMessages(uids []imap.UID, mailbox string) error
 }
 
 // Engine orchestrates one account's imap connection and the local store. It is
@@ -33,6 +33,13 @@ type Engine struct {
 	// ColorSync, when true, adopts server-side flag colors (Thunderbird $LabelN
 	// keywords) into the local cache during each folder sync.
 	ColorSync bool
+	// TrashPath and TrashFolderID identify the account's trash folder, which is
+	// where a deleted message goes. Deleting from the trash itself, or from an
+	// account with no trash folder (TrashPath empty), is the permanent delete
+	// instead. The caller sets these because folder roles are resolved above
+	// this layer.
+	TrashPath     string
+	TrashFolderID int64
 	// InitialLimit caps how many of a folder's newest messages the first sync
 	// fetches; the rest wait behind the folder's sync floor until a backfill asks
 	// for them (see window.go). 0 means no cap, the pre-#175 behavior. It only
@@ -73,6 +80,10 @@ func (e *Engine) SyncAccount(ctx context.Context, accountID int64) error {
 	for _, folder := range folders {
 		if err := ctx.Err(); err != nil {
 			return err
+		}
+		// a folder the user unchecked is never opened at all (#173).
+		if folder.SyncExcluded {
+			continue
 		}
 		res, err := e.SyncFolder(ctx, folder)
 		if err != nil {

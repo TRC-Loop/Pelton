@@ -5,10 +5,10 @@
   // in-app webview.
   import { onDestroy, onMount } from 'svelte'
   import { createEventDispatcher } from 'svelte'
-  import { IconBrandGithub, IconBug, IconLicense, IconScale, IconX, IconRefresh, IconUsers, IconWorld, IconBook2 } from '@tabler/icons-svelte'
+  import { IconBrandGithub, IconBug, IconLicense, IconScale, IconX, IconRefresh, IconUsers, IconWorld, IconBook2, IconFolderOpen, IconClipboard } from '@tabler/icons-svelte'
   import { BrowserOpenURL } from '../../../wailsjs/runtime/runtime'
   import { APP } from '../../lib/app-info'
-  import { appVersion, checkForUpdates, defaultMailClientStatus, setDefaultMailClient, isNightly, type UpdateCheckResult } from '../../lib/api'
+  import { appVersion, checkForUpdates, defaultMailClientStatus, setDefaultMailClient, isNightly, getDiagnostics, openLogFolder, type UpdateCheckResult } from '../../lib/api'
   import nightlyLogo from '../../assets/images/icons/pelton-nightly-logo.png'
   import { onUpdateAvailable } from '../../lib/events'
   import { prefs, setUpdateCheckFrequency } from '../../stores/prefs'
@@ -65,6 +65,29 @@
       toastError(errorMessage(err))
     } finally {
       settingDefault = false
+    }
+  }
+
+  // diagnostics (#211): the build and platform summary that starts a bug
+  // report, and a shortcut to the log folder. Copying is the only way any of
+  // this leaves the machine, and it takes a click to do it.
+  let copiedDiagnostics = false
+
+  async function onCopyDiagnostics(): Promise<void> {
+    try {
+      await navigator.clipboard.writeText(await getDiagnostics())
+      copiedDiagnostics = true
+      setTimeout(() => (copiedDiagnostics = false), 2000)
+    } catch (err) {
+      toastError(errorMessage(err))
+    }
+  }
+
+  async function onOpenLogFolder(): Promise<void> {
+    try {
+      await openLogFolder()
+    } catch (err) {
+      toastError(errorMessage(err))
     }
   }
 
@@ -207,6 +230,21 @@
     </button>
   </div>
 
+  <div class="row">
+    <span class="row-label">{$t('about.diagnostics.label')}</span>
+    <div class="diag-actions">
+      <button type="button" class="action-btn" on:click={onOpenLogFolder}>
+        <IconFolderOpen size={14} stroke={1.8} />
+        {$t('settingsPanel.button.openLogFolder')}
+      </button>
+      <button type="button" class="action-btn" on:click={onCopyDiagnostics}>
+        <IconClipboard size={14} stroke={1.8} />
+        {copiedDiagnostics ? $t('about.diagnostics.copied') : $t('about.diagnostics.copy')}
+      </button>
+    </div>
+  </div>
+  <p class="hint">{$t('about.diagnostics.hint')}</p>
+
   <div class="update-block">
     <SegmentedSetting label={$t('about.update.label')} value={$prefs.updateCheckFrequency} options={updateCheckOptions} on:change={onUpdateFrequency} />
     <p class="hint">{$t('about.update.hint')}</p>
@@ -337,7 +375,7 @@
     background: var(--surface-raised);
     color: var(--text-primary);
     font-size: var(--fz-label);
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
 
   .links button:hover {
@@ -387,7 +425,8 @@
     line-height: 1.5;
   }
 
-  .update-actions {
+  .update-actions,
+  .diag-actions {
     display: inline-flex;
     align-items: center;
     gap: var(--space-2);
@@ -403,7 +442,7 @@
     background: var(--surface-raised);
     color: var(--text-primary);
     font-size: var(--fz-label);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     white-space: nowrap;
   }
 
@@ -459,7 +498,7 @@
     border: none;
     background: transparent;
     color: var(--text-secondary);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     padding: var(--space-1);
     border-radius: var(--radius-control);
   }

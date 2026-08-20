@@ -188,7 +188,7 @@
     border-radius: var(--radius-control);
     background: var(--surface-raised);
     color: var(--text-secondary);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     font-size: var(--fz-meta);
   }
   .save-all:hover {
@@ -229,7 +229,7 @@
     border: none;
     background: transparent;
     text-align: left;
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
   .card-main:hover {
     background: var(--surface-hover);
@@ -245,7 +245,7 @@
     border-left: var(--hairline) solid var(--border-subtle);
     background: transparent;
     color: var(--text-tertiary);
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
   .dl-btn:hover {
     background: var(--surface-hover);

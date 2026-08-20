@@ -6,14 +6,14 @@
   // user opens it, so its cost is not paid at startup.
   import { createEventDispatcher, onMount } from 'svelte'
   import { get } from 'svelte/store'
-  import { IconX, IconArrowLeft, IconCheck } from '@tabler/icons-svelte'
+  import { IconX, IconArrowLeft, IconCheck, IconArrowRight, IconMailbox, IconPlus } from '@tabler/icons-svelte'
   import WizardProviders from './WizardProviders.svelte'
   import Spinner from '../common/Spinner.svelte'
   import { BrowserOpenURL } from '../../../wailsjs/runtime/runtime'
-  import { discoverConfig, testConnection, addPasswordAccount, addOAuthAccount } from '../../lib/api'
-  import { errorMessage } from '../../stores/toast'
+  import { discoverConfig, testConnection, addPasswordAccount, addOAuthAccount, listFolders, setFolderSyncExcluded, startAccountSync } from '../../lib/api'
+  import { errorMessage, toastError } from '../../stores/toast'
   import { providerPresets, type ProviderPreset } from '../../lib/providers'
-  import type { AddAccountRequest, Account } from '../../lib/types'
+  import type { AddAccountRequest, Account, Folder, TLSMode } from '../../lib/types'
   import { t } from '../../lib/i18n'
 
   const dispatch = createEventDispatcher<{ close: void; added: Account }>()
@@ -22,8 +22,17 @@
   // provider's setup. used by the onboarding provider cards.
   export let initialProviderId: string | null = null
 
-  type Step = 'provider' | 'config' | 'oauth' | 'working' | 'done' | 'error'
-  let step: Step = 'provider'
+  // whether to open on the start step, which asks whether the user is setting up
+  // a mailbox or coming from another client. Onboarding turns it off: it offers
+  // importing as a step of its own, so asking again here would be a dead end
+  // the user has already been past.
+  export let offerImport = true
+
+  type Step = 'start' | 'provider' | 'config' | 'oauth' | 'working' | 'folders' | 'done' | 'error'
+  let step: Step = offerImport ? 'start' : 'provider'
+
+  // the import modal, opened over the wizard from the start step.
+  let showImport = false
   // the form the last submit came from, so the error screen returns there
   // (gmail can submit from either form since oauth is optional for it).
   let formStep: 'config' | 'oauth' = 'config'
@@ -45,6 +54,8 @@
       imapPort: 993,
       smtpHost: '',
       smtpPort: 465,
+      imapTls: 'ssl',
+      smtpTls: 'ssl',
       password: '',
       provider: '',
       clientId: '',
@@ -55,31 +66,40 @@
   // whether the advanced section (tls mode, oauth secret) is expanded.
   let showAdvanced = false
 
-  // the imap transport, derived from the port: 143 is STARTTLS, anything else is
-  // implicit TLS. selecting a mode sets the conventional port, which the backend
-  // reads to choose the transport.
-  $: imapTLS = draft.imapPort === 143 ? 'starttls' : 'ssl'
+  // the transport is its own field, not read back off the port. deriving it
+  // meant STARTTLS only existed on 143 and 587, so a server on any other port
+  // could not be reached at all (#237).
+  //
+  // picking a mode still fills in that mode's usual port, but only when the
+  // current one is the other mode's default, so it never overwrites a port the
+  // user typed. changing the port never touches the mode.
+  const imapPorts: Record<string, number> = { ssl: 993, starttls: 143 }
+  const smtpPorts: Record<string, number> = { ssl: 465, starttls: 587 }
 
-  function setTLS(mode: string): void {
-    draft.imapPort = mode === 'starttls' ? 143 : 993
+  function setTLS(mode: TLSMode): void {
+    if (draft.imapPort === imapPorts[draft.imapTls]) {
+      draft.imapPort = imapPorts[mode]
+    }
+    draft.imapTls = mode
   }
 
-  // the smtp transport, derived the same way: 587 is STARTTLS submission,
-  // anything else (conventionally 465) is implicit TLS. selecting a mode sets
-  // the conventional port, which the backend reads to choose the transport.
-  $: smtpTLS = draft.smtpPort === 587 ? 'starttls' : 'ssl'
-
-  function setSMTPTLS(mode: string): void {
-    draft.smtpPort = mode === 'starttls' ? 587 : 465
+  function setSMTPTLS(mode: TLSMode): void {
+    if (draft.smtpPort === smtpPorts[draft.smtpTls]) {
+      draft.smtpPort = smtpPorts[mode]
+    }
+    draft.smtpTls = mode
   }
+
 
   function selectPreset(p: ProviderPreset): void {
     preset = p
     draft = blankDraft()
     if (p.imapHost) draft.imapHost = p.imapHost
     if (p.imapPort) draft.imapPort = p.imapPort
+    if (p.imapTls) draft.imapTls = p.imapTls
     if (p.smtpHost) draft.smtpHost = p.smtpHost
     if (p.smtpPort) draft.smtpPort = p.smtpPort
+    if (p.smtpTls) draft.smtpTls = p.smtpTls
     if (p.oauthProvider) draft.provider = p.oauthProvider
     testOk = null
     error = ''
@@ -112,6 +132,10 @@
       draft.imapPort = d.imapPort
       draft.smtpHost = d.smtpHost
       draft.smtpPort = d.smtpPort
+      // autoconfig states the security outright; empty means it said nothing
+      // usable, so the current choice stands rather than being overwritten.
+      if (d.imapTls) draft.imapTls = d.imapTls as TLSMode
+      if (d.smtpTls) draft.smtpTls = d.smtpTls as TLSMode
     } catch {
       // leave fields for manual entry; discovery is best effort.
     }
@@ -127,6 +151,7 @@
         username: draft.username,
         imapHost: draft.imapHost,
         imapPort: draft.imapPort,
+        imapTls: draft.imapTls,
         password: draft.password,
       })
       testOk = true
@@ -144,7 +169,7 @@
     workingMessage = get(t)('wizard.working.connecting')
     try {
       const account = await addPasswordAccount(draft)
-      finish(account)
+      await finish(account)
     } catch (err) {
       fail(err)
     }
@@ -156,15 +181,75 @@
     workingMessage = get(t)('wizard.working.signIn')
     try {
       const account = await addOAuthAccount(draft)
-      finish(account)
+      await finish(account)
     } catch (err) {
       fail(err)
     }
   }
 
-  function finish(account: Account): void {
-    step = 'done'
+  // the folder picker (#173). The account exists and its folders are discovered
+  // by now, but nothing has synced yet: AddAccount deliberately does not start,
+  // so a 30k-message archive can be unchecked before it is ever fetched.
+  let addedAccount: Account | null = null
+  let folders: Folder[] = []
+  // ids the user unchecked. Everything starts checked, which is what the issue
+  // asked for and keeps the default behaviour unchanged.
+  let unchecked = new Set<number>()
+  let applying = false
+
+  async function finish(account: Account): Promise<void> {
+    addedAccount = account
     dispatch('added', account)
+    try {
+      folders = await listFolders(account.id)
+    } catch {
+      // discovery failed or the server has no folders worth choosing from.
+      // Never block the wizard on it: sync and let the next one find them.
+      folders = []
+    }
+    if (folders.length < 2) {
+      // one folder, or none, is not a choice worth a screen.
+      await beginSync()
+      return
+    }
+    unchecked = new Set()
+    step = 'folders'
+  }
+
+  function toggleFolder(id: number): void {
+    const next = new Set(unchecked)
+    if (next.has(id)) {
+      next.delete(id)
+    } else {
+      next.add(id)
+    }
+    unchecked = next
+  }
+
+  // beginSync applies the folder choice and starts the first sync. It runs on
+  // every route out of the folder step, including skipping it, because the
+  // account is already saved and would otherwise sit there never syncing.
+  async function beginSync(): Promise<void> {
+    const account = addedAccount
+    if (!account) {
+      step = 'done'
+      return
+    }
+    applying = true
+    try {
+      for (const id of unchecked) {
+        await setFolderSyncExcluded(id, true)
+      }
+      await startAccountSync(account.id)
+    } catch (err) {
+      // the account exists either way, so a failure here is not worth throwing
+      // the user back to the form. It syncs everything, which is the old
+      // behaviour, and the folders stay unswitchable only until settings.
+      toastError(errorMessage(err))
+    } finally {
+      applying = false
+      step = 'done'
+    }
   }
 
   function fail(err: unknown): void {
@@ -175,6 +260,13 @@
   function back(): void {
     error = ''
     step = 'provider'
+    preset = null
+  }
+
+  // the start step is only ever reachable backwards from the provider grid.
+  function backToStart(): void {
+    error = ''
+    step = 'start'
     preset = null
   }
 
@@ -192,6 +284,7 @@
     draft.username
     draft.imapHost
     draft.imapPort
+    draft.imapTls
     draft.password
     testOk = null
   }
@@ -202,6 +295,10 @@
   <header class="head">
     {#if step === 'config' || step === 'oauth'}
       <button type="button" class="icon" aria-label={$t('wizard.back')} on:click={back}>
+        <IconArrowLeft size={18} stroke={1.8} />
+      </button>
+    {:else if step === 'provider' && offerImport}
+      <button type="button" class="icon" aria-label={$t('wizard.back')} on:click={backToStart}>
         <IconArrowLeft size={18} stroke={1.8} />
       </button>
     {:else}
@@ -215,7 +312,28 @@
 
   <div class="body">
     <div class="content">
-      {#if step === 'provider'}
+      {#if step === 'start'}
+        <h3>{$t('wizard.start.title')}</h3>
+        <p class="note">{$t('wizard.start.sub')}</p>
+        <div class="start-choices">
+          <button type="button" class="choice" on:click={() => (step = 'provider')}>
+            <span class="choice-icon"><IconPlus size={22} stroke={1.6} /></span>
+            <span class="choice-text">
+              <span class="choice-title">{$t('wizard.start.addTitle')}</span>
+              <span class="choice-sub">{$t('wizard.start.addSub')}</span>
+            </span>
+            <IconArrowRight size={16} stroke={1.8} />
+          </button>
+          <button type="button" class="choice" on:click={() => (showImport = true)}>
+            <span class="choice-icon"><IconMailbox size={22} stroke={1.6} /></span>
+            <span class="choice-text">
+              <span class="choice-title">{$t('wizard.start.importTitle')}</span>
+              <span class="choice-sub">{$t('wizard.start.importSub')}</span>
+            </span>
+            <IconArrowRight size={16} stroke={1.8} />
+          </button>
+        </div>
+      {:else if step === 'provider'}
         <WizardProviders on:pick={pick} />
       {:else if step === 'config'}
         <h3>{preset?.label}</h3>
@@ -270,14 +388,14 @@
 
             <span class="adv-label">{$t('wizard.advanced.imapSecurity')}</span>
             <div class="seg" role="radiogroup" aria-label={$t('wizard.advanced.imapSecurity')}>
-              <button type="button" class:on={imapTLS === 'ssl'} on:click={() => setTLS('ssl')}>SSL / TLS</button>
-              <button type="button" class:on={imapTLS === 'starttls'} on:click={() => setTLS('starttls')}>STARTTLS</button>
+              <button type="button" class:on={draft.imapTls === 'ssl'} on:click={() => setTLS('ssl')}>SSL / TLS</button>
+              <button type="button" class:on={draft.imapTls === 'starttls'} on:click={() => setTLS('starttls')}>STARTTLS</button>
             </div>
 
             <span class="adv-label">{$t('wizard.advanced.smtpSecurity')}</span>
             <div class="seg" role="radiogroup" aria-label={$t('wizard.advanced.smtpSecurity')}>
-              <button type="button" class:on={smtpTLS === 'ssl'} on:click={() => setSMTPTLS('ssl')}>SSL / TLS</button>
-              <button type="button" class:on={smtpTLS === 'starttls'} on:click={() => setSMTPTLS('starttls')}>STARTTLS</button>
+              <button type="button" class:on={draft.smtpTls === 'ssl'} on:click={() => setSMTPTLS('ssl')}>SSL / TLS</button>
+              <button type="button" class:on={draft.smtpTls === 'starttls'} on:click={() => setSMTPTLS('starttls')}>STARTTLS</button>
             </div>
             <p class="adv-hint">
               {$t('wizard.advanced.tlsHint')}
@@ -350,6 +468,33 @@
         {/if}
       {:else if step === 'working'}
         <Spinner label={workingMessage} />
+      {:else if step === 'folders'}
+        <div class="folders-step">
+          <h3>{$t('wizard.folders.title')}</h3>
+          <p class="note">{$t('wizard.folders.body')}</p>
+          <ul class="folder-list">
+            {#each folders as folder (folder.id)}
+              <li>
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={!unchecked.has(folder.id)}
+                    on:change={() => toggleFolder(folder.id)}
+                  />
+                  <span class="folder-name">{folder.name}</span>
+                </label>
+              </li>
+            {/each}
+          </ul>
+          <div class="folder-actions">
+            <button type="button" class="ghost" disabled={applying} on:click={() => { unchecked = new Set(); void beginSync() }}>
+              {$t('wizard.folders.skip')}
+            </button>
+            <button type="button" class="primary" disabled={applying} on:click={() => void beginSync()}>
+              {applying ? $t('wizard.folders.applying') : $t('wizard.folders.confirm')}
+            </button>
+          </div>
+        </div>
       {:else if step === 'done'}
         <div class="result">
           <IconCheck size={32} stroke={1.6} />
@@ -370,7 +515,105 @@
   </div>
 </div>
 
+<!-- the import flow is the same modal Settings uses, code-split so the wizard
+     does not carry it unless the user asks for it. -->
+{#if showImport}
+  {#await import('../settings/ImportClientModal.svelte') then m}
+    <svelte:component this={m.default} on:close={() => (showImport = false)} />
+  {/await}
+{/if}
+
 <style>
+  /* the folder picker: a plain checklist, since the point is to scan a long
+     list of server folders and untick the heavy ones. */
+  .folders-step {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .folder-list {
+    list-style: none;
+    margin: 0;
+    padding: var(--space-2);
+    max-height: 260px;
+    overflow-y: auto;
+    border: var(--hairline) solid var(--border-subtle);
+    border-radius: var(--radius-control);
+  }
+
+  .folder-list label {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-1) var(--space-2);
+    font-size: var(--fz-body);
+    cursor: pointer;
+  }
+
+  .folder-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .folder-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--space-2);
+  }
+
+  /* the start step: two equal choices, styled like the onboarding provider rows
+     so the two entry points into this flow look the same. */
+  .start-choices {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    margin-top: var(--space-4);
+  }
+
+  .choice {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    width: 100%;
+    padding: var(--space-4);
+    border: var(--hairline) solid var(--border-default);
+    border-radius: var(--radius-card);
+    background: var(--surface-raised);
+    color: var(--text-primary);
+    text-align: left;
+    cursor: pointer;
+  }
+  .choice:hover {
+    background: var(--surface-hover);
+    border-color: var(--accent);
+  }
+
+  .choice-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    color: var(--text-secondary);
+  }
+
+  .choice-text {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    flex: 1;
+    min-width: 0;
+  }
+  .choice-title {
+    font-size: var(--fz-body);
+    font-weight: var(--fw-medium);
+  }
+  .choice-sub {
+    font-size: var(--fz-label);
+    color: var(--text-tertiary);
+  }
+
   .screen {
     position: fixed;
     inset: 0;
@@ -380,6 +623,9 @@
     display: flex;
     flex-direction: column;
     background: var(--surface-base);
+    /* covers the whole window, so it has to keep the macOS traffic lights clear
+       itself; zero on every other platform. */
+    padding-top: var(--titlebar-lights);
   }
 
   .head {
@@ -404,7 +650,7 @@
     border: none;
     background: transparent;
     color: var(--text-secondary);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     border-radius: var(--radius-control);
   }
 
@@ -473,7 +719,7 @@
     font-size: var(--fz-label);
     font-weight: var(--fw-medium);
     text-decoration: underline;
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
 
   .field {
@@ -519,7 +765,7 @@
     border: none;
     background: transparent;
     color: var(--accent);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     font-size: var(--fz-label);
     padding: var(--space-1) 0;
     margin-bottom: var(--space-2);
@@ -558,7 +804,7 @@
     border: none;
     background: var(--surface-raised);
     color: var(--text-secondary);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     padding: var(--space-2) var(--space-4);
     font-size: var(--fz-label);
   }
@@ -591,7 +837,7 @@
     padding: var(--space-2) var(--space-5);
     border-radius: var(--radius-control);
     border: var(--hairline) solid var(--border-default);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     font-size: var(--fz-label);
   }
 

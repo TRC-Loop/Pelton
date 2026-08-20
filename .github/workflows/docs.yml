@@ -10,6 +10,11 @@ on:
     paths:
       - "docs/**"
       - "zensical.toml"
+      # overrides/ is the theme: templates and the vendored icon set live there,
+      # so a change to it changes the built site as surely as a page does.
+      # Without this, adding an icon deploys nothing and the site keeps serving
+      # the last build, which is how a broken icon reference survived a fix.
+      - "overrides/**"
       - ".github/workflows/docs.yml"
   workflow_dispatch:
 

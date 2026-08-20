@@ -154,7 +154,7 @@
     border: none;
     background: transparent;
     color: var(--text-tertiary);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     padding: var(--space-1);
     border-radius: var(--radius-control);
   }
@@ -226,7 +226,7 @@
     padding: 0;
     color: var(--text-tertiary);
     font-size: var(--fz-meta);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     text-align: left;
   }
   .example:hover {
@@ -243,7 +243,7 @@
     border: none;
     background: transparent;
     color: var(--text-tertiary);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     padding: var(--space-2);
     border-radius: var(--radius-control);
   }

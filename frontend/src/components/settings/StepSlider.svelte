@@ -86,7 +86,7 @@
     height: 4px;
     border-radius: 999px;
     background: var(--surface-hover);
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
 
   input[type='range']:focus-visible {

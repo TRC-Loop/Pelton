@@ -15,6 +15,7 @@ import (
 	"sync/atomic"
 
 	"github.com/TRC-Loop/Pelton/internal/configsync"
+	"github.com/TRC-Loop/Pelton/internal/logging"
 	"github.com/TRC-Loop/Pelton/internal/mcpserver"
 	"github.com/TRC-Loop/Pelton/internal/outbox"
 	"github.com/TRC-Loop/Pelton/internal/proxy"
@@ -28,6 +29,14 @@ import (
 type App struct {
 	ctx context.Context
 	log *slog.Logger
+	// logWriter is where log lines go. It always writes to stderr and, when
+	// the setting is on, also to a rotating file in the data directory. See
+	// logging.go.
+	logWriter *logging.Writer
+	// debug is set by --debug or PELTON_DEBUG and forces file logging on at
+	// debug level, over the setting. It is the way out of "the app will not
+	// start, so I cannot turn on logging in settings".
+	debug bool
 
 	store *storage.DB
 	// dataDir is the app data directory the store opened in; themes and the
@@ -95,6 +104,12 @@ type App struct {
 	// mailto holds a mailto: draft the app was launched with (or received from a
 	// second launch) until the frontend consumes it. See mailto.go.
 	mailto mailtoState
+
+	// badgeMu guards unreadBadge, the last unread count the frontend reported
+	// for the dock icon. Kept so toggling the setting can re-apply it without
+	// waiting for the next sidebar refresh.
+	badgeMu     sync.Mutex
+	unreadBadge int
 }
 
 // IsDemoMode reports whether the app was launched in the cosmetic demo mode. The
@@ -116,8 +131,10 @@ func (a *App) IsDevMode() bool {
 // initialization happens in startup once wails has handed us a context we can
 // emit runtime events on.
 func newApp(version, channel string) *App {
+	w := logging.NewWriter()
 	return &App{
-		log:        slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelInfo})),
+		logWriter:  w,
+		log:        w.Logger(),
 		version:    version,
 		channel:    channel,
 		storeReady: make(chan struct{}),
@@ -131,6 +148,13 @@ func newApp(version, channel string) *App {
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
 
+	// --debug has to work before the store is up, since "the app will not
+	// start" is one of the reasons to reach for it. With no store there are no
+	// settings to read, so this pass only ever turns logging on, never off.
+	if a.debug {
+		a.applyLogSettings()
+	}
+
 	store, dataDir, err := openStore(ctx, a.channel)
 	if err != nil {
 		a.log.Error("open store", "err", err)
@@ -142,6 +166,7 @@ func (a *App) startup(ctx context.Context) {
 	}
 	a.store = store
 	a.dataDir = dataDir
+	a.applyLogSettings()
 	a.queue = outbox.NewQueue(store)
 	a.loadProxy()
 	close(a.storeReady)
@@ -181,7 +206,7 @@ func (a *App) startup(ctx context.Context) {
 		a.log.Error("open search index", "err", err)
 	} else {
 		a.index = idx
-		go a.backfillSearch()
+		goSafe("catching the search index up", a.backfillSearch)
 	}
 
 	a.startBackgroundServices()
@@ -189,7 +214,7 @@ func (a *App) startup(ctx context.Context) {
 	// off by default; only runs at all if the user turned on a check
 	// frequency in settings. backgrounded so a slow/unreachable network never
 	// delays startup.
-	go a.maybeAutoCheckForUpdates(ctx)
+	goSafe("checking for updates", func() { a.maybeAutoCheckForUpdates(ctx) })
 
 	// if a bulk offline download was still running when the app last closed,
 	// pick it back up; planDownload skips anything already cached so this is
@@ -224,6 +249,8 @@ func (a *App) shutdown(ctx context.Context) {
 			a.log.Error("close store", "err", err)
 		}
 	}
+	// last, so anything the closes above logged still reaches the file.
+	a.logWriter.Disable()
 }
 
 // openStore opens the database and applies migrations, returning the

@@ -155,7 +155,7 @@
     border: none;
     background: transparent;
     color: var(--text-secondary);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     text-align: left;
     font-size: var(--fz-list);
     line-height: 1.2;
@@ -215,7 +215,7 @@
     background: transparent;
     color: var(--text-tertiary);
     border-radius: var(--radius-control);
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
 
   .act:hover {
@@ -238,7 +238,7 @@
     color: var(--text-tertiary);
     font-size: var(--fz-list);
     border-radius: var(--radius-control);
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
 
   .new:hover {

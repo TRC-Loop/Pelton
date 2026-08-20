@@ -10,6 +10,7 @@ import (
 	"embed"
 	"os"
 
+	"github.com/TRC-Loop/Pelton/internal/logging"
 	"github.com/TRC-Loop/Pelton/internal/storage"
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
@@ -37,7 +38,13 @@ type Config struct {
 
 // Run constructs and runs the wails application. It returns wails.Run's error.
 func Run(cfg Config) error {
+	// the outermost panic handler. A panic that gets this far has already
+	// taken the ui with it; this leaves a file behind saying what happened
+	// instead of the window simply disappearing.
+	defer logging.Guard("running the app")
+
 	app := newApp(cfg.Version, cfg.Channel)
+	app.debug = debugForced(os.Args[1:])
 	app.licenseManifest = cfg.LicenseManifest
 	app.programLicense = cfg.ProgramLicense
 	app.trayIcon = cfg.TrayIcon
@@ -102,6 +109,15 @@ func Run(cfg Config) error {
 			},
 		},
 		Mac: &mac.Options{
+			// draw the ui all the way to the top of the window instead of under an
+			// opaque native title bar, which never matches the theme. the frontend
+			// keeps the top strip clear of the traffic lights and makes it draggable
+			// (see the mac-titlebar handling in App.svelte).
+			//
+			// hidden, not hidden-inset: the inset variant asks for an NSToolbar,
+			// and the toolbar makes the title bar taller, which drops the traffic
+			// lights below the middle of the 30px menu bar row they share.
+			TitleBar: mac.TitleBarHidden(),
 			About: &mac.AboutInfo{
 				Title:   title,
 				Message: aboutMessage(cfg.Channel, cfg.Version),

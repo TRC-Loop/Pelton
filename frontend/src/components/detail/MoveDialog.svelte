@@ -150,7 +150,7 @@
     border: none;
     background: transparent;
     color: var(--text-tertiary);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     padding: var(--space-1);
     border-radius: var(--radius-control);
   }
@@ -195,7 +195,7 @@
     border: none;
     background: transparent;
     color: var(--text-primary);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     text-align: left;
     border-radius: var(--radius-control);
     font-size: var(--fz-label);

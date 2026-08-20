@@ -28,7 +28,8 @@ const attributeSeparator = " "
 // folderColumns is the select list every folder query shares, in the order
 // scanFolder reads them.
 const folderColumns = `id, account_id, name, imap_path, delimiter, parent_id,
-       attributes, uid_validity, position, pinned_position, role_override`
+       attributes, uid_validity, position, pinned_position, role_override,
+       sync_excluded`
 
 // folderOrder sorts folders for display: reordered groups first in the order the
 // user chose, then everything untouched in discovery (id) order. In sqlite
@@ -60,6 +61,11 @@ type Folder struct {
 	// from the server's special-use attribute and the folder name. It wins over
 	// both, because no amount of detection covers every server's naming.
 	RoleOverride string
+	// SyncExcluded means the user unchecked this folder, so sync skips it and
+	// nothing in it is fetched. A 30k-message archive nobody reads is the case
+	// this exists for. It stays in the sidebar, since hiding it would make the
+	// setting impossible to find again.
+	SyncExcluded bool
 }
 
 // CreateFolder inserts a folder and returns its new id.
@@ -83,7 +89,9 @@ VALUES (?, ?, ?, ?, ?, ?, ?)`
 
 // GetFolder returns one folder by id, or ErrFolderNotFound.
 func (d *DB) GetFolder(ctx context.Context, id int64) (*Folder, error) {
-	const query = `SELECT ` + folderColumns + ` FROM folders WHERE id = ?`
+	const query = `
+SELECT ` + folderColumns + `
+FROM folders WHERE id = ?`
 	f, err := scanFolder(d.sql.QueryRowContext(ctx, query, id))
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrFolderNotFound
@@ -97,7 +105,9 @@ func (d *DB) GetFolder(ctx context.Context, id int64) (*Folder, error) {
 // ListFolders returns every folder for an account in sidebar order: groups the
 // user has reordered first, in that order, then the rest by id.
 func (d *DB) ListFolders(ctx context.Context, accountID int64) ([]Folder, error) {
-	const query = `SELECT ` + folderColumns + ` FROM folders WHERE account_id = ? ` + folderOrder
+	const query = `
+SELECT ` + folderColumns + `
+FROM folders WHERE account_id = ? ` + folderOrder
 	rows, err := d.sql.QueryContext(ctx, query, accountID)
 	if err != nil {
 		return nil, fmt.Errorf("storage: list folders for account %d: %w", accountID, err)
@@ -283,6 +293,18 @@ func (d *DB) SetFolderRoleOverride(ctx context.Context, id int64, role string) e
 	return requireOneRow(res, ErrFolderNotFound)
 }
 
+// SetFolderSyncExcluded records whether sync skips a folder. Excluding one does
+// not delete what is already cached: the messages stay readable offline and
+// simply stop being updated, so unchecking a folder by mistake costs nothing.
+func (d *DB) SetFolderSyncExcluded(ctx context.Context, id int64, excluded bool) error {
+	res, err := d.sql.ExecContext(ctx,
+		`UPDATE folders SET sync_excluded = ? WHERE id = ?`, boolToInt(excluded), id)
+	if err != nil {
+		return fmt.Errorf("storage: set folder %d sync excluded: %w", id, err)
+	}
+	return requireOneRow(res, ErrFolderNotFound)
+}
+
 // setPositions runs one position-rewriting statement per id inside a single
 // transaction. The statement takes the new position and the id, in that order.
 func (d *DB) setPositions(ctx context.Context, stmt string, orderedIDs []int64, what string) error {
@@ -314,15 +336,17 @@ func (d *DB) DeleteFolder(ctx context.Context, id int64) error {
 
 func scanFolder(row rowScanner) (*Folder, error) {
 	var (
-		f      Folder
-		parent sql.NullInt64
-		attrs  string
+		f        Folder
+		parent   sql.NullInt64
+		attrs    string
+		excluded int
 	)
 	if err := row.Scan(&f.ID, &f.AccountID, &f.Name, &f.IMAPPath, &f.Delimiter,
 		&parent, &attrs, &f.UIDValidity, &f.Position, &f.PinnedPosition,
-		&f.RoleOverride); err != nil {
+		&f.RoleOverride, &excluded); err != nil {
 		return nil, err
 	}
+	f.SyncExcluded = excluded != 0
 	if parent.Valid {
 		f.ParentID = &parent.Int64
 	}

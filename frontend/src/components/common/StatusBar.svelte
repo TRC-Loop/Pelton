@@ -257,7 +257,7 @@
     border: none;
     background: transparent;
     color: var(--text-tertiary);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     padding: 1px;
     border-radius: var(--radius-control);
   }
@@ -274,7 +274,7 @@
     background: transparent;
     color: var(--text-secondary);
     font-size: var(--fz-meta);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     padding: var(--space-1) var(--space-2);
     border-radius: var(--radius-control);
   }
@@ -321,7 +321,7 @@
     background: transparent;
     color: var(--warning, var(--text-secondary));
     font-size: var(--fz-meta);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     padding: var(--space-1) var(--space-2);
     border-radius: var(--radius-control);
   }

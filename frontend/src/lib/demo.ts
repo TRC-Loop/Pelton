@@ -42,6 +42,13 @@ const accounts: Account[] = [
     imapPort: 993,
     smtpHost: 'smtp.pelton.email',
     smtpPort: 465,
+    local: false,
+    imapTls: 'ssl',
+    smtpTls: 'ssl',
+    exportOnArchive: false,
+    exportDir: '',
+    exportSubfolders: 'none',
+    exportNameTemplate: '',
   },
   {
     id: 2,
@@ -52,6 +59,13 @@ const accounts: Account[] = [
     imapPort: 993,
     smtpHost: 'smtp.pelton-potato.island',
     smtpPort: 465,
+    local: false,
+    imapTls: 'ssl',
+    smtpTls: 'ssl',
+    exportOnArchive: false,
+    exportDir: '',
+    exportSubfolders: 'none',
+    exportNameTemplate: '',
   },
 ]
 
@@ -63,6 +77,7 @@ function foldersFor(accountId: number, inboxUnread: number, inboxTotal: number):
     imapPath: name,
     delimiter: '/',
     parentId: null,
+    syncExcluded: false,
     role,
     unreadCount: unread,
     totalCount: total,
@@ -185,6 +200,7 @@ export function demoMessage(id: number): MessageDetail {
     toAddresses: 'spud@pelton.email',
     ccAddresses: '',
     bodyPlain: 'Hey, quick one about the potato shipment...',
+    bodyQuote: 'Hey, quick one about the potato shipment...',
     bodyHtmlSafe: sharedBodyHtml,
     unsubscribe: null,
     // the demo mail is not protected, so there is nothing to decrypt.
@@ -193,6 +209,7 @@ export function demoMessage(id: number): MessageDetail {
     hasRemoteContent: false,
     remoteAllowed: true,
     remoteHosts: [],
+    trackingPixels: [],
     attachments: summary.hasAttachments
       ? [{ id: id * 10, filename: 'q4-potato-yields.xlsx', contentType: 'application/vnd.ms-excel', sizeBytes: 48213, inline: false }]
       : [],

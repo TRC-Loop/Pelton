@@ -97,7 +97,7 @@
     height: 26px;
     border-radius: var(--radius-control);
     border: var(--hairline) solid var(--border-strong);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     display: inline-flex;
     align-items: center;
     justify-content: center;

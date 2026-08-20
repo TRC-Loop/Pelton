@@ -106,7 +106,7 @@
     font-size: var(--fz-body);
     color: var(--text-primary);
     line-height: 1.5;
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
   .ack input {
     margin: 2px 0 0;
@@ -130,7 +130,7 @@
     font-family: inherit;
     font-size: var(--fz-body);
     font-weight: var(--fw-medium);
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
   .primary:disabled {
     opacity: 0.5;

@@ -166,9 +166,20 @@ export function updateCompose(id: number, patch: Partial<ComposeSession>): void 
   composeSessions.update((list) => list.map((s) => (s.id === id ? { ...s, ...patch } : s)))
 }
 
-// closeCompose removes a session.
+// closeCompose removes a session. It drops whatever is in the pane, so callers
+// outside the pane itself should go through requestComposeClose instead.
 export function closeCompose(id: number): void {
   composeSessions.update((list) => list.filter((s) => s.id !== id))
+}
+
+// closeRequest names a session the app asked to close from outside the pane,
+// which the pane watches so the close still runs its save-or-discard prompt.
+export const closeRequest = writable<number | null>(null)
+
+// requestComposeClose asks a compose pane to close itself the way its own close
+// button does, prompting first when the draft has content.
+export function requestComposeClose(id: number): void {
+  closeRequest.set(id)
 }
 
 // getSession reads the current state of one session.
@@ -187,9 +198,14 @@ function withPrefix(subject: string, prefix: string): string {
 
 // quoteBody builds a quoted reply body. plaintext and markdown both quote with
 // "> "; html mode is the stubbed editor so it also gets the plain quote.
+//
+// bodyQuote, not bodyPlain: an html-only message has no text part, so quoting
+// bodyPlain produced an empty reply (#239). The backend renders the html down
+// to text for this field, and falls back to it only when there is no text part
+// to prefer.
 function quoteBody(detail: MessageDetail, _mode: EditorMode): string {
   const attribution = `On ${detail.date}, ${detail.fromName || detail.fromAddress} wrote:`
-  const quoted = detail.bodyPlain
+  const quoted = detail.bodyQuote
     .split('\n')
     .map((line) => `> ${line}`)
     .join('\n')
@@ -205,7 +221,7 @@ function forwardBody(detail: MessageDetail, _mode: EditorMode): string {
     `Subject: ${detail.subject}`,
     `To: ${detail.toAddresses}`,
   ].join('\n')
-  return `\n\n${header}\n\n${detail.bodyPlain}\n`
+  return `\n\n${header}\n\n${detail.bodyQuote}\n`
 }
 
 // messageIdRef would be the original Message-ID for threading. the detail dto

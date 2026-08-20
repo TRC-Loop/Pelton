@@ -5,7 +5,10 @@ surface.
 
 ## Privacy is a hard constraint
 
-- No telemetry, no crash reporting, no analytics, ever. If you're tempted to
+- No telemetry, no crash reporting, no analytics, ever. Local logs and crash
+  files (`internal/logging`, off by default) are not an exception to this:
+  they are written to the user's own disk and there is no code path that
+  uploads them. Don't add one. If you're tempted to
   add a network call for anything other than the user's own mail server or a
   feature they explicitly configured (OAuth, config sync to their own
   storage), stop and ask first.

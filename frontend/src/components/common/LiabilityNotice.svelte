@@ -42,7 +42,7 @@
     color: var(--link);
     font-family: inherit;
     font-size: var(--fz-body);
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
   .ack {
     display: flex;
@@ -52,7 +52,7 @@
     font-size: var(--fz-body);
     color: var(--text-primary);
     line-height: 1.5;
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
   .ack input {
     margin: 2px 0 0;

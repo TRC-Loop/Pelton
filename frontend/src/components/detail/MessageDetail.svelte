@@ -15,6 +15,7 @@
   import { openMessageId } from '../../stores/selection'
   import { messageDetail, loadMessage, clearMessage } from '../../stores/message'
   import { setFlagged, deleteMessage, archiveMessage, scanMessage } from '../../lib/api'
+  import { reportArchiveExport } from '../../lib/messageactions'
   import {
     virusTotal,
     scanning,
@@ -137,6 +138,7 @@
   async function archive(detail: MessageDetail): Promise<void> {
     try {
       const undo = await archiveMessage(detail.id)
+      reportArchiveExport(undo)
       if (undo.messageId) {
         recordArchived(detail, undo.messageId, undo.originalFolderId)
       }

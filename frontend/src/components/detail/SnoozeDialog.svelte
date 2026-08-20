@@ -225,7 +225,7 @@
     border: none;
     background: transparent;
     color: var(--text-tertiary);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     padding: var(--space-1);
     border-radius: var(--radius-control);
   }
@@ -249,7 +249,7 @@
     border-radius: var(--radius-control);
     background: var(--surface-raised);
     color: var(--text-primary);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     text-align: left;
     transition: border-color 0.1s ease, background 0.1s ease;
   }
@@ -299,7 +299,7 @@
     border-radius: var(--radius-control);
     background: var(--accent);
     color: #fff;
-    cursor: pointer;
+    cursor: var(--cursor-action);
     font-weight: var(--fw-medium);
   }
   .go:disabled {
@@ -313,6 +313,6 @@
     gap: var(--space-2);
     font-size: var(--fz-label);
     color: var(--text-secondary);
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
 </style>

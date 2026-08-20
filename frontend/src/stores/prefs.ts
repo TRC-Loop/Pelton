@@ -5,9 +5,9 @@
 // source of truth.
 
 import { writable } from 'svelte/store'
-import type { UIPrefs, ThemePref, DensityPref, EditorMode, ViewsPlacement, CloseAction } from '../lib/types'
+import type { UIPrefs, ThemePref, DensityPref, EditorMode, ViewsPlacement, CloseAction, LogLevel } from '../lib/types'
 import { getUIPrefs, setSetting, SettingKeys, systemColorScheme, setWindowTheme, getThemeApply } from '../lib/api'
-import { applyTheme, applyDensity, applyAccent, applyScale, applyReduceMotion, setThemeSchedule, applyUIFont, applyMonoFont, applyCorners, watchSystemTheme, setSystemSchemeOverride, resolveTheme } from '../theme/theme'
+import { applyTheme, applyDensity, applyAccent, applyScale, applyReduceMotion, applyHandCursor, setThemeSchedule, applyUIFont, applyMonoFont, applyCorners, watchSystemTheme, setSystemSchemeOverride, resolveTheme } from '../theme/theme'
 import { applyUserTheme } from '../theme/usertheme'
 import { uiFontStack, monoFontStack } from '../lib/fonts'
 import { setLocale } from '../lib/i18n'
@@ -31,6 +31,7 @@ const defaults: UIPrefs = {
   showShortcutHints: false,
   showAccountEmail: false,
   alwaysLoadImages: false,
+  blockTrackingPixels: false,
   avatarSource: 'bimi_gravatar',
   avatarStyle: 'initials',
   multiSelectEnabled: true,
@@ -68,6 +69,8 @@ const defaults: UIPrefs = {
   menuBarIcons: false,
   timeFormat: 'auto',
   reduceMotion: false,
+  handCursor: false,
+  dockBadge: true,
   themeDarkStart: '19:00',
   themeDarkEnd: '07:00',
   bodyFont: 'default',
@@ -79,6 +82,10 @@ const defaults: UIPrefs = {
   syncMessageLimit: 50,
   syncAutoBackfill: true,
   startupSelection: 'view:inbox',
+  logToFile: false,
+  logLevel: 'info',
+  logMessageMetadata: false,
+  crashLogs: false,
 }
 
 export const prefs = writable<UIPrefs>(defaults)
@@ -98,6 +105,7 @@ function applyAll(p: UIPrefs): void {
   applyAccent(p.accent)
   applyScale(p.uiScale)
   applyReduceMotion(p.reduceMotion)
+  applyHandCursor(p.handCursor)
   applyUIFont(uiFontStack(p.uiFont))
   applyMonoFont(monoFontStack(p.monoFont))
   applyCorners(p.cornerStyle)
@@ -410,6 +418,21 @@ export function setReduceMotion(value: boolean): void {
   void setSetting(SettingKeys.reduceMotion, String(value))
 }
 
+// setHandCursor switches clickable chrome between the native arrow and the
+// browser hand.
+export function setHandCursor(value: boolean): void {
+  prefs.update((p) => ({ ...p, handCursor: value }))
+  applyHandCursor(value)
+  void setSetting(SettingKeys.handCursor, String(value))
+}
+
+// setDockBadgeEnabled toggles the unread count on the dock icon. The backend
+// re-applies or clears the badge itself when this setting lands.
+export function setDockBadgeEnabled(value: boolean): void {
+  prefs.update((p) => ({ ...p, dockBadge: value }))
+  void setSetting(SettingKeys.dockBadge, String(value))
+}
+
 // setUIFont / setMonoFont override the interface and monospace font tokens,
 // applying live like the other appearance settings.
 export function setUIFont(value: string): void {
@@ -505,6 +528,15 @@ export function setAlwaysLoadImages(value: boolean): void {
   void setSetting(SettingKeys.alwaysLoadImages, String(value))
 }
 
+// setBlockTrackingPixels keeps images that look like tracking pixels blocked
+// even once the rest of a message's remote content is loaded. Off by default,
+// because the detection is a heuristic that will sometimes be wrong; each load
+// button offers to load them anyway when it is.
+export function setBlockTrackingPixels(value: boolean): void {
+  prefs.update((p) => ({ ...p, blockTrackingPixels: value }))
+  void setSetting(SettingKeys.blockTrackingPixels, String(value))
+}
+
 // setAvatarSource selects the sender-photo fallback chain (bimi_gravatar,
 // gravatar_bimi, pfp).
 export function setAvatarSource(source: string): void {
@@ -537,6 +569,34 @@ export function setShowSelectedCount(value: boolean): void {
 export function setStartupSelection(value: string): void {
   prefs.update((p) => ({ ...p, startupSelection: value }))
   void setSetting(SettingKeys.startupSelection, value)
+}
+
+// setLogToFile turns the rotating log file on or off. Off stops writing but
+// leaves what is already on disk; deleting it is a separate, explicit action.
+export function setLogToFile(value: boolean): void {
+  prefs.update((p) => ({ ...p, logToFile: value }))
+  void setSetting(SettingKeys.logToFile, String(value))
+}
+
+// setLogLevel picks how much detail the log records.
+export function setLogLevel(value: LogLevel): void {
+  prefs.update((p) => ({ ...p, logLevel: value }))
+  void setSetting(SettingKeys.logLevel, value)
+}
+
+// setLogMessageMetadata allows subjects and senders into the log for debugging
+// sync. Its own opt-in, since it is the one logging switch that writes anything
+// about the user's mail.
+export function setLogMessageMetadata(value: boolean): void {
+  prefs.update((p) => ({ ...p, logMessageMetadata: value }))
+  void setSetting(SettingKeys.logMessageMetadata, String(value))
+}
+
+// setCrashLogs toggles leaving a file with the stack behind when Pelton
+// crashes.
+export function setCrashLogs(value: boolean): void {
+  prefs.update((p) => ({ ...p, crashLogs: value }))
+  void setSetting(SettingKeys.crashLogs, String(value))
 }
 
 // setSidebarIndentGuides toggles the nested-folder guide lines.

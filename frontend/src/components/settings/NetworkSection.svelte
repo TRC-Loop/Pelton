@@ -205,7 +205,7 @@
     padding: var(--space-2) var(--space-5);
     border-radius: var(--radius-control);
     border: var(--hairline) solid var(--border-default);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     font-size: var(--fz-label);
   }
 

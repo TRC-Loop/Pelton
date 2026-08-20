@@ -15,7 +15,60 @@ export interface Account {
   imapPort: number
   smtpHost: string
   smtpPort: number
+  // the Local Folders account, which holds imported mail and has no server:
+  // it never syncs, and the ui hides the server-side folder actions on it.
+  local: boolean
+  // pinned connection security, a TLSMode value: 'ssl', 'starttls', or '' to
+  // derive it from the port, which is what accounts created before it was
+  // storable use. typed as string to match the generated dto, which cannot
+  // carry the union.
+  imapTls: string
+  smtpTls: string
+  // write a local .eml copy of every message archived from this account.
+  // exportDir is where the files go, exportSubfolders is 'none' | 'year' |
+  // 'month', and exportNameTemplate is the file name pattern ('' for the
+  // default). typed as string to match the generated dto.
+  exportOnArchive: boolean
+  exportDir: string
+  exportSubfolders: string
+  exportNameTemplate: string
 }
+
+// ThunderbirdAccount is one account read out of a Thunderbird profile. There is
+// no password: Thunderbird keeps its own, so an imported account is
+// re-authenticated once.
+export interface ThunderbirdAccount {
+  email: string
+  displayName: string
+  username: string
+  imapHost: string
+  imapPort: number
+  smtpHost: string
+  smtpPort: number
+  // 'imap' or 'pop3'. Pelton speaks imap, so a pop3 account is listed but
+  // cannot be imported.
+  kind: string
+  // true when this address is already configured here.
+  exists: boolean
+}
+
+// ThunderbirdFolder is one mail folder found on disk in a profile.
+export interface ThunderbirdFolder {
+  name: string
+  path: string
+  sizeBytes: number
+}
+
+// ThunderbirdProfile is one discovered profile and everything it holds.
+export interface ThunderbirdProfile {
+  name: string
+  path: string
+  accounts: ThunderbirdAccount[]
+  localFolders: ThunderbirdFolder[]
+}
+
+// TLSMode is the connection security for one leg of an account.
+export type TLSMode = '' | 'ssl' | 'starttls'
 
 export interface Folder {
   id: number
@@ -37,6 +90,9 @@ export interface Folder {
   // kept apart from role so the picker can show whether the current state is a
   // choice or automatic detection.
   roleOverride: string
+  // syncExcluded means the user unchecked this folder, so sync skips it. What
+  // was already fetched stays readable; it just stops being updated (#173).
+  syncExcluded: boolean
 }
 
 export interface UnifiedView {
@@ -93,6 +149,11 @@ export interface MessageDetail extends MessageSummary {
   toAddresses: string
   ccAddresses: string
   bodyPlain: string
+  // bodyQuote is the message as plain text for a reply or forward to quote:
+  // bodyPlain when the message has a text part, and the html rendered down to
+  // text when it does not. Replies to html-only mail quoted nothing before
+  // this existed (#239).
+  bodyQuote: string
   bodyHtmlSafe: string
   isHtml: boolean
   hasRemoteContent: boolean
@@ -101,6 +162,11 @@ export interface MessageDetail extends MessageSummary {
   remoteAllowed: boolean
   // remoteHosts lists the hosts blocked remote content would load from.
   remoteHosts: string[]
+  // trackingPixels are the blocked remote images that look like they exist to
+  // report the open rather than to be seen. Empty when detection is off.
+  // Detection is a guess and will sometimes be wrong, so the ui says "look
+  // like" and offers to load them anyway.
+  trackingPixels: TrackingPixel[]
   attachments: Attachment[]
   // unsubscribe describes the List-Unsubscribe mechanism the message
   // advertises: oneclick (RFC 8058 background POST), mailto (sent via the
@@ -114,6 +180,16 @@ export interface MessageDetail extends MessageSummary {
 }
 
 export type PGPState = '' | 'open' | 'locked' | 'nokey' | 'failed'
+
+// TrackingPixel is one remote image that looks like it exists to report the
+// open. reasons carries the signals behind that (tiny, hidden, known-host,
+// recipient, opaque-id, lone-image) so the ui can show its working instead of
+// asking to be believed.
+export interface TrackingPixel {
+  host: string
+  url: string
+  reasons: string[]
+}
 
 export interface UnsubscribeInfo {
   kind: 'oneclick' | 'mailto' | 'link'
@@ -214,6 +290,10 @@ export interface UIPrefs {
   showAccountEmail: boolean
   // alwaysLoadImages disables remote-image blocking globally (off by default).
   alwaysLoadImages: boolean
+  // blockTrackingPixels keeps images detected as tracking pixels blocked even
+  // once the rest of a message's remote content is loaded. Off by default; the
+  // private preset in onboarding turns it on.
+  blockTrackingPixels: boolean
   // avatarSource selects the sender-photo fallback chain: bimi_gravatar,
   // gravatar_bimi, or pfp (generated only). avatarStyle picks the generated
   // placeholder look: initials, mono, pixel, or geometric.
@@ -295,6 +375,11 @@ export interface UIPrefs {
   timeFormat: string
   // reduceMotion disables ui transitions and animations.
   reduceMotion: boolean
+  // handCursor shows the browser hand over clickable chrome instead of the
+  // native arrow. Hyperlinks keep the hand regardless.
+  handCursor: boolean
+  // dockBadge shows the unread count on the dock icon (macOS only for now).
+  dockBadge: boolean
   // themeDarkStart/themeDarkEnd bound the dark window ("HH:MM") for the
   // schedule theme mode.
   themeDarkStart: string
@@ -324,6 +409,31 @@ export interface UIPrefs {
   // 'folder:<id>' for one account folder, or 'last' to restore the previous
   // session. A target that no longer exists falls back to the unified inbox.
   startupSelection: string
+  // logToFile writes Pelton's own log to a rotating file in the data folder,
+  // at logLevel. logMessageMetadata additionally lets subjects and senders into
+  // it for debugging sync. crashLogs leaves a stack behind when the app
+  // crashes. All off by default; nothing is ever uploaded.
+  logToFile: boolean
+  logLevel: LogLevel
+  logMessageMetadata: boolean
+  crashLogs: boolean
+}
+
+// how much detail the log records.
+export type LogLevel = 'debug' | 'info' | 'warn' | 'error'
+
+// LogStatus is what the settings ui shows about logging: where the files are,
+// whether anything is being written, and whether the last run crashed.
+export interface LogStatus {
+  dir: string
+  // writing is the live state, which is not the setting: --debug and
+  // PELTON_DEBUG force logging on regardless of it, and forced says so.
+  writing: boolean
+  forced: boolean
+  sizeBytes: number
+  // crashName is empty when there is no crash the user has not seen yet.
+  crashName: string
+  crashTime: string
 }
 
 // what the window's close button does.
@@ -572,6 +682,9 @@ export interface Discovered {
   imapPort: number
   smtpHost: string
   smtpPort: number
+  // the security the source stated, empty when it said nothing usable.
+  imapTls: string
+  smtpTls: string
   oauth: boolean
   source: string
 }
@@ -587,6 +700,8 @@ export interface AddAccountRequest {
   imapPort: number
   smtpHost: string
   smtpPort: number
+  imapTls: TLSMode
+  smtpTls: TLSMode
   password: string
   provider: string
   clientId: string
@@ -601,6 +716,8 @@ export interface TestConnectionRequest {
   username: string
   imapHost: string
   imapPort: number
+  // tested with the same security the account will use, not a guess from the port.
+  imapTls: TLSMode
   password: string
 }
 

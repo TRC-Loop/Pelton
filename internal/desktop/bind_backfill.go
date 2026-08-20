@@ -5,7 +5,6 @@ import (
 
 	pimap "github.com/TRC-Loop/Pelton/internal/imap"
 	"github.com/TRC-Loop/Pelton/internal/storage"
-	psync "github.com/TRC-Loop/Pelton/internal/sync"
 )
 
 // Fetching older mail on demand (#175). A first sync only caches a folder's
@@ -91,8 +90,8 @@ func (a *App) FetchOlderMessages(req ListMessagesRequest) (FetchOlderResult, err
 	}
 
 	if res.Fetched > 0 {
-		go a.indexNewMessages()
-		go a.refreshViewCounts()
+		goSafe("indexing new mail", func() { _ = a.indexNewMessages() })
+		goSafe("counting unread mail", a.refreshViewCounts)
 	}
 	return res, nil
 }
@@ -119,9 +118,7 @@ func (a *App) backfillAccount(accountID int64, folders []storage.Folder) (int, b
 	}
 	defer client.Logout()
 
-	engine := psync.NewEngine(client, a.store, a.log)
-	engine.ColorSync = a.boolSetting(settingFlagColorSync, false)
-	engine.InitialLimit = a.syncMessageLimit()
+	engine := a.newSyncEngine(client, accountID)
 
 	batch := a.backfillBatch()
 	var (

@@ -3,7 +3,7 @@
   // local file: the user picks what to export, and on import picks a file and
   // chooses what to bring in. Pelton only reads and writes the file the user
   // chooses; nothing leaves the machine on its own.
-  import { IconDownload, IconUpload, IconFileImport } from '@tabler/icons-svelte'
+  import { IconDownload, IconUpload, IconFileImport, IconMailbox } from '@tabler/icons-svelte'
   import { inspectBackupFile, importData, type BackupInfo } from '../../lib/api'
   import { initPrefs, prefs } from '../../stores/prefs'
   import { toastError, toastSuccess, errorMessage } from '../../stores/toast'
@@ -12,6 +12,7 @@
   import { t } from '../../lib/i18n'
 
   let exportOpen = false
+  let clientImportOpen = false
 
   // import state: the inspected file and which of its categories to apply.
   let file: BackupInfo | null = null
@@ -111,6 +112,17 @@
 
   <div class="block">
     <div class="block-head">
+      <IconMailbox size={16} stroke={1.7} />
+      <h4>{$t('import.title')}</h4>
+    </div>
+    <p class="hint">{$t('import.sectionHint')}</p>
+    <button type="button" class="action-btn" on:click={() => (clientImportOpen = true)}>
+      {$t('import.open')}
+    </button>
+  </div>
+
+  <div class="block">
+    <div class="block-head">
       <IconFileImport size={16} stroke={1.7} />
       <h4>{$t('importExport.importTitle')}</h4>
     </div>
@@ -198,10 +210,16 @@
   </div>
 </div>
 
-<!-- the export modal is code-split so its logic loads only on demand. -->
+<!-- the modals are code-split so their logic loads only on demand. -->
 {#if exportOpen}
   {#await import('./ExportModal.svelte') then m}
     <svelte:component this={m.default} on:close={() => (exportOpen = false)} />
+  {/await}
+{/if}
+
+{#if clientImportOpen}
+  {#await import('./ImportClientModal.svelte') then m}
+    <svelte:component this={m.default} on:close={() => (clientImportOpen = false)} />
   {/await}
 {/if}
 
@@ -281,7 +299,7 @@
     gap: var(--space-2);
     font-size: var(--fz-label);
     color: var(--text-primary);
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
   .check.disabled {
     color: var(--text-tertiary);
@@ -302,7 +320,7 @@
     background: var(--surface-raised);
     color: var(--text-primary);
     font-size: var(--fz-label);
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
   .action-btn:hover {
     background: var(--surface-hover);

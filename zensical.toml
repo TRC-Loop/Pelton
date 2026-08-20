@@ -34,6 +34,7 @@ nav = [
   { "Command palette" = "command-palette.md" },
   { "Scanning links and attachments" = "virustotal.md" },
   { "Encryption keys" = "encryption.md" },
+  { "Logs and crash reports" = "logs.md" },
   { "FAQ" = "faq.md" },
 ]
 
@@ -84,6 +85,10 @@ toggle.name = "Switch to light mode"
 [[project.extra.social]]
 icon = "tabler/brand-github"
 link = "https://github.com/TRC-Loop/Pelton"
+
+[[project.extra.social]]
+icon = "tabler/brand-discord"
+link = "https://discord.gg/UzPNGZYy6V"
 
 [[project.extra.social]]
 icon = "tabler/world"

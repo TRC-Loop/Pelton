@@ -25,6 +25,21 @@ type AccountDTO struct {
 	IMAPPort    int    `json:"imapPort"`
 	SMTPHost    string `json:"smtpHost"`
 	SMTPPort    int    `json:"smtpPort"`
+	// Local marks the Local Folders account, which holds imported mail and has
+	// no server. The ui labels it and hides the server-side actions.
+	Local bool `json:"local"`
+	// IMAPTLS and SMTPTLS are the pinned connection security ("ssl" or
+	// "starttls"), or empty when it is derived from the port.
+	IMAPTLS string `json:"imapTls"`
+	SMTPTLS string `json:"smtpTls"`
+	// ExportOnArchive and the three fields under it are the account's
+	// export-on-archive settings: write a local .eml copy of every archived
+	// message into ExportDir, grouped by ExportSubfolders ("none", "year" or
+	// "month") and named after ExportNameTemplate.
+	ExportOnArchive    bool   `json:"exportOnArchive"`
+	ExportDir          string `json:"exportDir"`
+	ExportSubfolders   string `json:"exportSubfolders"`
+	ExportNameTemplate string `json:"exportNameTemplate"`
 }
 
 // FolderDTO is one mailbox in an account's tree. ParentID is null at the root.
@@ -48,6 +63,9 @@ type FolderDTO struct {
 	// above was detected. The ui needs the two apart to show which entry is
 	// ticked and whether "detect automatically" is the current state.
 	RoleOverride string `json:"roleOverride"`
+	// SyncExcluded means the user unchecked this folder, so sync skips it.
+	// Whatever was already cached stays readable (#173).
+	SyncExcluded bool `json:"syncExcluded"`
 }
 
 // UnifiedViewDTO is a cross account view (inbox/flagged/sent/drafts). The ui
@@ -142,10 +160,15 @@ type AttachmentDTO struct {
 // offer "load remote images".
 type MessageDetailDTO struct {
 	MessageSummaryDTO
-	ToAddresses      string `json:"toAddresses"`
-	CcAddresses      string `json:"ccAddresses"`
-	BodyPlain        string `json:"bodyPlain"`
-	BodyHTMLSafe     string `json:"bodyHtmlSafe"`
+	ToAddresses  string `json:"toAddresses"`
+	CcAddresses  string `json:"ccAddresses"`
+	BodyPlain    string `json:"bodyPlain"`
+	BodyHTMLSafe string `json:"bodyHtmlSafe"`
+	// BodyQuote is the message as plain text for a reply or forward to quote.
+	// It is BodyPlain when the message has a text part, and the html rendered
+	// down to text when it does not, which is the case BodyPlain is empty for
+	// and replies to html-only mail used to come out blank (#239).
+	BodyQuote        string `json:"bodyQuote"`
 	IsHTML           bool   `json:"isHtml"`
 	HasRemoteContent bool   `json:"hasRemoteContent"`
 	// RemoteAllowed is true when this message's remote content was rendered
@@ -154,8 +177,12 @@ type MessageDetailDTO struct {
 	RemoteAllowed bool `json:"remoteAllowed"`
 	// RemoteHosts lists the hosts the blocked remote content would load from, so
 	// the banner can show the user where.
-	RemoteHosts []string        `json:"remoteHosts"`
-	Attachments []AttachmentDTO `json:"attachments"`
+	RemoteHosts []string `json:"remoteHosts"`
+	// TrackingPixels are the remote images that look like they exist to report
+	// the open rather than to be seen (#205). They stay blocked even when the
+	// rest of the remote content is loaded, unless the user turns detection off.
+	TrackingPixels []TrackingPixelDTO `json:"trackingPixels"`
+	Attachments    []AttachmentDTO    `json:"attachments"`
 	// PGPState is empty for ordinary mail, and otherwise says what happened when
 	// the message was opened: "open" (decrypted, body below is the plaintext),
 	// "locked" (a passphrase is needed), "nokey" (no imported key can open it)
@@ -165,6 +192,17 @@ type MessageDetailDTO struct {
 	// Unsubscribe describes the unsubscribe mechanism the message advertises
 	// via its List-Unsubscribe headers, nil when it has none on record.
 	Unsubscribe *UnsubscribeDTO `json:"unsubscribe"`
+}
+
+// TrackingPixelDTO is one remote image the scan thinks exists to report the
+// open. Reasons carries the signals that led to that (tiny, hidden,
+// known-host, recipient, opaque-id, lone-image) so the ui can say why rather
+// than asking the reader to take its word for it. Detection is a guess and
+// will sometimes be wrong.
+type TrackingPixelDTO struct {
+	Host    string   `json:"host"`
+	URL     string   `json:"url"`
+	Reasons []string `json:"reasons"`
 }
 
 // authUnavailable is the placeholder auth status. The backend does not yet parse
@@ -207,6 +245,14 @@ func toAccountDTO(a storage.Account) AccountDTO {
 		IMAPPort:    a.IMAPPort,
 		SMTPHost:    a.SMTPHost,
 		SMTPPort:    a.SMTPPort,
+		Local:       a.Local,
+		IMAPTLS:     effectiveIMAPTLS(a),
+		SMTPTLS:     effectiveSMTPTLS(a),
+
+		ExportOnArchive:    a.ExportOnArchive,
+		ExportDir:          a.ExportDir,
+		ExportSubfolders:   a.ExportSubfolders,
+		ExportNameTemplate: a.ExportNameTemplate,
 	}
 }
 
@@ -224,6 +270,7 @@ func toFolderDTO(f storage.Folder) FolderDTO {
 		Attributes:   f.Attributes,
 		Pinned:       f.PinnedPosition > 0,
 		RoleOverride: f.RoleOverride,
+		SyncExcluded: f.SyncExcluded,
 	}
 }
 

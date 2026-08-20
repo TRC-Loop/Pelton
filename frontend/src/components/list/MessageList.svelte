@@ -76,6 +76,7 @@
     bulkMarkSeen,
     bulkMarkFlagged,
     bulkTrash,
+    reportArchiveExport,
   } from '../../lib/messageactions'
 
   // the meta-bar title. built-in unified views are localized by key (matching the
@@ -386,6 +387,7 @@
     }
     try {
       const undo = await archiveMessage(item.id)
+      reportArchiveExport(undo)
       if (undo.messageId) {
         recordArchived(item, undo.messageId, undo.originalFolderId)
       }
@@ -688,7 +690,7 @@
     background: var(--surface-sunken);
     border: var(--hairline) solid var(--border-default);
     border-radius: var(--radius-control);
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
 
   .load-older-btn:hover {
@@ -724,7 +726,7 @@
     border: none;
     background: transparent;
     color: var(--text-secondary);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     padding: var(--space-2);
     border-radius: var(--radius-control);
   }

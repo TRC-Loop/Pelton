@@ -69,7 +69,7 @@
     border-radius: var(--radius-card);
     background: var(--surface-raised);
     color: var(--text-primary);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     text-align: left;
   }
 

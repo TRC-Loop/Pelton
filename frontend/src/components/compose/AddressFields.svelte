@@ -113,7 +113,7 @@
     background: transparent;
     color: var(--text-tertiary);
     font-size: var(--fz-meta);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     padding: var(--space-1) var(--space-2);
     border-radius: var(--radius-control);
   }

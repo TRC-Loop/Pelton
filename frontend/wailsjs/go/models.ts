@@ -9,7 +9,15 @@ export namespace desktop {
 	    imapPort: number;
 	    smtpHost: string;
 	    smtpPort: number;
+	    imapTls: string;
+	    smtpTls: string;
+	    local: boolean;
+	    exportOnArchive: boolean;
+	    exportDir: string;
+	    exportSubfolders: string;
+	    exportNameTemplate: string;
 	
+
 	    static createFrom(source: any = {}) {
 	        return new AccountDTO(source);
 	    }
@@ -24,6 +32,13 @@ export namespace desktop {
 	        this.imapPort = source["imapPort"];
 	        this.smtpHost = source["smtpHost"];
 	        this.smtpPort = source["smtpPort"];
+	        this.imapTls = source["imapTls"];
+	        this.smtpTls = source["smtpTls"];
+	        this.local = source["local"];
+	        this.exportOnArchive = source["exportOnArchive"];
+	        this.exportDir = source["exportDir"];
+	        this.exportSubfolders = source["exportSubfolders"];
+	        this.exportNameTemplate = source["exportNameTemplate"];
 	    }
 	}
 	export class AccountSignaturesDTO {
@@ -48,6 +63,8 @@ export namespace desktop {
 	    imapPort: number;
 	    smtpHost: string;
 	    smtpPort: number;
+	    imapTls: string;
+	    smtpTls: string;
 	    password: string;
 	    provider: string;
 	    clientId: string;
@@ -66,6 +83,8 @@ export namespace desktop {
 	        this.imapPort = source["imapPort"];
 	        this.smtpHost = source["smtpHost"];
 	        this.smtpPort = source["smtpPort"];
+	        this.imapTls = source["imapTls"];
+	        this.smtpTls = source["smtpTls"];
 	        this.password = source["password"];
 	        this.provider = source["provider"];
 	        this.clientId = source["clientId"];
@@ -109,6 +128,8 @@ export namespace desktop {
 	export class ArchiveUndoDTO {
 	    messageId: string;
 	    originalFolderId: number;
+	    exportPath: string;
+	    exportError: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new ArchiveUndoDTO(source);
@@ -118,6 +139,8 @@ export namespace desktop {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.messageId = source["messageId"];
 	        this.originalFolderId = source["originalFolderId"];
+	        this.exportPath = source["exportPath"];
+	        this.exportError = source["exportError"];
 	    }
 	}
 	export class AttachmentContentDTO {
@@ -353,9 +376,11 @@ export namespace desktop {
 	    imapPort: number;
 	    smtpHost: string;
 	    smtpPort: number;
+	    imapTls: string;
+	    smtpTls: string;
 	    oauth: boolean;
 	    source: string;
-	
+
 	    static createFrom(source: any = {}) {
 	        return new DiscoveredDTO(source);
 	    }
@@ -366,6 +391,8 @@ export namespace desktop {
 	        this.imapPort = source["imapPort"];
 	        this.smtpHost = source["smtpHost"];
 	        this.smtpPort = source["smtpPort"];
+	        this.imapTls = source["imapTls"];
+	        this.smtpTls = source["smtpTls"];
 	        this.oauth = source["oauth"];
 	        this.source = source["source"];
 	    }
@@ -431,6 +458,7 @@ export namespace desktop {
 	    attributes: string[];
 	    pinned: boolean;
 	    roleOverride: string;
+	    syncExcluded: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new FolderDTO(source);
@@ -450,6 +478,7 @@ export namespace desktop {
 	        this.attributes = source["attributes"];
 	        this.pinned = source["pinned"];
 	        this.roleOverride = source["roleOverride"];
+	        this.syncExcluded = source["syncExcluded"];
 	    }
 	}
 	export class ImageAllowEntryDTO {
@@ -526,6 +555,28 @@ export namespace desktop {
 	        this.offset = source["offset"];
 	    }
 	}
+	export class LogStatusDTO {
+	    dir: string;
+	    writing: boolean;
+	    forced: boolean;
+	    sizeBytes: number;
+	    crashName: string;
+	    crashTime: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new LogStatusDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.dir = source["dir"];
+	        this.writing = source["writing"];
+	        this.forced = source["forced"];
+	        this.sizeBytes = source["sizeBytes"];
+	        this.crashName = source["crashName"];
+	        this.crashTime = source["crashTime"];
+	    }
+	}
 	export class MCPConfigDTO {
 	    enabled: boolean;
 	    port: number;
@@ -582,6 +633,22 @@ export namespace desktop {
 	        this.done = source["done"];
 	    }
 	}
+	export class TrackingPixelDTO {
+	    host: string;
+	    url: string;
+	    reasons: string[];
+	
+	    static createFrom(source: any = {}) {
+	        return new TrackingPixelDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.host = source["host"];
+	        this.url = source["url"];
+	        this.reasons = source["reasons"];
+	    }
+	}
 	export class SMIMEDTO {
 	    status: string;
 	    signer: string;
@@ -627,10 +694,12 @@ export namespace desktop {
 	    ccAddresses: string;
 	    bodyPlain: string;
 	    bodyHtmlSafe: string;
+	    bodyQuote: string;
 	    isHtml: boolean;
 	    hasRemoteContent: boolean;
 	    remoteAllowed: boolean;
 	    remoteHosts: string[];
+	    trackingPixels: TrackingPixelDTO[];
 	    attachments: AttachmentDTO[];
 	    pgpState: string;
 	    unsubscribe?: UnsubscribeDTO;
@@ -665,10 +734,12 @@ export namespace desktop {
 	        this.ccAddresses = source["ccAddresses"];
 	        this.bodyPlain = source["bodyPlain"];
 	        this.bodyHtmlSafe = source["bodyHtmlSafe"];
+	        this.bodyQuote = source["bodyQuote"];
 	        this.isHtml = source["isHtml"];
 	        this.hasRemoteContent = source["hasRemoteContent"];
 	        this.remoteAllowed = source["remoteAllowed"];
 	        this.remoteHosts = source["remoteHosts"];
+	        this.trackingPixels = this.convertValues(source["trackingPixels"], TrackingPixelDTO);
 	        this.attachments = this.convertValues(source["attachments"], AttachmentDTO);
 	        this.pgpState = source["pgpState"];
 	        this.unsubscribe = this.convertValues(source["unsubscribe"], UnsubscribeDTO);
@@ -1069,8 +1140,9 @@ export namespace desktop {
 	    username: string;
 	    imapHost: string;
 	    imapPort: number;
+	    imapTls: string;
 	    password: string;
-	
+
 	    static createFrom(source: any = {}) {
 	        return new TestConnectionRequest(source);
 	    }
@@ -1081,6 +1153,7 @@ export namespace desktop {
 	        this.username = source["username"];
 	        this.imapHost = source["imapHost"];
 	        this.imapPort = source["imapPort"];
+	        this.imapTls = source["imapTls"];
 	        this.password = source["password"];
 	    }
 	}
@@ -1203,6 +1276,86 @@ export namespace desktop {
 		}
 	}
 	
+	export class ThunderbirdAccountDTO {
+	    email: string;
+	    displayName: string;
+	    username: string;
+	    imapHost: string;
+	    imapPort: number;
+	    smtpHost: string;
+	    smtpPort: number;
+	    kind: string;
+	    exists: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new ThunderbirdAccountDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.email = source["email"];
+	        this.displayName = source["displayName"];
+	        this.username = source["username"];
+	        this.imapHost = source["imapHost"];
+	        this.imapPort = source["imapPort"];
+	        this.smtpHost = source["smtpHost"];
+	        this.smtpPort = source["smtpPort"];
+	        this.kind = source["kind"];
+	        this.exists = source["exists"];
+	    }
+	}
+	export class ThunderbirdFolderDTO {
+	    name: string;
+	    path: string;
+	    sizeBytes: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new ThunderbirdFolderDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.path = source["path"];
+	        this.sizeBytes = source["sizeBytes"];
+	    }
+	}
+	export class ThunderbirdProfileDTO {
+	    name: string;
+	    path: string;
+	    accounts: ThunderbirdAccountDTO[];
+	    localFolders: ThunderbirdFolderDTO[];
+	
+	    static createFrom(source: any = {}) {
+	        return new ThunderbirdProfileDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.path = source["path"];
+	        this.accounts = this.convertValues(source["accounts"], ThunderbirdAccountDTO);
+	        this.localFolders = this.convertValues(source["localFolders"], ThunderbirdFolderDTO);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
 	export class UIPrefsDTO {
 	    theme: string;
 	    accent: string;
@@ -1220,6 +1373,7 @@ export namespace desktop {
 	    showShortcutHints: boolean;
 	    showAccountEmail: boolean;
 	    alwaysLoadImages: boolean;
+	    blockTrackingPixels: boolean;
 	    avatarSource: string;
 	    avatarStyle: string;
 	    multiSelectEnabled: boolean;
@@ -1257,6 +1411,8 @@ export namespace desktop {
 	    menuBarIcons: boolean;
 	    timeFormat: string;
 	    reduceMotion: boolean;
+	    handCursor: boolean;
+	    dockBadge: boolean;
 	    themeDarkStart: string;
 	    themeDarkEnd: string;
 	    bodyFont: string;
@@ -1268,6 +1424,10 @@ export namespace desktop {
 	    syncMessageLimit: number;
 	    syncAutoBackfill: boolean;
 	    startupSelection: string;
+	    logToFile: boolean;
+	    logLevel: string;
+	    logMessageMetadata: boolean;
+	    crashLogs: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new UIPrefsDTO(source);
@@ -1291,6 +1451,7 @@ export namespace desktop {
 	        this.showShortcutHints = source["showShortcutHints"];
 	        this.showAccountEmail = source["showAccountEmail"];
 	        this.alwaysLoadImages = source["alwaysLoadImages"];
+	        this.blockTrackingPixels = source["blockTrackingPixels"];
 	        this.avatarSource = source["avatarSource"];
 	        this.avatarStyle = source["avatarStyle"];
 	        this.multiSelectEnabled = source["multiSelectEnabled"];
@@ -1328,6 +1489,8 @@ export namespace desktop {
 	        this.menuBarIcons = source["menuBarIcons"];
 	        this.timeFormat = source["timeFormat"];
 	        this.reduceMotion = source["reduceMotion"];
+	        this.handCursor = source["handCursor"];
+	        this.dockBadge = source["dockBadge"];
 	        this.themeDarkStart = source["themeDarkStart"];
 	        this.themeDarkEnd = source["themeDarkEnd"];
 	        this.bodyFont = source["bodyFont"];
@@ -1339,6 +1502,10 @@ export namespace desktop {
 	        this.syncMessageLimit = source["syncMessageLimit"];
 	        this.syncAutoBackfill = source["syncAutoBackfill"];
 	        this.startupSelection = source["startupSelection"];
+	        this.logToFile = source["logToFile"];
+	        this.logLevel = source["logLevel"];
+	        this.logMessageMetadata = source["logMessageMetadata"];
+	        this.crashLogs = source["crashLogs"];
 	    }
 	}
 	export class UnifiedViewDTO {
@@ -1368,11 +1535,18 @@ export namespace desktop {
 	    imapPort: number;
 	    smtpHost: string;
 	    smtpPort: number;
-	
+	    password: string;
+	    imapTls: string;
+	    smtpTls: string;
+	    exportOnArchive: boolean;
+	    exportDir: string;
+	    exportSubfolders: string;
+	    exportNameTemplate: string;
+
 	    static createFrom(source: any = {}) {
 	        return new UpdateAccountRequest(source);
 	    }
-	
+
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.id = source["id"];
@@ -1382,6 +1556,13 @@ export namespace desktop {
 	        this.imapPort = source["imapPort"];
 	        this.smtpHost = source["smtpHost"];
 	        this.smtpPort = source["smtpPort"];
+	        this.password = source["password"];
+	        this.imapTls = source["imapTls"];
+	        this.smtpTls = source["smtpTls"];
+	        this.exportOnArchive = source["exportOnArchive"];
+	        this.exportDir = source["exportDir"];
+	        this.exportSubfolders = source["exportSubfolders"];
+	        this.exportNameTemplate = source["exportNameTemplate"];
 	    }
 	}
 	export class UpdateCheckResult {

@@ -12,6 +12,7 @@ type menuStrings struct {
 	fileMenu         string
 	compose          string
 	exportPDF        string
+	closeWindow      string
 	mailboxMenu      string
 	syncNow          string
 	openWindow       string
@@ -44,6 +45,7 @@ var menuLocales = map[string]menuStrings{
 		fileMenu:         "File",
 		compose:          "Compose",
 		exportPDF:        "Export Message as PDF…",
+		closeWindow:      "Close Window",
 		mailboxMenu:      "Mailbox",
 		syncNow:          "Sync Now",
 		openWindow:       "Open Pelton",
@@ -69,6 +71,7 @@ var menuLocales = map[string]menuStrings{
 		fileMenu:         "Datei",
 		compose:          "Neue Nachricht",
 		exportPDF:        "Nachricht als PDF exportieren…",
+		closeWindow:      "Fenster schließen",
 		mailboxMenu:      "Postfach",
 		syncNow:          "Jetzt synchronisieren",
 		openWindow:       "Pelton öffnen",
@@ -94,6 +97,7 @@ var menuLocales = map[string]menuStrings{
 		fileMenu:         "Fichier",
 		compose:          "Nouveau message",
 		exportPDF:        "Exporter le message en PDF…",
+		closeWindow:      "Fermer la fenêtre",
 		mailboxMenu:      "Boîte mail",
 		syncNow:          "Synchroniser maintenant",
 		openWindow:       "Ouvrir Pelton",
@@ -119,6 +123,7 @@ var menuLocales = map[string]menuStrings{
 		fileMenu:         "Bestand",
 		compose:          "Nieuw bericht",
 		exportPDF:        "Bericht exporteren als PDF…",
+		closeWindow:      "Venster sluiten",
 		mailboxMenu:      "Mailbox",
 		syncNow:          "Nu synchroniseren",
 		openWindow:       "Pelton openen",
@@ -144,6 +149,7 @@ var menuLocales = map[string]menuStrings{
 		fileMenu:         "Archivo",
 		compose:          "Redactar",
 		exportPDF:        "Exportar mensaje como PDF…",
+		closeWindow:      "Cerrar ventana",
 		mailboxMenu:      "Buzón",
 		syncNow:          "Sincronizar ahora",
 		openWindow:       "Abrir Pelton",
@@ -169,6 +175,7 @@ var menuLocales = map[string]menuStrings{
 		fileMenu:         "Plik",
 		compose:          "Napisz",
 		exportPDF:        "Eksportuj wiadomość jako PDF…",
+		closeWindow:      "Zamknij okno",
 		mailboxMenu:      "Skrzynka",
 		syncNow:          "Synchronizuj teraz",
 		openWindow:       "Otwórz Pelton",

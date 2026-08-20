@@ -34,7 +34,7 @@
     border-radius: var(--radius-control);
     background: transparent;
     color: var(--text-secondary);
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
 
   .icon-btn:hover:not(:disabled) {

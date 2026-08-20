@@ -164,7 +164,7 @@
     border: none;
     background: transparent;
     color: var(--text-tertiary);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     padding: 2px;
   }
 
@@ -179,7 +179,7 @@
     background: var(--surface-raised);
     color: var(--text-secondary);
     font-size: var(--fz-label);
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
 
   .reset-all:hover {
@@ -245,7 +245,7 @@
     border-radius: var(--radius-control);
     background: var(--surface-raised);
     color: var(--text-secondary);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     font-size: var(--fz-meta);
   }
 

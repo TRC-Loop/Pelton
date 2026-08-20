@@ -33,7 +33,7 @@
   import { selection, applyStartupSelection, searchQuery } from './stores/selection'
   import { loadList, messageList } from './stores/messages'
   import { initProgress } from './stores/progress'
-  import { composeSessions, openCompose, openComposeWith, initComposePrefs, openReply, openForward } from './stores/compose'
+  import { composeSessions, openCompose, openComposeWith, initComposePrefs, openReply, openForward, requestComposeClose } from './stores/compose'
   import { openSnooze } from './stores/snooze'
   import { patchInList, removeFromList } from './stores/messages'
   import {
@@ -54,6 +54,12 @@
     isNightly,
     unsubscribeMessage,
     consumePendingMailto,
+    closeWindow,
+    getLogStatus,
+    openCrashReport,
+    accountsNeedingPassword,
+    titleBarDoubleClick,
+    setDockBadge,
   } from './lib/api'
   import { BrowserOpenURL } from '../wailsjs/runtime/runtime'
   import { liabilityAccepted } from './lib/liability'
@@ -63,7 +69,7 @@
   import { loadViews, editingView, closeViewEditor, openViewEditor, views as savedViews } from './stores/views'
   import { selectSavedView } from './stores/selection'
   import { isMac } from './lib/i18n'
-  import { Quit, WindowHide, WindowIsFullscreen, WindowFullscreen, WindowUnfullscreen } from '../wailsjs/runtime/runtime'
+  import { Quit, Hide, WindowIsFullscreen, WindowFullscreen, WindowUnfullscreen } from '../wailsjs/runtime/runtime'
   import { matchShortcut, comboHasModifier, type ShortcutAction } from './lib/shortcuts'
   import { bindings, recording, initShortcuts } from './stores/shortcuts'
   import { initMenuBar } from './stores/menubar'
@@ -71,7 +77,7 @@
   import { recordDeleted, triggerUndoDelete } from './stores/undodelete'
   import { triggerUndoArchive } from './stores/undoarchive'
   import { openMessageId, openMessage } from './stores/selection'
-  import { errorMessage, toastError, toastInfo } from './stores/toast'
+  import { errorMessage, toastError, toastInfo, pushAction } from './stores/toast'
   import { friendlyError } from './lib/errors'
   import { setOnline } from './stores/network'
   import { moveTarget } from './stores/move'
@@ -98,6 +104,7 @@
     bulkSetOffline,
     bulkTrash,
     bulkArchive,
+    reportArchiveExport,
   } from './lib/messageactions'
   import { buildCommands, mailCommands, type CommandContext, type MessageOp, type FolderOp } from './lib/commands'
   import { catalogByAction } from './lib/menuactions'
@@ -111,7 +118,8 @@
     paletteMail,
     paletteQuery,
   } from './stores/palette'
-  import type { EditorMode, MessageSummary, ThemePref, ThemeInfo, Folder } from './lib/types'
+  import AccountPasswordDialog from './components/settings/AccountPasswordDialog.svelte'
+  import type { EditorMode, MessageSummary, ThemePref, ThemeInfo, Folder, Account } from './lib/types'
 
   let settingsOpen = false
   // the settings category to open on; set by menu actions that deep-link into a
@@ -142,9 +150,37 @@
   // created there); on macOS the native bar stays and the in-app one is opt-in.
   $: showMenuBar = !isMac || $prefs.menuBarInApp
 
+  // the macOS window has no native title bar (mac.TitleBarHiddenInset), so the
+  // ui paints to the top edge and keeps a strip clear for the traffic lights.
+  // fullscreen hides the lights, and the strip goes with them.
+  let fullscreen = false
+  $: macTitlebar = isMac && !fullscreen
+  $: applyTitlebar(macTitlebar)
+  function applyTitlebar(on: boolean): void {
+    if (on) {
+      document.documentElement.dataset.titlebar = 'mac'
+    } else {
+      delete document.documentElement.dataset.titlebar
+    }
+  }
+
+  // only a window resize can change fullscreen state, and only the window layer
+  // knows the answer: wkwebview reports nothing useful about the frame.
+  async function refreshFullscreen(): Promise<void> {
+    if (!isMac) {
+      return
+    }
+    fullscreen = await WindowIsFullscreen().catch(() => false)
+  }
+
   // the native Mail menu's message actions are only usable while a message is
   // open; keep them greyed in step with the open message.
   $: setMailActionsEnabled($openMessageId != null)
+
+  // the dock badge follows the unified inbox, which the sidebar already
+  // recomputes after a sync and after anything that changes read state, so
+  // there is no second count to keep in step.
+  $: setDockBadge($sidebar.data?.views?.find((v) => v.key === 'inbox')?.unreadCount ?? 0)
 
   // keep the native window title in sync with context: "Settings" while the
   // settings screen is open, the open message's subject when reading, otherwise
@@ -173,11 +209,41 @@
     setWindowTitle(title)
   }
 
+  // offerCrashReport says so when the last run ended in a crash and there is a
+  // file about it (#211). It stays up until it is closed, since a crash is not
+  // something to notice out of the corner of an eye. Closing it without opening
+  // the report leaves the report unread, so the offer comes back next launch.
+  async function offerCrashReport(): Promise<void> {
+    let status
+    try {
+      status = await getLogStatus()
+    } catch {
+      return
+    }
+    if (!status.crashName) {
+      return
+    }
+    const when = status.crashTime || status.crashName
+    pushAction(
+      'error',
+      $t('crash.toast').replace('{when}', when),
+      {
+        label: $t('crash.open'),
+        run: () => {
+          openCrashReport().catch((err) => toastError(errorMessage(err)))
+        },
+      },
+      0,
+    )
+  }
+
   onMount(async () => {
     // cosmetic demo mode (--potatoes-are-nice): flip the data layer to sample
     // data before anything loads, so the whole ui fills with the potato inbox.
     const demo = await isDemoMode().catch(() => false)
     setDemoActive(demo)
+
+    void refreshFullscreen()
 
     // a nightly warns before anything else is on screen. demo mode is only used
     // for screenshots, so the dialog would just be in the way there.
@@ -219,6 +285,7 @@
       // onboarding collects the acknowledgement itself, so only ask separately
       // when the flow is not going to run.
       liabilityOpen = !onboardingOpen && !(await liabilityAccepted())
+      void offerCrashReport()
     }
 
     unsubscribers.push(
@@ -342,7 +409,51 @@
     }
   }
 
+  // the account currently being asked for a password, and the resolver waiting
+  // on the answer. Only one prompt is shown at a time.
+  let passwordPromptAccount: Account | null = null
+  let passwordPromptResolve: ((saved: boolean) => void) | null = null
+  // accounts the user skipped this session, so cancelling once does not mean
+  // being asked again on every automatic sync.
+  const skippedPasswordAccounts = new Set<number>()
+
+  function askForPassword(account: Account): Promise<boolean> {
+    passwordPromptAccount = account
+    return new Promise<boolean>((resolve) => {
+      passwordPromptResolve = resolve
+    })
+  }
+
+  function onPasswordPromptDone(saved: boolean): void {
+    const resolve = passwordPromptResolve
+    passwordPromptAccount = null
+    passwordPromptResolve = null
+    resolve?.(saved)
+  }
+
+  // promptForMissingPasswords asks about every account that has no stored
+  // password before a sync runs. An account imported from another mail client
+  // arrives without one, and previously that meant it silently never synced.
+  async function promptForMissingPasswords(): Promise<void> {
+    let pending: Account[]
+    try {
+      pending = await accountsNeedingPassword()
+    } catch {
+      // the sync itself will report whatever is actually wrong.
+      return
+    }
+    for (const account of pending) {
+      if (skippedPasswordAccounts.has(account.id)) {
+        continue
+      }
+      if (!(await askForPassword(account))) {
+        skippedPasswordAccounts.add(account.id)
+      }
+    }
+  }
+
   async function runSync(): Promise<void> {
+    await promptForMissingPasswords()
     syncing.set(true)
     try {
       await triggerSync()
@@ -472,6 +583,7 @@
         }
         case 'archive': {
           const undo = await archiveMessage(msg.id)
+          reportArchiveExport(undo)
           if (undo.messageId) {
             recordArchived(msg, undo.messageId, undo.originalFolderId)
           }
@@ -554,7 +666,12 @@
         void toggleFullscreen()
         break
       case 'hide-window':
-        WindowHide()
+        // Hide, not WindowHide: on macOS ordering the window out strands it,
+        // because wails has no reopen handler for the dock icon to trigger.
+        Hide()
+        break
+      case 'close-window':
+        closeFrontmost()
         break
       case 'quit':
         Quit()
@@ -800,6 +917,30 @@
     selectSavedView(v.id, v.name)
   }
 
+  // closeFrontmost is what Cmd+W means on a desktop: it shuts the thing you are
+  // looking at, not always the window. the nightly warning, the liability
+  // acknowledgement and onboarding are deliberately absent, since they are
+  // unskippable by design and this must not become a way around them.
+  function closeFrontmost(): void {
+    const composeEl = document.activeElement?.closest('[data-compose-id]')
+    if (composeEl instanceof HTMLElement && composeEl.dataset.composeId) {
+      requestComposeClose(Number(composeEl.dataset.composeId))
+      return
+    }
+    if (settingsOpen) {
+      settingsOpen = false
+      return
+    }
+    if (wizardOpen) {
+      wizardOpen = false
+      return
+    }
+    // nothing layered on top, so this closes the window itself. the backend owns
+    // what that means: it follows the close action setting, and hides through
+    // the same call the close button uses, which the dock icon can undo.
+    closeWindow()
+  }
+
   async function toggleFullscreen(): Promise<void> {
     if (await WindowIsFullscreen()) {
       WindowUnfullscreen()
@@ -990,11 +1131,27 @@
   }
 </script>
 
-<svelte:window on:keydown={onKeydown} on:contextmenu={onContextMenu} />
+<svelte:window on:keydown={onKeydown} on:contextmenu={onContextMenu} on:resize={refreshFullscreen} />
 
-<div class="shell" class:with-menubar={showMenuBar}>
+<!-- macOS with no in-app menu bar: an empty top row for the traffic lights, and
+     a matching strip above every overlay so the window can still be dragged
+     while settings or onboarding is open. with the menu bar on, the bar itself
+     is that row and handles both. -->
+{#if macTitlebar && !showMenuBar}
+  <!-- svelte-ignore a11y-no-static-element-interactions -->
+  <div
+    class="titlebar-drag"
+    style="--wails-draggable:drag"
+    aria-hidden="true"
+    on:dblclick={titleBarDoubleClick}
+  ></div>
+{/if}
+
+<div class="shell" class:with-topbar={showMenuBar || macTitlebar}>
   {#if showMenuBar}
     <MenuBar on:action={(e) => handleMenu(e.detail)} />
+  {:else if macTitlebar}
+    <div class="titlebar-space" aria-hidden="true"></div>
   {/if}
   <div class="columns" style={`grid-template-columns: ${sidebarW}px 0 ${listW}px 0 1fr`}>
     <Sidebar
@@ -1080,6 +1237,8 @@
 
 <CommandPalette commands={paletteCommands} mail={paletteMailCommands} />
 
+<AccountPasswordDialog account={passwordPromptAccount} onDone={onPasswordPromptDone} />
+
 <style>
   .shell {
     display: grid;
@@ -1096,9 +1255,24 @@
     overflow: hidden;
   }
 
-  /* with the in-app menu bar the shell gains a top auto row for it. */
-  .shell.with-menubar {
+  /* the menu bar, or the macOS traffic-light row, takes a top auto row. */
+  .shell.with-topbar {
     grid-template-rows: auto minmax(0, 1fr) auto;
+  }
+
+  .titlebar-space {
+    height: var(--titlebar-lights);
+  }
+
+  /* above every overlay: a window with no native title bar has nothing else to
+     drag it by, and settings or onboarding being open is no reason to lose
+     that. only rendered without the menu bar, which would otherwise have its
+     titles buried under this. */
+  .titlebar-drag {
+    position: fixed;
+    inset: 0 0 auto 0;
+    height: var(--titlebar-lights);
+    z-index: 700;
   }
 
   /* the two zero-width tracks hold the resizer handles, which overhang via

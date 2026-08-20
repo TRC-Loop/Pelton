@@ -6,8 +6,8 @@
   // affordance is always available. completion is persisted by the parent so this
   // only ever shows once, with a settings action to run it again.
   import { createEventDispatcher, onMount } from 'svelte'
-  import { fly, fade, scale } from 'svelte/transition'
-  import { quintOut, backOut } from 'svelte/easing'
+  import { fade, scale } from 'svelte/transition'
+  import { backOut } from 'svelte/easing'
   import {
     IconArrowRight,
     IconArrowLeft,
@@ -21,13 +21,11 @@
     IconPackageExport,
     IconBrandOpenSource,
     IconSparkles,
-    IconBrandGoogle,
-    IconBrandApple,
-    IconServer,
-    IconDots,
     IconPalette,
     IconWorld,
     IconMail,
+    IconMailbox,
+    IconPlus,
   } from '@tabler/icons-svelte'
   import Confetti from '../common/Confetti.svelte'
   import AppSkeleton from './AppSkeleton.svelte'
@@ -51,6 +49,7 @@
     setAvatarStyle,
     setAvatarSource,
     setAlwaysLoadImages,
+    setBlockTrackingPixels,
     setMessageFontSize,
     setFlagHighlight,
     setLanguage,
@@ -116,15 +115,18 @@
   // privacyMode is derived straight from the two settings it controls, not a
   // separate stored field, so it always reflects what's actually active (and
   // so re-running onboarding shows the real current choice, not a guess).
-  $: privacyMode = $prefs.avatarSource === 'pfp' && !$prefs.alwaysLoadImages ? 'private' : 'normal'
+  $: privacyMode =
+    $prefs.avatarSource === 'pfp' && !$prefs.alwaysLoadImages && $prefs.blockTrackingPixels ? 'private' : 'normal'
 
   function selectPrivacy(mode: 'private' | 'normal'): void {
     if (mode === 'private') {
       setAvatarSource('pfp')
       setAlwaysLoadImages(false)
+      setBlockTrackingPixels(true)
     } else {
       setAvatarSource('bimi_gravatar')
       setAlwaysLoadImages(true)
+      setBlockTrackingPixels(false)
     }
   }
 
@@ -143,12 +145,6 @@
       recommended: false,
       body: $t('onboarding.privacy.normal.body'),
     },
-  ]
-
-  $: quickProviders = [
-    { id: 'gmail', label: 'Gmail', icon: IconBrandGoogle, sub: $t('onboarding.provider.gmailSub') },
-    { id: 'icloud', label: 'iCloud', icon: IconBrandApple, sub: $t('onboarding.provider.icloudSub') },
-    { id: 'custom', label: $t('onboarding.provider.customLabel'), icon: IconServer, sub: $t('onboarding.provider.customSub') },
   ]
 
   // the ordered steps. "done" is the finale and has no skip/progress chrome.
@@ -215,14 +211,11 @@
       next()
     }
   }
-  // direction drives the slide of the step transition (forward vs back).
-  let dir = 1
 
   let showWizard = false
   let skippedMailbox = false
 
   function next(): void {
-    dir = 1
     index = Math.min(index + 1, order.length - 1)
   }
 
@@ -240,7 +233,6 @@
   }
 
   function back(): void {
-    dir = -1
     index = Math.max(index - 1, 0)
   }
 
@@ -277,15 +269,6 @@
 
   const addMailboxHint = shortcutLabel('mod+m')
 
-  // the provider that the wizard should open straight into, or null for the full
-  // provider grid.
-  let wizardProvider: string | null = null
-
-  function openProvider(id: string | null): void {
-    wizardProvider = id
-    showWizard = true
-  }
-
   // custom accent: a popover color picker (hue square + slider + hex), opened from
   // the custom swatch. it applies live through the same accent setter.
   let pickerOpen = false
@@ -294,17 +277,18 @@
   function onMailboxAdded(event: CustomEvent<Account>): void {
     showWizard = false
     dispatch('added', event.detail)
-    dir = 1
     index = order.indexOf('done')
   }
+
+  // both choices open the same dialogs the rest of the app uses, so there is one
+  // flow of each to maintain. They open over the onboarding screen and close
+  // back to it.
+  let showImport = false
 
   function skipMailbox(): void {
     skippedMailbox = true
     next()
   }
-
-  // slide params: enter from the side we are moving toward, leave to the other.
-  $: enterX = dir * 36
 </script>
 
 <div class="screen" role="dialog" aria-modal="true" aria-label="Welcome to Pelton">
@@ -317,15 +301,18 @@
 
   <div class="stage" class:wide={step === 'extras'}>
     {#key step}
-      <div class="step" in:fly={{ x: enterX, y: 8, duration: 380, easing: quintOut, delay: 90 }} out:fade={{ duration: 120 }}>
+      <!-- fade only, and no out transition: the previous step leaves at once so
+           the stage resizes while the new one is still transparent, instead of
+           shifting the content under the pointer part way through. -->
+      <div class="step" in:fade={{ duration: 120 }}>
         {#if step === 'welcome'}
           <div class="welcome">
             <img class="logo" src={logo} alt="Pelton" in:scale={{ start: 0.7, duration: 600, easing: backOut }} />
-            <h1 in:fly={{ y: 12, duration: 500, delay: 160, easing: quintOut }}>{$t('onboarding.welcome')}</h1>
-            <p class="lede" in:fly={{ y: 12, duration: 500, delay: 260, easing: quintOut }}>
+            <h1>{$t('onboarding.welcome')}</h1>
+            <p class="lede">
               {$t('onboarding.welcomeLede')}
             </p>
-            <button class="primary big" on:click={next} in:fly={{ y: 12, duration: 500, delay: 380, easing: quintOut }}>
+            <button class="primary big" on:click={next}>
               {$t('onboarding.getStarted')} <IconArrowRight size={18} stroke={1.8} />
             </button>
           </div>
@@ -354,8 +341,8 @@
           <div class="features">
             <h2>{$t('onboarding.featuresTitle')}</h2>
             <ul>
-              {#each features as f, i}
-                <li in:fly={{ y: 16, duration: 460, delay: 120 + i * 90, easing: quintOut }}>
+              {#each features as f}
+                <li>
                   <span class="f-icon"><svelte:component this={f.icon} size={22} stroke={1.6} /></span>
                   <span class="f-text">
                     <span class="f-title">{f.title}</span>
@@ -650,21 +637,19 @@
             <h2>{$t('onboarding.mailboxTitle')}</h2>
             <p class="sub">{$t('onboarding.mailboxSub')}</p>
             <div class="providers">
-              {#each quickProviders as p}
-                <button class="provider" on:click={() => openProvider(p.id)}>
-                  <span class="p-icon"><svelte:component this={p.icon} size={24} stroke={1.5} /></span>
-                  <span class="p-text">
-                    <span class="p-title">{p.label}</span>
-                    <span class="p-sub">{p.sub}</span>
-                  </span>
-                  <IconArrowRight size={16} stroke={1.8} />
-                </button>
-              {/each}
-              <button class="provider more" on:click={() => openProvider(null)}>
-                <span class="p-icon"><IconDots size={24} stroke={1.5} /></span>
+              <button class="provider" on:click={() => (showWizard = true)}>
+                <span class="p-icon"><IconPlus size={24} stroke={1.5} /></span>
                 <span class="p-text">
-                  <span class="p-title">{$t('onboarding.moreProviders')}</span>
-                  <span class="p-sub">{$t('onboarding.moreProvidersSub')}</span>
+                  <span class="p-title">{$t('wizard.start.addTitle')}</span>
+                  <span class="p-sub">{$t('wizard.start.addSub')}</span>
+                </span>
+                <IconArrowRight size={16} stroke={1.8} />
+              </button>
+              <button class="provider" on:click={() => (showImport = true)}>
+                <span class="p-icon"><IconMailbox size={24} stroke={1.5} /></span>
+                <span class="p-text">
+                  <span class="p-title">{$t('wizard.start.importTitle')}</span>
+                  <span class="p-sub">{$t('wizard.start.importSub')}</span>
                 </span>
                 <IconArrowRight size={16} stroke={1.8} />
               </button>
@@ -679,15 +664,15 @@
             <span class="done-mark" in:scale={{ start: 0.5, duration: 600, easing: backOut }}>
               <IconSparkles size={40} stroke={1.5} />
             </span>
-            <h1 in:fly={{ y: 12, duration: 500, delay: 160, easing: quintOut }}>{$t('onboarding.doneTitle')}</h1>
-            <p class="lede" in:fly={{ y: 12, duration: 500, delay: 260, easing: quintOut }}>
+            <h1>{$t('onboarding.doneTitle')}</h1>
+            <p class="lede">
               {#if skippedMailbox}
                 {$t('onboarding.doneLedeSkippedBefore')} <kbd>{addMailboxHint}</kbd> {$t('onboarding.doneLedeSkippedAfter')}
               {:else}
                 {$t('onboarding.doneLedeDefault')}
               {/if}
             </p>
-            <button class="primary big" on:click={finish} in:fly={{ y: 12, duration: 500, delay: 380, easing: quintOut }}>
+            <button class="primary big" on:click={finish}>
               {$t('onboarding.startUsing')}
             </button>
           </div>
@@ -709,9 +694,15 @@
   <Confetti />
 {/if}
 
+{#if showImport}
+  {#await import('../settings/ImportClientModal.svelte') then m}
+    <svelte:component this={m.default} on:close={() => (showImport = false)} />
+  {/await}
+{/if}
+
 {#if showWizard}
   <AddMailboxWizard
-    initialProviderId={wizardProvider}
+    offerImport={false}
     on:close={() => (showWizard = false)}
     on:added={onMailboxAdded}
   />
@@ -728,6 +719,9 @@
     justify-content: center;
     background: var(--surface-base);
     overflow: hidden;
+    /* covers the whole window, so it has to keep the macOS traffic lights clear
+       itself; zero on every other platform. */
+    padding-top: var(--titlebar-lights);
   }
 
   .skip {
@@ -738,7 +732,7 @@
     background: transparent;
     color: var(--text-tertiary);
     font-size: var(--fz-label);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     padding: var(--space-2) var(--space-3);
     border-radius: var(--radius-control);
   }
@@ -753,7 +747,6 @@
     max-width: 560px;
     padding: 0 var(--space-6);
     display: grid;
-    transition: max-width 0.3s ease;
   }
 
   /* the extras step needs more room for its two columns. */
@@ -761,7 +754,8 @@
     max-width: 760px;
   }
 
-  /* every step occupies the same grid cell so transitions cross-fade in place. */
+  /* every step occupies the same grid cell so one fades in exactly where the
+     last one was. */
   .step {
     grid-area: 1 / 1;
   }
@@ -978,7 +972,7 @@
     border: var(--hairline) solid var(--border-default);
     border-radius: var(--radius-card);
     background: var(--surface-raised);
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
   .style-card.active {
     border-color: var(--accent);
@@ -1073,7 +1067,7 @@
     border-radius: var(--radius-card);
     background: var(--surface-raised);
     color: var(--text-primary);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     transition: border-color 0.15s ease, transform 0.15s ease;
   }
 
@@ -1132,7 +1126,7 @@
     background: var(--surface-raised);
     color: var(--text-primary);
     text-align: left;
-    cursor: pointer;
+    cursor: var(--cursor-action);
     transition: border-color 0.15s ease, transform 0.15s ease;
   }
 
@@ -1216,7 +1210,7 @@
     border: 2px solid transparent;
     background: var(--sw);
     color: #fff;
-    cursor: pointer;
+    cursor: var(--cursor-action);
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -1239,7 +1233,7 @@
     border-radius: 999px;
     border: var(--hairline) dashed var(--border-strong, var(--border-default));
     overflow: hidden;
-    cursor: pointer;
+    cursor: var(--cursor-action);
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -1291,7 +1285,7 @@
     color: var(--accent-fg);
     font-size: var(--fz-body);
     font-weight: var(--fw-medium);
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
 
   .dm-cta:hover {
@@ -1321,17 +1315,13 @@
     border-radius: var(--radius-card);
     background: var(--surface-raised);
     color: var(--text-primary);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     transition: border-color 0.15s ease, transform 0.15s ease;
   }
 
   .provider:hover {
     transform: translateY(-2px);
     border-color: var(--accent);
-  }
-
-  .provider.more {
-    background: transparent;
   }
 
   .p-icon {
@@ -1407,7 +1397,7 @@
     border-radius: var(--radius-control);
     font-size: var(--fz-body);
     font-weight: var(--fw-medium);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     border: var(--hairline) solid var(--border-default);
   }
 

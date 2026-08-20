@@ -5,6 +5,7 @@ import (
 
 	wailsruntime "github.com/wailsapp/wails/v2/pkg/runtime"
 
+	"github.com/TRC-Loop/Pelton/internal/logging"
 	"github.com/TRC-Loop/Pelton/internal/storage"
 )
 
@@ -33,6 +34,11 @@ const (
 	settingShortcutHints  = "show_shortcut_hints"
 	settingAccountEmail   = "show_account_email"
 	settingRemoteAlways   = "remote_images_always"
+	// settingBlockTrackers keeps images that look like tracking pixels blocked
+	// even once remote content is loaded, so seeing a newsletter's pictures does
+	// not also confirm the open to the sender (#205). Off by default, since the
+	// detection is a heuristic that will sometimes be wrong.
+	settingBlockTrackers = "block_tracking_pixels"
 	settingAvatarSource   = "avatar_source"
 	settingAvatarStyle    = "avatar_style"
 	settingMultiSelect    = "multi_select_enabled"
@@ -76,6 +82,11 @@ const (
 	// disable ui transitions and animations (the os-level preference is
 	// honored by the frontend css regardless).
 	settingReduceMotion = "reduce_motion"
+	// show the browser hand over clickable chrome instead of the native arrow.
+	// hyperlinks keep the hand either way.
+	settingHandCursor = "hand_cursor"
+	// show the unread count on the dock icon (macOS only for now).
+	settingDockBadge = "dock_badge"
 	// dark window bounds ("HH:MM") for the schedule theme mode.
 	settingThemeDarkStart = "theme_dark_start"
 	settingThemeDarkEnd   = "theme_dark_end"
@@ -184,6 +195,10 @@ type UIPrefsDTO struct {
 	// AlwaysLoadImages disables remote-image blocking globally. Off by default;
 	// the ui guards turning it on with a tracking warning.
 	AlwaysLoadImages bool `json:"alwaysLoadImages"`
+	// BlockTrackingPixels keeps detected tracking pixels blocked even when the
+	// rest of a message's remote content is loaded. Off by default; the private
+	// preset in onboarding turns it on.
+	BlockTrackingPixels bool `json:"blockTrackingPixels"`
 	// AvatarSource selects the sender-photo fallback chain: bimi_gravatar,
 	// gravatar_bimi, or pfp (generated only). AvatarStyle picks the generated
 	// placeholder look: initials, mono, pixel, or geometric.
@@ -279,6 +294,11 @@ type UIPrefsDTO struct {
 	TimeFormat string `json:"timeFormat"`
 	// ReduceMotion disables ui transitions and animations.
 	ReduceMotion bool `json:"reduceMotion"`
+	// HandCursor shows the browser hand over clickable chrome instead of the
+	// native arrow.
+	HandCursor bool `json:"handCursor"`
+	// DockBadge shows the unread count on the dock icon.
+	DockBadge bool `json:"dockBadge"`
 	// ThemeDarkStart/ThemeDarkEnd bound the dark window ("HH:MM") for the
 	// schedule theme mode.
 	ThemeDarkStart string `json:"themeDarkStart"`
@@ -308,6 +328,15 @@ type UIPrefsDTO struct {
 	// the previous session. A target that no longer exists falls back to the
 	// unified inbox.
 	StartupSelection string `json:"startupSelection"`
+	// LogToFile writes the app's own log to a rotating file in the data
+	// directory, at LogLevel. LogMessageMetadata additionally allows subjects
+	// and senders into it for debugging sync. CrashLogs leaves a stack behind
+	// when the app panics. All off by default on a stable build; a nightly
+	// defaults the file log and crash reports on. Nothing is ever uploaded.
+	LogToFile          bool   `json:"logToFile"`
+	LogLevel           string `json:"logLevel"`
+	LogMessageMetadata bool   `json:"logMessageMetadata"`
+	CrashLogs          bool   `json:"crashLogs"`
 }
 
 // GetUIPrefs returns all ui preferences with defaults filled in, so startup is a
@@ -333,6 +362,7 @@ func (a *App) GetUIPrefs() (UIPrefsDTO, error) {
 		ShowShortcutHints:   a.boolSetting(settingShortcutHints, false),
 		ShowAccountEmail:    a.boolSetting(settingAccountEmail, false),
 		AlwaysLoadImages:    a.boolSetting(settingRemoteAlways, false),
+		BlockTrackingPixels: a.blockTrackers(),
 		AvatarSource:        a.stringSetting(settingAvatarSource, defaultAvatarSource),
 		AvatarStyle:         a.stringSetting(settingAvatarStyle, defaultAvatarStyle),
 		MultiSelectEnabled:  a.boolSetting(settingMultiSelect, true),
@@ -371,6 +401,8 @@ func (a *App) GetUIPrefs() (UIPrefsDTO, error) {
 		MenuBarIcons:               a.boolSetting(settingMenuBarIcons, false),
 		TimeFormat:                 a.stringSetting(settingTimeFormat, "auto"),
 		ReduceMotion:               a.boolSetting(settingReduceMotion, false),
+		HandCursor:                 a.boolSetting(settingHandCursor, false),
+		DockBadge:                  a.boolSetting(settingDockBadge, true),
 		ThemeDarkStart:             a.stringSetting(settingThemeDarkStart, "19:00"),
 		ThemeDarkEnd:               a.stringSetting(settingThemeDarkEnd, "07:00"),
 		BodyFont:                   a.stringSetting(settingBodyFont, "default"),
@@ -382,6 +414,10 @@ func (a *App) GetUIPrefs() (UIPrefsDTO, error) {
 		SyncMessageLimit:           a.syncMessageLimit(),
 		SyncAutoBackfill:           a.boolSetting(settingSyncAutoBackfill, true),
 		StartupSelection:           a.stringSetting(settingStartupSelection, defaultStartupSelection),
+		LogToFile:                  a.logsOn(),
+		LogLevel:                   logging.LevelName(a.logLevel()),
+		LogMessageMetadata:         a.boolSetting(settingLogMessageMetadata, false),
+		CrashLogs:                  a.crashLogsOn(),
 	}, nil
 }
 
@@ -416,11 +452,17 @@ func (a *App) SetSetting(key, value string) error {
 	if key == settingLanguage || key == settingMenuBarInApp || key == settingMenuBarNativeMinimal {
 		a.RebuildMenu()
 	}
+	if key == settingLogToFile || key == settingLogLevel || key == settingLogMessageMetadata || key == settingCrashLogs {
+		a.applyLogSettings()
+	}
+	if key == settingDockBadge {
+		a.applyDockBadge()
+	}
 	if key == settingIndexDecrypted {
 		// rebuilt from scratch rather than re-indexed in place: switching this
 		// off has to remove the plaintext already written, and overwriting
 		// documents would leave it in the index's older segments.
-		go a.rebuildSearchIndex()
+		goSafe("rebuilding the search index", a.rebuildSearchIndex)
 	}
 	return nil
 }

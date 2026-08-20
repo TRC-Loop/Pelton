@@ -2,6 +2,8 @@
 // settings and auth method so the user usually only types an address and signs
 // in or enters a password. custom uses autodiscovery instead of fixed hosts.
 
+import type { TLSMode } from './types'
+
 export type AuthKind = 'oauth' | 'password'
 
 export interface ProviderPreset {
@@ -14,6 +16,11 @@ export interface ProviderPreset {
   imapPort?: number
   smtpHost?: string
   smtpPort?: number
+  // the connection security each leg needs, stated rather than read back out of
+  // the port. outlook and icloud submit over STARTTLS on 587 while the rest use
+  // implicit TLS, and that is a fact about the provider, not about the number.
+  imapTls?: TLSMode
+  smtpTls?: TLSMode
   // note is shown under the form (e.g. app-specific password guidance).
   note?: string
   // appPasswordUrl, when set, replaces the plain note with a warning box that
@@ -41,8 +48,10 @@ export const providerPresets: ProviderPreset[] = [
     oauthProvider: 'google',
     imapHost: 'imap.gmail.com',
     imapPort: 993,
+    imapTls: 'ssl',
     smtpHost: 'smtp.gmail.com',
     smtpPort: 465,
+    smtpTls: 'ssl',
     appPasswordUrl: 'https://myaccount.google.com/apppasswords',
     oauthOptional: true,
   },
@@ -53,8 +62,10 @@ export const providerPresets: ProviderPreset[] = [
     oauthProvider: 'microsoft',
     imapHost: 'outlook.office365.com',
     imapPort: 993,
+    imapTls: 'ssl',
     smtpHost: 'smtp.office365.com',
     smtpPort: 587,
+    smtpTls: 'starttls',
     allowClientSecret: true,
   },
   {
@@ -63,8 +74,10 @@ export const providerPresets: ProviderPreset[] = [
     kind: 'password',
     imapHost: 'imap.mail.me.com',
     imapPort: 993,
+    imapTls: 'ssl',
     smtpHost: 'smtp.mail.me.com',
     smtpPort: 587,
+    smtpTls: 'starttls',
     appPasswordUrl: 'https://appleid.apple.com',
   },
   {
@@ -73,8 +86,10 @@ export const providerPresets: ProviderPreset[] = [
     kind: 'password',
     imapHost: 'imap.mail.yahoo.com',
     imapPort: 993,
+    imapTls: 'ssl',
     smtpHost: 'smtp.mail.yahoo.com',
     smtpPort: 465,
+    smtpTls: 'ssl',
     note: 'Yahoo requires an app password generated in account security.',
   },
   {
@@ -83,8 +98,10 @@ export const providerPresets: ProviderPreset[] = [
     kind: 'password',
     imapHost: 'imap.fastmail.com',
     imapPort: 993,
+    imapTls: 'ssl',
     smtpHost: 'smtp.fastmail.com',
     smtpPort: 465,
+    smtpTls: 'ssl',
     note: 'Fastmail requires an app password.',
   },
   {
@@ -93,8 +110,10 @@ export const providerPresets: ProviderPreset[] = [
     kind: 'password',
     imapHost: 'imap.purelymail.com',
     imapPort: 993,
+    imapTls: 'ssl',
     smtpHost: 'smtp.purelymail.com',
     smtpPort: 465,
+    smtpTls: 'ssl',
     note: 'Use your Purelymail password, or an app password if you enabled 2FA.',
   },
   {

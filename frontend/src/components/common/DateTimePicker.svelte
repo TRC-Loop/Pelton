@@ -476,7 +476,7 @@
     border-radius: var(--radius-control);
     background: var(--surface-sunken);
     color: var(--text-primary);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     font-size: var(--fz-list);
     width: 100%;
   }
@@ -535,7 +535,7 @@
     border: none;
     background: transparent;
     color: var(--text-secondary);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     border-radius: var(--radius-control);
   }
 
@@ -555,7 +555,7 @@
     font-size: var(--fz-label);
     font-weight: var(--fw-medium);
     color: var(--text-primary);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     padding: var(--space-1) var(--space-2);
     border-radius: var(--radius-control);
   }
@@ -581,7 +581,7 @@
     background: transparent;
     color: var(--text-primary);
     font-size: var(--fz-label);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     border-radius: var(--radius-control);
   }
 
@@ -620,7 +620,7 @@
     background: transparent;
     color: var(--text-primary);
     font-size: var(--fz-label);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     border-radius: var(--radius-control);
   }
 
@@ -688,7 +688,7 @@
     background: transparent;
     color: var(--link);
     font-size: var(--fz-label);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     padding: var(--space-1) var(--space-2);
     border-radius: var(--radius-control);
   }
@@ -706,7 +706,7 @@
     color: var(--accent-fg);
     font-size: var(--fz-label);
     font-weight: var(--fw-medium);
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
 
   .confirm-btn:disabled {

@@ -375,7 +375,7 @@
     border: none;
     background: transparent;
     color: var(--text-tertiary);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     padding: 1px;
     border-radius: var(--radius-control);
   }
@@ -398,7 +398,7 @@
     border: none;
     background: transparent;
     color: var(--text-tertiary);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     padding: 2px;
     border-radius: var(--radius-control);
   }
@@ -438,7 +438,7 @@
     width: 100%;
     border: none;
     background: transparent;
-    cursor: pointer;
+    cursor: var(--cursor-action);
     text-align: left;
     padding: var(--space-2);
     border-radius: var(--radius-control);
@@ -471,7 +471,7 @@
     border-radius: var(--radius-control);
     background: var(--surface-sunken);
     color: var(--text-secondary);
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
   .filter-btn:hover {
     background: var(--surface-hover);
@@ -532,6 +532,6 @@
     background: var(--accent);
     color: var(--accent-fg);
     font-size: var(--fz-label);
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
 </style>

@@ -353,7 +353,7 @@
     border: none;
     background: transparent;
     color: var(--text-secondary);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     padding: var(--space-1);
     border-radius: var(--radius-control);
   }
@@ -416,7 +416,7 @@
     background: transparent;
     color: var(--text-secondary);
     font-size: var(--fz-label);
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
 
   .segmented button.on {
@@ -476,7 +476,7 @@
     font-size: var(--fz-label);
     font-weight: var(--fw-medium);
     color: var(--text-primary);
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
 
   .css {
@@ -522,7 +522,7 @@
     background: transparent;
     color: var(--text-primary);
     font-size: var(--fz-label);
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
 
   .ghost-btn:hover {
@@ -536,7 +536,7 @@
     background: var(--accent);
     color: var(--accent-fg);
     font-size: var(--fz-label);
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
 
   .primary-btn:disabled {

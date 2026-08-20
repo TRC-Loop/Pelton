@@ -27,7 +27,7 @@
   import AttachmentPicker from './AttachmentPicker.svelte'
   import DateTimePicker from '../common/DateTimePicker.svelte'
   import { currentUIScale } from '../../theme/theme'
-  import { updateCompose, closeCompose, setComposeFullscreenDefault, type ComposeSession } from '../../stores/compose'
+  import { updateCompose, closeCompose, closeRequest, setComposeFullscreenDefault, type ComposeSession } from '../../stores/compose'
   import { signatures, signatureById, getAccountSignatures } from '../../stores/signatures'
   import type { Signature } from '../../lib/types'
   import { sidebar } from '../../stores/accounts'
@@ -348,6 +348,13 @@
     )
   }
 
+  // an outside close (the close-window action) lands here rather than removing
+  // the session, so an unsaved draft still gets its prompt.
+  $: if ($closeRequest === session.id) {
+    closeRequest.set(null)
+    requestClose()
+  }
+
   function requestClose(): void {
     if (hasContent()) {
       confirmClose = true
@@ -379,7 +386,7 @@
   }
 </script>
 
-<div class="compose" class:fullscreen={session.fullscreen} class:minimized={session.minimized} role="dialog" aria-label={$t('compose.dialog.ariaLabel')}>
+<div class="compose" class:fullscreen={session.fullscreen} class:minimized={session.minimized} data-compose-id={session.id} role="dialog" aria-label={$t('compose.dialog.ariaLabel')}>
   <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
   <header class="head" on:dblclick={toggleMinimize}>
     <span class="title">{session.subject || $t('compose.title.untitled')}</span>
@@ -573,6 +580,9 @@
   .compose.fullscreen {
     position: fixed;
     inset: 24px;
+    /* clears the macOS traffic lights, which the 24px inset alone runs into;
+       zero on every other platform. */
+    top: calc(24px + var(--titlebar-lights));
     width: auto;
     height: auto;
     max-height: none;
@@ -623,7 +633,7 @@
     border: none;
     background: transparent;
     color: var(--text-tertiary);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     border-radius: var(--radius-control);
   }
 
@@ -743,7 +753,7 @@
     color: var(--text-secondary);
     font-size: var(--fz-label);
     padding: var(--space-1) var(--space-2);
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
 
   .send,
@@ -756,7 +766,7 @@
     border-radius: var(--radius-control);
     background: var(--surface-raised);
     color: var(--text-primary);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     font-size: var(--fz-label);
   }
 
@@ -790,7 +800,7 @@
     border-radius: 0 var(--radius-control) var(--radius-control) 0;
     background: var(--surface-raised);
     color: var(--text-secondary);
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
 
   .send-caret:hover:not(:disabled) {
@@ -844,7 +854,7 @@
     border-radius: var(--radius-control);
     background: transparent;
     color: var(--text-primary);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     text-align: left;
     font-size: var(--fz-label);
   }
@@ -927,7 +937,7 @@
     border-radius: var(--radius-control);
     background: var(--surface-raised);
     color: var(--text-primary);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     font-size: var(--fz-label);
   }
 

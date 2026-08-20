@@ -15,7 +15,7 @@ Pelton is a free, open source, privacy-focused email client for macOS, Windows a
 - macOS: `~/Library/Application Support/Pelton`
 - Linux: `~/.config/Pelton`
 - Windows: `%AppData%\Pelton`
-- Contents: `pelton.db` (settings + mail cache), search index, `themes/<id>/` (installed themes)
+- Contents: `pelton.db` (settings + mail cache), search index, `themes/<id>/` (installed themes), `logs/` (only if logging is enabled)
 - Credentials: OS keyring only (Keychain / Credential Manager / Secret Service)
 - Backup: Settings > Import/Export, JSON export, credentials optionally included encrypted (AES-256-GCM, scrypt)
 
@@ -23,9 +23,17 @@ Pelton is a free, open source, privacy-focused email client for macOS, Windows a
 
 Only: user's IMAP/SMTP servers; GitHub releases API if update check enabled (default off); BIMI/Gravatar avatar lookups unless avatar source set to generated; remote mail images only after user approval (default blocked); VirusTotal lookups if the user enables the integration and supplies an API key (default off). No telemetry.
 
+## Tracking pixel detection
+
+Off by default, Settings > Privacy and network > "Keep tracking pixels blocked"; the private preset in onboarding turns it on. Entirely local: signals are read while parsing the body and a bundled domain list ships in-repo. Nothing is fetched or looked up. Signals per remote image: declared width/height of 1 or 0, inline style that hides it, host on the bundled list, an email address in the url (each sufficient alone), plus a long opaque id in the url and being the only image from its host (each weak, two needed). When on, flagged images stay blocked even after remote content is loaded, the blocked-content banner says how many and expands to show each host and the reasons, and every load button has a menu to load them anyway. Detection is heuristic and produces false positives; the ui says "look like".
+
 ## VirusTotal integration
 
 Off by default, Settings > External. Requires the user's own API key, stored in the OS keyring. Read-only v3 API: `GET /urls/{base64url_nopad(url)}` and `GET /files/{sha256}`. Never submits or uploads; attachments are looked up by hash only, so an unknown file stays unknown. Auto-scan of links and of attachments are separate toggles, both off by default; on-demand scanning is via right-click on a link or attachment, or the shield button in the message toolbar for a whole message. Verdicts cached locally 7 days, max 25 targets per scan; disabling the integration or clearing the key deletes the cache.
+
+## Logs and crash reports
+
+Off by default, Settings > Privacy and network. Nightly builds default them on. Nothing is uploaded: no crash reporter, no endpoint. Logs are files in `<data dir>/logs`, rotating at 2 MB with 3 kept copies (~8 MB cap). Levels: debug, info, warn, error. Secrets (passwords, app passwords, OAuth tokens) are removed by exact-value match wherever they appear, including inside server error strings. Mail content is never logged; subjects and senders only with the separate "Include message subjects and senders" opt-in. Crash reports hold the stack, version, OS and current activity, and are offered on the next launch. `PELTON_DEBUG` env var and `--debug` flag force logging on at debug level over the setting. Settings > About has "Open log folder" and "Copy diagnostics" (version, platform and settings only, no mail or addresses).
 
 ## Mail providers
 

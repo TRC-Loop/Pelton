@@ -8,10 +8,10 @@
   // it back to a draft the same way undo-send does.
   import { formatWeekdayTime, type TimeFormat } from '../../lib/format'
   import { prefs } from '../../stores/prefs'
-  import { IconSend, IconClock, IconAlertTriangle, IconX } from '@tabler/icons-svelte'
+  import { IconSend, IconClock, IconAlertTriangle, IconX, IconRefresh } from '@tabler/icons-svelte'
   import { createEventDispatcher } from 'svelte'
   import { outbox, loadOutbox } from '../../stores/outbox'
-  import { cancelSend } from '../../lib/api'
+  import { cancelSend, retrySend, discardFailedSend } from '../../lib/api'
   import { errorMessage, toastError, toastInfo } from '../../stores/toast'
   import type { OutboxRow } from '../../lib/types'
   import { t } from '../../lib/i18n'
@@ -63,6 +63,41 @@
       await loadOutbox()
     }
   }
+
+  // a failed message is out of retries, so it sits here until it is dealt with
+  // by hand (#238). Retrying is the useful case, since the usual reason is a
+  // server or password that has since been fixed.
+  let busy: number | null = null
+  // the row currently asking whether to discard. Discarding is not recoverable:
+  // the outbox holds the only copy of a message once it has left compose.
+  let confirmingDiscard: number | null = null
+
+  async function retry(id: number): Promise<void> {
+    busy = id
+    try {
+      if (await retrySend(id)) {
+        toastInfo($t('common.outboxPanel.retrying'))
+      }
+    } catch (err) {
+      toastError(errorMessage(err))
+    } finally {
+      busy = null
+      await loadOutbox()
+    }
+  }
+
+  async function discard(id: number): Promise<void> {
+    busy = id
+    confirmingDiscard = null
+    try {
+      await discardFailedSend(id)
+    } catch (err) {
+      toastError(errorMessage(err))
+    } finally {
+      busy = null
+      await loadOutbox()
+    }
+  }
 </script>
 
 <div class="panel" role="dialog" aria-label={$t('common.outboxPanel.title')}>
@@ -94,6 +129,17 @@
               <span class="bar"><span class="fill"></span></span>
             {:else if row.state === 'failed'}
               <span class="err">{row.lastError || $t('common.outboxPanel.sendFailed')}</span>
+              {#if confirmingDiscard === row.id}
+                <span class="confirm">
+                  <span class="muted">{$t('common.outboxPanel.discardConfirm')}</span>
+                  <button type="button" class="danger" on:click={() => discard(row.id)}>
+                    {$t('common.outboxPanel.discard')}
+                  </button>
+                  <button type="button" class="ghost" on:click={() => (confirmingDiscard = null)}>
+                    {$t('common.outboxPanel.discardCancel')}
+                  </button>
+                </span>
+              {/if}
             {:else if isScheduled(row)}
               <span class="muted">
                 {$t('common.outboxPanel.scheduledFor').replace('{when}', formatScheduled(row.nextAttemptAt))}
@@ -110,6 +156,27 @@
               aria-label={$t('common.outboxPanel.cancelScheduled')}
               title={$t('common.outboxPanel.cancelScheduled')}
               on:click={() => cancelScheduled(row.id)}
+            >
+              <IconX size={13} stroke={1.8} />
+            </button>
+          {:else if row.state === 'failed' && confirmingDiscard !== row.id}
+            <button
+              type="button"
+              class="cancel"
+              disabled={busy === row.id}
+              aria-label={$t('common.outboxPanel.retry')}
+              title={$t('common.outboxPanel.retry')}
+              on:click={() => retry(row.id)}
+            >
+              <IconRefresh size={13} stroke={1.8} />
+            </button>
+            <button
+              type="button"
+              class="cancel"
+              disabled={busy === row.id}
+              aria-label={$t('common.outboxPanel.discard')}
+              title={$t('common.outboxPanel.discard')}
+              on:click={() => (confirmingDiscard = row.id)}
             >
               <IconX size={13} stroke={1.8} />
             </button>
@@ -152,7 +219,7 @@
     border: none;
     background: transparent;
     color: var(--text-tertiary);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     padding: var(--space-1);
     border-radius: var(--radius-control);
   }
@@ -225,6 +292,42 @@
     word-break: break-word;
   }
 
+  /* the inline discard confirmation, inside the row rather than as a dialog:
+     it belongs to one message and the panel is already a popover. */
+  .confirm {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+
+  .confirm button {
+    border: var(--hairline) solid var(--border-default);
+    background: transparent;
+    border-radius: var(--radius-control);
+    padding: 2px var(--space-2);
+    font-size: var(--fz-meta);
+    cursor: pointer;
+  }
+
+  .confirm .danger {
+    border-color: var(--danger);
+    color: var(--danger);
+  }
+
+  .confirm .danger:hover {
+    background: var(--danger-bg);
+  }
+
+  .confirm .ghost {
+    color: var(--text-secondary);
+  }
+
+  .confirm .ghost:hover {
+    background: var(--surface-hover);
+    color: var(--text-primary);
+  }
+
   .cancel {
     display: inline-flex;
     align-self: flex-start;
@@ -232,7 +335,7 @@
     border: none;
     background: transparent;
     color: var(--text-tertiary);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     padding: var(--space-1);
     border-radius: var(--radius-control);
   }

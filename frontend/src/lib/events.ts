@@ -16,6 +16,7 @@ export const EventNames = {
   updateAvailable: 'update:available',
   mailtoCompose: 'mailto:compose',
   viewsChanged: 'views:changed',
+  importProgress: 'import:progress',
 } as const
 
 // payloads, mirroring the go event structs.
@@ -57,6 +58,21 @@ export interface AttachmentProgressEvent {
   error: string
 }
 
+// ImportProgressEvent reports a running mail import. running is false on the
+// final event, which carries the totals and any error. Progress is measured in
+// source bytes: an mbox does not say how many messages it holds until it has
+// been read through.
+export interface ImportProgressEvent {
+  running: boolean
+  folder: string
+  imported: number
+  skipped: number
+  failed: number
+  bytesDone: number
+  bytesTotal: number
+  folders: string[]
+  error: string
+}
 
 // UpdateAvailableEvent mirrors go's UpdateCheckResult, fired after an
 // automatic (frequency-driven) update check completes.
@@ -129,6 +145,12 @@ export function onUpdateAvailable(cb: (e: UpdateAvailableEvent) => void): Unsubs
 // running. A mailto that launched the app is delivered via consumePendingMailto.
 export function onMailtoCompose(cb: (e: MailtoDraft) => void): Unsubscribe {
   return EventsOn(EventNames.mailtoCompose, (e: MailtoDraft) => cb(e))
+}
+
+// onImportProgress fires while mail is being imported from files, and once more
+// with running false when the job ends.
+export function onImportProgress(cb: (e: ImportProgressEvent) => void): Unsubscribe {
+  return EventsOn(EventNames.importProgress, (e: ImportProgressEvent) => cb(e))
 }
 
 // onViewsChanged fires when saved views or their eager-run counts change. it
