@@ -103,7 +103,8 @@
   .pelton-vt-clean{color:#1a7f4b;}
   .pelton-vt-flagged{color:#c0392b;}
   .pelton-vt-unknown{color:#6b7280;}
-  .pelton-vt-error{color:#9a6700;}`
+  .pelton-vt-error{color:#9a6700;}
+  .pelton-phish{display:inline-block;margin-left:3px;font-weight:700;font-size:0.85em;color:#c0392b;cursor:default;}`
     const imgSrc = allowRemote ? 'data: https: http:' : 'data:'
     const csp = `default-src 'none'; img-src ${imgSrc}; style-src 'unsafe-inline'; font-src data:; script-src 'nonce-${nonce}'`
     const cspMeta = `<meta http-equiv="Content-Security-Policy" content="${csp}">`
@@ -211,7 +212,7 @@
     resizeObserver.observe(body)
     // a fresh srcdoc replaces the document, so any badges from the previous
     // render are gone and have to be put back.
-    decorateLinks(get(linkVerdicts))
+    decorateLinks(get(linkVerdicts), suspectLinks)
   }
 
   // onFrameLoad fires when the iframe's srcdoc finishes loading. It is the
@@ -325,24 +326,36 @@
     return { text: '?', cls: 'pelton-vt-unknown', label: $t('virustotal.verdict.unknown') }
   }
 
+  // suspectLinks are the urls the phishing checks flagged in this message: a
+  // link whose text names another site, a punycode host, a shortener, or a
+  // sign-in page somewhere unrelated to the sender (#206). Marking them where
+  // they sit is the only place the warning is any use, since the banner cannot
+  // point at a link halfway down a newsletter.
+  $: suspectLinks = new Set(detail.phishing?.links ?? [])
+
   // decorateLinks pins a badge to every anchor whose target has a verdict.
   // Badges are added to the iframe's own document, which the parent can reach
   // because the sandbox allows same-origin; they are our own nodes, never
   // anything the sender supplied, and are rebuilt from scratch on every pass so
   // a re-scan cannot leave a stale marker behind.
-  function decorateLinks(verdicts: Map<string, Verdict>): void {
+  function decorateLinks(verdicts: Map<string, Verdict>, suspects: Set<string>): void {
     const doc = frame?.contentDocument
     if (!readyBody() || !doc) {
       return
     }
-    for (const stale of Array.from(doc.querySelectorAll('.pelton-vt'))) {
+    for (const stale of Array.from(doc.querySelectorAll('.pelton-vt, .pelton-phish'))) {
       stale.remove()
     }
-    if (verdicts.size === 0) {
-      return
-    }
     for (const anchor of Array.from(doc.querySelectorAll('a[href]'))) {
-      const verdict = verdicts.get((anchor.getAttribute('href') ?? '').trim())
+      const href = (anchor.getAttribute('href') ?? '').trim()
+      if (suspects.has(href)) {
+        const mark = doc.createElement('span')
+        mark.className = 'pelton-phish'
+        mark.textContent = '⚠'
+        mark.title = $t('phishing.linkMarker')
+        anchor.after(mark)
+      }
+      const verdict = verdicts.get(href)
       if (!verdict) {
         continue
       }
@@ -356,7 +369,7 @@
   }
 
   $: if (frame && detail.isHtml) {
-    decorateLinks($linkVerdicts)
+    decorateLinks($linkVerdicts, suspectLinks)
   }
 
   window.addEventListener('message', onWindowMessage)

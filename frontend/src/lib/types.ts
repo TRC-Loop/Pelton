@@ -145,6 +145,25 @@ export interface SMIMESignature {
 
 export type SMIMEStatus = '' | 'valid' | 'untrusted' | 'invalid'
 
+// PhishingSignal is one finding. kind is a stable identifier the ui turns into
+// a sentence; detail is the domain, address or url it is about, and target the
+// link a link signal came from.
+export interface PhishingSignal {
+  kind: string
+  detail?: string
+  target?: string
+}
+
+// PhishingReport is the verdict for one message. 'caution' means something is
+// odd but has ordinary explanations; 'warning' means the message is claiming to
+// be from someone it was not sent by. There is no 'safe': nothing local can
+// establish that a message is genuine.
+export interface PhishingReport {
+  level: 'none' | 'caution' | 'warning'
+  signals?: PhishingSignal[]
+  links?: string[]
+}
+
 export interface MessageDetail extends MessageSummary {
   toAddresses: string
   ccAddresses: string
@@ -168,6 +187,9 @@ export interface MessageDetail extends MessageSummary {
   // like" and offers to load them anyway.
   trackingPixels: TrackingPixel[]
   attachments: Attachment[]
+  // phishing is what the local checks made of the message. level 'none' means
+  // nothing was found and the ui shows nothing at all.
+  phishing: PhishingReport
   // unsubscribe describes the List-Unsubscribe mechanism the message
   // advertises: oneclick (RFC 8058 background POST), mailto (sent via the
   // account's smtp) or link (opened in the browser). null when none is on

@@ -1,14 +1,16 @@
 <script lang="ts">
   // the per-message technical-info badges shared by the list row and the detail
   // header: mailbox/account badge, pgp status and auth status. each badge is
-  // shown only when its preference toggle is on. the auth badge is always a
-  // neutral "not available" state because the backend does not parse
-  // Authentication-Results yet (documented follow-up); we never invent a result.
+  // shown only when its preference toggle is on. the auth badge reports what
+  // the receiving server said about spf, dkim and dmarc; mail whose server said
+  // nothing reads as "not available" and never as a failure.
   import {
     IconMailbox,
     IconLock,
     IconShieldCheck,
     IconShieldQuestion,
+    IconShieldCheckFilled,
+    IconShieldExclamation,
     IconCertificate,
     IconCertificateOff,
     IconShieldX,
@@ -52,9 +54,13 @@
   $: showPgp = $prefs.showPgp && pgp !== 'none'
   $: showAuth = $prefs.showAuth
   $: pgpStatus = pgp as PGPStatus
-  // auth has only the "unavailable" state today; show n/a until the backend
-  // parses Authentication-Results, otherwise echo whatever it reports.
-  $: authText = auth === 'unavailable' ? $t('common.techBadges.authNA') : auth
+  // pass, partial, fail, or unavailable when the server reported nothing, which
+  // is most older cached mail. Anything unrecognised is shown as unavailable
+  // rather than echoed, so a future value cannot leak into the badge raw.
+  $: authKnown = auth === 'pass' || auth === 'partial' || auth === 'fail'
+  $: authText = authKnown ? $t(`common.techBadges.auth.${auth}`) : $t('common.techBadges.authNA')
+  $: authTitle = authKnown ? $t(`common.techBadges.authTitle.${auth}`) : $t('common.techBadges.authTitle')
+  $: AuthIcon = auth === 'pass' ? IconShieldCheckFilled : auth === 'fail' ? IconShieldExclamation : IconShieldQuestion
 </script>
 
 {#if showBadge || showPgp || showSmime || showAuth}
@@ -93,10 +99,11 @@
     {#if showAuth}
       <span
         class="badge auth"
-        title={$t('common.techBadges.authTitle')}
-        aria-label={$t('common.techBadges.authAriaLabel')}
+        class:auth-fail={auth === 'fail'}
+        title={authTitle}
+        aria-label={authTitle}
       >
-        <IconShieldQuestion size={12} stroke={1.6} />
+        <svelte:component this={AuthIcon} size={12} stroke={1.6} />
         <span class="badge-text">{authText}</span>
       </span>
     {/if}
@@ -145,8 +152,14 @@
   }
 
   /* auth is deliberately the dimmest: it carries no real data yet. */
+  /* the muted, italic treatment was for a badge that never said anything. It
+     stays for the unknown case and comes off once there is a real result. */
   .auth {
     opacity: 0.7;
-    font-style: italic;
+  }
+
+  .auth-fail {
+    opacity: 1;
+    color: var(--danger);
   }
 </style>

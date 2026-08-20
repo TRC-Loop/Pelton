@@ -701,6 +701,7 @@ export namespace desktop {
 	    remoteHosts: string[];
 	    trackingPixels: TrackingPixelDTO[];
 	    attachments: AttachmentDTO[];
+	    phishing: PhishingDTO;
 	    pgpState: string;
 	    unsubscribe?: UnsubscribeDTO;
 	
@@ -742,6 +743,7 @@ export namespace desktop {
 	        this.trackingPixels = this.convertValues(source["trackingPixels"], TrackingPixelDTO);
 	        this.attachments = this.convertValues(source["attachments"], AttachmentDTO);
 	        this.pgpState = source["pgpState"];
+	        this.phishing = this.convertValues(source["phishing"], PhishingDTO);
 	        this.unsubscribe = this.convertValues(source["unsubscribe"], UnsubscribeDTO);
 	    }
 	
@@ -991,6 +993,56 @@ export namespace desktop {
 		    }
 		    return a;
 		}
+	}
+	export class PhishingDTO {
+	    level: string;
+	    signals?: PhishingSignalDTO[];
+	    links?: string[];
+	
+	    static createFrom(source: any = {}) {
+	        return new PhishingDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.level = source["level"];
+	        this.signals = this.convertValues(source["signals"], PhishingSignalDTO);
+	        this.links = source["links"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class PhishingSignalDTO {
+	    kind: string;
+	    detail?: string;
+	    target?: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new PhishingSignalDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.kind = source["kind"];
+	        this.detail = source["detail"];
+	        this.target = source["target"];
+	    }
 	}
 	export class ProxyConfigDTO {
 	    mode: string;

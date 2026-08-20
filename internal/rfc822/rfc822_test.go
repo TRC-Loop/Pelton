@@ -143,3 +143,41 @@ func TestParseFallsBackOnUnparseableAddress(t *testing.T) {
 		t.Errorf("from = %q, want the raw header value", msg.From)
 	}
 }
+
+// TestParseBodyReadsAuthenticationHeaders: the headers are dropped once a
+// message is stored, so anything not read here is gone for good.
+func TestParseBodyReadsAuthenticationHeaders(t *testing.T) {
+	raw := []byte("From: Someone <someone@example.com>\r\n" +
+		"Reply-To: Other <other@elsewhere.test>\r\n" +
+		"Authentication-Results: mine.example.org; spf=fail smtp.mailfrom=evil.test\r\n" +
+		"Authentication-Results: relay.example.net; dkim=pass header.d=example.com\r\n" +
+		"Subject: Hi\r\n" +
+		"\r\n" +
+		"body\r\n")
+
+	msg, err := ParseBody(raw)
+	if err != nil {
+		t.Fatalf("ParseBody: %v", err)
+	}
+	if msg.ReplyTo != "Other <other@elsewhere.test>" {
+		t.Errorf("ReplyTo = %q", msg.ReplyTo)
+	}
+	if len(msg.AuthResults) != 2 {
+		t.Fatalf("AuthResults = %v, want both headers in order", msg.AuthResults)
+	}
+	if !strings.Contains(msg.AuthResults[0], "spf=fail") {
+		t.Errorf("first header = %q, want the receiving server's one first", msg.AuthResults[0])
+	}
+}
+
+// TestParseBodyWithoutAuthenticationHeaders: most mail has none, and that must
+// come out empty rather than as anything a check could read as a failure.
+func TestParseBodyWithoutAuthenticationHeaders(t *testing.T) {
+	msg, err := ParseBody([]byte("From: a@example.com\r\nSubject: Hi\r\n\r\nbody\r\n"))
+	if err != nil {
+		t.Fatalf("ParseBody: %v", err)
+	}
+	if len(msg.AuthResults) != 0 || msg.ReplyTo != "" {
+		t.Errorf("AuthResults = %v, ReplyTo = %q, want both empty", msg.AuthResults, msg.ReplyTo)
+	}
+}
