@@ -75,10 +75,12 @@ func Run(cfg Config) error {
 
 	return wails.Run(&options.App{
 		Title:     title,
-		Width:     1280,
-		Height:    820,
-		MinWidth:  900,
-		MinHeight: 600,
+		// the window opens at the default and startup resizes it to whatever was
+		// remembered, once the store is open. see geometry.go.
+		Width:     defaultWindowWidth,
+		Height:    defaultWindowHeight,
+		MinWidth:  minWindowWidth,
+		MinHeight: minWindowHeight,
 		AssetServer: &assetserver.Options{
 			Assets: cfg.Assets,
 		},
