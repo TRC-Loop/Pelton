@@ -244,7 +244,7 @@
     position: relative;
     height: 12px;
     border-radius: 999px;
-    cursor: pointer;
+    cursor: var(--cursor-action);
     touch-action: none;
     background: linear-gradient(
       to right,

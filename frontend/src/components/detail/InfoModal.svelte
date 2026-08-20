@@ -170,7 +170,7 @@
     border: none;
     background: transparent;
     color: var(--text-secondary);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     padding: var(--space-1);
     border-radius: var(--radius-control);
   }
@@ -219,7 +219,7 @@
     border: none;
     background: transparent;
     color: var(--text-tertiary);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     padding: var(--space-1);
     border-radius: var(--radius-control);
   }
@@ -251,7 +251,7 @@
     color: var(--accent-fg);
     font-size: var(--fz-label);
     font-weight: var(--fw-medium);
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
 
   .primary:hover {

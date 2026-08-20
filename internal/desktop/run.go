@@ -107,6 +107,15 @@ func Run(cfg Config) error {
 			},
 		},
 		Mac: &mac.Options{
+			// draw the ui all the way to the top of the window instead of under an
+			// opaque native title bar, which never matches the theme. the frontend
+			// keeps the top strip clear of the traffic lights and makes it draggable
+			// (see the mac-titlebar handling in App.svelte).
+			//
+			// hidden, not hidden-inset: the inset variant asks for an NSToolbar,
+			// and the toolbar makes the title bar taller, which drops the traffic
+			// lights below the middle of the 30px menu bar row they share.
+			TitleBar: mac.TitleBarHidden(),
 			About: &mac.AboutInfo{
 				Title:   title,
 				Message: aboutMessage(cfg.Channel, cfg.Version),

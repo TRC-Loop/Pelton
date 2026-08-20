@@ -145,7 +145,7 @@
     background: var(--surface-raised);
     color: var(--text-primary);
     font-weight: var(--fw-medium);
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
 
   .compose-btn:hover {
@@ -162,7 +162,7 @@
     border-radius: var(--radius-control);
     background: var(--surface-raised);
     color: var(--text-secondary);
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
 
   .sync-btn:hover {
@@ -211,7 +211,7 @@
     font-size: var(--fz-label);
     font-weight: var(--fw-medium);
     border-radius: var(--radius-control);
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
 
   .tabs button:hover {
@@ -235,7 +235,7 @@
     background: var(--surface-raised);
     color: var(--text-primary);
     font-size: var(--fz-label);
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
 
   .add-mailbox:hover {

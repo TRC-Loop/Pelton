@@ -43,7 +43,7 @@
     border: var(--hairline) solid var(--text-tertiary);
     border-radius: 999px;
     background: var(--text-tertiary);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     transition: background 0.14s ease, border-color 0.14s ease;
   }
 

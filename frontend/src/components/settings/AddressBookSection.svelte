@@ -103,7 +103,7 @@
     background: var(--surface-raised);
     font: inherit;
     font-size: var(--fz-label);
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
   .confirm .danger {
     border-color: var(--danger);
@@ -203,7 +203,7 @@
     border: none;
     background: transparent;
     color: var(--text-tertiary);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     padding: var(--space-1);
     border-radius: var(--radius-control);
     flex-shrink: 0;

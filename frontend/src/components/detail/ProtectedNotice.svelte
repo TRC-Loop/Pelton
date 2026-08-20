@@ -158,7 +158,7 @@
     background: var(--accent);
     border: none;
     border-radius: var(--radius-control);
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
   .unlock button:disabled {
     opacity: 0.5;

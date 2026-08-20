@@ -806,6 +806,13 @@ export function closeWindow(): void {
   void App.CloseWindow()
 }
 
+// titleBarDoubleClick runs the system's title-bar double-click action (zoom,
+// minimise or nothing). Needed because the app draws its own title bar on
+// macOS, so the window server never sees the click.
+export function titleBarDoubleClick(): void {
+  void App.TitleBarDoubleClick()
+}
+
 // setWindowTheme matches the native window chrome (the Windows caption bar) to
 // the resolved ui theme. No-op on macOS/Linux.
 export function setWindowTheme(dark: boolean): void {
@@ -902,6 +909,7 @@ export const SettingKeys = {
   menuBarNewItems: 'menu_bar_new_items',
   timeFormat: 'time_format',
   reduceMotion: 'reduce_motion',
+  handCursor: 'hand_cursor',
   themeDarkStart: 'theme_dark_start',
   themeDarkEnd: 'theme_dark_end',
   bodyFont: 'body_font',

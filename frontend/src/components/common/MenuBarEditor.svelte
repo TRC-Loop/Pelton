@@ -486,7 +486,7 @@
     color: var(--text-primary);
     font-size: var(--fz-label);
     border-radius: var(--radius-control);
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
 
   .add-chip {
@@ -496,7 +496,7 @@
     background: transparent;
     color: var(--text-secondary);
     border-radius: var(--radius-control);
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
 
   .add-chip:hover {
@@ -519,7 +519,7 @@
     color: var(--text-secondary);
     font-size: var(--fz-meta);
     border-radius: var(--radius-control);
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
 
   .txt-btn:hover {
@@ -625,7 +625,7 @@
     border: none;
     background: transparent;
     color: var(--text-secondary);
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
 
   .icon-btn {
@@ -635,7 +635,7 @@
     background: transparent;
     color: var(--text-secondary);
     border-radius: var(--radius-control);
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
 
   .icon-btn:hover,
@@ -682,7 +682,7 @@
     color: var(--text-secondary);
     font-size: var(--fz-meta);
     border-radius: var(--radius-control);
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
 
   .icon-choose:hover,

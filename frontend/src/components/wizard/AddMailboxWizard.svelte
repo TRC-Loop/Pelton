@@ -480,6 +480,9 @@
     display: flex;
     flex-direction: column;
     background: var(--surface-base);
+    /* covers the whole window, so it has to keep the macOS traffic lights clear
+       itself; zero on every other platform. */
+    padding-top: var(--titlebar-lights);
   }
 
   .head {
@@ -504,7 +507,7 @@
     border: none;
     background: transparent;
     color: var(--text-secondary);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     border-radius: var(--radius-control);
   }
 
@@ -573,7 +576,7 @@
     font-size: var(--fz-label);
     font-weight: var(--fw-medium);
     text-decoration: underline;
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
 
   .field {
@@ -619,7 +622,7 @@
     border: none;
     background: transparent;
     color: var(--accent);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     font-size: var(--fz-label);
     padding: var(--space-1) 0;
     margin-bottom: var(--space-2);
@@ -658,7 +661,7 @@
     border: none;
     background: var(--surface-raised);
     color: var(--text-secondary);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     padding: var(--space-2) var(--space-4);
     font-size: var(--fz-label);
   }
@@ -691,7 +694,7 @@
     padding: var(--space-2) var(--space-5);
     border-radius: var(--radius-control);
     border: var(--hairline) solid var(--border-default);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     font-size: var(--fz-label);
   }
 

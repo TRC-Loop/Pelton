@@ -265,7 +265,7 @@
     border: none;
     background: transparent;
     color: var(--text-tertiary);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     padding: var(--space-1);
     border-radius: var(--radius-control);
   }
@@ -290,7 +290,7 @@
     background: var(--surface-raised);
     color: var(--text-primary);
     font-size: var(--fz-label);
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
 
   .add:hover {
@@ -349,7 +349,7 @@
     border-radius: var(--radius-control);
     border: var(--hairline) solid var(--border-default);
     font-size: var(--fz-label);
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
 
   .ghost {

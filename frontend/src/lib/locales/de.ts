@@ -1135,6 +1135,8 @@ const de: Record<string, string> = {
   'settingsPanel.timeFormat.h24': '24 Stunden',
   'settingsPanel.toggle.reduceMotion': 'Bewegung reduzieren',
   'settingsPanel.hint.reduceMotion': 'Schaltet Animationen und Übergänge der Oberfläche aus. Die Systemeinstellung für reduzierte Bewegung wird automatisch berücksichtigt.',
+  'settingsPanel.toggle.handCursor': 'Handzeiger auf Schaltflächen',
+  'settingsPanel.hint.handCursor': 'Zeigt über Schaltflächen, Zeilen und Tabs den Handzeiger statt des normalen Pfeils. Links behalten die Hand immer.',
   'settingsPanel.theme.schedule': 'Zeitgesteuert',
   'settingsPanel.label.darkFrom': 'Dunkel ab',
   'settingsPanel.label.darkUntil': 'Bis',

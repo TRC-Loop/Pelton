@@ -688,7 +688,7 @@
     background: var(--surface-sunken);
     border: var(--hairline) solid var(--border-default);
     border-radius: var(--radius-control);
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
 
   .load-older-btn:hover {
@@ -724,7 +724,7 @@
     border: none;
     background: transparent;
     color: var(--text-secondary);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     padding: var(--space-2);
     border-radius: var(--radius-control);
   }

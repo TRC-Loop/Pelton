@@ -299,7 +299,7 @@
     gap: var(--space-2);
     font-size: var(--fz-label);
     color: var(--text-primary);
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
   .check.disabled {
     color: var(--text-tertiary);
@@ -320,7 +320,7 @@
     background: var(--surface-raised);
     color: var(--text-primary);
     font-size: var(--fz-label);
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
   .action-btn:hover {
     background: var(--surface-hover);

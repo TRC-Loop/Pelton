@@ -385,7 +385,7 @@
     border: var(--hairline) solid var(--border-default);
     background: var(--surface-raised);
     color: var(--text-primary);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     font-size: var(--fz-label);
     white-space: nowrap;
   }
@@ -436,7 +436,7 @@
     background: none;
     color: var(--link);
     font-size: inherit;
-    cursor: pointer;
+    cursor: var(--cursor-action);
     text-decoration: underline;
   }
 </style>

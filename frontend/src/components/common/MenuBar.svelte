@@ -13,7 +13,8 @@
   import MenuGlyph from './MenuGlyph.svelte'
   import MenuBarEditor from './MenuBarEditor.svelte'
   import { IconChevronRight } from '@tabler/icons-svelte'
-  import { t, shortcutLabel } from '../../lib/i18n'
+  import { t, shortcutLabel, isMac } from '../../lib/i18n'
+  import { titleBarDoubleClick } from '../../lib/api'
   import { prefs } from '../../stores/prefs'
   import { bindings } from '../../stores/shortcuts'
   import { openMessageId } from '../../stores/selection'
@@ -102,6 +103,24 @@
     openSub = null
   }
 
+  // the scrim that dismisses an open menu sits below the bar, so a click on the
+  // bar's own empty space never reaches it. that space is wide on macOS, where
+  // the bar spans the title bar, so dismiss from here too.
+  function onBarClick(event: MouseEvent): void {
+    if (event.target === barEl) {
+      close()
+    }
+  }
+
+  // on macOS this bar is the window's title bar, so a double-click on its empty
+  // space has to do what double-clicking a title bar does. the guard keeps it to
+  // the bar itself, never a menu title.
+  function onBarDblClick(event: MouseEvent): void {
+    if (isMac && event.target === barEl) {
+      titleBarDoubleClick()
+    }
+  }
+
   function onBarKeydown(event: KeyboardEvent): void {
     if (openKey === null) {
       return
@@ -139,7 +158,15 @@
   {/if}
 
   <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
-  <nav class="menubar" class:raised={openKey !== null} aria-label="Pelton" bind:this={barEl} on:keydown={onBarKeydown}>
+  <nav
+    class="menubar"
+    class:raised={openKey !== null}
+    aria-label="Pelton"
+    bind:this={barEl}
+    on:keydown={onBarKeydown}
+    on:click={onBarClick}
+    on:dblclick={onBarDblClick}
+  >
     {#each menus as m (m.id)}
       {@const label = m.labelKey ? $t(m.labelKey) : (m.label ?? '')}
       <div class="menu-wrap">
@@ -253,11 +280,16 @@
     align-items: center;
     gap: var(--space-1);
     height: 30px;
-    padding: 0 var(--space-2);
+    /* on macOS this bar is the top row of a window with no native title bar, so
+       it starts past the traffic lights and doubles as the drag handle rather
+       than sitting below a second, empty strip. the inset token is zero on
+       every other platform, where the padding stays symmetric. */
+    padding: 0 var(--space-2) 0 max(var(--space-2), var(--titlebar-inset));
     background: var(--surface-sunken);
     border-bottom: var(--hairline) solid var(--border-subtle);
     user-select: none;
     position: relative;
+    --wails-draggable: drag;
   }
 
   /* only while a menu is open: above the scrim, so the other titles still
@@ -266,6 +298,10 @@
      overlays like the settings screen. */
   .menubar.raised {
     z-index: 220;
+    /* with a menu open the bar stops being a window drag handle: a press there
+       has to dismiss the menu, and handing it to the window drag instead eats
+       the click and leaves the menu stuck open. */
+    --wails-draggable: no-drag;
   }
 
   .menu-wrap {
@@ -274,12 +310,19 @@
 
   .title {
     padding: var(--space-1) var(--space-3);
+    /* lifts the labels off the bar's centre line so they line up with the
+       traffic lights on macOS. zero elsewhere, where the bar centres normally.
+       only the labels move, not the bar or its dropdowns, which anchor to the
+       wrapper. */
+    position: relative;
+    top: calc(-1 * var(--titlebar-nudge));
     border: none;
     background: transparent;
     color: var(--text-secondary);
-    font-size: var(--fz-label);
+    font-size: var(--fz-list);
     border-radius: var(--radius-control);
     cursor: default;
+    --wails-draggable: no-drag;
   }
 
   .title:hover,
@@ -305,6 +348,7 @@
     border-radius: var(--radius-card);
     background: var(--surface-overlay);
     box-shadow: var(--shadow-overlay);
+    --wails-draggable: no-drag;
   }
 
   .sub-wrap {
@@ -333,7 +377,7 @@
     border: none;
     background: transparent;
     color: var(--text-primary);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     text-align: left;
     font-size: var(--fz-label);
     border-radius: var(--radius-control);

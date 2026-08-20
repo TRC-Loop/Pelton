@@ -201,7 +201,7 @@
     border: none;
     background: transparent;
     color: var(--text-secondary);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     padding: var(--space-1);
     border-radius: var(--radius-control);
   }
@@ -279,7 +279,7 @@
     align-items: center;
     gap: var(--space-2);
     padding: var(--space-2) var(--space-3);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     font-size: var(--fz-label);
     color: var(--text-secondary);
   }
@@ -348,7 +348,7 @@
     padding: var(--space-1) 0;
     font-size: var(--fz-label);
     color: var(--text-primary);
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
 
   .parts {
@@ -387,7 +387,7 @@
     background: transparent;
     color: var(--text-primary);
     font-size: var(--fz-label);
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
 
   .ghost-btn:hover {
@@ -401,7 +401,7 @@
     background: var(--accent);
     color: var(--accent-fg);
     font-size: var(--fz-label);
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
 
   .primary-btn:disabled {

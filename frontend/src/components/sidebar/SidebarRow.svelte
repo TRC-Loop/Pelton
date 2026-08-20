@@ -128,7 +128,7 @@
     border: none;
     background: transparent;
     color: var(--text-tertiary);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     border-radius: var(--radius-control);
   }
 
@@ -150,7 +150,7 @@
     border: none;
     background: transparent;
     color: var(--text-secondary);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     text-align: left;
     font-size: var(--fz-list);
     line-height: 1.2;

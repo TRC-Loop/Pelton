@@ -58,6 +58,7 @@
     getLogStatus,
     openCrashReport,
     accountsNeedingPassword,
+    titleBarDoubleClick,
   } from './lib/api'
   import { BrowserOpenURL } from '../wailsjs/runtime/runtime'
   import { liabilityAccepted } from './lib/liability'
@@ -147,6 +148,29 @@
   // created there); on macOS the native bar stays and the in-app one is opt-in.
   $: showMenuBar = !isMac || $prefs.menuBarInApp
 
+  // the macOS window has no native title bar (mac.TitleBarHiddenInset), so the
+  // ui paints to the top edge and keeps a strip clear for the traffic lights.
+  // fullscreen hides the lights, and the strip goes with them.
+  let fullscreen = false
+  $: macTitlebar = isMac && !fullscreen
+  $: applyTitlebar(macTitlebar)
+  function applyTitlebar(on: boolean): void {
+    if (on) {
+      document.documentElement.dataset.titlebar = 'mac'
+    } else {
+      delete document.documentElement.dataset.titlebar
+    }
+  }
+
+  // only a window resize can change fullscreen state, and only the window layer
+  // knows the answer: wkwebview reports nothing useful about the frame.
+  async function refreshFullscreen(): Promise<void> {
+    if (!isMac) {
+      return
+    }
+    fullscreen = await WindowIsFullscreen().catch(() => false)
+  }
+
   // the native Mail menu's message actions are only usable while a message is
   // open; keep them greyed in step with the open message.
   $: setMailActionsEnabled($openMessageId != null)
@@ -211,6 +235,8 @@
     // data before anything loads, so the whole ui fills with the potato inbox.
     const demo = await isDemoMode().catch(() => false)
     setDemoActive(demo)
+
+    void refreshFullscreen()
 
     // a nightly warns before anything else is on screen. demo mode is only used
     // for screenshots, so the dialog would just be in the way there.
@@ -1097,11 +1123,27 @@
   }
 </script>
 
-<svelte:window on:keydown={onKeydown} on:contextmenu={onContextMenu} />
+<svelte:window on:keydown={onKeydown} on:contextmenu={onContextMenu} on:resize={refreshFullscreen} />
 
-<div class="shell" class:with-menubar={showMenuBar}>
+<!-- macOS with no in-app menu bar: an empty top row for the traffic lights, and
+     a matching strip above every overlay so the window can still be dragged
+     while settings or onboarding is open. with the menu bar on, the bar itself
+     is that row and handles both. -->
+{#if macTitlebar && !showMenuBar}
+  <!-- svelte-ignore a11y-no-static-element-interactions -->
+  <div
+    class="titlebar-drag"
+    style="--wails-draggable:drag"
+    aria-hidden="true"
+    on:dblclick={titleBarDoubleClick}
+  ></div>
+{/if}
+
+<div class="shell" class:with-topbar={showMenuBar || macTitlebar}>
   {#if showMenuBar}
     <MenuBar on:action={(e) => handleMenu(e.detail)} />
+  {:else if macTitlebar}
+    <div class="titlebar-space" aria-hidden="true"></div>
   {/if}
   <div class="columns" style={`grid-template-columns: ${sidebarW}px 0 ${listW}px 0 1fr`}>
     <Sidebar
@@ -1205,9 +1247,24 @@
     overflow: hidden;
   }
 
-  /* with the in-app menu bar the shell gains a top auto row for it. */
-  .shell.with-menubar {
+  /* the menu bar, or the macOS traffic-light row, takes a top auto row. */
+  .shell.with-topbar {
     grid-template-rows: auto minmax(0, 1fr) auto;
+  }
+
+  .titlebar-space {
+    height: var(--titlebar-lights);
+  }
+
+  /* above every overlay: a window with no native title bar has nothing else to
+     drag it by, and settings or onboarding being open is no reason to lose
+     that. only rendered without the menu bar, which would otherwise have its
+     titles buried under this. */
+  .titlebar-drag {
+    position: fixed;
+    inset: 0 0 auto 0;
+    height: var(--titlebar-lights);
+    z-index: 700;
   }
 
   /* the two zero-width tracks hold the resizer handles, which overhang via

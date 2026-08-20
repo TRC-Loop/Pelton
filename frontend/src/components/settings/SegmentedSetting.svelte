@@ -54,7 +54,7 @@
     color: var(--text-secondary);
     padding: var(--space-2) var(--space-4);
     font-size: var(--fz-label);
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
 
   button:last-child {

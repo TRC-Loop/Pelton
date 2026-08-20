@@ -1088,6 +1088,8 @@ const pl: Record<string, string> = {
   'settingsPanel.timeFormat.h24': '24-godzinny',
   'settingsPanel.toggle.reduceMotion': 'Ogranicz ruch',
   'settingsPanel.hint.reduceMotion': 'Wyłącza animacje i przejścia interfejsu. Podąża też automatycznie za systemowym ustawieniem ograniczenia ruchu.',
+  'settingsPanel.toggle.handCursor': 'Kursor dłoni na przyciskach',
+  'settingsPanel.hint.handCursor': 'Pokazuje kursor dłoni nad przyciskami, wierszami i kartami zamiast zwykłej strzałki. Odnośniki zawsze zachowują dłoń.',
   'settingsPanel.theme.schedule': 'Zaplanowany',
   'settingsPanel.label.darkFrom': 'Ciemny od',
   'settingsPanel.label.darkUntil': 'Do',

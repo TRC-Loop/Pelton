@@ -82,7 +82,7 @@
     /* unknown and any other unhandled state: deliberately neutral, since it is
        not a statement about the target either way. */
     color: var(--text-tertiary);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     vertical-align: middle;
   }
 

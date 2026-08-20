@@ -63,6 +63,20 @@
   /* borders are hairlines throughout. */
   --hairline: 0.5px;
 
+  /* cursor shown over anything clickable that is not a hyperlink. native
+     desktop apps use the arrow there, browsers use the hand; the appearance
+     setting flips this on the root, see :root[data-cursor="hand"] below. */
+  --cursor-action: default;
+
+  /* how much room the macos traffic lights need at the top left of a window
+     with no native title bar: --titlebar-lights vertically, --titlebar-inset
+     from the left edge. zero everywhere else, see :root[data-titlebar="mac"]. */
+  --titlebar-lights: 0px;
+  --titlebar-inset: 0px;
+  /* how far the menu bar's labels lift off their centre line to sit level with
+     the traffic lights, which the system draws slightly above it. */
+  --titlebar-nudge: 0px;
+
   /* accent. --accent and --accent-fg are overwritten at runtime by accent.ts.
      the derivations below stay in css so they track whatever accent is set. */
   --accent: #465af2;
@@ -197,4 +211,21 @@
 :root[data-corners="round"] {
   --radius-control: 10px;
   --radius-card: 12px;
+}
+
+/* cursor variant. the default is the arrow on every platform, matching native
+   apps; this brings back the browser hand for anyone who prefers it. */
+:root[data-cursor="hand"] {
+  --cursor-action: pointer;
+}
+
+/* macos only, set by App.svelte: the window has no native title bar, so the ui
+   leaves room for the traffic lights at the top left. the lights are drawn by
+   the system at a fixed size, so both values are divided by the interface scale
+   to cancel out the css zoom applyScale puts on the root; without that they
+   would overshoot above 100% and slide under the lights below it. */
+:root[data-titlebar="mac"] {
+  --titlebar-lights: calc(28px / var(--ui-scale, 1));
+  --titlebar-inset: calc(78px / var(--ui-scale, 1));
+  --titlebar-nudge: calc(3px / var(--ui-scale, 1));
 }

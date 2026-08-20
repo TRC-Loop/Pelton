@@ -245,7 +245,7 @@
     color: var(--accent-fg);
     font-size: var(--fz-label);
     font-weight: var(--fw-medium);
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
   .add-btn:hover {
     filter: brightness(1.05);
@@ -312,7 +312,7 @@
     border: none;
     background: transparent;
     color: var(--text-tertiary);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     padding: var(--space-1);
     border-radius: var(--radius-control);
     flex-shrink: 0;
@@ -406,7 +406,7 @@
     border-radius: var(--radius-control);
     font-size: var(--fz-label);
     font-weight: var(--fw-medium);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     border: var(--hairline) solid var(--border-default);
   }
   .primary {

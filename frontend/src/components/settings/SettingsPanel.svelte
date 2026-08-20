@@ -92,6 +92,7 @@
     setMenuBarIcons,
     setTimeFormat,
     setReduceMotion,
+    setHandCursor,
     setThemeDarkTimes,
     setBodyFont,
     setUIFont,
@@ -165,6 +166,7 @@
     { cat: 'appearance', label: $t('settingsPanel.label.corners'), kw: 'rounded square' },
     { cat: 'appearance', label: $t('settingsPanel.label.interfaceScale'), kw: 'zoom scale size' },
     { cat: 'appearance', label: $t('settingsPanel.toggle.reduceMotion'), kw: 'animation' },
+    { cat: 'appearance', label: $t('settingsPanel.toggle.handCursor'), kw: 'cursor pointer mouse arrow hand' },
     { cat: 'appearance', label: $t('settingsPanel.label.emptyStateImage'), kw: 'background image empty' },
     { cat: 'menubar', label: $t('settingsPanel.toggle.menuBarInApp'), kw: 'menu bar' },
     { cat: 'menubar', label: $t('settingsPanel.toggle.menuBarNativeMinimal'), kw: 'menu bar native' },
@@ -810,6 +812,15 @@
             />
           </div>
           <p class="hint">{$t('settingsPanel.hint.reduceMotion')}</p>
+          <div class="toggle">
+            <span class="row-label">{$t('settingsPanel.toggle.handCursor')}</span>
+            <ToggleSwitch
+              checked={$prefs.handCursor}
+              label={$t('settingsPanel.toggle.handCursor')}
+              on:change={(e) => setHandCursor(e.detail)}
+            />
+          </div>
+          <p class="hint">{$t('settingsPanel.hint.handCursor')}</p>
 
           <div class="field">
             <span class="row-label">{$t('settingsPanel.label.emptyStateImage')}</span>
@@ -1581,6 +1592,9 @@
     display: flex;
     flex-direction: column;
     background: var(--surface-base);
+    /* covers the whole window, so it has to keep the macOS traffic lights clear
+       itself; zero on every other platform. */
+    padding-top: var(--titlebar-lights);
   }
 
   .head {
@@ -1603,7 +1617,7 @@
     border: none;
     background: transparent;
     color: var(--text-secondary);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     padding: var(--space-2);
     border-radius: var(--radius-control);
   }
@@ -1664,7 +1678,7 @@
     border: none;
     background: transparent;
     color: var(--text-tertiary);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     padding: 0;
   }
 
@@ -1701,7 +1715,7 @@
     background: transparent;
     border-radius: var(--radius-control);
     color: var(--text-secondary);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     text-align: left;
     font-size: var(--fz-list);
   }
@@ -1842,7 +1856,7 @@
     background: var(--surface-raised);
     border-radius: var(--radius-control);
     color: var(--text-primary);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     text-align: left;
   }
 
@@ -1869,7 +1883,7 @@
     color: var(--text-primary);
     font-size: var(--fz-label);
     border-radius: var(--radius-control);
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
 
   .edit-menubar:hover {
@@ -1908,7 +1922,7 @@
     border: var(--hairline) solid var(--border-default);
     border-radius: var(--radius-card);
     background: var(--surface-raised);
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
 
   .style-card:hover {
@@ -1938,7 +1952,7 @@
     background: var(--surface-raised);
     color: var(--text-primary);
     font-size: var(--fz-label);
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
 
   .action-btn:hover {
@@ -2013,7 +2027,7 @@
     padding: var(--space-2) var(--space-4);
     border-radius: var(--radius-control);
     font-size: var(--fz-label);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     border: var(--hairline) solid var(--border-default);
   }
 
@@ -2034,7 +2048,7 @@
     justify-content: space-between;
     gap: var(--space-4);
     padding: var(--space-2) 0;
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
 
   .toggle.disabled {
@@ -2053,7 +2067,7 @@
     background: var(--surface-raised);
     color: var(--text-primary);
     font: inherit;
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
 
   .download-row {
@@ -2081,7 +2095,7 @@
     background: var(--surface-raised);
     color: var(--text-secondary);
     font-size: var(--fz-meta);
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
 
   .preset-btn:hover {
@@ -2112,7 +2126,7 @@
     background: var(--surface-raised);
     color: var(--text-primary);
     font-size: var(--fz-label);
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
 
   .lang-tool-btn:hover {

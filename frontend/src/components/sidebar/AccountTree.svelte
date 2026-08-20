@@ -121,7 +121,7 @@
     padding: var(--space-2) var(--space-3);
     border: none;
     background: transparent;
-    cursor: pointer;
+    cursor: var(--cursor-action);
     text-align: left;
     border-radius: var(--radius-control);
   }
@@ -141,7 +141,7 @@
     background: transparent;
     color: var(--text-tertiary);
     border-radius: var(--radius-control);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     opacity: 0;
   }
 
