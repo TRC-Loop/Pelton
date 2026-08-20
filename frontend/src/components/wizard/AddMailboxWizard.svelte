@@ -13,7 +13,7 @@
   import { discoverConfig, testConnection, addPasswordAccount, addOAuthAccount } from '../../lib/api'
   import { errorMessage } from '../../stores/toast'
   import { providerPresets, type ProviderPreset } from '../../lib/providers'
-  import type { AddAccountRequest, Account } from '../../lib/types'
+  import type { AddAccountRequest, Account, TLSMode } from '../../lib/types'
   import { t } from '../../lib/i18n'
 
   const dispatch = createEventDispatcher<{ close: void; added: Account }>()
@@ -54,6 +54,8 @@
       imapPort: 993,
       smtpHost: '',
       smtpPort: 465,
+      imapTls: 'ssl',
+      smtpTls: 'ssl',
       password: '',
       provider: '',
       clientId: '',
@@ -64,31 +66,40 @@
   // whether the advanced section (tls mode, oauth secret) is expanded.
   let showAdvanced = false
 
-  // the imap transport, derived from the port: 143 is STARTTLS, anything else is
-  // implicit TLS. selecting a mode sets the conventional port, which the backend
-  // reads to choose the transport.
-  $: imapTLS = draft.imapPort === 143 ? 'starttls' : 'ssl'
+  // the transport is its own field, not read back off the port. deriving it
+  // meant STARTTLS only existed on 143 and 587, so a server on any other port
+  // could not be reached at all (#237).
+  //
+  // picking a mode still fills in that mode's usual port, but only when the
+  // current one is the other mode's default, so it never overwrites a port the
+  // user typed. changing the port never touches the mode.
+  const imapPorts: Record<string, number> = { ssl: 993, starttls: 143 }
+  const smtpPorts: Record<string, number> = { ssl: 465, starttls: 587 }
 
-  function setTLS(mode: string): void {
-    draft.imapPort = mode === 'starttls' ? 143 : 993
+  function setTLS(mode: TLSMode): void {
+    if (draft.imapPort === imapPorts[draft.imapTls]) {
+      draft.imapPort = imapPorts[mode]
+    }
+    draft.imapTls = mode
   }
 
-  // the smtp transport, derived the same way: 587 is STARTTLS submission,
-  // anything else (conventionally 465) is implicit TLS. selecting a mode sets
-  // the conventional port, which the backend reads to choose the transport.
-  $: smtpTLS = draft.smtpPort === 587 ? 'starttls' : 'ssl'
-
-  function setSMTPTLS(mode: string): void {
-    draft.smtpPort = mode === 'starttls' ? 587 : 465
+  function setSMTPTLS(mode: TLSMode): void {
+    if (draft.smtpPort === smtpPorts[draft.smtpTls]) {
+      draft.smtpPort = smtpPorts[mode]
+    }
+    draft.smtpTls = mode
   }
+
 
   function selectPreset(p: ProviderPreset): void {
     preset = p
     draft = blankDraft()
     if (p.imapHost) draft.imapHost = p.imapHost
     if (p.imapPort) draft.imapPort = p.imapPort
+    if (p.imapTls) draft.imapTls = p.imapTls
     if (p.smtpHost) draft.smtpHost = p.smtpHost
     if (p.smtpPort) draft.smtpPort = p.smtpPort
+    if (p.smtpTls) draft.smtpTls = p.smtpTls
     if (p.oauthProvider) draft.provider = p.oauthProvider
     testOk = null
     error = ''
@@ -121,6 +132,10 @@
       draft.imapPort = d.imapPort
       draft.smtpHost = d.smtpHost
       draft.smtpPort = d.smtpPort
+      // autoconfig states the security outright; empty means it said nothing
+      // usable, so the current choice stands rather than being overwritten.
+      if (d.imapTls) draft.imapTls = d.imapTls as TLSMode
+      if (d.smtpTls) draft.smtpTls = d.smtpTls as TLSMode
     } catch {
       // leave fields for manual entry; discovery is best effort.
     }
@@ -136,6 +151,7 @@
         username: draft.username,
         imapHost: draft.imapHost,
         imapPort: draft.imapPort,
+        imapTls: draft.imapTls,
         password: draft.password,
       })
       testOk = true
@@ -208,6 +224,7 @@
     draft.username
     draft.imapHost
     draft.imapPort
+    draft.imapTls
     draft.password
     testOk = null
   }
@@ -311,14 +328,14 @@
 
             <span class="adv-label">{$t('wizard.advanced.imapSecurity')}</span>
             <div class="seg" role="radiogroup" aria-label={$t('wizard.advanced.imapSecurity')}>
-              <button type="button" class:on={imapTLS === 'ssl'} on:click={() => setTLS('ssl')}>SSL / TLS</button>
-              <button type="button" class:on={imapTLS === 'starttls'} on:click={() => setTLS('starttls')}>STARTTLS</button>
+              <button type="button" class:on={draft.imapTls === 'ssl'} on:click={() => setTLS('ssl')}>SSL / TLS</button>
+              <button type="button" class:on={draft.imapTls === 'starttls'} on:click={() => setTLS('starttls')}>STARTTLS</button>
             </div>
 
             <span class="adv-label">{$t('wizard.advanced.smtpSecurity')}</span>
             <div class="seg" role="radiogroup" aria-label={$t('wizard.advanced.smtpSecurity')}>
-              <button type="button" class:on={smtpTLS === 'ssl'} on:click={() => setSMTPTLS('ssl')}>SSL / TLS</button>
-              <button type="button" class:on={smtpTLS === 'starttls'} on:click={() => setSMTPTLS('starttls')}>STARTTLS</button>
+              <button type="button" class:on={draft.smtpTls === 'ssl'} on:click={() => setSMTPTLS('ssl')}>SSL / TLS</button>
+              <button type="button" class:on={draft.smtpTls === 'starttls'} on:click={() => setSMTPTLS('starttls')}>STARTTLS</button>
             </div>
             <p class="adv-hint">
               {$t('wizard.advanced.tlsHint')}

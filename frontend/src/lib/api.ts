@@ -29,6 +29,7 @@ import type {
   Discovered,
   AddAccountRequest,
   TestConnectionRequest,
+  TLSMode,
   Signature,
   AccountSignatures,
   AddressBookEntry,
@@ -112,6 +113,8 @@ export function updateAccount(req: {
   smtpHost: string
   smtpPort: number
   password: string
+  imapTls: TLSMode
+  smtpTls: TLSMode
 }): Promise<Account> {
   return App.UpdateAccount(new desktop.UpdateAccountRequest(req))
 }

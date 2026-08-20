@@ -18,6 +18,12 @@ export interface Account {
   // the Local Folders account, which holds imported mail and has no server:
   // it never syncs, and the ui hides the server-side folder actions on it.
   local: boolean
+  // pinned connection security, a TLSMode value: 'ssl', 'starttls', or '' to
+  // derive it from the port, which is what accounts created before it was
+  // storable use. typed as string to match the generated dto, which cannot
+  // carry the union.
+  imapTls: string
+  smtpTls: string
 }
 
 // ThunderbirdAccount is one account read out of a Thunderbird profile. There is
@@ -52,6 +58,9 @@ export interface ThunderbirdProfile {
   accounts: ThunderbirdAccount[]
   localFolders: ThunderbirdFolder[]
 }
+
+// TLSMode is the connection security for one leg of an account.
+export type TLSMode = '' | 'ssl' | 'starttls'
 
 export interface Folder {
   id: number
@@ -662,6 +671,9 @@ export interface Discovered {
   imapPort: number
   smtpHost: string
   smtpPort: number
+  // the security the source stated, empty when it said nothing usable.
+  imapTls: string
+  smtpTls: string
   oauth: boolean
   source: string
 }
@@ -677,6 +689,8 @@ export interface AddAccountRequest {
   imapPort: number
   smtpHost: string
   smtpPort: number
+  imapTls: TLSMode
+  smtpTls: TLSMode
   password: string
   provider: string
   clientId: string
@@ -691,6 +705,8 @@ export interface TestConnectionRequest {
   username: string
   imapHost: string
   imapPort: number
+  // tested with the same security the account will use, not a guess from the port.
+  imapTls: TLSMode
   password: string
 }
 

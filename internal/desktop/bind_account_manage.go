@@ -35,6 +35,10 @@ type UpdateAccountRequest struct {
 	// re-enter it. An account imported from another client has no stored
 	// password at all, and this is how it gets one.
 	Password string `json:"password"`
+	// IMAPTLS and SMTPTLS pin the connection security: "ssl", "starttls", or
+	// empty to derive it from the port.
+	IMAPTLS string `json:"imapTls"`
+	SMTPTLS string `json:"smtpTls"`
 }
 
 // UpdateAccount persists edits to an account's display name and server settings.
@@ -44,6 +48,9 @@ type UpdateAccountRequest struct {
 func (a *App) UpdateAccount(req UpdateAccountRequest) (AccountDTO, error) {
 	if err := a.ready(); err != nil {
 		return AccountDTO{}, err
+	}
+	if !validTLSMode(req.IMAPTLS) || !validTLSMode(req.SMTPTLS) {
+		return AccountDTO{}, errUnknownTLSMode
 	}
 	account, err := a.store.GetAccount(a.ctx, req.ID)
 	if err != nil {
@@ -55,6 +62,8 @@ func (a *App) UpdateAccount(req UpdateAccountRequest) (AccountDTO, error) {
 	account.IMAPPort = req.IMAPPort
 	account.SMTPHost = req.SMTPHost
 	account.SMTPPort = req.SMTPPort
+	account.IMAPTLS = req.IMAPTLS
+	account.SMTPTLS = req.SMTPTLS
 	if err := a.store.UpdateAccount(a.ctx, account); err != nil {
 		return AccountDTO{}, err
 	}

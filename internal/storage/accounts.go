@@ -20,10 +20,15 @@ type Account struct {
 	// Username is the login name when it differs from the email address. Empty
 	// means authenticate with Email.
 	Username  string
-	IMAPHost  string
-	IMAPPort  int
-	SMTPHost  string
-	SMTPPort  int
+	IMAPHost string
+	IMAPPort int
+	SMTPHost string
+	SMTPPort int
+	// IMAPTLS and SMTPTLS pin the connection security: "ssl" for implicit TLS,
+	// "starttls" to upgrade a cleartext connection. Empty derives it from the
+	// port, which is what every account created before this was storable does.
+	IMAPTLS   string
+	SMTPTLS   string
 	CreatedAt time.Time
 	// Position is the account section's rank in the sidebar, or 0 until the user
 	// reorders them. Unpositioned accounts sort after positioned ones by id, so
@@ -47,7 +52,7 @@ const LocalAccountName = "Local Folders"
 // accountColumns is the select list every account query shares, in the order
 // scanAccount reads them.
 const accountColumns = `id, email, display_name, username, imap_host, imap_port,
-       smtp_host, smtp_port, created_at, position, is_local`
+       smtp_host, smtp_port, imap_tls, smtp_tls, created_at, position, is_local`
 
 // CreateAccount inserts an account and returns its new id. CreatedAt is set to
 // now if the caller left it zero.
@@ -58,11 +63,11 @@ func (d *DB) CreateAccount(ctx context.Context, a *Account) (int64, error) {
 	}
 
 	const query = `
-INSERT INTO accounts (email, display_name, username, imap_host, imap_port, smtp_host, smtp_port, created_at, is_local)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+INSERT INTO accounts (email, display_name, username, imap_host, imap_port, smtp_host, smtp_port, imap_tls, smtp_tls, created_at, is_local)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 	res, err := d.sql.ExecContext(ctx, query,
 		a.Email, a.DisplayName, a.Username, a.IMAPHost, a.IMAPPort, a.SMTPHost, a.SMTPPort,
-		formatTime(created), boolToInt(a.Local))
+		a.IMAPTLS, a.SMTPTLS, formatTime(created), boolToInt(a.Local))
 	if err != nil {
 		return 0, fmt.Errorf("storage: insert account %q: %w", a.Email, err)
 	}
@@ -120,10 +125,12 @@ FROM accounts ORDER BY position = 0, position, id`
 func (d *DB) UpdateAccount(ctx context.Context, a *Account) error {
 	const query = `
 UPDATE accounts
-SET email = ?, display_name = ?, username = ?, imap_host = ?, imap_port = ?, smtp_host = ?, smtp_port = ?
+SET email = ?, display_name = ?, username = ?, imap_host = ?, imap_port = ?, smtp_host = ?, smtp_port = ?,
+    imap_tls = ?, smtp_tls = ?
 WHERE id = ?`
 	res, err := d.sql.ExecContext(ctx, query,
-		a.Email, a.DisplayName, a.Username, a.IMAPHost, a.IMAPPort, a.SMTPHost, a.SMTPPort, a.ID)
+		a.Email, a.DisplayName, a.Username, a.IMAPHost, a.IMAPPort, a.SMTPHost, a.SMTPPort,
+		a.IMAPTLS, a.SMTPTLS, a.ID)
 	if err != nil {
 		return fmt.Errorf("storage: update account %d: %w", a.ID, err)
 	}
@@ -159,7 +166,7 @@ func scanAccount(row rowScanner) (*Account, error) {
 		local   int
 	)
 	if err := row.Scan(&a.ID, &a.Email, &a.DisplayName, &a.Username, &a.IMAPHost, &a.IMAPPort,
-		&a.SMTPHost, &a.SMTPPort, &created, &a.Position, &local); err != nil {
+		&a.SMTPHost, &a.SMTPPort, &a.IMAPTLS, &a.SMTPTLS, &created, &a.Position, &local); err != nil {
 		return nil, err
 	}
 	t, err := parseTime(created)
