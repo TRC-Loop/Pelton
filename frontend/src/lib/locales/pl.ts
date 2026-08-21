@@ -951,6 +951,8 @@ const pl: Record<string, string> = {
   'mailboxes.saving': 'Zapisywanie…',
   'mailboxes.cancel': 'Anuluj',
   'mailboxes.deleteConfirm': 'Usunąć tę skrzynkę? Pobrana poczta, załączniki i zapisane hasło zostaną usunięte z tego urządzenia. Poczta na serwerze pozostaje nietknięta.',
+  'mailboxes.section.archiving': 'Archiwizacja',
+  'mailboxes.section.encryption': 'Ochrona przy wysyłce',
   'mailboxes.advanced.title': 'Archiwizacja i szyfrowanie',
   'mailboxes.advanced.hint': 'Zapisywanie kopii zarchiwizowanej poczty i to, jak zaczynają nowe wiadomości z tej skrzynki.',
   'mailboxes.displayNameHint': 'Nazwa, którą odbiorcy widzą obok twojego adresu w poczcie wysyłanej z tej skrzynki. Pokazuje ją też panel boczny.',

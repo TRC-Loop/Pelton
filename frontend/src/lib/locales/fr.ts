@@ -996,6 +996,8 @@ const fr: Record<string, string> = {
   'mailboxes.saving': 'Enregistrement…',
   'mailboxes.cancel': 'Annuler',
   'mailboxes.deleteConfirm': 'Supprimer cette boîte ? Les e-mails téléchargés, les pièces jointes et le mot de passe enregistré sont supprimés de cet appareil. Les e-mails sur le serveur ne sont pas touchés.',
+  'mailboxes.section.archiving': 'Archivage',
+  'mailboxes.section.encryption': 'Protection à l\'envoi',
   'mailboxes.advanced.title': 'Archivage et chiffrement',
   'mailboxes.advanced.hint': 'Garder une copie du courrier archivé, et l\'état de départ des nouveaux messages de cette boîte.',
   'mailboxes.displayNameHint': 'Le nom que les destinataires voient à côté de votre adresse sur le courrier envoyé depuis cette boîte. C\'est aussi ce qu\'affiche la barre latérale.',

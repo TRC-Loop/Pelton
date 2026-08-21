@@ -6,7 +6,8 @@
   // user opens it, so its cost is not paid at startup.
   import { createEventDispatcher, onMount } from 'svelte'
   import { get } from 'svelte/store'
-  import { IconX, IconArrowLeft, IconCheck, IconArrowRight, IconMailbox, IconPlus, IconInfoCircle } from '@tabler/icons-svelte'
+  import InfoTip from '../common/InfoTip.svelte'
+  import { IconX, IconArrowLeft, IconCheck, IconArrowRight, IconMailbox, IconPlus } from '@tabler/icons-svelte'
   import WizardProviders from './WizardProviders.svelte'
   import Spinner from '../common/Spinner.svelte'
   import { BrowserOpenURL } from '../../../wailsjs/runtime/runtime'
@@ -346,16 +347,9 @@
         <label class="field">
           <span>
             {$t('wizard.field.displayName')}
-            <span class="info" title={$t('mailboxes.displayNameHint')} aria-label={$t('mailboxes.displayNameHint')}>
-              <IconInfoCircle size={13} stroke={1.7} />
-            </span>
+            <InfoTip text={$t('mailboxes.displayNameHint')} />
           </span>
-          <input
-            type="text"
-            bind:value={draft.displayName}
-            placeholder={$t('wizard.field.displayNamePlaceholder')}
-            title={$t('mailboxes.displayNameHint')}
-          />
+          <input type="text" bind:value={draft.displayName} placeholder={$t('wizard.field.displayNamePlaceholder')} />
         </label>
         <label class="field">
           <span>{$t('wizard.field.password')}</span>
@@ -443,16 +437,9 @@
         <label class="field">
           <span>
             {$t('wizard.field.displayName')}
-            <span class="info" title={$t('mailboxes.displayNameHint')} aria-label={$t('mailboxes.displayNameHint')}>
-              <IconInfoCircle size={13} stroke={1.7} />
-            </span>
+            <InfoTip text={$t('mailboxes.displayNameHint')} />
           </span>
-          <input
-            type="text"
-            bind:value={draft.displayName}
-            placeholder={$t('wizard.field.displayNamePlaceholder')}
-            title={$t('mailboxes.displayNameHint')}
-          />
+          <input type="text" bind:value={draft.displayName} placeholder={$t('wizard.field.displayNamePlaceholder')} />
         </label>
         <label class="field">
           <span>{$t('wizard.field.oauthClientId')}</span>
@@ -838,11 +825,6 @@
     color: var(--accent-fg);
   }
 
-  .info {
-    display: inline-flex;
-    vertical-align: -2px;
-    color: var(--text-tertiary);
-  }
 
   .adv-hint {
     margin: var(--space-2) 0 0;

@@ -996,6 +996,8 @@ const de: Record<string, string> = {
   'mailboxes.saving': 'Wird gespeichert…',
   'mailboxes.cancel': 'Abbrechen',
   'mailboxes.deleteConfirm': 'Dieses Postfach löschen? Die geladenen Mails, Anhänge und das gespeicherte Passwort werden von diesem Gerät entfernt. Die Mails auf dem Server bleiben unberührt.',
+  'mailboxes.section.archiving': 'Archivierung',
+  'mailboxes.section.encryption': 'Schutz beim Senden',
   'mailboxes.advanced.title': 'Archivierung und Verschlüsselung',
   'mailboxes.advanced.hint': 'Eine Kopie archivierter Mail sichern, und wie neue Nachrichten aus diesem Postfach starten.',
   'mailboxes.displayNameHint': 'Der Name, den Empfänger neben deiner Adresse sehen, wenn du aus diesem Postfach schreibst. Die Seitenleiste zeigt ihn ebenfalls.',

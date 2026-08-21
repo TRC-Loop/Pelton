@@ -996,6 +996,8 @@ const nl: Record<string, string> = {
   'mailboxes.saving': 'Opslaan…',
   'mailboxes.cancel': 'Annuleren',
   'mailboxes.deleteConfirm': 'Deze mailbox verwijderen? De gedownloade e-mail, bijlagen en het opgeslagen wachtwoord worden van dit apparaat verwijderd. E-mail op de server blijft ongemoeid.',
+  'mailboxes.section.archiving': 'Archivering',
+  'mailboxes.section.encryption': 'Bescherming bij verzenden',
   'mailboxes.advanced.title': 'Archivering en versleuteling',
   'mailboxes.advanced.hint': 'Een kopie van gearchiveerde mail bewaren, en hoe nieuwe berichten uit deze mailbox beginnen.',
   'mailboxes.displayNameHint': 'De naam die ontvangers naast je adres zien bij mail die je vanuit deze mailbox verstuurt. De zijbalk toont hem ook.',

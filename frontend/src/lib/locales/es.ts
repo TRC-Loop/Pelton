@@ -996,6 +996,8 @@ const es: Record<string, string> = {
   'mailboxes.saving': 'Guardando…',
   'mailboxes.cancel': 'Cancelar',
   'mailboxes.deleteConfirm': '¿Eliminar este buzón? El correo descargado, los adjuntos y la contraseña guardada se eliminan de este dispositivo. El correo del servidor no se toca.',
+  'mailboxes.section.archiving': 'Archivado',
+  'mailboxes.section.encryption': 'Protección al enviar',
   'mailboxes.advanced.title': 'Archivado y cifrado',
   'mailboxes.advanced.hint': 'Guardar una copia del correo archivado, y cómo empiezan los mensajes nuevos de este buzón.',
   'mailboxes.displayNameHint': 'El nombre que los destinatarios ven junto a tu dirección en el correo que envías desde este buzón. También es lo que muestra la barra lateral.',

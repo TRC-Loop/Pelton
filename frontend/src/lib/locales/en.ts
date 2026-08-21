@@ -996,6 +996,8 @@ const en: Record<string, string> = {
   'mailboxes.saving': 'Saving…',
   'mailboxes.cancel': 'Cancel',
   'mailboxes.deleteConfirm': 'Delete this mailbox? Its downloaded mail, attachments and saved password are removed from this device. Mail on the server is not touched.',
+  'mailboxes.section.archiving': 'Archiving',
+  'mailboxes.section.encryption': 'Outgoing protection',
   'mailboxes.advanced.title': 'Archiving and encryption',
   'mailboxes.advanced.hint': 'Saving a copy of archived mail, and how new messages from this mailbox start out.',
   'mailboxes.displayNameHint': 'The name recipients see next to your address on mail you send from this mailbox. It is also what the sidebar shows.',

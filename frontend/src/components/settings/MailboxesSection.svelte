@@ -5,9 +5,10 @@
   // through an inline confirm. Email is not editable here, it identifies the
   // account; changing it is a re-add.
   import { onMount } from 'svelte'
-  import { IconPencil, IconTrash, IconCheck, IconPlus, IconAlertTriangle, IconChevronRight, IconInfoCircle } from '@tabler/icons-svelte'
+  import { IconPencil, IconTrash, IconCheck, IconPlus, IconAlertTriangle, IconChevronRight } from '@tabler/icons-svelte'
   import ToggleSwitch from '../common/ToggleSwitch.svelte'
   import Modal from '../common/Modal.svelte'
+  import InfoTip from '../common/InfoTip.svelte'
   import {
     listAccounts,
     updateAccount,
@@ -290,11 +291,9 @@
       <label class="field">
         <span>
           {$t('wizard.field.displayName')}
-          <span class="info" title={$t('mailboxes.displayNameHint')} aria-label={$t('mailboxes.displayNameHint')}>
-            <IconInfoCircle size={13} stroke={1.7} />
-          </span>
+          <InfoTip text={$t('mailboxes.displayNameHint')} />
         </span>
-        <input type="text" bind:value={draft.displayName} title={$t('mailboxes.displayNameHint')} />
+        <input type="text" bind:value={draft.displayName} />
       </label>
       <label class="field">
         <span>{$t('wizard.field.username')}</span>
@@ -365,61 +364,69 @@
       size="medium"
       on:close={() => (showAdvanced = false)}
     >
-      <div class="form">
-        <div class="toggle">
-          <span>{$t('mailboxes.export.toggle')}</span>
-          <ToggleSwitch
-            checked={draft.exportOnArchive}
-            disabled={!draft.exportDir}
-            label={$t('mailboxes.export.toggle')}
-            on:change={(e) => setExportOnArchive(e.detail)}
-          />
-        </div>
-        <p class="server-hint">{$t('mailboxes.export.hint')}</p>
-        <div class="folder-row">
-          <span class="path" class:unset={!draft.exportDir}>
-            {draft.exportDir || $t('mailboxes.export.noFolder')}
+      <section class="group">
+        <h4>{$t('mailboxes.section.archiving')}</h4>
+        <div class="form">
+          <div class="toggle">
+            <span>{$t('mailboxes.export.toggle')}</span>
+            <ToggleSwitch
+              checked={draft.exportOnArchive}
+              disabled={!draft.exportDir}
+              label={$t('mailboxes.export.toggle')}
+              on:change={(e) => setExportOnArchive(e.detail)}
+            />
+          </div>
+          <p class="server-hint">{$t('mailboxes.export.hint')}</p>
+          <div class="folder-row">
+            <span class="path" class:unset={!draft.exportDir}>
+              {draft.exportDir || $t('mailboxes.export.noFolder')}
+            </span>
+            <button type="button" class="ghost" on:click={pickExportFolder}>
+              {$t('mailboxes.export.choose')}
+            </button>
+          </div>
+          <span class="field">
+            <span>{$t('mailboxes.export.subfolders')}</span>
+            <div class="seg" role="radiogroup" aria-label={$t('mailboxes.export.subfolders')}>
+              {#each subfolderModes as mode (mode)}
+                <button type="button" class:on={draft.exportSubfolders === mode} on:click={() => setSubfolders(mode)}>
+                  {$t(`mailboxes.export.subfolders.${mode}`)}
+                </button>
+              {/each}
+            </div>
           </span>
-          <button type="button" class="ghost" on:click={pickExportFolder}>
-            {$t('mailboxes.export.choose')}
-          </button>
+          <label class="field">
+            <span>{$t('mailboxes.export.template')}</span>
+            <input
+              type="text"
+              bind:value={draft.exportNameTemplate}
+              on:input={refreshPreview}
+              placeholder="{'{date}'}_{'{subject}'}"
+            />
+          </label>
+          <p class="server-hint">{$t('mailboxes.export.placeholders')}</p>
+          {#if namePreview}
+            <p class="server-hint preview">{$t('mailboxes.export.preview')} <code>{namePreview}</code></p>
+          {/if}
         </div>
-        <span class="field">
-          <span>{$t('mailboxes.export.subfolders')}</span>
-          <div class="seg" role="radiogroup" aria-label={$t('mailboxes.export.subfolders')}>
-            {#each subfolderModes as mode (mode)}
-              <button type="button" class:on={draft.exportSubfolders === mode} on:click={() => setSubfolders(mode)}>
-                {$t(`mailboxes.export.subfolders.${mode}`)}
-              </button>
-            {/each}
-          </div>
-        </span>
-        <label class="field">
-          <span>{$t('mailboxes.export.template')}</span>
-          <input
-            type="text"
-            bind:value={draft.exportNameTemplate}
-            on:input={refreshPreview}
-            placeholder="{'{date}'}_{'{subject}'}"
-          />
-        </label>
-        <p class="server-hint">{$t('mailboxes.export.placeholders')}</p>
-        <span class="field">
-          <span>{$t('mailboxes.pgpDefault')}</span>
-          <div class="seg" role="radiogroup" aria-label={$t('mailboxes.pgpDefault')}>
-            {#each pgpDefaults as mode (mode)}
-              <button type="button" class:on={draft.pgpDefault === mode} on:click={() => setPGPDefault(mode)}>
-                {$t(`mailboxes.pgpDefault.${mode || 'off'}`)}
-              </button>
-            {/each}
-          </div>
-        </span>
-        <p class="server-hint">{$t('mailboxes.pgpDefaultHint')}</p>
+      </section>
 
-        {#if namePreview}
-          <p class="server-hint preview">{$t('mailboxes.export.preview')} <code>{namePreview}</code></p>
-        {/if}
-      </div>
+      <section class="group">
+        <h4>{$t('mailboxes.section.encryption')}</h4>
+        <div class="form">
+          <span class="field">
+            <span>{$t('mailboxes.pgpDefault')}</span>
+            <div class="seg" role="radiogroup" aria-label={$t('mailboxes.pgpDefault')}>
+              {#each pgpDefaults as mode (mode)}
+                <button type="button" class:on={draft.pgpDefault === mode} on:click={() => setPGPDefault(mode)}>
+                  {$t(`mailboxes.pgpDefault.${mode || 'off'}`)}
+                </button>
+              {/each}
+            </div>
+          </span>
+          <p class="server-hint">{$t('mailboxes.pgpDefaultHint')}</p>
+        </div>
+      </section>
 
       <svelte:fragment slot="footer">
         <button type="button" class="primary" on:click={() => (showAdvanced = false)}>{$t('modal.close')}</button>
@@ -575,11 +582,21 @@
     background: var(--surface-hover);
   }
 
-  .info {
-    display: inline-flex;
-    vertical-align: -2px;
+  /* the two halves of the extras modal, so archiving and encryption do not
+     read as one long list of unrelated controls. */
+  .group + .group {
+    margin-top: var(--space-5);
+    padding-top: var(--space-4);
+    border-top: var(--hairline) solid var(--border-subtle);
+  }
+
+  .group h4 {
+    margin: 0 0 var(--space-3);
+    font-size: var(--fz-label);
+    font-weight: var(--fw-semibold);
     color: var(--text-tertiary);
   }
+
 
   .form {
     display: flex;
