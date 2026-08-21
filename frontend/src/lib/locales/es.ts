@@ -1013,6 +1013,7 @@ const es: Record<string, string> = {
   'mailboxes.passwordPrompt.marker': 'Pelton no puede iniciar sesión en este buzón. Pulsa para introducir su contraseña.',
   'mailboxes.export.toggle': 'Guardar una copia al archivar',
   'mailboxes.export.hint': 'Cada mensaje que archives también se escribe en esta carpeta como archivo .eml, para poder vaciar el servidor más adelante sin perder el correo.',
+  'mailboxes.export.needFolder': 'Elige primero una carpeta y luego podrás activarlo.',
   'mailboxes.export.noFolder': 'Aún no has elegido carpeta',
   'mailboxes.export.choose': 'Elegir carpeta…',
   'mailboxes.export.subfolders': 'Agrupar en subcarpetas',

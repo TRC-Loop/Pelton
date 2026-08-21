@@ -1013,6 +1013,7 @@ const fr: Record<string, string> = {
   'mailboxes.passwordPrompt.marker': 'Pelton n’arrive pas à se connecter à cette boîte. Cliquez pour saisir son mot de passe.',
   'mailboxes.export.toggle': 'Enregistrer une copie lors de l’archivage',
   'mailboxes.export.hint': 'Chaque message archivé est aussi écrit dans ce dossier au format .eml, pour pouvoir alléger le serveur plus tard sans perdre le courrier.',
+  'mailboxes.export.needFolder': 'Choisissez d\'abord un dossier, ensuite vous pourrez l\'activer.',
   'mailboxes.export.noFolder': 'Aucun dossier choisi',
   'mailboxes.export.choose': 'Choisir un dossier…',
   'mailboxes.export.subfolders': 'Regrouper en sous-dossiers',

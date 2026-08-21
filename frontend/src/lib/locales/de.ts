@@ -1013,6 +1013,7 @@ const de: Record<string, string> = {
   'mailboxes.passwordPrompt.marker': 'Pelton kann sich bei diesem Postfach nicht anmelden. Zum Eintragen des Passworts klicken.',
   'mailboxes.export.toggle': 'Beim Archivieren eine Kopie speichern',
   'mailboxes.export.hint': 'Jede archivierte Nachricht wird zusätzlich als .eml-Datei in diesen Ordner geschrieben, damit du den Server später ausdünnen kannst, ohne die Mail zu verlieren.',
+  'mailboxes.export.needFolder': 'Wähle zuerst einen Ordner, dann lässt sich das einschalten.',
   'mailboxes.export.noFolder': 'Noch kein Ordner gewählt',
   'mailboxes.export.choose': 'Ordner wählen…',
   'mailboxes.export.subfolders': 'In Unterordner gruppieren',

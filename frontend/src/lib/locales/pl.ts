@@ -968,6 +968,7 @@ const pl: Record<string, string> = {
   'mailboxes.passwordPrompt.marker': 'Pelton nie może zalogować się do tej skrzynki. Kliknij, aby wpisać hasło.',
   'mailboxes.export.toggle': 'Zapisz kopię przy archiwizacji',
   'mailboxes.export.hint': 'Każda zarchiwizowana wiadomość jest też zapisywana w tym folderze jako plik .eml, dzięki czemu możesz później zwolnić miejsce na serwerze bez utraty poczty.',
+  'mailboxes.export.needFolder': 'Najpierw wybierz folder, potem będzie można to włączyć.',
   'mailboxes.export.noFolder': 'Nie wybrano jeszcze folderu',
   'mailboxes.export.choose': 'Wybierz folder…',
   'mailboxes.export.subfolders': 'Grupuj w podfolderach',

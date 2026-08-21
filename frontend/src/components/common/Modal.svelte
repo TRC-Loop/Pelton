@@ -69,18 +69,16 @@
     return [...found].filter((el) => el.offsetParent !== null)
   }
 
+  // the dialog itself takes focus unless a field asked for it. Focusing the
+  // first control instead would put the ring on whatever happens to come first,
+  // and anything that reacts to focus (a tooltip, a picker) would fire on open.
   function focusFirst(): void {
     const wanted = dialog?.querySelector<HTMLElement>('[autofocus]')
     if (wanted) {
       wanted.focus()
       return
     }
-    const first = focusables()[0]
-    if (first) {
-      first.focus()
-    } else {
-      dialog?.focus()
-    }
+    dialog?.focus()
   }
 
   /** Closes, or asks first when there are unsaved edits. */

@@ -1013,6 +1013,7 @@ const nl: Record<string, string> = {
   'mailboxes.passwordPrompt.marker': 'Pelton kan niet inloggen op deze mailbox. Klik om het wachtwoord in te voeren.',
   'mailboxes.export.toggle': 'Een kopie opslaan bij archiveren',
   'mailboxes.export.hint': 'Elk bericht dat je archiveert wordt ook als .eml-bestand in deze map geschreven, zodat je de server later kunt opschonen zonder de mail kwijt te raken.',
+  'mailboxes.export.needFolder': 'Kies eerst een map, daarna kun je dit aanzetten.',
   'mailboxes.export.noFolder': 'Nog geen map gekozen',
   'mailboxes.export.choose': 'Map kiezen…',
   'mailboxes.export.subfolders': 'In submappen groeperen',

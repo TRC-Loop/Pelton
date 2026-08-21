@@ -16,13 +16,21 @@
 </button>
 
 <style>
+  /* an exact 13px box: any bigger and the hover target reaches into the rest
+     of the label line, which reads as the bubble opening at random. */
   .tip {
     position: relative;
     display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 13px;
+    height: 13px;
     padding: 0;
+    margin-left: var(--space-1);
     border: none;
     background: transparent;
     vertical-align: -2px;
+    line-height: 0;
     color: var(--text-tertiary);
     cursor: help;
   }
@@ -48,6 +56,7 @@
     line-height: 1.45;
     text-align: left;
     white-space: normal;
+    pointer-events: none;
     opacity: 0;
     visibility: hidden;
     transition:

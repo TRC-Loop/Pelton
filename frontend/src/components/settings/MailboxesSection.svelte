@@ -367,16 +367,6 @@
       <section class="group">
         <h4>{$t('mailboxes.section.archiving')}</h4>
         <div class="form">
-          <div class="toggle">
-            <span>{$t('mailboxes.export.toggle')}</span>
-            <ToggleSwitch
-              checked={draft.exportOnArchive}
-              disabled={!draft.exportDir}
-              label={$t('mailboxes.export.toggle')}
-              on:change={(e) => setExportOnArchive(e.detail)}
-            />
-          </div>
-          <p class="server-hint">{$t('mailboxes.export.hint')}</p>
           <div class="folder-row">
             <span class="path" class:unset={!draft.exportDir}>
               {draft.exportDir || $t('mailboxes.export.noFolder')}
@@ -385,28 +375,45 @@
               {$t('mailboxes.export.choose')}
             </button>
           </div>
-          <span class="field">
-            <span>{$t('mailboxes.export.subfolders')}</span>
-            <div class="seg" role="radiogroup" aria-label={$t('mailboxes.export.subfolders')}>
-              {#each subfolderModes as mode (mode)}
-                <button type="button" class:on={draft.exportSubfolders === mode} on:click={() => setSubfolders(mode)}>
-                  {$t(`mailboxes.export.subfolders.${mode}`)}
-                </button>
-              {/each}
-            </div>
-          </span>
-          <label class="field">
-            <span>{$t('mailboxes.export.template')}</span>
-            <input
-              type="text"
-              bind:value={draft.exportNameTemplate}
-              on:input={refreshPreview}
-              placeholder="{'{date}'}_{'{subject}'}"
+          <!-- there is nowhere to write without a folder, so the switch stays
+               off until one is picked. -->
+          <div class="toggle">
+            <span class:muted={!draft.exportDir}>{$t('mailboxes.export.toggle')}</span>
+            <ToggleSwitch
+              checked={draft.exportOnArchive}
+              disabled={!draft.exportDir}
+              label={$t('mailboxes.export.toggle')}
+              on:change={(e) => setExportOnArchive(e.detail)}
             />
-          </label>
-          <p class="server-hint">{$t('mailboxes.export.placeholders')}</p>
-          {#if namePreview}
-            <p class="server-hint preview">{$t('mailboxes.export.preview')} <code>{namePreview}</code></p>
+          </div>
+          <p class="server-hint" class:warn={!draft.exportDir}>
+            {draft.exportDir ? $t('mailboxes.export.hint') : $t('mailboxes.export.needFolder')}
+          </p>
+
+          {#if draft.exportDir}
+            <span class="field">
+              <span>{$t('mailboxes.export.subfolders')}</span>
+              <div class="seg" role="radiogroup" aria-label={$t('mailboxes.export.subfolders')}>
+                {#each subfolderModes as mode (mode)}
+                  <button type="button" class:on={draft.exportSubfolders === mode} on:click={() => setSubfolders(mode)}>
+                    {$t(`mailboxes.export.subfolders.${mode}`)}
+                  </button>
+                {/each}
+              </div>
+            </span>
+            <label class="field">
+              <span>{$t('mailboxes.export.template')}</span>
+              <input
+                type="text"
+                bind:value={draft.exportNameTemplate}
+                on:input={refreshPreview}
+                placeholder="{'{date}'}_{'{subject}'}"
+              />
+            </label>
+            <p class="server-hint">{$t('mailboxes.export.placeholders')}</p>
+            {#if namePreview}
+              <p class="server-hint preview">{$t('mailboxes.export.preview')} <code>{namePreview}</code></p>
+            {/if}
           {/if}
         </div>
       </section>
@@ -560,6 +567,10 @@
   .warn {
     font-size: var(--fz-meta);
     color: var(--text-secondary);
+  }
+
+  .muted {
+    opacity: 0.6;
   }
 
   /* the way into the second modal, with the chevron so it reads as somewhere
