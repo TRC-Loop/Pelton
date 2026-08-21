@@ -55,6 +55,7 @@ type execer interface {
 // on disk attachments root.
 type DB struct {
 	sql            *sql.DB
+	path           string
 	attachmentsDir string
 }
 
@@ -114,8 +115,14 @@ func Open(path string) (*DB, error) {
 
 	return &DB{
 		sql:            sqlDB,
+		path:           path,
 		attachmentsDir: filepath.Join(baseDir, attachmentsDirName),
 	}, nil
+}
+
+// Path returns the database file this DB was opened on.
+func (d *DB) Path() string {
+	return d.path
 }
 
 // dataSourceName builds the dsn. the pragmas are set as query params so they

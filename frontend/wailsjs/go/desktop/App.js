@@ -58,6 +58,10 @@ export function ChooseThunderbirdProfile() {
   return window['go']['desktop']['App']['ChooseThunderbirdProfile']();
 }
 
+export function ClearDevActivity() {
+  return window['go']['desktop']['App']['ClearDevActivity']();
+}
+
 export function ClearSentOutbox() {
   return window['go']['desktop']['App']['ClearSentOutbox']();
 }
@@ -124,6 +128,18 @@ export function DeleteTheme(arg1) {
 
 export function DeleteView(arg1) {
   return window['go']['desktop']['App']['DeleteView'](arg1);
+}
+
+export function DevActivity(arg1) {
+  return window['go']['desktop']['App']['DevActivity'](arg1);
+}
+
+export function DevProcessStats() {
+  return window['go']['desktop']['App']['DevProcessStats']();
+}
+
+export function DevToolsEnabled() {
+  return window['go']['desktop']['App']['DevToolsEnabled']();
 }
 
 export function DiscardFailedSend(arg1) {

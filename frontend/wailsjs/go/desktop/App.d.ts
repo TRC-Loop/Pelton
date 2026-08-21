@@ -30,6 +30,8 @@ export function ChooseMailFiles():Promise<Array<string>>;
 
 export function ChooseThunderbirdProfile():Promise<Array<desktop.ThunderbirdProfileDTO>>;
 
+export function ClearDevActivity():Promise<void>;
+
 export function ClearSentOutbox():Promise<void>;
 
 export function CloseWindow():Promise<void>;
@@ -63,6 +65,12 @@ export function DeleteSignature(arg1:number):Promise<void>;
 export function DeleteTheme(arg1:string):Promise<void>;
 
 export function DeleteView(arg1:number):Promise<void>;
+
+export function DevActivity(arg1:number):Promise<desktop.DevActivityDTO>;
+
+export function DevProcessStats():Promise<desktop.DevProcessDTO>;
+
+export function DevToolsEnabled():Promise<boolean>;
 
 export function DiscardFailedSend(arg1:number):Promise<boolean>;
 

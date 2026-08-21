@@ -118,6 +118,7 @@
     paletteQuery,
   } from './stores/palette'
   import AccountPasswordDialog from './components/settings/AccountPasswordDialog.svelte'
+  import DevOverlays from './components/dev/DevOverlays.svelte'
   import {
     passwordPrompt,
     answerPasswordPrompt,
@@ -1206,6 +1207,8 @@
 <CommandPalette commands={paletteCommands} mail={paletteMailCommands} />
 
 <AccountPasswordDialog account={$passwordPrompt} onDone={answerPasswordPrompt} />
+
+<DevOverlays />
 
 <style>
   .shell {
