@@ -5,8 +5,9 @@
   // through an inline confirm. Email is not editable here, it identifies the
   // account; changing it is a re-add.
   import { onMount } from 'svelte'
-  import { IconPencil, IconTrash, IconCheck, IconX, IconPlus, IconAlertTriangle } from '@tabler/icons-svelte'
+  import { IconPencil, IconTrash, IconCheck, IconPlus, IconAlertTriangle } from '@tabler/icons-svelte'
   import ToggleSwitch from '../common/ToggleSwitch.svelte'
+  import Modal from '../common/Modal.svelte'
   import {
     listAccounts,
     updateAccount,
@@ -38,6 +39,10 @@
   // the sample file name the export settings show, rendered by the backend so
   // the ui never has a second copy of the naming rules.
   let namePreview = ''
+  // the draft as it opened, so closing knows whether there is anything to lose.
+  let opened = ''
+
+  $: dirty = draft !== null && (JSON.stringify(draft) !== opened || passwordDraft !== '')
 
   // the subfolder modes, in the order the picker shows them.
   const subfolderModes = ['none', 'year', 'month'] as const
@@ -79,6 +84,7 @@
     // with, resolving the empty value an older account carries, so the control
     // shows the truth and saving pins it.
     draft = { ...account }
+    opened = JSON.stringify(draft)
     passwordDraft = ''
     void refreshPreview()
   }
@@ -240,157 +246,157 @@
   <ul class="list">
     {#each accounts as account (account.id)}
       <li>
-        {#if editingId === account.id && draft}
-          <div class="edit">
-            <span class="email">{account.email}</span>
-            <label class="field">
-              <span>{$t('wizard.field.displayName')}</span>
-              <input type="text" bind:value={draft.displayName} />
-            </label>
-            <label class="field">
-              <span>{$t('wizard.field.username')}</span>
-              <input type="text" bind:value={draft.username} placeholder={account.email} />
-            </label>
-            <div class="servers">
-              <label class="field"><span>{$t('wizard.field.imapHost')}</span><input type="text" bind:value={draft.imapHost} /></label>
-              <label class="field narrow"><span>{$t('wizard.field.port')}</span><input type="number" bind:value={draft.imapPort} /></label>
-            </div>
-            <div class="servers">
-              <span class="field">
-                <span>{$t('wizard.advanced.imapSecurity')}</span>
-                <div class="seg" role="radiogroup" aria-label={$t('wizard.advanced.imapSecurity')}>
-                  <button type="button" class:on={draft.imapTls === 'ssl'} on:click={() => setIMAPTLS('ssl')}>SSL / TLS</button>
-                  <button type="button" class:on={draft.imapTls === 'starttls'} on:click={() => setIMAPTLS('starttls')}>STARTTLS</button>
-                </div>
-              </span>
-            </div>
-            <div class="servers">
-              <label class="field"><span>{$t('wizard.field.smtpHost')}</span><input type="text" bind:value={draft.smtpHost} /></label>
-              <label class="field narrow"><span>{$t('wizard.field.port')}</span><input type="number" bind:value={draft.smtpPort} /></label>
-            </div>
-            <div class="servers">
-              <span class="field">
-                <span>{$t('wizard.advanced.smtpSecurity')}</span>
-                <div class="seg" role="radiogroup" aria-label={$t('wizard.advanced.smtpSecurity')}>
-                  <button type="button" class:on={draft.smtpTls === 'ssl'} on:click={() => setSMTPTLS('ssl')}>SSL / TLS</button>
-                  <button type="button" class:on={draft.smtpTls === 'starttls'} on:click={() => setSMTPTLS('starttls')}>STARTTLS</button>
-                </div>
-              </span>
-            </div>
-            <label class="field">
-              <span>{$t('wizard.field.password')}</span>
-              <input
-                type="password"
-                bind:value={passwordDraft}
-                autocomplete="off"
-                placeholder={$t(
-                  $missingPassword.has(account.id)
-                    ? 'mailboxes.passwordMissing'
-                    : 'mailboxes.passwordUnchanged',
-                )}
-              />
-            </label>
-            {#if $missingPassword.has(account.id)}
-              <p class="server-hint warn">{$t('mailboxes.passwordNeededHint')}</p>
-            {/if}
-            <p class="server-hint">{$t('mailboxes.serverChangeHint')}</p>
-
-            <div class="toggle">
-              <span>{$t('mailboxes.export.toggle')}</span>
-              <ToggleSwitch
-                checked={draft.exportOnArchive}
-                disabled={!draft.exportDir}
-                label={$t('mailboxes.export.toggle')}
-                on:change={(e) => setExportOnArchive(e.detail)}
-              />
-            </div>
-            <p class="server-hint">{$t('mailboxes.export.hint')}</p>
-            <div class="folder-row">
-              <span class="path" class:unset={!draft.exportDir}>
-                {draft.exportDir || $t('mailboxes.export.noFolder')}
-              </span>
-              <button type="button" class="ghost" on:click={pickExportFolder}>
-                {$t('mailboxes.export.choose')}
-              </button>
-            </div>
-            <span class="field">
-              <span>{$t('mailboxes.export.subfolders')}</span>
-              <div class="seg" role="radiogroup" aria-label={$t('mailboxes.export.subfolders')}>
-                {#each subfolderModes as mode (mode)}
-                  <button type="button" class:on={draft.exportSubfolders === mode} on:click={() => setSubfolders(mode)}>
-                    {$t(`mailboxes.export.subfolders.${mode}`)}
-                  </button>
-                {/each}
-              </div>
-            </span>
-            <label class="field">
-              <span>{$t('mailboxes.export.template')}</span>
-              <input
-                type="text"
-                bind:value={draft.exportNameTemplate}
-                on:input={refreshPreview}
-                placeholder="{'{date}'}_{'{subject}'}"
-              />
-            </label>
-            <p class="server-hint">{$t('mailboxes.export.placeholders')}</p>
-            <span class="field">
-              <span>{$t('mailboxes.pgpDefault')}</span>
-              <div class="seg" role="radiogroup" aria-label={$t('mailboxes.pgpDefault')}>
-                {#each pgpDefaults as mode (mode)}
-                  <button type="button" class:on={draft.pgpDefault === mode} on:click={() => setPGPDefault(mode)}>
-                    {$t(`mailboxes.pgpDefault.${mode || 'off'}`)}
-                  </button>
-                {/each}
-              </div>
-            </span>
-            <p class="server-hint">{$t('mailboxes.pgpDefaultHint')}</p>
-
-            {#if namePreview}
-              <p class="server-hint preview">{$t('mailboxes.export.preview')} <code>{namePreview}</code></p>
-            {/if}
-
-            <div class="edit-actions">
-              <button type="button" class="ghost" on:click={cancelEdit}>{$t('mailboxes.cancel')}</button>
-              <button type="button" class="primary" disabled={saving} on:click={save}>
-                <IconCheck size={14} stroke={2} />
-                {saving ? $t('mailboxes.saving') : $t('mailboxes.save')}
-              </button>
-            </div>
+        <div class="who">
+          <span class="name">{account.displayName || account.email}</span>
+          {#if account.displayName}<span class="addr">{account.email}</span>{/if}
+        </div>
+        {#if $missingPassword.has(account.id)}
+          <button
+            type="button"
+            class="icon warn-icon"
+            title={$t('mailboxes.passwordPrompt.marker')}
+            aria-label={$t('mailboxes.passwordPrompt.marker')}
+            on:click={() => askForPassword(account)}
+          >
+            <IconAlertTriangle size={15} stroke={1.8} />
+          </button>
+        {/if}
+        {#if confirmingId === account.id}
+          <div class="confirm">
+            <span class="warn">{$t('mailboxes.deleteConfirm')}</span>
+            <button type="button" class="danger" on:click={() => confirmDelete(account.id)}>{$t('action.delete')}</button>
+            <button type="button" class="ghost" on:click={() => (confirmingId = null)}>{$t('mailboxes.cancel')}</button>
           </div>
         {:else}
-          <div class="who">
-            <span class="name">{account.displayName || account.email}</span>
-            {#if account.displayName}<span class="addr">{account.email}</span>{/if}
-          </div>
-          {#if $missingPassword.has(account.id)}
-            <button
-              type="button"
-              class="icon warn-icon"
-              title={$t('mailboxes.passwordPrompt.marker')}
-              aria-label={$t('mailboxes.passwordPrompt.marker')}
-              on:click={() => askForPassword(account)}
-            >
-              <IconAlertTriangle size={15} stroke={1.8} />
-            </button>
-          {/if}
-          {#if confirmingId === account.id}
-            <div class="confirm">
-              <span class="warn">{$t('mailboxes.deleteConfirm')}</span>
-              <button type="button" class="danger" on:click={() => confirmDelete(account.id)}>{$t('action.delete')}</button>
-              <button type="button" class="ghost" on:click={() => (confirmingId = null)}>{$t('mailboxes.cancel')}</button>
-            </div>
-          {:else}
-            <button type="button" class="icon" aria-label={`${$t('mailboxes.edit')} ${account.email}`} on:click={() => startEdit(account)}>
-              <IconPencil size={15} stroke={1.7} />
-            </button>
-            <button type="button" class="icon del" aria-label={`${$t('action.delete')} ${account.email}`} on:click={() => ((confirmingId = account.id), (editingId = null))}>
-              <IconTrash size={15} stroke={1.7} />
-            </button>
-          {/if}
+          <button type="button" class="icon" aria-label={`${$t('mailboxes.edit')} ${account.email}`} on:click={() => startEdit(account)}>
+            <IconPencil size={15} stroke={1.7} />
+          </button>
+          <button type="button" class="icon del" aria-label={`${$t('action.delete')} ${account.email}`} on:click={() => ((confirmingId = account.id), (editingId = null))}>
+            <IconTrash size={15} stroke={1.7} />
+          </button>
         {/if}
       </li>
     {/each}
   </ul>
+{/if}
+
+{#if draft}
+  <Modal title={draft.email} hint={$t('mailboxes.serverChangeHint')} size="large" {dirty} on:close={cancelEdit}>
+    <div class="form">
+      <label class="field">
+        <span>{$t('wizard.field.displayName')}</span>
+        <input type="text" bind:value={draft.displayName} />
+      </label>
+      <label class="field">
+        <span>{$t('wizard.field.username')}</span>
+        <input type="text" bind:value={draft.username} placeholder={draft.email} />
+      </label>
+      <div class="servers">
+        <label class="field"><span>{$t('wizard.field.imapHost')}</span><input type="text" bind:value={draft.imapHost} /></label>
+        <label class="field narrow"><span>{$t('wizard.field.port')}</span><input type="number" bind:value={draft.imapPort} /></label>
+      </div>
+      <div class="servers">
+        <span class="field">
+          <span>{$t('wizard.advanced.imapSecurity')}</span>
+          <div class="seg" role="radiogroup" aria-label={$t('wizard.advanced.imapSecurity')}>
+            <button type="button" class:on={draft.imapTls === 'ssl'} on:click={() => setIMAPTLS('ssl')}>SSL / TLS</button>
+            <button type="button" class:on={draft.imapTls === 'starttls'} on:click={() => setIMAPTLS('starttls')}>STARTTLS</button>
+          </div>
+        </span>
+      </div>
+      <div class="servers">
+        <label class="field"><span>{$t('wizard.field.smtpHost')}</span><input type="text" bind:value={draft.smtpHost} /></label>
+        <label class="field narrow"><span>{$t('wizard.field.port')}</span><input type="number" bind:value={draft.smtpPort} /></label>
+      </div>
+      <div class="servers">
+        <span class="field">
+          <span>{$t('wizard.advanced.smtpSecurity')}</span>
+          <div class="seg" role="radiogroup" aria-label={$t('wizard.advanced.smtpSecurity')}>
+            <button type="button" class:on={draft.smtpTls === 'ssl'} on:click={() => setSMTPTLS('ssl')}>SSL / TLS</button>
+            <button type="button" class:on={draft.smtpTls === 'starttls'} on:click={() => setSMTPTLS('starttls')}>STARTTLS</button>
+          </div>
+        </span>
+      </div>
+      <label class="field">
+        <span>{$t('wizard.field.password')}</span>
+        <input
+          type="password"
+          bind:value={passwordDraft}
+          autocomplete="off"
+          placeholder={$t(
+            $missingPassword.has(draft.id)
+              ? 'mailboxes.passwordMissing'
+              : 'mailboxes.passwordUnchanged',
+          )}
+        />
+      </label>
+      {#if $missingPassword.has(draft.id)}
+        <p class="server-hint warn">{$t('mailboxes.passwordNeededHint')}</p>
+      {/if}
+
+      <div class="toggle">
+        <span>{$t('mailboxes.export.toggle')}</span>
+        <ToggleSwitch
+          checked={draft.exportOnArchive}
+          disabled={!draft.exportDir}
+          label={$t('mailboxes.export.toggle')}
+          on:change={(e) => setExportOnArchive(e.detail)}
+        />
+      </div>
+      <p class="server-hint">{$t('mailboxes.export.hint')}</p>
+      <div class="folder-row">
+        <span class="path" class:unset={!draft.exportDir}>
+          {draft.exportDir || $t('mailboxes.export.noFolder')}
+        </span>
+        <button type="button" class="ghost" on:click={pickExportFolder}>
+          {$t('mailboxes.export.choose')}
+        </button>
+      </div>
+      <span class="field">
+        <span>{$t('mailboxes.export.subfolders')}</span>
+        <div class="seg" role="radiogroup" aria-label={$t('mailboxes.export.subfolders')}>
+          {#each subfolderModes as mode (mode)}
+            <button type="button" class:on={draft.exportSubfolders === mode} on:click={() => setSubfolders(mode)}>
+              {$t(`mailboxes.export.subfolders.${mode}`)}
+            </button>
+          {/each}
+        </div>
+      </span>
+      <label class="field">
+        <span>{$t('mailboxes.export.template')}</span>
+        <input
+          type="text"
+          bind:value={draft.exportNameTemplate}
+          on:input={refreshPreview}
+          placeholder="{'{date}'}_{'{subject}'}"
+        />
+      </label>
+      <p class="server-hint">{$t('mailboxes.export.placeholders')}</p>
+      <span class="field">
+        <span>{$t('mailboxes.pgpDefault')}</span>
+        <div class="seg" role="radiogroup" aria-label={$t('mailboxes.pgpDefault')}>
+          {#each pgpDefaults as mode (mode)}
+            <button type="button" class:on={draft.pgpDefault === mode} on:click={() => setPGPDefault(mode)}>
+              {$t(`mailboxes.pgpDefault.${mode || 'off'}`)}
+            </button>
+          {/each}
+        </div>
+      </span>
+      <p class="server-hint">{$t('mailboxes.pgpDefaultHint')}</p>
+
+      {#if namePreview}
+        <p class="server-hint preview">{$t('mailboxes.export.preview')} <code>{namePreview}</code></p>
+      {/if}
+    </div>
+
+    <svelte:fragment slot="footer">
+      <button type="button" class="ghost" on:click={cancelEdit}>{$t('mailboxes.cancel')}</button>
+      <button type="button" class="primary" disabled={saving} on:click={save}>
+        <IconCheck size={14} stroke={2} />
+        {saving ? $t('mailboxes.saving') : $t('mailboxes.save')}
+      </button>
+    </svelte:fragment>
+  </Modal>
 {/if}
 
 {#if wizardOpen}
@@ -520,16 +526,11 @@
     color: var(--text-secondary);
   }
 
-  .edit {
+  .form {
     display: flex;
     flex-direction: column;
     gap: var(--space-2);
     width: 100%;
-  }
-  .email {
-    font-size: var(--fz-label);
-    font-weight: var(--fw-medium);
-    color: var(--text-primary);
   }
 
   .field {
@@ -634,13 +635,6 @@
     font-family: var(--font-mono);
     color: var(--text-secondary);
     overflow-wrap: anywhere;
-  }
-
-  .edit-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: var(--space-2);
-    margin-top: var(--space-1);
   }
 
   .primary,

@@ -9,6 +9,8 @@
   import { onMount } from 'svelte'
   import { IconPencil, IconTrash, IconPlus, IconCheck, IconX, IconStarFilled } from '@tabler/icons-svelte'
   import ToggleSwitch from '../common/ToggleSwitch.svelte'
+  import Modal from '../common/Modal.svelte'
+  import EmojiPickerModal from './EmojiPickerModal.svelte'
   import { prefs, setPaletteProfiles } from '../../stores/prefs'
   import { profiles, currentProfile, loadProfiles, switchTo } from '../../stores/profiles'
   import { allAccounts, createProfile, updateProfile, deleteProfile } from '../../lib/api'
@@ -22,44 +24,6 @@
 
   const starts: ProfileStart[] = ['share', 'copy', 'fresh']
 
-  // the icons on offer. A picker rather than a text field: this is a label you
-  // recognise at a glance in the status bar, not somewhere to paste anything.
-  const iconChoices = [
-    // people and places
-    '🧑', '👤', '👥', '🧑‍💻', '🧑‍🎓', '🧑‍🏫', '🧑‍⚕️', '🧑‍🔧', '🧑‍🍳', '🧑‍🎨',
-    '🏠', '🏡', '🏢', '🏫', '🏥', '🏦', '🏭', '🏛️', '⛺', '🌆',
-    // work and study
-    '💼', '📁', '🗂️', '📋', '📌', '📎', '🖇️', '📐', '📏', '✏️',
-    '🖊️', '🖋️', '📝', '📚', '📖', '🎓', '🧾', '💳', '💰', '📊',
-    '📈', '📉', '🗓️', '⏰', '⌛', '🔔', '📣', '🗣️', '🤝', '🧠',
-    // mail and comms
-    '✉️', '📮', '📨', '📬', '📭', '📦', '📡', '☎️', '📱', '💬',
-    // making and fixing
-    '🛠️', '🔧', '🔩', '⚙️', '🧰', '🔬', '🧪', '⚗️', '🧬', '🔭',
-    '💡', '🔌', '🔋', '🖥️', '💻', '⌨️', '🖱️', '🖨️', '💾', '🗄️',
-    // art, music, play
-    '🎨', '🖌️', '🎭', '🎬', '📷', '📹', '🎧', '🎵', '🎸', '🎹',
-    '🥁', '🎤', '🎮', '🕹️', '🎲', '♟️', '🧩', '🎯', '🎳', '🏆',
-    // sport and outdoors
-    '⚽', '🏀', '🏈', '🎾', '🏐', '🏓', '🥊', '🚴', '🏃', '🧗',
-    '🏊', '⛷️', '🏕️', '🥾', '🚵', '🛹', '🛼', '🪁', '🎣', '🧘',
-    // travel
-    '✈️', '🚀', '🚗', '🚌', '🚂', '🚢', '⛵', '🛵', '🚲', '🗺️',
-    '🧳', '🏝️', '🏔️', '🌋', '🗽', '🎡', '🎢', '🌉', '⛱️', '🧭',
-    // nature and weather
-    '🌍', '🌙', '⭐', '🌟', '☀️', '⛅', '🌈', '❄️', '🔥', '💧',
-    '🌊', '🌱', '🌳', '🌵', '🍀', '🌸', '🌻', '🍁', '🍄', '🪴',
-    // animals
-    '🐢', '🐝', '🐞', '🦊', '🐻', '🐼', '🐨', '🐧', '🦉', '🦅',
-    '🐬', '🐙', '🦀', '🐈', '🐕', '🐎', '🦋', '🐳', '🦔', '🦕',
-    // food and drink
-    '🥔', '☕', '🍵', '🍺', '🍷', '🥂', '🍎', '🍌', '🍓', '🍇',
-    '🍕', '🍔', '🌮', '🍜', '🍣', '🥐', '🥗', '🍪', '🎂', '🍫',
-    // symbols
-    '❤️', '💙', '💚', '💛', '💜', '🖤', '🤍', '🧡', '💫', '✨',
-    '🔒', '🔑', '🛡️', '⚡', '♻️', '⚓', '🧿', '🔮', '🎁', '🏁',
-  ]
-
   let accounts: Account[] = []
   let loading = true
   let draft: ProfileDraft | null = null
@@ -68,6 +32,11 @@
   let creating = false
   let saving = false
   let confirmingId: number | null = null
+  let pickingIcon = false
+  // the draft as it opened, so closing knows whether there is anything to lose.
+  let opened = ''
+
+  $: dirty = draft !== null && JSON.stringify(draft) !== opened
 
   // editing the main profile: it owns the rows the others read, so it has no
   // sharing choices of its own to make.
@@ -90,7 +59,7 @@
   function startCreate(): void {
     confirmingId = null
     creating = true
-    draft = {
+    open({
       id: 0,
       name: '',
       icon: '',
@@ -98,13 +67,13 @@
       startSettings: 'copy',
       startSignatures: 'fresh',
       startViews: 'fresh',
-    }
+    })
   }
 
   function startEdit(profile: Profile): void {
     confirmingId = null
     creating = false
-    draft = {
+    open({
       id: profile.id,
       name: profile.name,
       icon: profile.icon,
@@ -113,12 +82,18 @@
       startSettings: profile.shareSettings ? 'share' : 'fresh',
       startSignatures: profile.shareSignatures ? 'share' : 'fresh',
       startViews: profile.shareViews ? 'share' : 'fresh',
-    }
+    })
+  }
+
+  function open(value: ProfileDraft): void {
+    draft = value
+    opened = JSON.stringify(value)
   }
 
   function cancel(): void {
     draft = null
     creating = false
+    pickingIcon = false
   }
 
   function setStart(area: Area, value: ProfileStart): void {
@@ -266,42 +241,31 @@
 {/if}
 
 {#if draft}
-  <div class="editor">
-    <h4>{creating ? $t('profiles.newProfile') : $t('profiles.editProfile')}</h4>
-
+  <Modal
+    title={creating ? $t('profiles.newProfile') : $t('profiles.editProfile')}
+    size="large"
+    {dirty}
+    on:close={cancel}
+  >
     <div class="fields">
       <label class="field">
         <span>{$t('profiles.field.name')}</span>
         <input type="text" bind:value={draft.name} placeholder={$t('profiles.field.namePlaceholder')} />
       </label>
-    </div>
 
-    <h5>{$t('profiles.field.icon')}</h5>
-    <div class="icons" role="radiogroup" aria-label={$t('profiles.field.icon')}>
-      <button
-        type="button"
-        class="icon-choice none"
-        class:on={draft.icon === ''}
-        role="radio"
-        aria-checked={draft.icon === ''}
-        title={$t('profiles.icon.none')}
-        aria-label={$t('profiles.icon.none')}
-        on:click={() => draft && (draft.icon = '')}
-      >
-        <IconX size={14} stroke={2} />
-      </button>
-      {#each iconChoices as choice (choice)}
-        <button
-          type="button"
-          class="icon-choice"
-          class:on={draft.icon === choice}
-          role="radio"
-          aria-checked={draft.icon === choice}
-          on:click={() => draft && (draft.icon = choice)}
-        >
-          {choice}
+      <div class="field">
+        <span>{$t('profiles.field.icon')}</span>
+        <button type="button" class="icon-btn" on:click={() => (pickingIcon = true)}>
+          <span class="preview">
+            {#if draft.icon}
+              {draft.icon}
+            {:else}
+              <IconX size={14} stroke={2} />
+            {/if}
+          </span>
+          {draft.icon ? $t('iconPicker.change') : $t('iconPicker.choose')}
         </button>
-      {/each}
+      </div>
     </div>
 
     <h5>{$t('profiles.accounts')}</h5>
@@ -358,7 +322,7 @@
       </div>
     {/each}
 
-    <div class="edit-actions">
+    <svelte:fragment slot="footer">
       <button type="button" class="ghost" on:click={cancel}>
         <IconX size={14} stroke={2} />
         {$t('mailboxes.cancel')}
@@ -367,8 +331,16 @@
         <IconCheck size={14} stroke={2} />
         {saving ? $t('mailboxes.saving') : $t('mailboxes.save')}
       </button>
-    </div>
-  </div>
+    </svelte:fragment>
+  </Modal>
+
+  {#if pickingIcon}
+    <EmojiPickerModal
+      value={draft.icon}
+      on:select={(e) => draft && (draft.icon = e.detail)}
+      on:close={() => (pickingIcon = false)}
+    />
+  {/if}
 {/if}
 
 <style>
@@ -382,13 +354,6 @@
   h3 {
     margin: 0 0 var(--space-3);
     font-size: var(--fz-heading);
-    font-weight: var(--fw-semibold);
-    color: var(--text-primary);
-  }
-
-  h4 {
-    margin: 0 0 var(--space-3);
-    font-size: var(--fz-title);
     font-weight: var(--fw-semibold);
     color: var(--text-primary);
   }
@@ -493,16 +458,9 @@
     color: var(--text-secondary);
   }
 
-  .editor {
-    margin-top: var(--space-4);
-    padding: var(--space-4);
-    border: var(--hairline) solid var(--border-default);
-    border-radius: var(--radius-card);
-    background: var(--surface-sunken);
-  }
-
   .fields {
     display: flex;
+    align-items: flex-end;
     gap: var(--space-3);
   }
 
@@ -521,39 +479,32 @@
 
   /* a big grid that scrolls rather than pushing the rest of the form down the
      page. Roomy enough to scan, capped so it never owns the screen. */
-  .icons {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(30px, 1fr));
-    gap: var(--space-1);
-    max-height: 190px;
-    overflow-y: auto;
-    padding: var(--space-1);
-    margin-bottom: var(--space-2);
-    border: var(--hairline) solid var(--border-subtle);
+  .icon-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    align-self: flex-start;
+    padding: 0 var(--space-3);
+    height: var(--control-height);
+    border: var(--hairline) solid var(--border-default);
     border-radius: var(--radius-control);
-    background: var(--surface-raised);
-    scrollbar-width: thin;
+    background: var(--surface-base);
+    color: var(--text-secondary);
+    font-size: var(--fz-label);
+    cursor: var(--cursor-action);
+  }
+  .icon-btn:hover {
+    background: var(--surface-hover);
+    color: var(--text-primary);
   }
 
-  .icon-choice {
+  .preview {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 30px;
-    height: 30px;
-    font-size: 15px;
-    border: var(--hairline) solid transparent;
-    border-radius: var(--radius-control);
-    background: var(--surface-raised);
-    color: var(--text-tertiary);
-    cursor: var(--cursor-action);
-  }
-  .icon-choice:hover {
-    border-color: var(--border-default);
-  }
-  .icon-choice.on {
-    border-color: var(--accent);
-    background: var(--surface-hover);
+    min-width: 18px;
+    font-size: var(--fz-body);
+    line-height: 1;
   }
 
   .field {
@@ -637,13 +588,6 @@
   .seg button.on {
     background: var(--accent);
     color: var(--accent-fg);
-  }
-
-  .edit-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: var(--space-2);
-    margin-top: var(--space-4);
   }
 
   .ghost,

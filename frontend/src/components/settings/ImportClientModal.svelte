@@ -5,8 +5,8 @@
   // not lost. Everything is user-initiated: a picker, or a profile Pelton found
   // where Thunderbird installs them. Nothing reads the network.
   import { createEventDispatcher, onDestroy, onMount } from 'svelte'
-  import { fade, scale } from 'svelte/transition'
-  import { IconX, IconMailbox, IconFileImport, IconFolderSearch } from '@tabler/icons-svelte'
+  import Modal from '../common/Modal.svelte'
+  import { IconMailbox, IconFileImport, IconFolderSearch } from '@tabler/icons-svelte'
   import Spinner from '../common/Spinner.svelte'
   import {
     findThunderbirdProfiles,
@@ -136,39 +136,15 @@
     }
   }
 
-  function onKeydown(event: KeyboardEvent): void {
-    if (event.key === 'Escape' && !running) {
-      dispatch('close')
-    }
-  }
 </script>
 
-<svelte:window on:keydown={onKeydown} />
-
-<!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
-<div class="backdrop" transition:fade={{ duration: 120 }} on:click={() => !running && dispatch('close')}></div>
-<div
-  class="dialog"
-  role="dialog"
-  aria-modal="true"
-  aria-label={$t('import.title')}
-  transition:scale={{ duration: 150, start: 0.94 }}
+<Modal
+  title={$t('import.title')}
+  hint={$t('import.intro')}
+  size="medium"
+  closable={!running}
+  on:close={() => dispatch('close')}
 >
-  <header>
-    <h2>{$t('import.title')}</h2>
-    <button
-      type="button"
-      class="close"
-      aria-label={$t('detail.attachments.close')}
-      disabled={running}
-      on:click={() => dispatch('close')}
-    >
-      <IconX size={16} stroke={1.8} />
-    </button>
-  </header>
-
-  <p class="hint">{$t('import.intro')}</p>
-
   <div class="body">
     <section class="block">
       <div class="block-head">
@@ -282,72 +258,20 @@
     </div>
   {/if}
 
-  <div class="actions">
+  <svelte:fragment slot="footer">
     <button type="button" class="action-btn primary" disabled={running} on:click={() => dispatch('close')}>
-      {$t('detail.attachments.close')}
+      {$t('modal.close')}
     </button>
-  </div>
-</div>
+  </svelte:fragment>
+</Modal>
 
 <style>
-  .backdrop {
-    position: fixed;
-    inset: 0;
-    z-index: 300;
-    background: var(--scrim, rgba(0, 0, 0, 0.4));
-    backdrop-filter: blur(2px);
-  }
 
-  .dialog {
-    position: fixed;
-    z-index: 301;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: min(520px, calc(100vw - 2 * var(--space-5)));
-    max-height: calc(100vh - 2 * var(--space-5));
-    padding: var(--space-4);
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-3);
-    border: var(--hairline) solid var(--border-default);
-    border-radius: var(--radius-card);
-    background: var(--surface-overlay);
-    box-shadow: var(--shadow-overlay);
-  }
-
-  header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
-  h2 {
-    margin: 0;
-    font-size: var(--fz-heading);
-    font-weight: var(--fw-semibold);
-    color: var(--text-primary);
-  }
   h3 {
     margin: 0;
     font-size: var(--fz-body);
     font-weight: var(--fw-semibold);
     color: var(--text-primary);
-  }
-  .close {
-    border: none;
-    background: transparent;
-    color: var(--text-tertiary);
-    cursor: pointer;
-    padding: var(--space-1);
-    border-radius: var(--radius-control);
-  }
-  .close:hover:not(:disabled) {
-    background: var(--surface-hover);
-    color: var(--text-primary);
-  }
-  .close:disabled {
-    opacity: 0.5;
-    cursor: default;
   }
 
   .body {
@@ -372,13 +296,6 @@
     align-items: center;
     gap: var(--space-2);
     color: var(--text-secondary);
-  }
-
-  .hint {
-    margin: 0;
-    font-size: var(--fz-label);
-    color: var(--text-tertiary);
-    line-height: 1.5;
   }
 
   .sub-hint {
@@ -478,12 +395,6 @@
     height: 100%;
     background: var(--accent);
     transition: width 0.2s ease;
-  }
-
-  .actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: var(--space-2);
   }
 
   .action-btn {

@@ -11,8 +11,8 @@
   // "Don't ask again" is the stronger form: the prompt stops interrupting for
   // that account entirely and a warning marker next to the mailbox takes over
   // saying it cannot sync (#290).
-  import { fade, scale } from 'svelte/transition'
-  import { IconX, IconLock } from '@tabler/icons-svelte'
+  import { IconLock } from '@tabler/icons-svelte'
+  import Modal from '../common/Modal.svelte'
   import { setAccountPassword } from '../../lib/api'
   import { errorMessage, toastError } from '../../stores/toast'
   import { t } from '../../lib/i18n'
@@ -71,33 +71,11 @@
     onDone('dismissed')
   }
 
-  function onKeydown(event: KeyboardEvent): void {
-    if (event.key === 'Escape') {
-      cancel()
-    }
-  }
 </script>
 
-<svelte:window on:keydown={account ? onKeydown : undefined} />
-
 {#if account}
-  <div class="backdrop" transition:fade={{ duration: 120 }}></div>
-  <div
-    class="dialog"
-    role="dialog"
-    aria-modal="true"
-    aria-label={$t('mailboxes.passwordPrompt.title')}
-    transition:scale={{ duration: 150, start: 0.94 }}
-  >
-    <header>
-      <h2>
-        <span class="glyph"><IconLock size={16} stroke={1.8} /></span>
-        {$t('mailboxes.passwordPrompt.title')}
-      </h2>
-      <button type="button" class="close" aria-label={$t('mailboxes.cancel')} on:click={cancel}>
-        <IconX size={16} stroke={1.8} />
-      </button>
-    </header>
+  <Modal title={$t('mailboxes.passwordPrompt.title')} size="small" on:close={cancel}>
+    <span slot="icon"><IconLock size={16} stroke={1.8} /></span>
 
     <p class="lead">
       {$t('mailboxes.passwordPrompt.body').replace('{email}', who)}
@@ -111,81 +89,23 @@
         <input type="password" bind:value={password} autofocus autocomplete="off" spellcheck="false" />
       </label>
 
-      <div class="actions">
-        <button type="button" class="dismiss" on:click={dismiss}>
-          {$t('mailboxes.passwordPrompt.dismiss')}
-        </button>
-        <button type="button" class="cancel" on:click={cancel}>
-          {$t('mailboxes.passwordPrompt.skip')}
-        </button>
-        <button type="submit" class="go" disabled={busy || password === ''}>
-          {busy ? $t('mailboxes.saving') : $t('mailboxes.save')}
-        </button>
-      </div>
     </form>
-  </div>
+
+    <svelte:fragment slot="footer">
+      <button type="button" class="dismiss" on:click={dismiss}>
+        {$t('mailboxes.passwordPrompt.dismiss')}
+      </button>
+      <button type="button" class="cancel" on:click={cancel}>
+        {$t('mailboxes.passwordPrompt.skip')}
+      </button>
+      <button type="button" class="go" disabled={busy || password === ''} on:click={submit}>
+        {busy ? $t('mailboxes.saving') : $t('mailboxes.save')}
+      </button>
+    </svelte:fragment>
+  </Modal>
 {/if}
 
 <style>
-  .backdrop {
-    position: fixed;
-    inset: 0;
-    z-index: 330;
-    background: var(--scrim, rgba(0, 0, 0, 0.4));
-    backdrop-filter: blur(2px);
-  }
-
-  .dialog {
-    position: fixed;
-    z-index: 331;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: min(420px, calc(100vw - 2 * var(--space-5)));
-    padding: var(--space-4);
-    border: var(--hairline) solid var(--border-default);
-    border-radius: var(--radius-card);
-    background: var(--surface-overlay);
-    box-shadow: var(--shadow-overlay);
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-3);
-  }
-
-  header {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: var(--space-3);
-  }
-
-  h2 {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    margin: 0;
-    font-size: var(--fz-title);
-    font-weight: var(--fw-semibold);
-    color: var(--text-primary);
-  }
-
-  .glyph {
-    display: inline-flex;
-    color: var(--text-tertiary);
-  }
-
-  .close {
-    border: none;
-    background: transparent;
-    color: var(--text-tertiary);
-    cursor: pointer;
-    padding: var(--space-1);
-    border-radius: var(--radius-control);
-  }
-  .close:hover {
-    background: var(--surface-hover);
-    color: var(--text-primary);
-  }
 
   .lead {
     margin: 0;
@@ -222,13 +142,6 @@
   .field input:focus {
     outline: none;
     border-color: var(--accent);
-  }
-
-  .actions {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    gap: var(--space-2);
   }
 
   /* the quiet option, kept away from the two that answer the question now. */

@@ -5,6 +5,7 @@
   // for "save this search as a view", where the parent seeds the query fields).
   import { createEventDispatcher } from 'svelte'
   import { IconX } from '@tabler/icons-svelte'
+  import Modal from '../common/Modal.svelte'
   import type { View, Account } from '../../lib/types'
   import { viewIconNames, viewIconComponent, viewColors, viewColorCss } from '../../lib/viewicons'
   import { saveView } from '../../lib/api'
@@ -23,6 +24,11 @@
   // local copy so cancelling discards edits.
   let draft: View = { ...value, queryFrom: [...value.queryFrom], queryTo: [...value.queryTo] }
   let saving = false
+  // what the draft looked like when the editor opened, so closing knows whether
+  // there is anything to lose.
+  const opened = JSON.stringify(draft)
+
+  $: dirty = JSON.stringify(draft) !== opened
 
   // pending chip text per address field, committed on Enter/comma/blur.
   let chipDraft: { queryFrom: string; queryTo: string } = { queryFrom: '', queryTo: '' }
@@ -97,18 +103,13 @@
   }
 </script>
 
-<!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions a11y-no-noninteractive-element-interactions -->
-<div class="overlay" on:click={() => dispatch('close')}>
-  <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions a11y-no-noninteractive-element-interactions -->
-  <div class="modal" role="dialog" aria-modal="true" aria-label={$t('views.editorTitle')} tabindex="-1" on:click|stopPropagation>
-    <header>
-      <span class="m-title">{draft.id === 0 ? $t('views.newTitle') : $t('views.editTitle')}</span>
-      <button type="button" class="m-close" aria-label={$t('about.close')} on:click={() => dispatch('close')}>
-        <IconX size={18} stroke={1.8} />
-      </button>
-    </header>
-
-    <div class="m-body">
+<Modal
+  title={draft.id === 0 ? $t('views.newTitle') : $t('views.editTitle')}
+  size="medium"
+  {dirty}
+  on:close={() => dispatch('close')}
+>
+  <div class="m-body">
       <label class="field">
         <span class="label">{$t('views.nameLabel')}</span>
         <input type="text" bind:value={draft.name} placeholder={$t('views.namePlaceholder')} maxlength="60" />
@@ -250,79 +251,18 @@
       </div>
     </div>
 
-    <footer>
-      <button type="button" class="btn ghost" on:click={() => dispatch('close')}>{$t('views.cancel')}</button>
-      <button type="button" class="btn primary" disabled={!canSave} on:click={save}>{$t('views.save')}</button>
-    </footer>
-  </div>
-</div>
+  <svelte:fragment slot="footer">
+    <button type="button" class="btn ghost" on:click={() => dispatch('close')}>{$t('views.cancel')}</button>
+    <button type="button" class="btn primary" disabled={!canSave} on:click={save}>{$t('views.save')}</button>
+  </svelte:fragment>
+</Modal>
 
 <style>
-  .overlay {
-    position: fixed;
-    inset: 0;
-    background: var(--overlay-scrim, rgba(0, 0, 0, 0.4));
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 60;
-    padding: var(--space-4);
-  }
-
-  .modal {
-    display: flex;
-    flex-direction: column;
-    width: min(560px, 100%);
-    max-height: min(88vh, 720px);
-    background: var(--surface-base);
-    border: var(--hairline) solid var(--border-default);
-    border-radius: var(--radius-card);
-    box-shadow: var(--shadow-overlay, 0 20px 60px rgba(0, 0, 0, 0.3));
-    overflow: hidden;
-  }
-
-  header,
-  footer {
-    display: flex;
-    align-items: center;
-    padding: var(--space-3) var(--space-4);
-    border-bottom: var(--hairline) solid var(--border-subtle);
-  }
-
-  footer {
-    border-bottom: none;
-    border-top: var(--hairline) solid var(--border-subtle);
-    justify-content: flex-end;
-    gap: var(--space-2);
-  }
-
-  .m-title {
-    flex: 1;
-    font-weight: var(--fw-semibold);
-    color: var(--text-primary);
-  }
-
-  .m-close {
-    display: inline-flex;
-    border: none;
-    background: transparent;
-    color: var(--text-tertiary);
-    cursor: var(--cursor-action);
-    border-radius: var(--radius-control);
-    padding: var(--space-1);
-  }
-
-  .m-close:hover {
-    background: var(--surface-hover);
-    color: var(--text-primary);
-  }
 
   .m-body {
     display: flex;
     flex-direction: column;
     gap: var(--space-3);
-    padding: var(--space-4);
-    overflow-y: auto;
   }
 
   .field {

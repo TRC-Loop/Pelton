@@ -130,6 +130,9 @@
      readable on a light surface. */
   --nightly: #8b3cc0;
   --nightly-bg: color-mix(in srgb, #b965e2 16%, transparent);
+
+  /* the dim behind a modal. */
+  --scrim: rgba(0, 0, 0, 0.4);
 }
 
 /* dark theme. every token has a dark value so the toggle never leaves a gap. */
@@ -165,6 +168,8 @@
 
   --nightly: #c98cea;
   --nightly-bg: color-mix(in srgb, #b965e2 22%, transparent);
+
+  --scrim: rgba(0, 0, 0, 0.55);
 
   --shadow-overlay: 0 8px 24px rgba(0, 0, 0, 0.5);
 }

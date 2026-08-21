@@ -5,7 +5,8 @@
   // in-app webview.
   import { onDestroy, onMount } from 'svelte'
   import { createEventDispatcher } from 'svelte'
-  import { IconBrandGithub, IconBug, IconLicense, IconScale, IconX, IconRefresh, IconUsers, IconWorld, IconBook2, IconFolderOpen, IconClipboard } from '@tabler/icons-svelte'
+  import Modal from '../common/Modal.svelte'
+  import { IconBrandGithub, IconBug, IconLicense, IconScale, IconRefresh, IconUsers, IconWorld, IconBook2, IconFolderOpen, IconClipboard } from '@tabler/icons-svelte'
   import { BrowserOpenURL } from '../../../wailsjs/runtime/runtime'
   import { APP } from '../../lib/app-info'
   import { appVersion, checkForUpdates, defaultMailClientStatus, setDefaultMailClient, isNightly, getDiagnostics, openLogFolder, type UpdateCheckResult } from '../../lib/api'
@@ -154,14 +155,9 @@
     BrowserOpenURL(url)
   }
 
-  function onKeydown(event: KeyboardEvent): void {
-    if (event.key === 'Escape') {
-      showLicenses = false
-    }
-  }
 </script>
 
-<svelte:window on:keydown={showLicenses ? onKeydown : undefined} on:resize={showViewportInfo ? refreshViewportInfo : undefined} />
+<svelte:window on:resize={showViewportInfo ? refreshViewportInfo : undefined} />
 
 <div class="about">
   <div class="identity">
@@ -280,23 +276,11 @@
 </div>
 
 {#if showLicenses}
-  <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
-  <div class="overlay" on:click={() => (showLicenses = false)}>
-    <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions a11y-no-noninteractive-element-interactions -->
-    <div class="modal" role="dialog" aria-modal="true" aria-label={$t('about.licenses')} tabindex="-1" on:click|stopPropagation>
-      <header>
-        <span class="m-title">{$t('about.licenses')}</span>
-        <button type="button" class="m-close" aria-label={$t('about.close')} on:click={() => (showLicenses = false)}>
-          <IconX size={18} stroke={1.8} />
-        </button>
-      </header>
-      <div class="m-body">
-        {#await import('./LicensesView.svelte') then m}
-          <svelte:component this={m.default} />
-        {/await}
-      </div>
-    </div>
-  </div>
+  <Modal title={$t('about.licenses')} size="large" on:close={() => (showLicenses = false)}>
+    {#await import('./LicensesView.svelte') then m}
+      <svelte:component this={m.default} />
+    {/await}
+  </Modal>
 {/if}
 
 <style>
@@ -455,61 +439,4 @@
     cursor: default;
   }
 
-  .overlay {
-    position: fixed;
-    inset: 0;
-    z-index: 140;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: var(--space-5);
-    background: var(--scrim, rgba(0, 0, 0, 0.4));
-  }
-
-  .modal {
-    width: 100%;
-    max-width: 640px;
-    max-height: 82vh;
-    display: flex;
-    flex-direction: column;
-    border: var(--hairline) solid var(--border-default);
-    border-radius: var(--radius-card);
-    background: var(--surface-overlay);
-    box-shadow: var(--shadow-overlay);
-    overflow: hidden;
-  }
-
-  .modal header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: var(--space-4) var(--space-5);
-    border-bottom: var(--hairline) solid var(--border-subtle);
-  }
-
-  .m-title {
-    font-size: var(--fz-heading);
-    font-weight: var(--fw-semibold);
-    color: var(--text-primary);
-  }
-
-  .m-close {
-    display: inline-flex;
-    border: none;
-    background: transparent;
-    color: var(--text-secondary);
-    cursor: var(--cursor-action);
-    padding: var(--space-1);
-    border-radius: var(--radius-control);
-  }
-
-  .m-close:hover {
-    background: var(--surface-hover);
-    color: var(--text-primary);
-  }
-
-  .m-body {
-    padding: var(--space-4) var(--space-5);
-    overflow-y: auto;
-  }
 </style>

@@ -5,6 +5,7 @@
   // them per message from the compose footer.
   import { onMount } from 'svelte'
   import { IconPlus, IconPencil, IconTrash } from '@tabler/icons-svelte'
+  import Modal from '../common/Modal.svelte'
   import { signatures, persistSignature, removeSignature, getAccountSignatures, setAccountSignatures } from '../../stores/signatures'
   import { sidebar } from '../../stores/accounts'
   import { errorMessage, toastError } from '../../stores/toast'
@@ -20,14 +21,15 @@
   const blank = (): Signature => ({ id: 0, name: '', kind: 'footer', format: 'markdown', content: '' })
   let draft: Signature = blank()
   let editing = false
+  // what the draft looked like when the editor opened, so closing knows whether
+  // there is anything to lose.
+  let opened = ''
 
-  function startNew(): void {
-    draft = blank()
-    editing = true
-  }
+  $: dirty = editing && JSON.stringify(draft) !== opened
 
-  function startEdit(s: Signature): void {
-    draft = { ...s }
+  function open(value: Signature): void {
+    draft = { ...value }
+    opened = JSON.stringify(draft)
     editing = true
   }
 
@@ -106,7 +108,7 @@
           <span class="fmt">{s.format}</span>
         </div>
         <div class="block-actions">
-          <button type="button" class="icon-btn" aria-label={$t('signatures.edit')} on:click={() => startEdit(s)}>
+          <button type="button" class="icon-btn" aria-label={$t('signatures.edit')} on:click={() => open(s)}>
             <IconPencil size={15} stroke={1.6} />
           </button>
           <button type="button" class="icon-btn danger" aria-label={$t('signatures.delete')} on:click={() => remove(s.id)}>
@@ -118,8 +120,18 @@
   {/if}
 </div>
 
+<button type="button" class="add" on:click={() => open(blank())}>
+  <IconPlus size={15} stroke={1.8} />
+  {$t('signatures.new')}
+</button>
+
 {#if editing}
-  <div class="editor">
+  <Modal
+    title={draft.id === 0 ? $t('signatures.new') : $t('signatures.editTitle')}
+    size="medium"
+    {dirty}
+    on:close={() => (editing = false)}
+  >
     <div class="editor-row">
       <input class="field" placeholder={$t('signatures.namePlaceholder')} bind:value={draft.name} />
       <select class="field" bind:value={draft.kind}>
@@ -131,17 +143,13 @@
         <option value="html">HTML</option>
       </select>
     </div>
-    <textarea class="content" rows="6" placeholder={$t('signatures.contentPlaceholder')} bind:value={draft.content}></textarea>
-    <div class="editor-actions">
+    <textarea class="content" rows="10" placeholder={$t('signatures.contentPlaceholder')} bind:value={draft.content}></textarea>
+
+    <svelte:fragment slot="footer">
       <button type="button" class="ghost" on:click={() => (editing = false)}>{$t('signatures.cancel')}</button>
       <button type="button" class="primary" on:click={save}>{$t('signatures.save')}</button>
-    </div>
-  </div>
-{:else}
-  <button type="button" class="add" on:click={startNew}>
-    <IconPlus size={15} stroke={1.8} />
-    {$t('signatures.new')}
-  </button>
+    </svelte:fragment>
+  </Modal>
 {/if}
 
 {#if accounts.length > 0}
@@ -297,14 +305,6 @@
     background: var(--surface-hover);
   }
 
-  .editor {
-    margin-top: var(--space-3);
-    padding: var(--space-3);
-    border: var(--hairline) solid var(--border-default);
-    border-radius: var(--radius-card);
-    background: var(--surface-raised);
-  }
-
   .editor-row {
     display: flex;
     gap: var(--space-2);
@@ -334,13 +334,6 @@
     font-family: var(--font-mono);
     font-size: var(--fz-label);
     resize: vertical;
-  }
-
-  .editor-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: var(--space-2);
-    margin-top: var(--space-2);
   }
 
   .ghost,
