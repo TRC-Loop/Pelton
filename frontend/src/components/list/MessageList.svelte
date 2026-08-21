@@ -48,6 +48,7 @@
   import {
     selectedIds,
     clearSelection,
+    anchorAt,
     selectOnly,
     toggleSelect,
     selectRange,
@@ -254,6 +255,8 @@
     }
     activeIndex = index
     clearSelection()
+    // the row that was opened is where a following shift-click measures from.
+    anchorAt(item.id)
     openMessage(item.id)
     if (!item.seen) {
       patchInList(item.id, { seen: true })
@@ -499,7 +502,7 @@
     // pointer becomes the selection and the menu is about that message, which is
     // what every other app does and what stops an action landing on a set the
     // user had forgotten about.
-    if (selectionCount > 0) {
+    if (selectionCount > 0 && !$selectedIds.has(item.id)) {
       selectOnly(item.id)
     }
     const entries: MenuEntry[] = [
