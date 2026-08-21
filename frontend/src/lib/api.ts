@@ -963,6 +963,8 @@ export const SettingKeys = {
   flagColorSync: 'flag_color_sync',
   showOfflineIndicator: 'show_offline_indicator',
   showUnsyncedFolder: 'show_unsynced_folder',
+  restoreTabs: 'restore_reading_tabs',
+  openTabs: 'open_reading_tabs',
   swipeEnabled: 'swipe_enabled',
   swipeLeftAction: 'swipe_left_action',
   swipeRightAction: 'swipe_right_action',

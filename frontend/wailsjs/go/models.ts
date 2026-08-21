@@ -1584,6 +1584,7 @@ export namespace desktop {
 	    flagColorSync: boolean;
 	    showOfflineIndicator: boolean;
 	    showUnsyncedFolder: boolean;
+	    restoreTabs: boolean;
 	    swipeEnabled: boolean;
 	    swipeLeftAction: string;
 	    swipeRightAction: string;
@@ -1663,6 +1664,7 @@ export namespace desktop {
 	        this.flagColorSync = source["flagColorSync"];
 	        this.showOfflineIndicator = source["showOfflineIndicator"];
 	        this.showUnsyncedFolder = source["showUnsyncedFolder"];
+	        this.restoreTabs = source["restoreTabs"];
 	        this.swipeEnabled = source["swipeEnabled"];
 	        this.swipeLeftAction = source["swipeLeftAction"];
 	        this.swipeRightAction = source["swipeRightAction"];

@@ -48,6 +48,7 @@ const defaults: UIPrefs = {
   flagColorSync: false,
   showOfflineIndicator: true,
   showUnsyncedFolder: true,
+  restoreTabs: false,
   swipeEnabled: true,
   swipeLeftAction: 'delete',
   swipeRightAction: 'unread',
@@ -266,6 +267,12 @@ export function setShowOfflineIndicator(value: boolean): void {
 export function setShowUnsyncedFolder(value: boolean): void {
   prefs.update((p) => ({ ...p, showUnsyncedFolder: value }))
   void setSetting(SettingKeys.showUnsyncedFolder, String(value))
+}
+
+// setRestoreTabs toggles bringing the reading-pane tabs back at launch.
+export function setRestoreTabs(value: boolean): void {
+  prefs.update((p) => ({ ...p, restoreTabs: value }))
+  void setSetting(SettingKeys.restoreTabs, String(value))
 }
 
 // setSwipeEnabled toggles trackpad swipe gestures on message rows.

@@ -27,6 +27,7 @@
     IconFolderSymlink,
     IconStar,
     IconStarFilled,
+    IconLayoutColumns,
   } from '@tabler/icons-svelte'
   import { selection, searchQuery, openMessageId, openMessage } from '../../stores/selection'
   import {
@@ -62,6 +63,7 @@
   import { recordDeleted } from '../../stores/undodelete'
   import { recordArchived } from '../../stores/undoarchive'
   import { openContextMenu, type MenuEntry } from '../../stores/contextmenu'
+  import { openInTab } from '../../stores/tabs'
   import { errorMessage, toastError } from '../../stores/toast'
   import { isVIPAddress } from '../../stores/vip'
   import type { Selection, MessageSummary, SwipeAction, EditorMode } from '../../lib/types'
@@ -451,6 +453,7 @@
     }
     const entries: MenuEntry[] = [
       { label: $t('messageList.menu.open'), icon: IconMail, action: () => open(items.indexOf(item)) },
+      { label: $t('messageList.menu.openInTab'), icon: IconLayoutColumns, action: () => openInTab(item.id, item.subject) },
       { label: $t('action.reply'), icon: IconArrowBackUp, action: () => void replyTo(item, false) },
       { label: $t('shortcut.replyAll'), icon: IconArrowBackUp, action: () => void replyTo(item, true) },
       { label: $t('action.forward'), icon: IconArrowForwardUp, action: () => void forward(item) },
@@ -475,6 +478,16 @@
       { label: $t('action.delete'), icon: IconTrash, danger: true, action: () => void remove(item) },
     ]
     openContextMenu(event.clientX, event.clientY, entries)
+  }
+
+  // middle-click opens a message in a tab, the way it opens a link in a browser.
+  // auxclick rather than mousedown, so the platform's autoscroll never starts.
+  function onRowAux(event: MouseEvent, item: MessageSummary): void {
+    if (event.button !== 1) {
+      return
+    }
+    event.preventDefault()
+    openInTab(item.id, item.subject)
   }
 
   // onScroll updates the virtualization window and pages in more rows near the
@@ -600,6 +613,7 @@
             selected={item.id === $openMessageId || index === activeIndex}
             checked={$selectedIds.has(item.id)}
             on:click={(e) => onRowClick(e, index)}
+            on:auxclick={(e) => onRowAux(e, item)}
             on:contextmenu={(e) => onContext(e, item)}
             on:swipe={(e) => performSwipe(item, e.detail)}
           />

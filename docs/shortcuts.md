@@ -31,6 +31,23 @@ macOS has no such convention and does not use them.
 
 Reply, reply all, forward, mark read or unread, flag, snooze, archive, delete and download-for-offline ship unbound so they cannot collide with anything. Bind them to whatever you like under **Settings, Shortcuts**; each one acts on the currently open message.
 
+## Reading tabs
+
+Middle-click a message, or right-click it and pick **Open in new tab**, to park it in a tab. The tab bar only exists while a tab does.
+
+| Shortcut | Action |
+| -------- | ------ |
+| ++cmd+1++ | Back to the reading pane |
+| ++cmd+2++ to ++cmd+8++ | Jump to that tab |
+| ++cmd+9++ | Jump to the last tab |
+| ++cmd+w++ | Close the tab you are on |
+
+Middle-clicking a tab closes it too. With no tab open, ++cmd+w++ closes the window as before.
+
+Opening and closing a tab are also actions you can bind a key to under **Settings, Shortcuts**, and they sit in the **View** menu.
+
+By default tabs last until you quit. **Settings, Reading** has a switch to bring them back next launch.
+
 ## Developer overlays
 
 Only in a development run, started with `PELTON_DEV` (what `make run` sets) or `PELTON_DEVTOOLS=1`. A normal build does not bind these keys at all.

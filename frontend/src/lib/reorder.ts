@@ -11,6 +11,10 @@
 // Reordering is always within one container, which is what makes "siblings
 // only" true by construction: there is no cross-container drop to refuse.
 //
+// It works along either axis. Vertical is the default (the sidebar); the
+// reading-pane tab strip passes axis: 'x'. Only the measurements differ, so
+// both share the same drag, placeholder and auto-scroll behaviour.
+//
 // Usage: put the action on the container, mark each direct child with
 // data-reorder-id, and mark the grab handle inside a child with
 // data-reorder-handle. A drag can only start from a handle, so ordinary clicks
@@ -21,6 +25,12 @@ import type { ActionReturn } from 'svelte/action'
 /** Detail of the `reorder` event: the child ids in their new order. */
 export interface ReorderDetail {
   ids: string[]
+}
+
+/** Options for the action. */
+export interface ReorderOptions {
+  /** Which way the items are laid out. Defaults to vertical. */
+  axis?: 'x' | 'y'
 }
 
 /** The events the action adds to the element it is used on. */
@@ -42,24 +52,37 @@ export const reorderIdAttr = 'data-reorder-id'
 /** Attribute marking the grab handle inside an item. */
 export const reorderHandleAttr = 'data-reorder-handle'
 
-// nearestScroller finds the ancestor that actually scrolls, so a drag near the
-// edge of a long folder list can pull the sidebar along with it.
-function nearestScroller(el: HTMLElement): HTMLElement | null {
-  for (let node = el.parentElement; node; node = node.parentElement) {
-    const overflow = getComputedStyle(node).overflowY
-    if ((overflow === 'auto' || overflow === 'scroll') && node.scrollHeight > node.clientHeight) {
+// nearestScroller finds the element that actually scrolls along the drag axis,
+// so a drag near the edge of a long folder list, or a tab strip wider than the
+// pane, can pull it along. The container itself counts: a tab strip scrolls
+// itself rather than delegating to an ancestor.
+function nearestScroller(el: HTMLElement, horizontal: boolean): HTMLElement | null {
+  for (let node: HTMLElement | null = el; node; node = node.parentElement) {
+    const style = getComputedStyle(node)
+    const overflow = horizontal ? style.overflowX : style.overflowY
+    const scrolls = horizontal
+      ? node.scrollWidth > node.clientWidth
+      : node.scrollHeight > node.clientHeight
+    if ((overflow === 'auto' || overflow === 'scroll') && scrolls) {
       return node
     }
   }
   return null
 }
 
-// newPlaceholder builds the gap that opens between rows at the drop position.
-// It is a plain list element, so it cannot land on top of a row.
-function newPlaceholder(): HTMLDivElement {
+// newPlaceholder builds the gap that opens between items at the drop position.
+// It is a plain list element, so it cannot land on top of an item.
+function newPlaceholder(horizontal: boolean): HTMLDivElement {
   const el = document.createElement('div')
-  el.style.height = '2px'
-  el.style.margin = '2px var(--space-2)'
+  if (horizontal) {
+    el.style.width = '2px'
+    el.style.margin = 'var(--space-1) 2px'
+    el.style.alignSelf = 'stretch'
+  } else {
+    el.style.height = '2px'
+    el.style.margin = '2px var(--space-2)'
+  }
+  el.style.flex = '0 0 auto'
   el.style.borderRadius = '1px'
   el.style.background = 'var(--accent)'
   el.style.pointerEvents = 'none'
@@ -71,15 +94,24 @@ function newPlaceholder(): HTMLDivElement {
  * `reorderstart` when a drag begins, `reorderend` when it ends either way, and
  * `reorder` with a {@link ReorderDetail} only when the order actually changed.
  */
-export function reorder(node: HTMLElement): ActionReturn<undefined, ReorderAttributes> {
+export function reorder(
+  node: HTMLElement,
+  options: ReorderOptions = {},
+): ActionReturn<ReorderOptions | undefined, ReorderAttributes> {
+  const horizontal = options.axis === 'x'
+  // the pointer coordinate along the drag axis, and the item edges to compare
+  // it against. Everything else is the same either way.
+  const along = (event: MouseEvent): number => (horizontal ? event.clientX : event.clientY)
+  const midpoint = (rect: DOMRect): number => (horizontal ? rect.left + rect.width / 2 : rect.top + rect.height / 2)
+
   let dragged: HTMLElement | null = null
-  let startY = 0
+  let start = 0
   let active = false
   let placeholder: HTMLDivElement | null = null
   let dropIndex = -1
   let scroller: HTMLElement | null = null
   let scrollFrame = 0
-  let pointerY = 0
+  let pointer = 0
 
   // only the real items, so the placeholder never counts as one.
   function items(): HTMLElement[] {
@@ -106,9 +138,9 @@ export function reorder(node: HTMLElement): ActionReturn<undefined, ReorderAttri
     }
     event.preventDefault()
     dragged = item
-    startY = event.clientY
-    pointerY = event.clientY
-    scroller = nearestScroller(node)
+    start = along(event)
+    pointer = along(event)
+    scroller = nearestScroller(node, horizontal)
     window.addEventListener('mousemove', onMouseMove)
     window.addEventListener('mouseup', onMouseUp)
     window.addEventListener('keydown', onKeyDown)
@@ -119,17 +151,16 @@ export function reorder(node: HTMLElement): ActionReturn<undefined, ReorderAttri
     if (dragged) {
       dragged.style.opacity = '0.4'
     }
-    placeholder = newPlaceholder()
+    placeholder = newPlaceholder(horizontal)
     node.dispatchEvent(new CustomEvent('reorderstart'))
   }
 
-  // dropIndexFor counts how many rows sit above the pointer, which is the index
-  // the dragged row would take.
-  function dropIndexFor(clientY: number, list: HTMLElement[]): number {
+  // dropIndexFor counts how many items sit before the pointer, which is the
+  // index the dragged item would take.
+  function dropIndexFor(at: number, list: HTMLElement[]): number {
     let index = 0
     for (const el of list) {
-      const rect = el.getBoundingClientRect()
-      if (clientY < rect.top + rect.height / 2) {
+      if (at < midpoint(el.getBoundingClientRect())) {
         break
       }
       index++
@@ -150,7 +181,7 @@ export function reorder(node: HTMLElement): ActionReturn<undefined, ReorderAttri
     if (list.length === 0) {
       return
     }
-    const index = dropIndexFor(pointerY, list)
+    const index = dropIndexFor(pointer, list)
     dropIndex = index
     const from = list.indexOf(dragged)
     // dropping back into its own slot changes nothing, so show no gap at all
@@ -162,8 +193,8 @@ export function reorder(node: HTMLElement): ActionReturn<undefined, ReorderAttri
   }
 
   function onMouseMove(event: MouseEvent): void {
-    pointerY = event.clientY
-    if (!active && Math.abs(event.clientY - startY) < dragThreshold) {
+    pointer = along(event)
+    if (!active && Math.abs(pointer - start) < dragThreshold) {
       return
     }
     if (!active) {
@@ -183,14 +214,20 @@ export function reorder(node: HTMLElement): ActionReturn<undefined, ReorderAttri
         return
       }
       const rect = scroller.getBoundingClientRect()
+      const near = horizontal ? rect.left : rect.top
+      const far = horizontal ? rect.right : rect.bottom
       let delta = 0
-      if (pointerY < rect.top + autoScrollMargin) {
+      if (pointer < near + autoScrollMargin) {
         delta = -autoScrollSpeed
-      } else if (pointerY > rect.bottom - autoScrollMargin) {
+      } else if (pointer > far - autoScrollMargin) {
         delta = autoScrollSpeed
       }
       if (delta !== 0) {
-        scroller.scrollTop += delta
+        if (horizontal) {
+          scroller.scrollLeft += delta
+        } else {
+          scroller.scrollTop += delta
+        }
         update()
         scrollFrame = requestAnimationFrame(step)
       }

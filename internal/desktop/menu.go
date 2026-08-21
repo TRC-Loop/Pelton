@@ -111,6 +111,11 @@ func (a *App) buildMenu() *menu.Menu {
 		a.addFullscreenItem(viewMenu, s)
 		viewMenu.AddSeparator()
 		viewMenu.AddText(s.lowPowerMode, nil, a.menuAction("toggle-low-power"))
+		// reading-pane tabs. No accelerators: they ship unbound so the user
+		// picks their own under Settings, Shortcuts.
+		viewMenu.AddSeparator()
+		viewMenu.AddText(s.openInTab, nil, a.menuAction("open-in-tab"))
+		viewMenu.AddText(s.closeTab, nil, a.menuAction("close-tab"))
 	}
 
 	// the standard edit menu gives copy/paste/select-all their native bindings,

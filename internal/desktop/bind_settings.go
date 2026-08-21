@@ -56,6 +56,7 @@ const (
 	settingFlagColorSync       = "flag_color_sync"
 	settingShowOffline         = "show_offline_indicator"
 	settingShowUnsyncedFolder  = "show_unsynced_folder"
+	settingRestoreTabs         = "restore_reading_tabs"
 	settingSwipeEnabled        = "swipe_enabled"
 	settingSwipeLeft           = "swipe_left_action"
 	settingSwipeRight          = "swipe_right_action"
@@ -240,6 +241,10 @@ type UIPrefsDTO struct {
 	// ShowUnsyncedFolder marks folders the user excluded from sync in the
 	// sidebar, so a folder that stopped receiving new mail says why.
 	ShowUnsyncedFolder bool `json:"showUnsyncedFolder"`
+	// RestoreTabs brings back the reading-pane tabs that were open at quit.
+	// Off by default: a tab is a temporary place to park a message, and most
+	// of them are finished with by the time the app closes.
+	RestoreTabs bool `json:"restoreTabs"`
 	// Swipe gestures on message rows (trackpad only). SwipeEnabled turns them on;
 	// SwipeLeftAction/SwipeRightAction pick what each direction does
 	// (delete, unread, read, flag, archive, snooze, none).
@@ -384,6 +389,7 @@ func (a *App) GetUIPrefs() (UIPrefsDTO, error) {
 		FlagColorSync:              a.boolSetting(settingFlagColorSync, false),
 		ShowOfflineIndicator:       a.boolSetting(settingShowOffline, true),
 		ShowUnsyncedFolder:         a.boolSetting(settingShowUnsyncedFolder, true),
+		RestoreTabs:                a.boolSetting(settingRestoreTabs, false),
 		SwipeEnabled:               a.boolSetting(settingSwipeEnabled, true),
 		SwipeLeftAction:            a.stringSetting(settingSwipeLeft, "delete"),
 		SwipeRightAction:           a.stringSetting(settingSwipeRight, "unread"),
