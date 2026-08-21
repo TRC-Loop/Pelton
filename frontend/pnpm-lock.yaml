@@ -47,6 +47,9 @@ importers:
       codemirror:
         specifier: ^6.0.2
         version: 6.0.2
+      flag-icons:
+        specifier: ^7.5.0
+        version: 7.5.0
       marked:
         specifier: ^18.0.9
         version: 18.0.9
@@ -455,6 +458,9 @@ packages:
     peerDependenciesMeta:
       picomatch:
         optional: true
+
+  flag-icons@7.5.0:
+    resolution: {integrity: sha512-kd+MNXviFIg5hijH766tt+3x76ele1AXlo4zDdCxIvqWZhKt4T83bOtxUOOMlTx/EcFdUMH5yvQgYlFh1EqqFg==}
 
   fsevents@2.3.3:
     resolution: {integrity: sha512-5xoDfX+fL7faATnagmWPpbFtwh/R77WmMMqqHGS65C3vvB0YHrgF+B1YmZ3441tMj5n63k0212XNoJwzlhffQw==}
@@ -1112,6 +1118,8 @@ snapshots:
   fdir@6.5.0(picomatch@4.0.5):
     optionalDependencies:
       picomatch: 4.0.5
+
+  flag-icons@7.5.0: {}
 
   fsevents@2.3.3:
     optional: true

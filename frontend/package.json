@@ -37,6 +37,7 @@
     "@tiptap/pm": "^3.29.2",
     "@tiptap/starter-kit": "^3.29.2",
     "codemirror": "^6.0.2",
+    "flag-icons": "^7.5.0",
     "marked": "^18.0.9",
     "svelte-dnd-action": "^0.9.78"
   },
