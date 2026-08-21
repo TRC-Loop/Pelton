@@ -18,4 +18,11 @@ export default defineConfig({
       'tabler-nodes-outline': tablerNodesOutline,
     },
   },
+  build: {
+    // the flag set is globbed whole so a new locale needs no asset work, and
+    // most of its svgs are small enough that vite would inline every one of
+    // them into the picker's chunk. They stay files, so only the handful
+    // actually rendered is ever read.
+    assetsInlineLimit: (file) => (file.includes('flag-icons/flags/') ? false : undefined),
+  },
 })
