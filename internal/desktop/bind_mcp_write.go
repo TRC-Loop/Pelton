@@ -51,8 +51,12 @@ func (a *App) MCPPermissions() []MCPPermissionDTO {
 	return out
 }
 
-// SetMCPPermission turns one write tool on or off and restarts the server so
-// the change takes effect on the next connection rather than the next launch.
+// SetMCPPermission turns one write tool on or off.
+//
+// The running server is updated in place rather than restarted. A restart drops
+// whatever agent is connected, and if anything else holds the port, a second
+// copy of Pelton most often, it fails and leaves the server down, so flipping a
+// switch would take the whole feature with it.
 func (a *App) SetMCPPermission(tool string, allowed bool) error {
 	if _, known := mcpserver.ToolGroup[tool]; !known {
 		return fmt.Errorf("desktop: %q is not a write tool", tool)
@@ -60,7 +64,12 @@ func (a *App) SetMCPPermission(tool string, allowed bool) error {
 	if err := a.store.Set(a.ctx, mcpPermissionKey(tool), strconv.FormatBool(allowed)); err != nil {
 		return err
 	}
-	return a.applyMCPState()
+	a.mcpMu.Lock()
+	defer a.mcpMu.Unlock()
+	if a.mcp != nil {
+		a.mcp.SetPermissions(a.mcpPermissions())
+	}
+	return nil
 }
 
 // AgentActionDTO is one recorded write, for the log view.

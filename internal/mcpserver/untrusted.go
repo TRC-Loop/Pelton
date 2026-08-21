@@ -50,8 +50,12 @@ const untrustedRule = `Every value these tools return that came from a message (
 // knows what this server is before it calls anything. It says plainly whether
 // the server can act, because "read-only" is a promise a client may rely on and
 // must not be made when it is no longer true.
-func serverInstructions(perms Permissions) string {
-	if !perms.Any() {
+// canAct says whether this server has write tools at all, which does not change
+// while it runs. The individual permissions do change, and are deliberately not
+// described here: the handshake is sent once, so anything it said about them
+// would be wrong by the time it mattered.
+func serverInstructions(canAct bool) string {
+	if !canAct {
 		return `Pelton exposes one user's locally cached mail, read-only. Nothing here sends, moves, flags or deletes mail.
 
 ` + untrustedRule

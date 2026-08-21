@@ -51,9 +51,16 @@ type OutgoingMessage struct {
 // capability does not exist and trying something else.
 var ErrToolNotPermitted = errors.New("this action is switched off in Pelton's settings")
 
+// permissionNote is appended to every write tool's description. It says that
+// permission is decided per call rather than naming the current state, which a
+// cached tool list would get wrong.
+const permissionNote = "The user switches each action on or off in Pelton and can change that at any time, " +
+	"so whether this is permitted is decided when you call it: a call that returns without an error did what it says, " +
+	"and one that is not permitted fails and says so. Never assume from this description either way."
+
 // registerWriteTools adds the mutating tool set. It is a no-op when the caller
 // supplied no Writer, which is what keeps a read-only build read-only.
-func registerWriteTools(srv *mcp.Server, w Writer, perms Permissions) {
+func registerWriteTools(srv *mcp.Server, w Writer, perms func() Permissions) {
 	if w == nil {
 		return
 	}
@@ -78,7 +85,8 @@ func registerWriteTools(srv *mcp.Server, w Writer, perms Permissions) {
 			return done(w.Flag(ctx, in.ID, in.Flagged))
 		})
 
-	addWrite(srv, perms, ToolSetFlagColor, "Set a message's colour label, or clear it with 0.",
+	addWrite(srv, perms, ToolSetFlagColor,
+		"Set a message's colour label. 1 red, 2 orange, 3 yellow, 4 green, 5 teal, 6 blue, 7 purple, 8 pink, 0 clears it.",
 		func(ctx context.Context, in colorInput) (any, error) {
 			return done(w.SetFlagColor(ctx, in.ID, in.Color))
 		})
@@ -112,19 +120,19 @@ func registerWriteTools(srv *mcp.Server, w Writer, perms Permissions) {
 		})
 }
 
-// addWrite registers one write tool behind its permission. The permission is
-// read at registration because the server is rebuilt whenever a setting
-// changes, so the closure cannot go stale.
-func addWrite[In any](srv *mcp.Server, perms Permissions, name, description string, run func(context.Context, In) (any, error)) {
-	allowed := perms.Allows(name)
-	if !allowed {
-		description += " (Currently switched off in Pelton's settings.)"
-	}
+// addWrite registers one write tool behind its permission.
+//
+// The permission is read on every call, not captured here, so switching one on
+// or off reaches an agent that is already connected. The description says
+// nothing about the current state either: clients cache the tool list, so a
+// description naming it would survive the change and then contradict what the
+// call actually does.
+func addWrite[In any](srv *mcp.Server, perms func() Permissions, name, description string, run func(context.Context, In) (any, error)) {
 	mcp.AddTool(srv, &mcp.Tool{
 		Name:        name,
-		Description: description,
+		Description: description + " " + permissionNote,
 	}, func(ctx context.Context, _ *mcp.CallToolRequest, in In) (*mcp.CallToolResult, any, error) {
-		if !allowed {
+		if !perms().Allows(name) {
 			return nil, nil, fmt.Errorf("%s: %w", name, ErrToolNotPermitted)
 		}
 		out, err := run(ctx, in)
@@ -174,7 +182,7 @@ type flagInput struct {
 
 type colorInput struct {
 	ID    int64 `json:"id" jsonschema:"the message id"`
-	Color int   `json:"color" jsonschema:"the colour label, or 0 to clear it"`
+	Color int   `json:"color" jsonschema:"1 red, 2 orange, 3 yellow, 4 green, 5 teal, 6 blue, 7 purple, 8 pink, or 0 to clear the label"`
 }
 
 type sendInput struct {

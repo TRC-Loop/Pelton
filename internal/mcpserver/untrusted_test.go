@@ -194,7 +194,7 @@ func TestToolDescriptionsWarn(t *testing.T) {
 // TestServerInstructionsStateThePolicy: the handshake is the one place a client
 // hears the rule before any mail reaches it.
 func TestServerInstructionsStateThePolicy(t *testing.T) {
-	instructions := serverInstructions(nil)
+	instructions := serverInstructions(false)
 	for _, want := range []string{"read-only", "untrusted", metaUntrusted} {
 		if !strings.Contains(instructions, want) {
 			t.Errorf("server instructions do not mention %q", want)
@@ -202,10 +202,11 @@ func TestServerInstructionsStateThePolicy(t *testing.T) {
 	}
 }
 
-// A server that can act must not still call itself read-only: a client may rely
-// on that word, and it would be a promise the server no longer keeps.
-func TestServerInstructionsDropReadOnlyWhenWritesAreOn(t *testing.T) {
-	instructions := serverInstructions(Permissions{ToolMarkRead: true})
+// A server that carries write tools must not still call itself read-only: a
+// client may rely on that word, and it would be a promise the server no longer
+// keeps.
+func TestServerInstructionsDropReadOnlyWhenWritesExist(t *testing.T) {
+	instructions := serverInstructions(true)
 	if strings.Contains(instructions, "read-only") {
 		t.Error("instructions still claim read-only with a write tool enabled")
 	}
