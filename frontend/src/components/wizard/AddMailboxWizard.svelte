@@ -6,7 +6,7 @@
   // user opens it, so its cost is not paid at startup.
   import { createEventDispatcher, onMount } from 'svelte'
   import { get } from 'svelte/store'
-  import { IconX, IconArrowLeft, IconCheck, IconArrowRight, IconMailbox, IconPlus } from '@tabler/icons-svelte'
+  import { IconX, IconArrowLeft, IconCheck, IconArrowRight, IconMailbox, IconPlus, IconInfoCircle } from '@tabler/icons-svelte'
   import WizardProviders from './WizardProviders.svelte'
   import Spinner from '../common/Spinner.svelte'
   import { BrowserOpenURL } from '../../../wailsjs/runtime/runtime'
@@ -344,8 +344,18 @@
           <input type="email" bind:value={draft.email} on:blur={maybeDiscover} placeholder={$t('wizard.field.emailPlaceholder')} />
         </label>
         <label class="field">
-          <span>{$t('wizard.field.displayName')}</span>
-          <input type="text" bind:value={draft.displayName} placeholder={$t('wizard.field.displayNamePlaceholder')} />
+          <span>
+            {$t('wizard.field.displayName')}
+            <span class="info" title={$t('mailboxes.displayNameHint')} aria-label={$t('mailboxes.displayNameHint')}>
+              <IconInfoCircle size={13} stroke={1.7} />
+            </span>
+          </span>
+          <input
+            type="text"
+            bind:value={draft.displayName}
+            placeholder={$t('wizard.field.displayNamePlaceholder')}
+            title={$t('mailboxes.displayNameHint')}
+          />
         </label>
         <label class="field">
           <span>{$t('wizard.field.password')}</span>
@@ -431,8 +441,18 @@
           <input type="email" bind:value={draft.email} placeholder={$t('wizard.field.emailPlaceholder')} />
         </label>
         <label class="field">
-          <span>{$t('wizard.field.displayName')}</span>
-          <input type="text" bind:value={draft.displayName} placeholder={$t('wizard.field.displayNamePlaceholder')} />
+          <span>
+            {$t('wizard.field.displayName')}
+            <span class="info" title={$t('mailboxes.displayNameHint')} aria-label={$t('mailboxes.displayNameHint')}>
+              <IconInfoCircle size={13} stroke={1.7} />
+            </span>
+          </span>
+          <input
+            type="text"
+            bind:value={draft.displayName}
+            placeholder={$t('wizard.field.displayNamePlaceholder')}
+            title={$t('mailboxes.displayNameHint')}
+          />
         </label>
         <label class="field">
           <span>{$t('wizard.field.oauthClientId')}</span>
@@ -816,6 +836,12 @@
   .seg button.on {
     background: var(--accent);
     color: var(--accent-fg);
+  }
+
+  .info {
+    display: inline-flex;
+    vertical-align: -2px;
+    color: var(--text-tertiary);
   }
 
   .adv-hint {

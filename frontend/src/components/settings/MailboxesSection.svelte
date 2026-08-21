@@ -5,7 +5,7 @@
   // through an inline confirm. Email is not editable here, it identifies the
   // account; changing it is a re-add.
   import { onMount } from 'svelte'
-  import { IconPencil, IconTrash, IconCheck, IconPlus, IconAlertTriangle } from '@tabler/icons-svelte'
+  import { IconPencil, IconTrash, IconCheck, IconPlus, IconAlertTriangle, IconChevronRight, IconInfoCircle } from '@tabler/icons-svelte'
   import ToggleSwitch from '../common/ToggleSwitch.svelte'
   import Modal from '../common/Modal.svelte'
   import {
@@ -39,8 +39,8 @@
   // the sample file name the export settings show, rendered by the backend so
   // the ui never has a second copy of the naming rules.
   let namePreview = ''
-  // the archiving and encryption block, collapsed until asked for: it is two
-  // features deep and most edits here are a server or a password.
+  // the archiving and encryption settings, over the editor rather than in it:
+  // they are two features deep and most edits here are a server or a password.
   let showAdvanced = false
   // the draft as it opened, so closing knows whether there is anything to lose.
   let opened = ''
@@ -288,8 +288,13 @@
   <Modal title={draft.email} hint={$t('mailboxes.serverChangeHint')} size="large" {dirty} on:close={cancelEdit}>
     <div class="form">
       <label class="field">
-        <span>{$t('wizard.field.displayName')}</span>
-        <input type="text" bind:value={draft.displayName} />
+        <span>
+          {$t('wizard.field.displayName')}
+          <span class="info" title={$t('mailboxes.displayNameHint')} aria-label={$t('mailboxes.displayNameHint')}>
+            <IconInfoCircle size={13} stroke={1.7} />
+          </span>
+        </span>
+        <input type="text" bind:value={draft.displayName} title={$t('mailboxes.displayNameHint')} />
       </label>
       <label class="field">
         <span>{$t('wizard.field.username')}</span>
@@ -340,12 +345,27 @@
 
     </div>
 
-    <button type="button" class="disclosure" on:click={() => (showAdvanced = !showAdvanced)}>
-      {showAdvanced ? $t('wizard.advanced.hide') : $t('wizard.advanced.show')} {$t('mailboxes.advanced.label')}
+    <button type="button" class="more" on:click={() => (showAdvanced = true)}>
+      {$t('mailboxes.advanced.title')}
+      <IconChevronRight size={15} stroke={1.7} />
     </button>
+    <svelte:fragment slot="footer">
+      <button type="button" class="ghost" on:click={cancelEdit}>{$t('mailboxes.cancel')}</button>
+      <button type="button" class="primary" disabled={saving} on:click={save}>
+        <IconCheck size={14} stroke={2} />
+        {saving ? $t('mailboxes.saving') : $t('mailboxes.save')}
+      </button>
+    </svelte:fragment>
+  </Modal>
 
-    {#if showAdvanced}
-      <div class="form advanced">
+  {#if showAdvanced}
+    <Modal
+      title={$t('mailboxes.advanced.title')}
+      hint={$t('mailboxes.advanced.hint')}
+      size="medium"
+      on:close={() => (showAdvanced = false)}
+    >
+      <div class="form">
         <div class="toggle">
           <span>{$t('mailboxes.export.toggle')}</span>
           <ToggleSwitch
@@ -400,16 +420,12 @@
           <p class="server-hint preview">{$t('mailboxes.export.preview')} <code>{namePreview}</code></p>
         {/if}
       </div>
-    {/if}
 
-    <svelte:fragment slot="footer">
-      <button type="button" class="ghost" on:click={cancelEdit}>{$t('mailboxes.cancel')}</button>
-      <button type="button" class="primary" disabled={saving} on:click={save}>
-        <IconCheck size={14} stroke={2} />
-        {saving ? $t('mailboxes.saving') : $t('mailboxes.save')}
-      </button>
-    </svelte:fragment>
-  </Modal>
+      <svelte:fragment slot="footer">
+        <button type="button" class="primary" on:click={() => (showAdvanced = false)}>{$t('modal.close')}</button>
+      </svelte:fragment>
+    </Modal>
+  {/if}
 {/if}
 
 {#if wizardOpen}
@@ -539,25 +555,30 @@
     color: var(--text-secondary);
   }
 
-  /* a lightweight text toggle, the same one the add-mailbox wizard uses. */
-  .disclosure {
-    align-self: flex-start;
-    margin: var(--space-3) 0 0;
-    padding: var(--space-1) 0;
-    border: none;
-    background: transparent;
-    color: var(--accent);
+  /* the way into the second modal: a row, so it reads as somewhere to go
+     rather than another setting. */
+  .more {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    margin-top: var(--space-3);
+    padding: var(--space-2) var(--space-3);
+    border: var(--hairline) solid var(--border-default);
+    border-radius: var(--radius-control);
+    background: var(--surface-raised);
+    color: var(--text-primary);
     font-size: var(--fz-label);
     cursor: var(--cursor-action);
   }
-  .disclosure:hover {
-    text-decoration: underline;
+  .more:hover {
+    background: var(--surface-hover);
   }
 
-  .advanced {
-    margin-top: var(--space-3);
-    padding-top: var(--space-3);
-    border-top: var(--hairline) solid var(--border-subtle);
+  .info {
+    display: inline-flex;
+    vertical-align: -2px;
+    color: var(--text-tertiary);
   }
 
   .form {
