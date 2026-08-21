@@ -16,6 +16,21 @@ No. There is no telemetry and nothing to opt out of. The complete list of networ
 
 Nothing else, ever. Themes with remote CSS references are flagged at import for exactly this reason.
 
+## A mail shows as gibberish, and it looks fine in another client
+
+Some mail does not say which encoding its text uses, and some names one no
+table knows. Pelton works it out from the text itself, the same way other
+clients do, and marks the message with a small badge in the reading pane so you
+know it was a guess.
+
+If your mail keeps coming from one system that gets this wrong in the same way,
+you can pick a fixed encoding under **Settings, Display, Text encoding
+fallback** instead of leaving it on detection.
+
+Mail that was already in your cache before this existed was stored broken and
+cannot be repaired locally, so Pelton fetches those messages from your server
+again, a few per sync.
+
 ## How do I back up my accounts and settings?
 
 **Settings, Import / Export**. The export is a single JSON file with your settings, mailboxes and signatures. Mail credentials can be included too, encrypted with a password you choose. The cached mail itself is not part of the export; it re-syncs from your server after an import.

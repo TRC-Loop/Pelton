@@ -3,6 +3,7 @@ package rfc822
 import (
 	"strings"
 	"testing"
+	"unicode/utf8"
 )
 
 // multipart/related inside multipart/mixed is the shape a real message with an
@@ -179,5 +180,85 @@ func TestParseBodyWithoutAuthenticationHeaders(t *testing.T) {
 	}
 	if len(msg.AuthResults) != 0 || msg.ReplyTo != "" {
 		t.Errorf("AuthResults = %v, ReplyTo = %q, want both empty", msg.AuthResults, msg.ReplyTo)
+	}
+}
+
+// the mojibake bug (#311). Mail that declares no charset, or one nothing knows,
+// used to reach storage as the sender's raw bytes and be rendered as utf-8
+// later. Every case here has to come out as valid utf-8, and the ones where the
+// original text is recoverable have to come out as the original text.
+func TestParseDecodesTextThatDeclaresNoUsableCharset(t *testing.T) {
+	// "Grüße aus Köln" in latin-1: long enough for the detector to have
+	// something to work with, which short strings do not give it.
+	const latin1Body = "Gr\xfc\xdfe aus K\xf6ln. Der Kaffee war gr\xf6\xdfer als \xfcblich und die T\xfcr stand offen."
+	const want = "Grüße aus Köln. Der Kaffee war größer als üblich und die Tür stand offen."
+
+	cases := []struct {
+		name        string
+		contentType string
+		body        string
+		want        string
+		wantGuess   bool
+	}{
+		{"declared latin-1", "text/plain; charset=iso-8859-1", latin1Body, want, false},
+		{"declared windows-1252", "text/plain; charset=windows-1252", latin1Body, want, false},
+		{"no charset at all", "text/plain", latin1Body, want, true},
+		{"charset nothing knows", "text/plain; charset=x-nonsense", latin1Body, want, true},
+		{"us-ascii with high bytes", "text/plain; charset=us-ascii", latin1Body, want, true},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			raw := "Subject: hi\r\nFrom: a@example.com\r\n" +
+				"Content-Type: " + c.contentType + "\r\n\r\n" + c.body + "\r\n"
+			msg, err := Parse([]byte(raw))
+			if err != nil {
+				t.Fatalf("parse: %v", err)
+			}
+			if !utf8.ValidString(msg.Text) {
+				t.Fatalf("stored body is not valid utf-8: %q", msg.Text)
+			}
+			if got := strings.TrimRight(msg.Text, "\r\n"); got != c.want {
+				t.Errorf("body = %q, want %q", got, c.want)
+			}
+			if guessed := msg.CharsetGuess != ""; guessed != c.wantGuess {
+				t.Errorf("CharsetGuess = %q, guessed = %v, want %v", msg.CharsetGuess, guessed, c.wantGuess)
+			}
+		})
+	}
+}
+
+// an encoded-word naming a charset go's own decoder does not know used to be
+// left in the subject as its raw =?...?= source.
+func TestParseDecodesEncodedWordInAnyCharset(t *testing.T) {
+	cases := []struct {
+		subject string
+		want    string
+	}{
+		{"=?koi8-r?B?8NLJ18XU?=", "Привет"},
+		{"=?UTF-8?B?R3LDvMOfZQ==?=", "Grüße"},
+		{"=?iso-8859-1?Q?Gr=FC=DFe?=", "Grüße"},
+	}
+	for _, c := range cases {
+		raw := "Subject: " + c.subject + "\r\nFrom: a@example.com\r\n\r\nbody\r\n"
+		msg, err := Parse([]byte(raw))
+		if err != nil {
+			t.Fatalf("parse %q: %v", c.subject, err)
+		}
+		if msg.Subject != c.want {
+			t.Errorf("subject %q decoded to %q, want %q", c.subject, msg.Subject, c.want)
+		}
+	}
+}
+
+// a display name in raw 8-bit bytes has no charset of its own to convert by, so
+// it goes the same way as a body rather than reaching the sender column broken.
+func TestParseAddressWithRawHighBytesIsValidUTF8(t *testing.T) {
+	const raw = "Subject: hi\r\nFrom: J\xfcrgen M\xfcller <j@example.com>\r\n\r\nbody\r\n"
+	msg, err := Parse([]byte(raw))
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	if !utf8.ValidString(msg.From) {
+		t.Fatalf("from is not valid utf-8: %q", msg.From)
 	}
 }

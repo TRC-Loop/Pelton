@@ -18,8 +18,8 @@ import (
 	"github.com/emersion/go-message"
 	"github.com/emersion/go-message/mail"
 
-	// registers legacy charset decoders (ISO-8859-*, Windows-125x, ...)
-	_ "github.com/emersion/go-message/charset"
+	// decodes the legacy charsets, and guesses at the ones a message gets wrong
+	"github.com/TRC-Loop/Pelton/internal/charsetguess"
 )
 
 // Message is a parsed message. Text and HTML hold the first body part of each
@@ -46,11 +46,21 @@ type Message struct {
 	// first was added by the receiving server and is the only trustworthy one.
 	ReplyTo     string
 	AuthResults []string
+	// CharsetGuess names the encoding a body part was read as when the message
+	// declared none or declared one nothing knows. Empty for mail that was
+	// right about itself, which is nearly all of it.
+	CharsetGuess string
 	// Header is the message's top-level header, for the fields Pelton reads
 	// only in one place and so does not promote above (a client's own
 	// X- headers, for instance).
 	Header mail.Header
 }
+
+// unnamedGuess marks text that had to be guessed at when the encoding actually
+// used is not known here. The decode happens inside the charset hook, which
+// keeps the mixed-encoding header case right but has no way to report back
+// which table it settled on.
+const unnamedGuess = "detected"
 
 // Attachment holds attachment metadata and its decoded content. ContentID is
 // set for inline cid-referenced parts.
@@ -71,7 +81,8 @@ func Parse(raw []byte) (*Message, error) {
 		return nil, err
 	}
 
-	msg.Subject, _ = mr.Header.Subject()
+	subject, _ := mr.Header.Subject()
+	msg.Subject = charsetguess.Valid(subject)
 	msg.MessageID, _ = mr.Header.MessageID()
 	msg.From = addressList(&mr.Header, "From")
 	msg.To = addressList(&mr.Header, "To")
@@ -134,13 +145,27 @@ func parts(mr *mail.Reader, msg *Message) error {
 			if err != nil {
 				return fmt.Errorf("rfc822: read inline part: %w", err)
 			}
-			contentType, _, _ := header.ContentType()
+			contentType, params, _ := header.ContentType()
+			// a part that named no charset was never converted, so what came
+			// back is whatever the sender wrote. Nothing downstream can tell
+			// the difference later, so it is decided here.
+			text, guessed := charsetguess.Decode(body)
+			if guessed == "" && !charsetguess.Known(params["charset"]) {
+				// the part named something no table knows, so the text above
+				// came back detected rather than converted. Which encoding was
+				// picked is decided inside the decoder and does not travel back
+				// here, so record that it was a guess without naming it.
+				guessed = unnamedGuess
+			}
+			if guessed != "" && msg.CharsetGuess == "" {
+				msg.CharsetGuess = guessed
+			}
 			if strings.EqualFold(contentType, "text/html") {
 				if msg.HTML == "" {
-					msg.HTML = string(body)
+					msg.HTML = text
 				}
 			} else if msg.Text == "" {
-				msg.Text = string(body)
+				msg.Text = text
 			}
 		case *mail.AttachmentHeader:
 			filename, _ := header.Filename()
@@ -187,7 +212,7 @@ func headerValues(h *mail.Header, key string) []string {
 func addressList(h *mail.Header, key string) string {
 	addrs, err := h.AddressList(key)
 	if err != nil {
-		return strings.TrimSpace(h.Get(key))
+		return charsetguess.Valid(strings.TrimSpace(h.Get(key)))
 	}
 	parts := make([]string, 0, len(addrs))
 	for _, a := range addrs {
@@ -200,5 +225,5 @@ func addressList(h *mail.Header, key string) string {
 			parts = append(parts, a.Name)
 		}
 	}
-	return strings.Join(parts, ", ")
+	return charsetguess.Valid(strings.Join(parts, ", "))
 }

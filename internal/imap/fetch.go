@@ -7,6 +7,7 @@ import (
 	"github.com/emersion/go-imap/v2"
 	"github.com/emersion/go-imap/v2/imapclient"
 
+	"github.com/TRC-Loop/Pelton/internal/charsetguess"
 	"github.com/TRC-Loop/Pelton/internal/rfc822"
 )
 
@@ -60,6 +61,10 @@ type Message struct {
 	// nothing downstream can go back for them.
 	ReplyTo     string
 	AuthResults []string
+	// CharsetGuess names what the body was read as when the message declared no
+	// charset or one nothing knows, and is empty for mail that was right about
+	// itself. It is kept so the reader can be told the text was guessed at.
+	CharsetGuess string
 }
 
 // Attachment holds attachment metadata and its decoded content. It is the
@@ -146,7 +151,7 @@ func (c *Client) FetchMessage(uid imap.UID) (*Message, error) {
 	msg := &Message{UID: buf.UID, Flags: buf.Flags, Size: int64(len(raw)), Raw: raw}
 	if buf.Envelope != nil {
 		msg.MessageID = buf.Envelope.MessageID
-		msg.Subject = buf.Envelope.Subject
+		msg.Subject, msg.CharsetGuess = charsetguess.Text(buf.Envelope.Subject)
 		msg.From = formatAddresses(buf.Envelope.From)
 		msg.To = formatAddresses(buf.Envelope.To)
 		msg.Cc = formatAddresses(buf.Envelope.Cc)
@@ -215,7 +220,7 @@ func (c *Client) FetchAllFlags() ([]MessageHeader, error) {
 func headerFromBuffer(b *imapclient.FetchMessageBuffer) MessageHeader {
 	h := MessageHeader{SeqNum: b.SeqNum, UID: b.UID, Flags: b.Flags}
 	if b.Envelope != nil {
-		h.Subject = b.Envelope.Subject
+		h.Subject, _ = charsetguess.Text(b.Envelope.Subject)
 		h.From = formatAddresses(b.Envelope.From)
 		h.To = formatAddresses(b.Envelope.To)
 		h.Date = b.Envelope.Date
@@ -233,6 +238,9 @@ func parseBody(raw []byte, msg *Message) error {
 	}
 	msg.Text = parsed.Text
 	msg.HTML = parsed.HTML
+	if msg.CharsetGuess == "" {
+		msg.CharsetGuess = parsed.CharsetGuess
+	}
 	msg.Attachments = parsed.Attachments
 	msg.ListUnsubscribe = parsed.ListUnsubscribe
 	msg.ListUnsubscribePost = parsed.ListUnsubscribePost

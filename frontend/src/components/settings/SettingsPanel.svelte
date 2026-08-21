@@ -197,6 +197,7 @@
     { cat: 'display', label: $t('settingsPanel.label.bodyFont'), kw: 'font' },
     { cat: 'display', label: $t('settingsPanel.label.uiFont'), kw: 'font interface' },
     { cat: 'display', label: $t('settingsPanel.label.monoFont'), kw: 'font monospace code' },
+    { cat: 'display', label: $t('settingsPanel.label.charsetFallback'), kw: 'encoding charset unicode gibberish mojibake utf8 latin' },
     { cat: 'display', label: $t('settings.lockPanes'), kw: 'panes layout lock' },
     { cat: 'composing', label: $t('settingsPanel.label.defaultEditor'), kw: 'editor html plain markdown' },
     { cat: 'composing', label: $t('settingsPanel.toggle.autocomplete'), kw: 'autocomplete recipients' },
@@ -365,7 +366,7 @@
   }
 
   import { bodyFonts, uiFonts, monoFonts } from '../../lib/fonts'
-  import { listSystemFonts } from '../../lib/api'
+  import { listSystemFonts, getSetting, setSetting } from '../../lib/api'
 
   $: bodyFontOptions = bodyFonts.map((f) => ({ key: f.key, label: f.label ?? $t(f.labelKey ?? '') }))
   $: uiFontOptions = uiFonts.map((f) => ({ key: f.key, label: f.label ?? $t(f.labelKey ?? '') }))
@@ -379,6 +380,43 @@
       .then((fonts) => (systemFonts = fonts))
       .catch(() => (systemFonts = []))
   })
+
+  // how mail that names no encoding, or names one nothing knows, is read. It is
+  // a parser setting rather than a ui preference, so it is read from and written
+  // to the store directly. 'auto' detects from the bytes and is what almost
+  // everyone should leave it on; the named encodings are for someone who
+  // receives mail from one system that is always wrong in the same way.
+  const charsetKey = 'charset_fallback'
+  const charsetOptions = [
+    'windows-1252',
+    'iso-8859-2',
+    'iso-8859-7',
+    'iso-8859-9',
+    'koi8-r',
+    'windows-1251',
+    'shift_jis',
+    'euc-jp',
+    'gb18030',
+    'big5',
+    'euc-kr',
+    'utf-8',
+  ]
+  let charsetFallback = 'auto'
+  onMount(async () => {
+    try {
+      const stored = await getSetting(charsetKey)
+      if (stored.found && stored.value !== '') {
+        charsetFallback = stored.value
+      }
+    } catch {
+      // the store is not open yet; the default is what the parser uses anyway.
+    }
+  })
+
+  function onCharsetFallback(event: Event): void {
+    charsetFallback = (event.currentTarget as HTMLSelectElement).value
+    void setSetting(charsetKey, charsetFallback)
+  }
 
   // select handlers (the cast lives in script; inline ts casts break the parser).
   // the startup target is stored as an opaque string ('last', 'view:<key>' or
@@ -1327,6 +1365,16 @@
             </select>
           </div>
           <p class="hint">{$t('settingsPanel.hint.monoFont')}</p>
+          <div class="row">
+            <span class="row-label">{$t('settingsPanel.label.charsetFallback')}</span>
+            <select class="select" value={charsetFallback} on:change={onCharsetFallback}>
+              <option value="auto">{$t('settingsPanel.charset.auto')}</option>
+              {#each charsetOptions as name}
+                <option value={name}>{name}</option>
+              {/each}
+            </select>
+          </div>
+          <p class="hint">{$t('settingsPanel.hint.charsetFallback')}</p>
           <TechToggles />
 
           <h4 class="subhead">{$t('settings.panes')}</h4>

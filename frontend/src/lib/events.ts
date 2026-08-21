@@ -7,6 +7,7 @@ import { EventsOn } from '../../wailsjs/runtime/runtime'
 // event names, matching the go constants exactly.
 export const EventNames = {
   mailNew: 'mail:new',
+  mailRepaired: 'mail:repaired',
   syncProgress: 'sync:progress',
   syncState: 'sync:state',
   outboxChanged: 'outbox:changed',
@@ -23,6 +24,14 @@ export const EventNames = {
 
 // payloads, mirroring the go event structs.
 export interface MailNewEvent {
+  accountId: number
+  folderId: number
+  count: number
+}
+
+// MailRepairedEvent reports messages whose stored text was replaced because it
+// had been cached in an encoding nothing could read.
+export interface MailRepairedEvent {
   accountId: number
   folderId: number
   count: number
@@ -103,6 +112,12 @@ export type Unsubscribe = () => void
 // onMailNew fires when sync or idle pulled new messages.
 export function onMailNew(cb: (e: MailNewEvent) => void): Unsubscribe {
   return EventsOn(EventNames.mailNew, (e: MailNewEvent) => cb(e))
+}
+
+// onMailRepaired fires when a sync rewrote the text of cached messages, so the
+// list and any open message show the fixed text without a reload.
+export function onMailRepaired(cb: (e: MailRepairedEvent) => void): Unsubscribe {
+  return EventsOn(EventNames.mailRepaired, (e: MailRepairedEvent) => cb(e))
 }
 
 // onSyncProgress fires per folder as a sync runs.

@@ -213,6 +213,7 @@ func (im *Importer) storeMessage(ctx context.Context, accountID int64, folder st
 		SizeBytes:           parsed.Size,
 		ListUnsubscribe:     parsed.ListUnsubscribe,
 		ListUnsubscribePost: parsed.ListUnsubscribePost,
+		CharsetGuess:        parsed.CharsetGuess,
 	}
 
 	attachments := make([]storage.IncomingAttachment, 0, len(parsed.Attachments))

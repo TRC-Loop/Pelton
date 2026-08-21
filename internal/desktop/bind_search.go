@@ -114,6 +114,33 @@ func (a *App) indexNewMessages() error {
 	}
 }
 
+// reindexMessages replaces the index entries of messages whose stored text
+// changed after they were first indexed. The incremental pass only ever walks
+// forward from the watermark, so a message repaired in place would otherwise
+// stay searchable by its old broken text.
+func (a *App) reindexMessages(ids []int64) {
+	if a.index == nil || len(ids) == 0 {
+		return
+	}
+	a.searchMu.Lock()
+	defer a.searchMu.Unlock()
+
+	docs := make([]search.Doc, 0, len(ids))
+	for _, id := range ids {
+		m, err := a.store.GetMessage(a.ctx, id)
+		if err != nil {
+			a.log.Error("read repaired message for search index", "id", id, "err", err)
+			continue
+		}
+		doc := toSearchDoc(*m)
+		doc.Body = a.searchBody(*m)
+		docs = append(docs, doc)
+	}
+	if err := a.index.IndexBatch(docs); err != nil {
+		a.log.Error("index repaired messages", "err", err)
+	}
+}
+
 // searchWatermark reads the highest indexed message id, defaulting to 0 (index
 // everything) when unset or unparsable.
 func (a *App) searchWatermark() int64 {

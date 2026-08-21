@@ -208,6 +208,8 @@ export function demoMessage(id: number): MessageDetail {
     bodyHtmlSafe: sharedBodyHtml,
     phishing: { level: 'none' },
     unsubscribe: null,
+    // the demo mail says what encoding it uses, so nothing was guessed.
+    charsetGuess: '',
     // the demo mail is not protected, so there is nothing to decrypt.
     pgpState: '',
     isHtml: true,

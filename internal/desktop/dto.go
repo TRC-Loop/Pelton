@@ -203,6 +203,11 @@ type MessageDetailDTO struct {
 	// Unsubscribe describes the unsubscribe mechanism the message advertises
 	// via its List-Unsubscribe headers, nil when it has none on record.
 	Unsubscribe *UnsubscribeDTO `json:"unsubscribe"`
+	// CharsetGuess names what the text was read as when the message declared no
+	// charset or one nothing knows, and is "detected" when the encoding was
+	// picked but not reported back. Empty for mail that was right about itself,
+	// which is nearly all of it, and the reader is shown nothing then.
+	CharsetGuess string `json:"charsetGuess"`
 }
 
 // TrackingPixelDTO is one remote image the scan thinks exists to report the

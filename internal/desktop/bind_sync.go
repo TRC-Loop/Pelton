@@ -243,6 +243,7 @@ func (a *App) syncFolders(client *pimap.Client, accountID int64) error {
 			a.emit(EventMailNew, MailNewEvent{AccountID: accountID, FolderID: f.ID, Count: res.New})
 			goSafe("announcing new mail", func() { a.notifyNewMail(f, res.NewIDs) })
 		}
+		a.afterRepairs(f, res.RepairedIDs)
 	}
 	a.emit(EventSyncProgress, SyncProgressEvent{
 		AccountID: accountID, Done: len(folders), Total: len(folders),
@@ -291,6 +292,7 @@ func (a *App) syncOneFolder(client *pimap.Client, folder storage.Folder) error {
 	if err != nil {
 		return err
 	}
+	a.afterRepairs(folder, res.RepairedIDs)
 	if res.New > 0 {
 		a.emit(EventMailNew, MailNewEvent{AccountID: folder.AccountID, FolderID: folder.ID, Count: res.New})
 		goSafe("announcing new mail", func() { a.notifyNewMail(folder, res.NewIDs) })
@@ -415,4 +417,19 @@ func (a *App) findTrashFolder(accountID int64) (storage.Folder, bool) {
 		}
 	}
 	return storage.Folder{}, false
+}
+
+// afterRepairs deals with messages whose text was fetched again because what
+// was cached could not be decoded. The list reloads so the reader sees the
+// fixed subject without reopening the folder, and the search index is
+// rewritten for those messages, which the incremental pass would never revisit.
+func (a *App) afterRepairs(folder storage.Folder, ids []int64) {
+	if len(ids) == 0 {
+		return
+	}
+	a.log.Info("repaired cached mail with broken text", "folder", folder.Name, "count", len(ids))
+	a.emit(EventMailRepaired, MailRepairedEvent{
+		AccountID: folder.AccountID, FolderID: folder.ID, Count: len(ids),
+	})
+	goSafe("reindexing repaired mail", func() { a.reindexMessages(ids) })
 }

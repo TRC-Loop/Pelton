@@ -64,7 +64,7 @@
   import { liabilityAccepted } from './lib/liability'
   import { setDemoActive } from './lib/demo'
   import { recordArchived } from './stores/undoarchive'
-  import { onMailNew, onSyncState, onSyncProgress, onOutboxChanged, onMenu, onViewsChanged, onProfileChanged, onMailtoCompose, onAgentProposals, type Unsubscribe, type MailtoDraft } from './lib/events'
+  import { onMailNew, onMailRepaired, onSyncState, onSyncProgress, onOutboxChanged, onMenu, onViewsChanged, onProfileChanged, onMailtoCompose, onAgentProposals, type Unsubscribe, type MailtoDraft } from './lib/events'
   import { loadViews, editingView, closeViewEditor, openViewEditor, views as savedViews } from './stores/views'
   import { selectSavedView } from './stores/selection'
   import { isMac } from './lib/i18n'
@@ -318,6 +318,13 @@
     unsubscribers.push(
       onMailNew(() => {
         void refreshSidebar()
+        void loadList(get(selection))
+      }),
+    )
+    unsubscribers.push(
+      onMailRepaired(() => {
+        // the subjects and bodies changed underneath the list, so what is on
+        // screen is stale rather than merely incomplete.
         void loadList(get(selection))
       }),
     )

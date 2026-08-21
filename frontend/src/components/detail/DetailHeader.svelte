@@ -176,6 +176,7 @@
       auth={detail.auth}
       smime={detail.smime}
       revocation={revocation}
+      charsetGuess={detail.charsetGuess}
     />
     {#if unsub}
       <button type="button" class="unsub" class:confirming disabled={done || working} on:click={onUnsubscribe}>

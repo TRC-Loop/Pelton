@@ -67,6 +67,8 @@ type FolderSyncResult struct {
 	Pushed           int     // local flag or delete operations sent to the server
 	UIDValidityReset bool    // the cache for the folder was dropped and refetched
 	HasOlder         bool    // the server still holds messages below the sync window
+	Repaired         int     // messages refetched because their cached text was broken
+	RepairedIDs      []int64 // storage ids of those messages, for reindexing
 }
 
 // SyncAccount syncs every cached folder for an account. A failure on one folder
@@ -165,6 +167,11 @@ func (e *Engine) syncFolder(ctx context.Context, folder storage.Folder, backfill
 
 	plan := BuildPlan(locals, servers, floor)
 	e.executePlan(ctx, folder, plan, localByUID, &res)
+
+	// mail cached before charset detection existed is stored with bytes that
+	// are not valid utf-8 and cannot be fixed locally, so it comes from the
+	// server again. A few per sync, after the plan, so it never delays new mail.
+	e.repairMangled(ctx, folder, &res)
 
 	// adopt server-side color labels when color syncing is on. this runs after the
 	// plan so newly fetched messages already have local rows to color.
