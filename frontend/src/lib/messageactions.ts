@@ -21,8 +21,9 @@ import type { MessageSummary } from './types'
 import { patchInList, removeFromList } from '../stores/messages'
 import { openMessageId } from '../stores/selection'
 import { clearSelection } from '../stores/listselect'
-import { recordDeleted } from '../stores/undodelete'
-import { recordArchived } from '../stores/undoarchive'
+import { recordDeleted, recordDeletedBatch } from '../stores/undodelete'
+import { recordArchived, recordArchivedBatch, type ArchivedMessage } from '../stores/undoarchive'
+import { askConfirm } from '../stores/confirm'
 import { isVIPAddress, addVIP, removeVIP } from '../stores/vip'
 import { errorMessage, toastError, toastSuccess } from '../stores/toast'
 import { t } from './i18n'
@@ -159,21 +160,66 @@ export async function bulkSetOffline(items: MessageSummary[], offline: boolean):
 }
 
 /**
- * Deletes every given message. Sequential rather than parallel: each delete
- * pushes an undo entry and mutates the list, and the server is happier with a
- * queue than with fifty concurrent stores.
+ * Deletes every given message, after asking when it is more than one. The
+ * question lives here rather than at each button, so the menu, the toolbar, a
+ * shortcut and the command palette all ask it.
+ *
+ * Sequential rather than parallel: each delete mutates the list, and the server
+ * is happier with a queue than with fifty concurrent stores. The whole batch is
+ * one undo step, so one press brings all of them back.
  */
 export async function bulkTrash(items: MessageSummary[]): Promise<void> {
-  clearSelection()
-  for (const item of items) {
-    await trashMessage(item)
+  if (items.length > 1 && !(await confirmBulkDelete(items.length))) {
+    return
   }
+  clearSelection()
+  const deleted: MessageSummary[] = []
+  for (const item of items) {
+    try {
+      await deleteMessage(item.id)
+      deleted.push(item)
+      removeFromList(item.id)
+      if (get(openMessageId) === item.id) {
+        openMessageId.set(null)
+      }
+    } catch (err) {
+      toastError(errorMessage(err))
+    }
+  }
+  recordDeletedBatch(deleted)
 }
 
-/** Archives every given message, sequentially, for the same reason as bulkTrash. */
+// confirmBulkDelete asks before a delete that covers more than one message.
+// Deleting one stays instant: it is a single row, visibly gone, and undo is a
+// keypress away.
+function confirmBulkDelete(count: number): Promise<boolean> {
+  const label = get(t)
+  return askConfirm({
+    title: label('messageList.bulk.deleteConfirmTitle').replace('{n}', String(count)),
+    body: label('messageList.bulk.deleteConfirmBody'),
+    confirmLabel: label('messageList.bulk.deleteConfirmAction').replace('{n}', String(count)),
+    danger: true,
+  })
+}
+
+/** Archives every given message, sequentially, as one undo step. */
 export async function bulkArchive(items: MessageSummary[]): Promise<void> {
   clearSelection()
+  const undone: ArchivedMessage[] = []
   for (const item of items) {
-    await archive(item)
+    try {
+      const undo = await archiveMessage(item.id)
+      reportArchiveExport(undo)
+      if (undo.messageId) {
+        undone.push({ summary: item, messageId: undo.messageId, originalFolderId: undo.originalFolderId })
+      }
+      removeFromList(item.id)
+      if (get(openMessageId) === item.id) {
+        openMessageId.set(null)
+      }
+    } catch (err) {
+      toastError(errorMessage(err))
+    }
   }
+  recordArchivedBatch(undone)
 }

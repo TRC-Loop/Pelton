@@ -28,6 +28,7 @@
     IconStar,
     IconStarFilled,
     IconLayoutColumns,
+    IconArchive,
   } from '@tabler/icons-svelte'
   import { selection, searchQuery, openMessageId, openMessage } from '../../stores/selection'
   import {
@@ -47,6 +48,7 @@
   import {
     selectedIds,
     clearSelection,
+    selectOnly,
     toggleSelect,
     selectRange,
   } from '../../stores/listselect'
@@ -58,8 +60,8 @@
     archiveMessage,
   } from '../../lib/api'
   import { openReply, openForward } from '../../stores/compose'
-  import { openSnooze } from '../../stores/snooze'
-  import { openMove } from '../../stores/move'
+  import { openSnooze, openSnoozeMany } from '../../stores/snooze'
+  import { openMove, openMoveMany } from '../../stores/move'
   import { recordDeleted } from '../../stores/undodelete'
   import { recordArchived } from '../../stores/undoarchive'
   import { openContextMenu, type MenuEntry } from '../../stores/contextmenu'
@@ -77,6 +79,9 @@
     trashMessage,
     bulkMarkSeen,
     bulkMarkFlagged,
+    bulkMarkColor,
+    bulkSetOffline,
+    bulkArchive,
     bulkTrash,
     reportArchiveExport,
   } from '../../lib/messageactions'
@@ -354,6 +359,33 @@
     await bulkTrash(selectedItems)
   }
 
+  async function bulkSetColor(color: number): Promise<void> {
+    await bulkMarkColor(selectedItems, color)
+  }
+
+  async function bulkSetOfflineCopies(offline: boolean): Promise<void> {
+    await bulkSetOffline(selectedItems, offline)
+  }
+
+  async function bulkArchiveSelection(): Promise<void> {
+    await bulkArchive(selectedItems)
+  }
+
+  // the move and snooze dialogs take the whole selection, so the folder or the
+  // time is chosen once rather than once per message. Both clear the selection
+  // here: the rows are on their way out of this list either way.
+  function bulkMove(): void {
+    const items = selectedItems
+    clearSelection()
+    openMoveMany(items)
+  }
+
+  function bulkSnooze(): void {
+    const ids = selectedItems.map((m) => m.id)
+    clearSelection()
+    openSnoozeMany(ids)
+  }
+
   // reply/forward need the full message (for quoting), so load it first.
   $: editorMode = $prefs.defaultEditorMode as EditorMode
 
@@ -436,20 +468,39 @@
   function onContext(event: MouseEvent, item: MessageSummary): void {
     event.preventDefault()
     if (selectionCount > 1 && $selectedIds.has(item.id)) {
+      const n = String(selectionCount)
       const anyUnread = selectedItems.some((m) => !m.seen)
       const anyUnflagged = selectedItems.some((m) => !m.flagged)
+      const anyOnline = selectedItems.some((m) => !m.offline)
       const entries: MenuEntry[] = [
         anyUnread
-          ? { label: $t('messageList.bulk.markReadCount').replace('{n}', String(selectionCount)), icon: IconMailOpened, action: () => void bulkSetSeen(true) }
-          : { label: $t('messageList.bulk.markUnreadCount').replace('{n}', String(selectionCount)), icon: IconMailFilled, action: () => void bulkSetSeen(false) },
+          ? { label: $t('messageList.bulk.markReadCount').replace('{n}', n), icon: IconMailOpened, action: () => void bulkSetSeen(true) }
+          : { label: $t('messageList.bulk.markUnreadCount').replace('{n}', n), icon: IconMailFilled, action: () => void bulkSetSeen(false) },
         anyUnflagged
-          ? { label: $t('messageList.bulk.flagCount').replace('{n}', String(selectionCount)), icon: IconFlagFilled, action: () => void bulkSetFlagged(true) }
-          : { label: $t('messageList.bulk.unflagCount').replace('{n}', String(selectionCount)), icon: IconFlag, action: () => void bulkSetFlagged(false) },
+          ? { label: $t('messageList.bulk.flagCount').replace('{n}', n), icon: IconFlagFilled, action: () => void bulkSetFlagged(true) }
+          : { label: $t('messageList.bulk.unflagCount').replace('{n}', n), icon: IconFlag, action: () => void bulkSetFlagged(false) },
+        // the colour row has no count of its own; it sits under the labels above
+        // and applies to the same selection they name.
+        { kind: 'colors', current: 0, onPick: (color) => void bulkSetColor(color) },
         'separator',
-        { label: $t('messageList.bulk.deleteCount').replace('{n}', String(selectionCount)), icon: IconTrash, danger: true, action: () => void bulkDelete() },
+        { label: $t('messageList.bulk.snoozeCount').replace('{n}', n), icon: IconClockPause, action: bulkSnooze },
+        { label: $t('messageList.bulk.moveCount').replace('{n}', n), icon: IconFolderSymlink, action: bulkMove },
+        { label: $t('messageList.bulk.archiveCount').replace('{n}', n), icon: IconArchive, action: () => void bulkArchiveSelection() },
+        anyOnline
+          ? { label: $t('messageList.bulk.downloadCount').replace('{n}', n), icon: IconDownload, action: () => void bulkSetOfflineCopies(true) }
+          : { label: $t('messageList.bulk.removeOfflineCount').replace('{n}', n), icon: IconDownloadOff, action: () => void bulkSetOfflineCopies(false) },
+        'separator',
+        { label: $t('messageList.bulk.deleteCount').replace('{n}', n), icon: IconTrash, danger: true, action: () => void bulkDelete() },
       ]
       openContextMenu(event.clientX, event.clientY, entries)
       return
+    }
+    // right clicking outside the selection is a fresh start: the row under the
+    // pointer becomes the selection and the menu is about that message, which is
+    // what every other app does and what stops an action landing on a set the
+    // user had forgotten about.
+    if (selectionCount > 0) {
+      selectOnly(item.id)
     }
     const entries: MenuEntry[] = [
       { label: $t('messageList.menu.open'), icon: IconMail, action: () => open(items.indexOf(item)) },
@@ -552,6 +603,12 @@
           <IconFlag size={16} stroke={1.7} />
         </button>
       {/if}
+      <button type="button" class="act" title={$t('action.archive')} on:click={bulkArchiveSelection}>
+        <IconArchive size={16} stroke={1.7} />
+      </button>
+      <button type="button" class="act" title={$t('messageList.menu.moveTo')} on:click={bulkMove}>
+        <IconFolderSymlink size={16} stroke={1.7} />
+      </button>
       <button type="button" class="act danger" title={$t('action.delete')} on:click={bulkDelete}>
         <IconTrash size={16} stroke={1.7} />
       </button>
