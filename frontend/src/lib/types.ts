@@ -869,3 +869,40 @@ export interface DevProcessStats {
   dataDirBytes: number
   uptimeSeconds: number
 }
+
+// Profile is one workspace within the install (#270): which accounts it shows,
+// and whether its settings, signatures and saved views are its own or the main
+// profile's. Mail belongs to the install, so an account visible in two profiles
+// is cached and synced once.
+export interface Profile {
+  id: number
+  name: string
+  // an emoji or short glyph shown next to the name, so the current profile is
+  // recognisable at a glance.
+  icon: string
+  // the profile the install started as: renamable, never deletable.
+  main: boolean
+  // the profile the app is currently in.
+  active: boolean
+  // live links to the main profile. A copied area reads false: it was a
+  // one-time duplicate, not a link.
+  shareSettings: boolean
+  shareSignatures: boolean
+  shareViews: boolean
+  accountIds: number[]
+}
+
+// ProfileStart is where one area of a new profile comes from: a live link to
+// the main profile, a one-time copy of it, or nothing at all.
+export type ProfileStart = 'share' | 'copy' | 'fresh'
+
+// ProfileDraft is the create/edit form's shape.
+export interface ProfileDraft {
+  id: number
+  name: string
+  icon: string
+  accountIds: number[]
+  startSettings: ProfileStart
+  startSignatures: ProfileStart
+  startViews: ProfileStart
+}

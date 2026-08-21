@@ -95,6 +95,11 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 	}
 	a.ID = id
 	a.CreatedAt = created
+	// an account nobody can see would be invisible mail, so it joins the profile
+	// that created it. Other profiles opt in from the profile editor.
+	if err := d.AddAccountToProfiles(ctx, id, []int64{d.ScopedProfileID()}); err != nil {
+		return 0, err
+	}
 	return id, nil
 }
 
@@ -118,8 +123,24 @@ FROM accounts WHERE id = ?`
 func (d *DB) ListAccounts(ctx context.Context) ([]Account, error) {
 	const query = `
 SELECT ` + accountColumns + `
+FROM accounts
+WHERE id IN (SELECT account_id FROM profile_accounts WHERE profile_id = ?)
+ORDER BY position = 0, position, id`
+	return d.listAccounts(ctx, query, d.ScopedProfileID())
+}
+
+// ListAllAccounts returns every account on the install, whether or not the
+// current profile shows it. Only the profile editor and account deletion want
+// this; everything else works with what the profile can see.
+func (d *DB) ListAllAccounts(ctx context.Context) ([]Account, error) {
+	const query = `
+SELECT ` + accountColumns + `
 FROM accounts ORDER BY position = 0, position, id`
-	rows, err := d.sql.QueryContext(ctx, query)
+	return d.listAccounts(ctx, query)
+}
+
+func (d *DB) listAccounts(ctx context.Context, query string, args ...any) ([]Account, error) {
+	rows, err := d.sql.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("storage: list accounts: %w", err)
 	}

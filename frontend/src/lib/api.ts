@@ -54,6 +54,8 @@ import type {
   ThunderbirdProfile,
   DevActivity,
   DevProcessStats,
+  Profile,
+  ProfileDraft,
 } from './types'
 
 // isDemoMode reports whether the app launched in the cosmetic --potatoes-are-nice
@@ -1315,4 +1317,48 @@ export function clearDevActivity(): Promise<void> {
 // devProcessStats samples the Go runtime and the app's on-disk footprint.
 export function devProcessStats(): Promise<DevProcessStats> {
   return App.DevProcessStats()
+}
+
+// listProfiles returns every profile on the install, main first (#270).
+export function listProfiles(): Promise<Profile[]> {
+  if (isDemoActive()) {
+    return Promise.resolve([])
+  }
+  return App.ListProfiles().then((list) => (list ?? []) as unknown as Profile[])
+}
+
+// activeProfile returns the profile the app is in.
+export function activeProfile(): Promise<Profile> {
+  return App.ActiveProfile() as unknown as Promise<Profile>
+}
+
+// createProfile adds a profile. Areas set to 'copy' are duplicated from main
+// now; areas set to 'share' stay linked to it.
+export function createProfile(draft: ProfileDraft): Promise<Profile> {
+  return App.CreateProfile(new desktop.ProfileRequest(draft)) as unknown as Promise<Profile>
+}
+
+// updateProfile saves a profile's name, icon, sharing and visible accounts.
+export function updateProfile(draft: ProfileDraft): Promise<Profile> {
+  return App.UpdateProfile(new desktop.ProfileRequest(draft)) as unknown as Promise<Profile>
+}
+
+// deleteProfile removes a profile and what it owned. Its accounts and their
+// mail belong to the install and stay.
+export function deleteProfile(id: number): Promise<void> {
+  return App.DeleteProfile(id)
+}
+
+// switchProfile moves the app to another profile, in place.
+export function switchProfile(id: number): Promise<void> {
+  return App.SwitchProfile(id)
+}
+
+// allAccounts lists every account on the install, including ones the current
+// profile does not show. Only the profile editor wants this.
+export function allAccounts(): Promise<Account[]> {
+  if (isDemoActive()) {
+    return Promise.resolve(demoAccounts())
+  }
+  return App.AllAccounts().then((list) => (list ?? []) as unknown as Account[])
 }

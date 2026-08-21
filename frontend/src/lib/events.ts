@@ -16,6 +16,7 @@ export const EventNames = {
   updateAvailable: 'update:available',
   mailtoCompose: 'mailto:compose',
   viewsChanged: 'views:changed',
+  profileChanged: 'profile:changed',
   importProgress: 'import:progress',
 } as const
 
@@ -157,4 +158,11 @@ export function onImportProgress(cb: (e: ImportProgressEvent) => void): Unsubscr
 // carries no payload; subscribers reload the views store.
 export function onViewsChanged(cb: () => void): Unsubscribe {
   return EventsOn(EventNames.viewsChanged, () => cb())
+}
+
+// onProfileChanged fires when the app switches profile, or when the profile it
+// is in is edited. Everything the ui holds is scoped to a profile, so the
+// subscriber reloads rather than patching.
+export function onProfileChanged(cb: () => void): Unsubscribe {
+  return EventsOn(EventNames.profileChanged, () => cb())
 }

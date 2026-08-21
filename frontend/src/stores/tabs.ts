@@ -83,6 +83,16 @@ export function closeTab(id: number): void {
   persist()
 }
 
+/**
+ * Closes every tab and returns to the pane. Switching profile does this: the
+ * parked messages belong to accounts the new profile may not even show.
+ */
+export function clearAllTabs(): void {
+  tabs.set([])
+  activeTabId.set(null)
+  persist()
+}
+
 /** Closes the tab currently showing, if the pane is showing one. */
 export function closeActiveTab(): void {
   const active = get(activeTabId)

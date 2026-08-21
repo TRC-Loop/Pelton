@@ -4,11 +4,15 @@ import {desktop} from '../models';
 
 export function AccountsNeedingPassword():Promise<Array<desktop.AccountDTO>>;
 
+export function ActiveProfile():Promise<desktop.ProfileDTO>;
+
 export function AddOAuthAccount(arg1:desktop.AddAccountRequest):Promise<desktop.AccountDTO>;
 
 export function AddPasswordAccount(arg1:desktop.AddAccountRequest):Promise<desktop.AccountDTO>;
 
 export function AddVIPSender(arg1:string):Promise<void>;
+
+export function AllAccounts():Promise<Array<desktop.AccountDTO>>;
 
 export function AllowDomainImages(arg1:number):Promise<void>;
 
@@ -44,6 +48,8 @@ export function ConsumePendingMailto():Promise<desktop.PendingMailtoDTO>;
 
 export function CreateFolder(arg1:desktop.CreateFolderRequest):Promise<desktop.FolderDTO>;
 
+export function CreateProfile(arg1:desktop.ProfileRequest):Promise<desktop.ProfileDTO>;
+
 export function DefaultMailClientStatus():Promise<desktop.DefaultMailStatusDTO>;
 
 export function DeleteAccount(arg1:number):Promise<void>;
@@ -59,6 +65,8 @@ export function DeleteLogs():Promise<void>;
 export function DeleteMessage(arg1:number):Promise<void>;
 
 export function DeletePGPKey(arg1:string):Promise<void>;
+
+export function DeleteProfile(arg1:number):Promise<void>;
 
 export function DeleteSignature(arg1:number):Promise<void>;
 
@@ -169,6 +177,8 @@ export function ListOutbox():Promise<Array<desktop.OutboxRowDTO>>;
 export function ListPGPKeys():Promise<Array<desktop.PGPKeyDTO>>;
 
 export function ListPinnedFolders():Promise<Array<desktop.FolderDTO>>;
+
+export function ListProfiles():Promise<Array<desktop.ProfileDTO>>;
 
 export function ListSignatures():Promise<Array<desktop.SignatureDTO>>;
 
@@ -308,6 +318,8 @@ export function SnoozeMessage(arg1:number,arg2:string,arg3:boolean):Promise<void
 
 export function StartAccountSync(arg1:number):Promise<void>;
 
+export function SwitchProfile(arg1:number):Promise<void>;
+
 export function SystemColorScheme():Promise<string>;
 
 export function TestConnection(arg1:desktop.TestConnectionRequest):Promise<void>;
@@ -337,3 +349,5 @@ export function UnsealDraft(arg1:number,arg2:string):Promise<desktop.DraftDTO>;
 export function Unsubscribe(arg1:number):Promise<void>;
 
 export function UpdateAccount(arg1:desktop.UpdateAccountRequest):Promise<desktop.AccountDTO>;
+
+export function UpdateProfile(arg1:desktop.ProfileRequest):Promise<desktop.ProfileDTO>;

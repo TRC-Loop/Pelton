@@ -21,6 +21,7 @@
   import SignaturesSection from './SignaturesSection.svelte'
   import AddressBookSection from './AddressBookSection.svelte'
   import MailboxesSection from './MailboxesSection.svelte'
+  import ProfilesSection from './ProfilesSection.svelte'
   import NetworkSection from './NetworkSection.svelte'
   import ExternalSection from './ExternalSection.svelte'
   import { setEditing as setMenuBarEditing, menuBarNewItems, setNewItemsMode, type NewItemsMode } from '../../stores/menubar'
@@ -1496,6 +1497,10 @@
           <div class="merged-block">
             <AddressBookSection />
           </div>
+        </section>
+      {:else if active === 'profiles'}
+        <section>
+          <ProfilesSection />
         </section>
       {:else if active === 'external'}
         <section>

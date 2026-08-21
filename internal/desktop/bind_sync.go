@@ -309,14 +309,15 @@ func (a *App) idleLoop(account storage.Account) {
 	if account.Local {
 		return
 	}
-	for a.ctx.Err() == nil {
-		if err := a.idleSession(account); err != nil && a.ctx.Err() == nil {
+	ctx := a.sessionCtx()
+	for ctx.Err() == nil {
+		if err := a.idleSession(ctx, account); err != nil && ctx.Err() == nil {
 			if errors.Is(err, errNoCredentials) {
 				return
 			}
 			a.log.Error("idle session", "account", account.Email, "err", err)
 			select {
-			case <-a.ctx.Done():
+			case <-ctx.Done():
 				return
 			case <-time.After(15 * time.Second):
 			}
@@ -326,7 +327,7 @@ func (a *App) idleLoop(account storage.Account) {
 
 // idleSession opens one connection for an account, idles, and re-syncs on each
 // server update until the connection drops or the context is cancelled.
-func (a *App) idleSession(account storage.Account) error {
+func (a *App) idleSession(ctx context.Context, account storage.Account) error {
 	cfg, err := a.resolveIMAP(account)
 	if err != nil {
 		return err
@@ -345,7 +346,7 @@ func (a *App) idleSession(account storage.Account) error {
 	defer client.Logout()
 
 	if !client.SupportsIdle() {
-		<-a.ctx.Done()
+		<-ctx.Done()
 		return nil
 	}
 
@@ -367,8 +368,8 @@ func (a *App) idleSession(account storage.Account) error {
 	// folders are covered by the periodic full sync (runAutoSyncLoop). syncMu is
 	// held only for the brief resync so manual and background syncs are not
 	// blocked while idling.
-	for a.ctx.Err() == nil {
-		gotUpdate, err := client.IdleUntil(a.ctx)
+	for ctx.Err() == nil {
+		gotUpdate, err := client.IdleUntil(ctx)
 		if err != nil {
 			return err
 		}

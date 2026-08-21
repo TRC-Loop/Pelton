@@ -61,6 +61,14 @@ type App struct {
 	rejectedLoginsMu sync.Mutex
 	// startedAt is when the process came up, for the process overlay's uptime.
 	startedAt time.Time
+	// runtimeReady is set once wails has handed us its context in startup.
+	// Until then there is no ui to emit events at or menu to rebuild.
+	runtimeReady atomic.Bool
+	// the active profile's background work (idle loops, sync) runs under this
+	// context, so switching profiles stops it. See bind_profiles.go.
+	session     context.Context
+	sessionStop context.CancelFunc
+	sessionMu   sync.Mutex
 	// dirSizes caches measured directory sizes for the process overlay, which
 	// polls while it is open and must not walk the attachment tree every tick.
 	// See bind_devtools.go.
@@ -165,6 +173,11 @@ func newApp(version, channel string) *App {
 // the bound methods returning errors.
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
+	// from here the wails runtime is usable: emitting events and rebuilding the
+	// native menu both need the context wails itself handed us. Tests construct
+	// an App with an ordinary context and never reach this, so those calls stay
+	// no-ops there rather than taking the process down.
+	a.runtimeReady.Store(true)
 
 	// --debug has to work before the store is up, since "the app will not
 	// start" is one of the reasons to reach for it. With no store there are no

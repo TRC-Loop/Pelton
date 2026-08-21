@@ -6,6 +6,10 @@ export function AccountsNeedingPassword() {
   return window['go']['desktop']['App']['AccountsNeedingPassword']();
 }
 
+export function ActiveProfile() {
+  return window['go']['desktop']['App']['ActiveProfile']();
+}
+
 export function AddOAuthAccount(arg1) {
   return window['go']['desktop']['App']['AddOAuthAccount'](arg1);
 }
@@ -16,6 +20,10 @@ export function AddPasswordAccount(arg1) {
 
 export function AddVIPSender(arg1) {
   return window['go']['desktop']['App']['AddVIPSender'](arg1);
+}
+
+export function AllAccounts() {
+  return window['go']['desktop']['App']['AllAccounts']();
 }
 
 export function AllowDomainImages(arg1) {
@@ -86,6 +94,10 @@ export function CreateFolder(arg1) {
   return window['go']['desktop']['App']['CreateFolder'](arg1);
 }
 
+export function CreateProfile(arg1) {
+  return window['go']['desktop']['App']['CreateProfile'](arg1);
+}
+
 export function DefaultMailClientStatus() {
   return window['go']['desktop']['App']['DefaultMailClientStatus']();
 }
@@ -116,6 +128,10 @@ export function DeleteMessage(arg1) {
 
 export function DeletePGPKey(arg1) {
   return window['go']['desktop']['App']['DeletePGPKey'](arg1);
+}
+
+export function DeleteProfile(arg1) {
+  return window['go']['desktop']['App']['DeleteProfile'](arg1);
 }
 
 export function DeleteSignature(arg1) {
@@ -336,6 +352,10 @@ export function ListPGPKeys() {
 
 export function ListPinnedFolders() {
   return window['go']['desktop']['App']['ListPinnedFolders']();
+}
+
+export function ListProfiles() {
+  return window['go']['desktop']['App']['ListProfiles']();
 }
 
 export function ListSignatures() {
@@ -614,6 +634,10 @@ export function StartAccountSync(arg1) {
   return window['go']['desktop']['App']['StartAccountSync'](arg1);
 }
 
+export function SwitchProfile(arg1) {
+  return window['go']['desktop']['App']['SwitchProfile'](arg1);
+}
+
 export function SystemColorScheme() {
   return window['go']['desktop']['App']['SystemColorScheme']();
 }
@@ -672,4 +696,8 @@ export function Unsubscribe(arg1) {
 
 export function UpdateAccount(arg1) {
   return window['go']['desktop']['App']['UpdateAccount'](arg1);
+}
+
+export function UpdateProfile(arg1) {
+  return window['go']['desktop']['App']['UpdateProfile'](arg1);
 }

@@ -231,6 +231,24 @@ func (a *App) AccountsNeedingPassword() ([]AccountDTO, error) {
 	return out, nil
 }
 
+// AllAccounts lists every account on the install, including the ones the
+// current profile does not show. The profile editor is the only screen that
+// wants this: everywhere else works with what the profile can see.
+func (a *App) AllAccounts() ([]AccountDTO, error) {
+	if err := a.ready(); err != nil {
+		return nil, err
+	}
+	accounts, err := a.store.ListAllAccounts(a.ctx)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]AccountDTO, 0, len(accounts))
+	for _, acct := range accounts {
+		out = append(out, toAccountDTO(acct))
+	}
+	return out, nil
+}
+
 // DeleteAccount removes an account entirely: its keyring secret, its cached mail
 // (folders, messages and attachment rows cascade in the db) and its attachment
 // files on disk. Deleting the keyring secret also lets any running idle loop for

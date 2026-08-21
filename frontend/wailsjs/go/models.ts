@@ -1145,6 +1145,58 @@ export namespace desktop {
 	}
 	
 	
+	export class ProfileDTO {
+	    id: number;
+	    name: string;
+	    icon: string;
+	    main: boolean;
+	    active: boolean;
+	    shareSettings: boolean;
+	    shareSignatures: boolean;
+	    shareViews: boolean;
+	    accountIds: number[];
+	
+	    static createFrom(source: any = {}) {
+	        return new ProfileDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.name = source["name"];
+	        this.icon = source["icon"];
+	        this.main = source["main"];
+	        this.active = source["active"];
+	        this.shareSettings = source["shareSettings"];
+	        this.shareSignatures = source["shareSignatures"];
+	        this.shareViews = source["shareViews"];
+	        this.accountIds = source["accountIds"];
+	    }
+	}
+	export class ProfileRequest {
+	    id: number;
+	    name: string;
+	    icon: string;
+	    accountIds: number[];
+	    startSettings: string;
+	    startSignatures: string;
+	    startViews: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new ProfileRequest(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.name = source["name"];
+	        this.icon = source["icon"];
+	        this.accountIds = source["accountIds"];
+	        this.startSettings = source["startSettings"];
+	        this.startSignatures = source["startSignatures"];
+	        this.startViews = source["startViews"];
+	    }
+	}
 	export class ProtectionStatusDTO {
 	    canSign: boolean;
 	    signerLocked: boolean;

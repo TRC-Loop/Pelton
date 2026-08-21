@@ -29,6 +29,7 @@ type menuStrings struct {
 	toggleFullscreen string
 	lowPowerMode     string
 	openInTab        string
+	switchProfile    string
 	closeTab         string
 }
 
@@ -64,6 +65,7 @@ var menuLocales = map[string]menuStrings{
 		toggleFullscreen: "Toggle Fullscreen",
 		lowPowerMode:     "Low Power Mode",
 		openInTab:        "Open in New Tab",
+		switchProfile:    "Switch Profile…",
 		closeTab:         "Close Tab",
 	},
 	"de": {
@@ -92,6 +94,7 @@ var menuLocales = map[string]menuStrings{
 		toggleFullscreen: "Vollbild umschalten",
 		lowPowerMode:     "Energiesparmodus",
 		openInTab:        "In neuem Tab öffnen",
+		switchProfile:    "Profil wechseln…",
 		closeTab:         "Tab schließen",
 	},
 	"fr": {
@@ -120,6 +123,7 @@ var menuLocales = map[string]menuStrings{
 		toggleFullscreen: "Basculer le plein écran",
 		lowPowerMode:     "Mode basse consommation",
 		openInTab:        "Ouvrir dans un nouvel onglet",
+		switchProfile:    "Changer de profil…",
 		closeTab:         "Fermer l'onglet",
 	},
 	"nl": {
@@ -148,6 +152,7 @@ var menuLocales = map[string]menuStrings{
 		toggleFullscreen: "Volledig scherm in-/uitschakelen",
 		lowPowerMode:     "Energiebesparende modus",
 		openInTab:        "Openen in nieuw tabblad",
+		switchProfile:    "Profiel wisselen…",
 		closeTab:         "Tabblad sluiten",
 	},
 	"es": {
@@ -176,6 +181,7 @@ var menuLocales = map[string]menuStrings{
 		toggleFullscreen: "Alternar pantalla completa",
 		lowPowerMode:     "Modo de bajo consumo",
 		openInTab:        "Abrir en una pestaña nueva",
+		switchProfile:    "Cambiar de perfil…",
 		closeTab:         "Cerrar pestaña",
 	},
 	"pl": {
@@ -204,6 +210,7 @@ var menuLocales = map[string]menuStrings{
 		toggleFullscreen: "Przełącz pełny ekran",
 		lowPowerMode:     "Tryb oszczędzania energii",
 		openInTab:        "Otwórz w nowej karcie",
+		switchProfile:    "Zmień profil…",
 		closeTab:         "Zamknij kartę",
 	},
 }
