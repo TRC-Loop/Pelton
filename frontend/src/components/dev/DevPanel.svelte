@@ -28,6 +28,11 @@
   $: placement = position ?? { top, left }
 
   function startDrag(event: PointerEvent): void {
+    // the close button lives in the drag strip. Capturing the pointer for a
+    // drag would swallow its click, so a press on a control is not a drag.
+    if (event.target instanceof Element && event.target.closest('button')) {
+      return
+    }
     const panel = (event.currentTarget as HTMLElement).parentElement
     if (!panel) {
       return
@@ -50,6 +55,9 @@
   }
 
   function endDrag(event: PointerEvent): void {
+    if (!dragging) {
+      return
+    }
     dragging = false
     ;(event.currentTarget as HTMLElement).releasePointerCapture(event.pointerId)
   }
