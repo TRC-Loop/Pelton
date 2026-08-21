@@ -555,13 +555,13 @@
     color: var(--text-secondary);
   }
 
-  /* the way into the second modal: a row, so it reads as somewhere to go
-     rather than another setting. */
+  /* the way into the second modal, with the chevron so it reads as somewhere
+     to go rather than another setting. */
   .more {
-    display: flex;
+    display: inline-flex;
     align-items: center;
-    justify-content: space-between;
-    width: 100%;
+    gap: var(--space-2);
+    align-self: flex-start;
     margin-top: var(--space-3);
     padding: var(--space-2) var(--space-3);
     border: var(--hairline) solid var(--border-default);
