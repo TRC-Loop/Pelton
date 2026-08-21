@@ -5,7 +5,7 @@
   // theme through the backend, Cancel lets the parent restore the active
   // theme. fields left empty fall back to the base's built-in value.
   import { createEventDispatcher } from 'svelte'
-  import { IconX } from '@tabler/icons-svelte'
+  import Modal from '../common/Modal.svelte'
   import { saveCustomTheme } from '../../lib/api'
   import type { ThemeInfo } from '../../lib/types'
   import { applyUserTheme } from '../../theme/usertheme'
@@ -206,26 +206,9 @@
     }
   }
 
-  function onKeydown(event: KeyboardEvent): void {
-    if (event.key === 'Escape') {
-      dispatch('close')
-    }
-  }
 </script>
 
-<svelte:window on:keydown={onKeydown} />
-
-<!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
-<div class="overlay" on:click={() => dispatch('close')}>
-  <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions a11y-no-noninteractive-element-interactions -->
-  <div class="modal" role="dialog" aria-modal="true" aria-label={$t('themeEditor.title')} tabindex="-1" on:click|stopPropagation>
-    <header>
-      <span class="m-title">{$t('themeEditor.title')}</span>
-      <button type="button" class="m-close" aria-label={$t('about.close')} on:click={() => dispatch('close')}>
-        <IconX size={18} stroke={1.8} />
-      </button>
-    </header>
-
+<Modal title={$t('themeEditor.title')} size="large" on:close={() => dispatch('close')}>
     <div class="m-body">
       <div class="top-row">
         <label class="field name-field">
@@ -302,73 +285,18 @@
       </details>
     </div>
 
-    <footer>
-      <button type="button" class="ghost-btn" on:click={() => dispatch('close')}>{$t('themeEditor.cancel')}</button>
-      <button type="button" class="primary-btn" disabled={saving} on:click={save}>{$t('themeEditor.save')}</button>
-    </footer>
-  </div>
-</div>
+  <svelte:fragment slot="footer">
+    <button type="button" class="ghost-btn" on:click={() => dispatch('close')}>{$t('themeEditor.cancel')}</button>
+    <button type="button" class="primary-btn" disabled={saving} on:click={save}>{$t('themeEditor.save')}</button>
+  </svelte:fragment>
+</Modal>
 
 <style>
-  .overlay {
-    position: fixed;
-    inset: 0;
-    z-index: 140;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: var(--space-5);
-    background: var(--scrim, rgba(0, 0, 0, 0.4));
-  }
-
-  .modal {
-    width: 100%;
-    max-width: 560px;
-    max-height: 84vh;
-    display: flex;
-    flex-direction: column;
-    border: var(--hairline) solid var(--border-default);
-    border-radius: var(--radius-card);
-    background: var(--surface-overlay);
-    box-shadow: var(--shadow-overlay);
-    overflow: hidden;
-  }
-
-  header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: var(--space-4) var(--space-5);
-    border-bottom: var(--hairline) solid var(--border-subtle);
-  }
-
-  .m-title {
-    font-size: var(--fz-heading);
-    font-weight: var(--fw-semibold);
-    color: var(--text-primary);
-  }
-
-  .m-close {
-    display: inline-flex;
-    border: none;
-    background: transparent;
-    color: var(--text-secondary);
-    cursor: var(--cursor-action);
-    padding: var(--space-1);
-    border-radius: var(--radius-control);
-  }
-
-  .m-close:hover {
-    background: var(--surface-hover);
-    color: var(--text-primary);
-  }
 
   .m-body {
-    padding: var(--space-4) var(--space-5);
-    overflow-y: auto;
     display: flex;
     flex-direction: column;
-    gap: var(--space-2);
+    gap: var(--space-4);
   }
 
   .top-row {
@@ -505,14 +433,6 @@
 
   .mono {
     font-family: var(--font-mono);
-  }
-
-  footer {
-    display: flex;
-    justify-content: flex-end;
-    gap: var(--space-2);
-    padding: var(--space-4) var(--space-5);
-    border-top: var(--hairline) solid var(--border-subtle);
   }
 
   .ghost-btn {

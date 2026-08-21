@@ -6,6 +6,7 @@
   // user opens it, so its cost is not paid at startup.
   import { createEventDispatcher, onMount } from 'svelte'
   import { get } from 'svelte/store'
+  import InfoTip from '../common/InfoTip.svelte'
   import { IconX, IconArrowLeft, IconCheck, IconArrowRight, IconMailbox, IconPlus } from '@tabler/icons-svelte'
   import WizardProviders from './WizardProviders.svelte'
   import Spinner from '../common/Spinner.svelte'
@@ -344,7 +345,10 @@
           <input type="email" bind:value={draft.email} on:blur={maybeDiscover} placeholder={$t('wizard.field.emailPlaceholder')} />
         </label>
         <label class="field">
-          <span>{$t('wizard.field.displayName')}</span>
+          <span>
+            {$t('wizard.field.displayName')}
+            <InfoTip text={$t('mailboxes.displayNameHint')} />
+          </span>
           <input type="text" bind:value={draft.displayName} placeholder={$t('wizard.field.displayNamePlaceholder')} />
         </label>
         <label class="field">
@@ -431,7 +435,10 @@
           <input type="email" bind:value={draft.email} placeholder={$t('wizard.field.emailPlaceholder')} />
         </label>
         <label class="field">
-          <span>{$t('wizard.field.displayName')}</span>
+          <span>
+            {$t('wizard.field.displayName')}
+            <InfoTip text={$t('mailboxes.displayNameHint')} />
+          </span>
           <input type="text" bind:value={draft.displayName} placeholder={$t('wizard.field.displayNamePlaceholder')} />
         </label>
         <label class="field">
@@ -817,6 +824,7 @@
     background: var(--accent);
     color: var(--accent-fg);
   }
+
 
   .adv-hint {
     margin: var(--space-2) 0 0;

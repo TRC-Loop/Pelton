@@ -5,8 +5,8 @@
   // the key before holding it. "Remember" puts it in the OS keyring, the same
   // place account passwords live; unticked, it is held in memory and forgotten
   // when Pelton quits. Either way it never reaches the settings database.
-  import { fade, scale } from 'svelte/transition'
-  import { IconX, IconLock } from '@tabler/icons-svelte'
+  import { IconLock } from '@tabler/icons-svelte'
+  import Modal from '../common/Modal.svelte'
   import { passphraseRequest, closePassphrase } from '../../stores/passphrase'
   import { unlockPGPKey } from '../../lib/api'
   import { errorMessage, toastError } from '../../stores/toast'
@@ -59,34 +59,11 @@
     }
   }
 
-  function onKeydown(event: KeyboardEvent): void {
-    if (event.key === 'Escape') {
-      closePassphrase()
-    }
-  }
 </script>
 
-<svelte:window on:keydown={request ? onKeydown : undefined} />
-
 {#if request}
-  <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
-  <div class="backdrop" transition:fade={{ duration: 120 }} on:click={closePassphrase}></div>
-  <div
-    class="dialog"
-    role="dialog"
-    aria-modal="true"
-    aria-label={$t('encryption.passphrase.title')}
-    transition:scale={{ duration: 150, start: 0.94 }}
-  >
-    <header>
-      <h2>
-        <span class="glyph"><IconLock size={16} stroke={1.8} /></span>
-        {$t('encryption.passphrase.title')}
-      </h2>
-      <button type="button" class="close" aria-label={$t('folders.cancel')} on:click={closePassphrase}>
-        <IconX size={16} stroke={1.8} />
-      </button>
-    </header>
+  <Modal title={$t('encryption.passphrase.title')} size="small" on:close={closePassphrase}>
+    <span slot="icon"><IconLock size={16} stroke={1.8} /></span>
 
     <p class="key">{keyLabel}</p>
 
@@ -112,78 +89,20 @@
         </span>
       </label>
 
-      <div class="actions">
-        <button type="button" class="cancel" on:click={closePassphrase}>
-          {$t('folders.cancel')}
-        </button>
-        <button type="submit" class="go" disabled={busy || passphrase === ''}>
-          {$t('encryption.unlock')}
-        </button>
-      </div>
     </form>
-  </div>
+
+    <svelte:fragment slot="footer">
+      <button type="button" class="cancel" on:click={closePassphrase}>
+        {$t('folders.cancel')}
+      </button>
+      <button type="button" class="go" disabled={busy || passphrase === ''} on:click={submit}>
+        {$t('encryption.unlock')}
+      </button>
+    </svelte:fragment>
+  </Modal>
 {/if}
 
 <style>
-  .backdrop {
-    position: fixed;
-    inset: 0;
-    z-index: 320;
-    background: var(--scrim, rgba(0, 0, 0, 0.4));
-    backdrop-filter: blur(2px);
-  }
-
-  .dialog {
-    position: fixed;
-    z-index: 321;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: min(420px, calc(100vw - 2 * var(--space-5)));
-    padding: var(--space-4);
-    border: var(--hairline) solid var(--border-default);
-    border-radius: var(--radius-card);
-    background: var(--surface-overlay);
-    box-shadow: var(--shadow-overlay);
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-3);
-  }
-
-  header {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: var(--space-3);
-  }
-
-  h2 {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    margin: 0;
-    font-size: var(--fz-title);
-    font-weight: var(--fw-semibold);
-    color: var(--text-primary);
-  }
-
-  .glyph {
-    display: inline-flex;
-    color: var(--text-tertiary);
-  }
-
-  .close {
-    border: none;
-    background: transparent;
-    color: var(--text-tertiary);
-    cursor: var(--cursor-action);
-    padding: var(--space-1);
-    border-radius: var(--radius-control);
-  }
-  .close:hover {
-    background: var(--surface-hover);
-    color: var(--text-primary);
-  }
 
   .key {
     margin: 0;
@@ -238,12 +157,6 @@
   .remember small {
     display: block;
     color: var(--text-tertiary);
-  }
-
-  .actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: var(--space-2);
   }
 
   .cancel {

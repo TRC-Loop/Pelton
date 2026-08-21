@@ -3,8 +3,8 @@
   // for remote content (images), lets them open an example message to remember
   // who it is, and revoke any entry. Reached from the Privacy settings.
   import { createEventDispatcher, onMount } from 'svelte'
-  import { fade, scale } from 'svelte/transition'
-  import { IconX, IconTrash, IconMail, IconUser, IconWorld } from '@tabler/icons-svelte'
+  import Modal from '../common/Modal.svelte'
+  import { IconTrash, IconMail, IconUser, IconWorld } from '@tabler/icons-svelte'
   import { listImageAllowlist, removeImageAllow, type ImageAllowEntry } from '../../lib/api'
   import { openMessage } from '../../stores/selection'
   import { errorMessage, toastError } from '../../stores/toast'
@@ -46,33 +46,14 @@
     dispatch('openMessage')
   }
 
-  function onKeydown(event: KeyboardEvent): void {
-    if (event.key === 'Escape') {
-      dispatch('close')
-    }
-  }
 </script>
 
-<svelte:window on:keydown={onKeydown} />
-
-<!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
-<div class="backdrop" transition:fade={{ duration: 120 }} on:click={() => dispatch('close')}></div>
-<div
-  class="dialog"
-  role="dialog"
-  aria-modal="true"
-  aria-label={$t('imageAllowlist.title')}
-  transition:scale={{ duration: 150, start: 0.94 }}
+<Modal
+  title={$t('imageAllowlist.title')}
+  hint={$t('imageAllowlist.hint')}
+  size="small"
+  on:close={() => dispatch('close')}
 >
-  <header>
-    <h2>{$t('imageAllowlist.title')}</h2>
-    <button type="button" class="close" aria-label={$t('detail.attachments.close')} on:click={() => dispatch('close')}>
-      <IconX size={16} stroke={1.8} />
-    </button>
-  </header>
-
-  <p class="hint">{$t('imageAllowlist.hint')}</p>
-
   {#if loading}
     <p class="empty">{$t('imageAllowlist.loading')}</p>
   {:else if entries.length === 0}
@@ -110,65 +91,9 @@
       {/each}
     </ul>
   {/if}
-</div>
+</Modal>
 
 <style>
-  .backdrop {
-    position: fixed;
-    inset: 0;
-    z-index: 300;
-    background: var(--scrim, rgba(0, 0, 0, 0.4));
-    backdrop-filter: blur(2px);
-  }
-
-  .dialog {
-    position: fixed;
-    z-index: 301;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: min(440px, calc(100vw - 2 * var(--space-5)));
-    max-height: 72vh;
-    padding: var(--space-4);
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-3);
-    border: var(--hairline) solid var(--border-default);
-    border-radius: var(--radius-card);
-    background: var(--surface-overlay);
-    box-shadow: var(--shadow-overlay);
-  }
-
-  header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
-  h2 {
-    margin: 0;
-    font-size: var(--fz-heading);
-    font-weight: var(--fw-semibold);
-    color: var(--text-primary);
-  }
-  .close {
-    border: none;
-    background: transparent;
-    color: var(--text-tertiary);
-    cursor: var(--cursor-action);
-    padding: var(--space-1);
-    border-radius: var(--radius-control);
-  }
-  .close:hover {
-    background: var(--surface-hover);
-    color: var(--text-primary);
-  }
-
-  .hint {
-    margin: 0;
-    font-size: var(--fz-label);
-    color: var(--text-tertiary);
-    line-height: 1.5;
-  }
 
   .empty {
     margin: var(--space-4) 0;
