@@ -16,6 +16,7 @@ import {
 } from './demo'
 import type {
   Account,
+  SMIMERevocation,
   Folder,
   UnifiedView,
   MessageList,
@@ -432,6 +433,26 @@ export function composeProtectionStatus(
 // point the passphrase prompt at the right one. '' when there is none.
 export function signerFingerprint(accountId: number): Promise<string> {
   return App.SignerFingerprint(accountId)
+}
+
+// --- s/mime revocation (#226) ---
+
+// checkSMIMERevocation asks the signing certificate's authority whether it has
+// been withdrawn. Returns a '' status when the setting is off or the message
+// carries nothing to check, so the caller can call it unconditionally.
+export function checkSMIMERevocation(messageId: number): Promise<SMIMERevocation> {
+  return App.CheckSMIMERevocation(messageId)
+}
+
+// smimeRevocationEnabled reports whether revocation checking is on.
+export function smimeRevocationEnabled(): Promise<boolean> {
+  return App.SMIMERevocationEnabled()
+}
+
+// setSMIMERevocation turns revocation checking on or off. Turning it off also
+// empties the cache of past answers.
+export function setSMIMERevocation(on: boolean): Promise<void> {
+  return App.SetSMIMERevocation(on)
 }
 
 // unsealDraft opens a draft of an encrypted message with a passphrase.

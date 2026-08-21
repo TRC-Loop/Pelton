@@ -151,6 +151,23 @@ export interface SMIMESignature {
 
 export type SMIMEStatus = '' | 'valid' | 'untrusted' | 'invalid'
 
+// SMIMERevocation is what the issuing authority says about a signing
+// certificate now, which the signature itself cannot tell you: a message signed
+// with a stolen key still verifies. status is '' when no check was made, either
+// because the setting is off or the message carries no signature.
+export interface SMIMERevocation {
+  status: string
+  detail: string
+  revokedAt: string
+  checked: string
+}
+
+// good means still in force, revoked means the authority has withdrawn it, and
+// unknown means the question could not be answered. unknown is not evidence
+// either way and must not read as one.
+export type SMIMERevocationStatus = '' | 'good' | 'revoked' | 'unknown'
+
+
 // PhishingSignal is one finding. kind is a stable identifier the ui turns into
 // a sentence; detail is the domain, address or url it is about, and target the
 // link a link signal came from.

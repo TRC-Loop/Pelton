@@ -27,6 +27,8 @@
     getSetting,
     setSetting,
     SettingKeys,
+    smimeRevocationEnabled,
+    setSMIMERevocation,
   } from '../../lib/api'
   import ToggleSwitch from '../common/ToggleSwitch.svelte'
   import { sidebar } from '../../stores/accounts'
@@ -46,6 +48,11 @@
   // than the prefs store, since it is not a display preference.
   let indexDecrypted = false
   let searchBusy = false
+  // whether s/mime signatures are checked against the issuing authority for
+  // revocation. Also read from the backend: it is not a display preference, and
+  // turning it off empties the cache of past answers.
+  let revocation = false
+  let revocationBusy = false
 
   $: accounts = $sidebar.data?.accounts ?? []
   $: signingKeys = keys.filter((k) => k.hasPrivate)
@@ -57,8 +64,27 @@
     } catch {
       // never set: the default is off, which is what the toggle already shows.
     }
+    try {
+      revocation = await smimeRevocationEnabled()
+    } catch {
+      // same: off is the default and what the toggle shows.
+    }
     loading = false
   })
+
+  // onRevocation flips the setting. Turning it off empties the cache backend
+  // side, so nothing is left recording which authorities were asked about whom.
+  async function onRevocation(next: boolean): Promise<void> {
+    revocationBusy = true
+    try {
+      await setSMIMERevocation(next)
+      revocation = next
+    } catch (err) {
+      toastError(errorMessage(err))
+    } finally {
+      revocationBusy = false
+    }
+  }
 
   // onIndexDecrypted rebuilds the search index in the background either way,
   // so switching this off removes the plaintext already written rather than
@@ -315,6 +341,19 @@
     />
   </div>
   <p class="hint">{$t('encryption.searchHint')}</p>
+
+  <h4>{$t('encryption.revocationTitle')}</h4>
+  <div class="account">
+    <span class="row-label">{$t('encryption.revocationLabel')}</span>
+    <ToggleSwitch
+      checked={revocation}
+      label={$t('encryption.revocationLabel')}
+      disabled={revocationBusy}
+      on:change={(e) => void onRevocation(e.detail)}
+    />
+  </div>
+  <p class="hint">{$t('encryption.revocationHint')}</p>
+  <p class="hint">{$t('encryption.revocationPrivacy')}</p>
 </div>
 
 <style>

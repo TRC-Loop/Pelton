@@ -90,6 +90,14 @@ type SMIMESignature struct {
 	Email  string
 	Issuer string
 	Detail string
+	// Certs is the signing certificate and its issuer in DER, length-prefixed
+	// so the pair survives one column. The raw message is not kept, so this is
+	// what a revocation check works from. It is written on insert and read back
+	// only by that check, never by a list, since a list has no use for a few
+	// kilobytes of certificate per row. Fingerprint is sha-256 of the signing
+	// certificate and keys the revocation cache.
+	Certs       []byte
+	Fingerprint string
 }
 
 // IncomingAttachment is attachment metadata together with its content, handed
@@ -149,6 +157,15 @@ func (d *DB) InsertMessageWithAttachments(ctx context.Context, m *Message, atts 
 	return id, nil
 }
 
+// orEmptyBlob keeps a nil slice from binding as NULL, which a NOT NULL column
+// refuses. Unsigned mail carries no certificates and must still insert.
+func orEmptyBlob(b []byte) []byte {
+	if b == nil {
+		return []byte{}
+	}
+	return b
+}
+
 func insertMessage(ctx context.Context, ex execer, m *Message) (int64, error) {
 	const query = `
 INSERT INTO messages (
@@ -156,14 +173,16 @@ INSERT INTO messages (
     to_addresses, cc_addresses, date, flags, body_plain, body_html,
     has_attachments, size_bytes, list_unsubscribe, list_unsubscribe_post,
     smime_status, smime_signer, smime_email, smime_issuer, smime_detail,
+    smime_certs, smime_fingerprint,
     reply_to, auth_spf, auth_dkim, auth_dmarc, auth_spf_domain, auth_dkim_domain
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 	res, err := ex.ExecContext(ctx, query,
 		m.AccountID, m.FolderID, m.UID, m.MessageID, m.Subject, m.FromAddress,
 		m.FromName, m.ToAddresses, m.CcAddresses, formatTime(m.Date), uint8(m.Flags),
 		m.BodyPlain, m.BodyHTML, boolToInt(m.HasAttachments), m.SizeBytes,
 		m.ListUnsubscribe, boolToInt(m.ListUnsubscribePost),
 		m.SMIME.Status, m.SMIME.Signer, m.SMIME.Email, m.SMIME.Issuer, m.SMIME.Detail,
+		orEmptyBlob(m.SMIME.Certs), m.SMIME.Fingerprint,
 		m.ReplyTo, m.Auth.SPF, m.Auth.DKIM, m.Auth.DMARC, m.Auth.SPFDomain, m.Auth.DKIMDomain)
 	if err != nil {
 		return 0, fmt.Errorf("storage: insert message uid %d: %w", m.UID, err)
@@ -265,7 +284,7 @@ SELECT id, account_id, folder_id, uid, message_id, subject, from_address,
        body_html, has_attachments, size_bytes, flag_color, snooze_until,
        snooze_hidden, offline, list_unsubscribe, list_unsubscribe_post,
        smime_status, smime_signer, smime_email, smime_issuer, smime_detail,
-       reply_to, auth_spf, auth_dkim, auth_dmarc, auth_spf_domain,
+       smime_fingerprint, reply_to, auth_spf, auth_dkim, auth_dmarc, auth_spf_domain,
        auth_dkim_domain`
 
 const selectMessageByID = selectMessageColumns + `
@@ -287,7 +306,7 @@ func scanMessage(row rowScanner) (*Message, error) {
 		&m.FlagColor, &m.SnoozeUntil, &snoozeHidden, &offline,
 		&m.ListUnsubscribe, &unsubPost,
 		&m.SMIME.Status, &m.SMIME.Signer, &m.SMIME.Email, &m.SMIME.Issuer,
-		&m.SMIME.Detail, &m.ReplyTo, &m.Auth.SPF, &m.Auth.DKIM, &m.Auth.DMARC,
+		&m.SMIME.Detail, &m.SMIME.Fingerprint, &m.ReplyTo, &m.Auth.SPF, &m.Auth.DKIM, &m.Auth.DMARC,
 		&m.Auth.SPFDomain, &m.Auth.DKIMDomain); err != nil {
 		return nil, err
 	}

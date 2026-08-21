@@ -8,14 +8,41 @@
   import TechBadges from '../common/TechBadges.svelte'
   import { prefs } from '../../stores/prefs'
   import { formatFullDate, displayName, type TimeFormat } from '../../lib/format'
-  import { unsubscribeMessage } from '../../lib/api'
+  import { unsubscribeMessage, checkSMIMERevocation } from '../../lib/api'
   import { BrowserOpenURL } from '../../../wailsjs/runtime/runtime'
   import { errorMessage, toastError, toastSuccess } from '../../stores/toast'
   import { t } from '../../lib/i18n'
   import { vipSenders, bareAddress, addVIP, removeVIP } from '../../stores/vip'
-  import type { MessageDetail, UnsubscribeInfo } from '../../lib/types'
+  import type { MessageDetail, UnsubscribeInfo, SMIMERevocation } from '../../lib/types'
 
   export let detail: MessageDetail
+
+  // what the signing certificate's authority says about it now. The check runs
+  // when a signed message is opened rather than at sync: a certificate valid
+  // when the mail arrived can be withdrawn afterwards, which is the case worth
+  // catching. The backend answers with an empty status when the setting is off,
+  // so asking unconditionally costs nothing.
+  let revocation: SMIMERevocation | undefined
+  let checkedId = 0
+
+  $: if (detail.smime.status !== '' && detail.id !== checkedId) {
+    checkedId = detail.id
+    revocation = undefined
+    void loadRevocation(detail.id)
+  }
+
+  // a failed check is not a verdict, so a rejection leaves the badge as the
+  // signature verdict alone rather than raising anything at the reader.
+  async function loadRevocation(id: number): Promise<void> {
+    try {
+      const result = await checkSMIMERevocation(id)
+      if (id === checkedId) {
+        revocation = result
+      }
+    } catch {
+      // offline, or the store could not be read. Either way, say nothing.
+    }
+  }
 
   // the vip store (loaded at startup, updated on every toggle) is the single
   // source of truth, so un-starring reflects immediately. The backend
@@ -148,6 +175,7 @@
       pgp={detail.pgp}
       auth={detail.auth}
       smime={detail.smime}
+      revocation={revocation}
     />
     {#if unsub}
       <button type="button" class="unsub" class:confirming disabled={done || working} on:click={onUnsubscribe}>

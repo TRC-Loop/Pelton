@@ -54,6 +54,10 @@ export function CheckForUpdates() {
   return window['go']['desktop']['App']['CheckForUpdates']();
 }
 
+export function CheckSMIMERevocation(arg1) {
+  return window['go']['desktop']['App']['CheckSMIMERevocation'](arg1);
+}
+
 export function ChooseArchiveExportFolder() {
   return window['go']['desktop']['App']['ChooseArchiveExportFolder']();
 }
@@ -590,6 +594,10 @@ export function SetProxyConfig(arg1) {
   return window['go']['desktop']['App']['SetProxyConfig'](arg1);
 }
 
+export function SetSMIMERevocation(arg1) {
+  return window['go']['desktop']['App']['SetSMIMERevocation'](arg1);
+}
+
 export function SetSeen(arg1, arg2) {
   return window['go']['desktop']['App']['SetSeen'](arg1, arg2);
 }
@@ -620,6 +628,10 @@ export function SetWindowTheme(arg1) {
 
 export function SetWindowTitle(arg1) {
   return window['go']['desktop']['App']['SetWindowTitle'](arg1);
+}
+
+export function SMIMERevocationEnabled() {
+  return window['go']['desktop']['App']['SMIMERevocationEnabled']();
 }
 
 export function SignerFingerprint(arg1) {

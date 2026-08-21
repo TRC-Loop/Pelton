@@ -96,9 +96,28 @@ A signed message shows a badge in the reading pane, alongside the PGP one and co
 | **Signature verified** | The message has not been altered, the certificate is valid and trusted by your system, and it belongs to the sender. |
 | **Signature unverified** | The certificate cannot be vouched for: an authority your computer does not trust, an expired certificate, or one issued to somebody other than the sender. Hover the badge for which. |
 | **Signature failed** | The message was altered after it was signed. |
+| **Certificate revoked** | The authority that issued the certificate has withdrawn it. Only shows with revocation checking on, below. |
 
 Mail with no signature shows no badge, which is nearly all of it.
 
 Checking happens while the mail is downloaded, so it works offline afterwards and adds no delay when you open a message. Messages already in your cache from before this existed show no badge until they sync again.
 
-Two limits worth knowing. Pelton does not ask the certificate authority whether a certificate has been revoked since it was issued, because that would tell the authority which mail you are reading; a revoked certificate still shows as verified. And the verdict is the one recorded when the message arrived, which is the right question for a signature: a certificate expiring later does not make an older message a forgery.
+One limit worth knowing: the verdict is the one recorded when the message arrived, which is the right question for a signature. A certificate expiring later does not make an older message a forgery.
+
+## Revocation checking
+
+A certificate gets revoked when the private key behind it is lost or stolen, or when the person it was issued to no longer holds the role it vouches for. The signature still verifies afterwards, because the maths has not changed. Only the authority that issued the certificate knows it has been withdrawn.
+
+Finding out means asking that authority, over the network, about a specific certificate. That tells them which certificate you are checking, and so roughly who mails you and when you read it. So it is a setting, under Settings > Encryption, and it is off.
+
+With it on, Pelton asks the first time you open a signed message, and remembers the answer for as long as the authority says it holds. Reading a thread is one question, not one per message. Requests go through your proxy if you have one set.
+
+Three things you can see:
+
+| State | Meaning |
+| --- | --- |
+| Nothing extra | The authority says the certificate is still in force. The badge reads as before. |
+| **Certificate revoked** | The authority has withdrawn it. The signature is intact but no longer vouches for anybody. |
+| A note on the badge | The check could not be made: offline, the authority did not answer, or the certificate names no way to ask. The signature verdict is left alone, because being offline says nothing about a certificate. |
+
+Turning the setting off deletes every answer Pelton has cached.

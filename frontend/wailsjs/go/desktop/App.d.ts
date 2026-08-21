@@ -28,6 +28,8 @@ export function CancelSend(arg1:number):Promise<boolean>;
 
 export function CheckForUpdates():Promise<desktop.UpdateCheckResult>;
 
+export function CheckSMIMERevocation(arg1:number):Promise<desktop.SMIMERevocationDTO>;
+
 export function ChooseArchiveExportFolder():Promise<string>;
 
 export function ChooseMailFiles():Promise<Array<string>>;
@@ -296,6 +298,8 @@ export function SetMailActionsEnabled(arg1:boolean):Promise<void>;
 
 export function SetProxyConfig(arg1:desktop.ProxyConfigDTO):Promise<void>;
 
+export function SetSMIMERevocation(arg1:boolean):Promise<void>;
+
 export function SetSeen(arg1:number,arg2:boolean):Promise<void>;
 
 export function SetSetting(arg1:string,arg2:string):Promise<void>;
@@ -311,6 +315,8 @@ export function SetVirusTotalEnabled(arg1:boolean):Promise<void>;
 export function SetWindowTheme(arg1:boolean):Promise<void>;
 
 export function SetWindowTitle(arg1:string):Promise<void>;
+
+export function SMIMERevocationEnabled():Promise<boolean>;
 
 export function SignerFingerprint(arg1:number):Promise<string>;
 
