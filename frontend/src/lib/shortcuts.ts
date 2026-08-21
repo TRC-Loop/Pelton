@@ -55,6 +55,11 @@ export type ShortcutAction =
   // until you use it, and a default key would not be.
   | 'open-in-tab'
   | 'close-tab'
+  // profiles (#270). Switching opens the picker; next and previous move along
+  // the list without one.
+  | 'switch-profile'
+  | 'next-profile'
+  | 'prev-profile'
 
 // Shortcut pairs an action with its default combo and the label key for display.
 export interface Shortcut {
@@ -111,6 +116,9 @@ export const shortcuts: Shortcut[] = [
   { action: 'apply-theme', combo: '', labelKey: 'palette.action.applyTheme' },
   { action: 'open-in-tab', combo: '', labelKey: 'messageList.menu.openInTab' },
   { action: 'close-tab', combo: '', labelKey: 'tabs.close' },
+  { action: 'switch-profile', combo: '', labelKey: 'profiles.switch' },
+  { action: 'next-profile', combo: '', labelKey: 'profiles.next' },
+  { action: 'prev-profile', combo: '', labelKey: 'profiles.previous' },
 ]
 
 // ParsedCombo is a combo broken into its modifier flags and final key.

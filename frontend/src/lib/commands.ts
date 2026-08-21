@@ -17,13 +17,14 @@ import {
   IconMoon,
   IconDeviceDesktop,
   IconBrush,
+  IconUsers,
   IconMail,
   IconMailOpened,
 } from '@tabler/icons-svelte'
 import { menuActionCatalog, type MenuActionId } from './menuactions'
 import { settingsCategories } from './settingscategories'
 import { flagColors } from '../theme/flagcolors'
-import type { Account, Folder, UnifiedView, View, MessageSummary, ThemeInfo } from './types'
+import type { Account, Folder, UnifiedView, View, MessageSummary, ThemeInfo, Profile } from './types'
 
 /** Which section of the palette an entry belongs to. */
 export type CommandGroup = 'action' | 'navigate' | 'setting' | 'mail'
@@ -76,6 +77,10 @@ export interface CommandContext {
   unifiedViews: UnifiedView[]
   savedViews: View[]
   themes: ThemeInfo[]
+  /** Every profile, for the switcher step. Empty hides the entry. */
+  profiles: Profile[]
+  /** Whether each profile also gets its own top-level palette entry. */
+  paletteProfiles: boolean
   /** The message in the reading pane, or null. */
   openMessage: MessageSummary | null
   /** The message list's multi-selection, empty when there is none. */
@@ -94,6 +99,8 @@ export interface CommandContext {
   editView: (view: View) => void
   applyTheme: (themeId: string) => void
   setBaseTheme: (theme: 'light' | 'dark' | 'system') => void
+  /** Switches to another profile. */
+  switchProfile: (id: number) => void
 }
 
 /** A message operation the palette can run on one message or on a selection. */
@@ -123,6 +130,7 @@ const steppedActions = new Set<MenuActionId>([
   'toggle-pin-folder',
   'apply-theme',
   'edit-view',
+  'switch-profile',
 ])
 
 /** Every folder across every account, flattened, with its account attached. */
@@ -286,6 +294,34 @@ function steppedCommands(ctx: CommandContext): PaletteCommand[] {
     })
   }
 
+  if (ctx.profiles.length > 1) {
+    out.push({
+      id: 'action:switch-profile',
+      group: 'action',
+      label: ctx.t('profiles.switch'),
+      icon: IconUsers,
+      run: () => profileStep(ctx),
+    })
+    // with the setting on, each profile is its own entry, so activating one is
+    // a keystroke instead of a picker step. Off by default: the entries are
+    // only worth their place in the list if you switch often.
+    if (ctx.paletteProfiles) {
+      for (const profile of ctx.profiles) {
+        if (profile.active) {
+          continue
+        }
+        out.push({
+          id: `action:profile-${profile.id}`,
+          group: 'action',
+          label: ctx.t('profiles.switchToName').replace('{name}', profile.name),
+          keywords: ctx.t('profiles.switch'),
+          icon: IconUsers,
+          run: () => ctx.switchProfile(profile.id),
+        })
+      }
+    }
+  }
+
   out.push({
     id: 'action:apply-theme',
     group: 'action',
@@ -295,6 +331,22 @@ function steppedCommands(ctx: CommandContext): PaletteCommand[] {
   })
 
   return out
+}
+
+/** The profile picker. The one you are in is listed but does nothing. */
+function profileStep(ctx: CommandContext): CommandStep {
+  return {
+    label: ctx.t('profiles.switch'),
+    placeholder: ctx.t('profiles.pick'),
+    items: ctx.profiles.map((profile) => ({
+      id: `profile:${profile.id}`,
+      group: 'action' as const,
+      label: profile.name,
+      hint: profile.active ? ctx.t('profiles.currentTag') : undefined,
+      icon: IconUsers,
+      run: () => ctx.switchProfile(profile.id),
+    })),
+  }
 }
 
 /** The theme picker: the three built-in bases, then every installed theme. */

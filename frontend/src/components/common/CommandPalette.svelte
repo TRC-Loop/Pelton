@@ -72,10 +72,16 @@
     input?.focus()
   }
 
+  // the order the groups appear in, whatever their scores. Doing something
+  // comes before going somewhere, which comes before changing a preference:
+  // typing three letters should not put a settings pane above the action of
+  // the same name.
+  const groupRank: CommandGroup[] = ['action', 'mail', 'navigate', 'setting']
+
   /**
-   * Buckets ranked results by group, ordering the buckets by their strongest
-   * member. Results arrive sorted by score alone, which would interleave the
-   * groups and repeat their headers all the way down the list.
+   * Buckets ranked results by group. The buckets are in a fixed order rather
+   * than by their strongest member, so the palette reads the same way every
+   * time; within a bucket the score still decides.
    */
   function groupRuns(list: RankedCommand[]): { group: CommandGroup; items: RankedCommand[] }[] {
     const buckets = new Map<CommandGroup, RankedCommand[]>()
@@ -89,7 +95,7 @@
     }
     return [...buckets.entries()]
       .map(([group, items]) => ({ group, items }))
-      .sort((a, b) => b.items[0].score - a.items[0].score)
+      .sort((a, b) => groupRank.indexOf(a.group) - groupRank.indexOf(b.group))
   }
 
   function groupLabel(group: CommandGroup): string {

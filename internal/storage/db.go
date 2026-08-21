@@ -57,6 +57,9 @@ type DB struct {
 	sql            *sql.DB
 	path           string
 	attachmentsDir string
+	// scope is the profile the store reads and writes profile-owned rows for.
+	// See profilescope.go.
+	scope scope
 }
 
 // ChannelNightly is the build channel of the automated dev-branch builds. It
@@ -191,7 +194,10 @@ func (d *DB) RunMigrations(ctx context.Context) error {
 			return err
 		}
 	}
-	return nil
+	// settings, signatures and saved views belong to a profile, so the store has
+	// to know which one before anything reads them. Doing it here means every
+	// path that opens a database gets a usable scope, tests included.
+	return d.UseActiveProfile(ctx)
 }
 
 const createMigrationsTable = `

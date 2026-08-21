@@ -23,12 +23,17 @@ type Signature struct {
 	UpdatedAt time.Time
 }
 
-// ListSignatures returns every signature ordered by kind then name.
+// Signatures belong to a profile: a work signature has no place on private
+// mail. A profile that shares them with main reads and writes main's rows, which
+// the store resolves once per switch (profilescope.go).
+
+// ListSignatures returns every signature of the current profile, ordered by kind
+// then name.
 func (d *DB) ListSignatures(ctx context.Context) ([]Signature, error) {
 	const query = `
 SELECT id, name, kind, format, content, created_at, updated_at
-FROM signatures ORDER BY kind, name`
-	rows, err := d.sql.QueryContext(ctx, query)
+FROM signatures WHERE profile_id = ? ORDER BY kind, name`
+	rows, err := d.sql.QueryContext(ctx, query, d.signaturesProfile())
 	if err != nil {
 		return nil, fmt.Errorf("storage: list signatures: %w", err)
 	}
@@ -52,10 +57,10 @@ FROM signatures ORDER BY kind, name`
 func (d *DB) CreateSignature(ctx context.Context, s *Signature) (int64, error) {
 	now := time.Now().UTC()
 	const query = `
-INSERT INTO signatures (name, kind, format, content, created_at, updated_at)
-VALUES (?, ?, ?, ?, ?, ?)`
+INSERT INTO signatures (name, kind, format, content, created_at, updated_at, profile_id)
+VALUES (?, ?, ?, ?, ?, ?, ?)`
 	res, err := d.sql.ExecContext(ctx, query,
-		s.Name, s.Kind, s.Format, s.Content, formatTime(now), formatTime(now))
+		s.Name, s.Kind, s.Format, s.Content, formatTime(now), formatTime(now), d.signaturesProfile())
 	if err != nil {
 		return 0, fmt.Errorf("storage: insert signature: %w", err)
 	}

@@ -40,6 +40,9 @@ func (a *App) buildMenu() *menu.Menu {
 	appMenu.AddText(s.about, nil, a.menuAction("about"))
 	appMenu.AddSeparator()
 	appMenu.AddText(s.preferences, keys.CmdOrCtrl(","), a.menuAction("preferences"))
+	// profiles (#270). No accelerator: switching ships unbound so the user picks
+	// their own key under Settings, Shortcuts.
+	appMenu.AddText(s.switchProfile, nil, a.menuAction("switch-profile"))
 	appMenu.AddSeparator()
 	appMenu.AddText(s.hide, keys.CmdOrCtrl("h"), func(_ *menu.CallbackData) {
 		// Hide, not WindowHide: see the note in beforeClose. Ordering the window
@@ -145,7 +148,7 @@ func (a *App) addFullscreenItem(m *menu.Menu, s menuStrings) {
 // next launch. Only macOS has a native menu to rebuild; Windows/Linux use the
 // in-app bar, which re-renders itself.
 func (a *App) RebuildMenu() {
-	if a.ctx == nil || goruntime.GOOS != "darwin" {
+	if a.ctx == nil || !a.runtimeReady.Load() || goruntime.GOOS != "darwin" {
 		return
 	}
 	wailsruntime.MenuSetApplicationMenu(a.ctx, a.buildMenu())

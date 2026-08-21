@@ -49,9 +49,14 @@ SELECT id, name, icon, color,
        position, created_at, updated_at
 FROM views`
 
+// viewsScope restricts every view query to the profile that owns them, which is
+// the current one or main when it shares. Saved views are per profile: a work
+// triage view is noise at home.
+const viewsScope = ` WHERE profile_id = ?`
+
 // ListViews returns every view ordered by position then name.
 func (d *DB) ListViews(ctx context.Context) ([]View, error) {
-	rows, err := d.sql.QueryContext(ctx, selectViewColumns+` ORDER BY position, name`)
+	rows, err := d.sql.QueryContext(ctx, selectViewColumns+viewsScope+` ORDER BY position, name`, d.viewsProfile())
 	if err != nil {
 		return nil, fmt.Errorf("storage: list views: %w", err)
 	}
@@ -89,7 +94,8 @@ func (d *DB) CreateView(ctx context.Context, v *View) (int64, error) {
 	now := time.Now().UTC()
 	if v.Position == 0 {
 		var maxPos sql.NullInt64
-		if err := d.sql.QueryRowContext(ctx, `SELECT MAX(position) FROM views`).Scan(&maxPos); err != nil {
+		if err := d.sql.QueryRowContext(ctx,
+			`SELECT MAX(position) FROM views WHERE profile_id = ?`, d.viewsProfile()).Scan(&maxPos); err != nil {
 			return 0, fmt.Errorf("storage: view max position: %w", err)
 		}
 		v.Position = int(maxPos.Int64) + 1
@@ -97,12 +103,12 @@ func (d *DB) CreateView(ctx context.Context, v *View) (int64, error) {
 	const query = `
 INSERT INTO views (name, icon, color, query_text, query_from, query_to, query_subject,
                    within_days, use_regex, unread_only, flagged_only, has_attachment, account_id,
-                   position, created_at, updated_at)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+                   position, created_at, updated_at, profile_id)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 	res, err := d.sql.ExecContext(ctx, query,
 		v.Name, v.Icon, v.Color, v.QueryText, v.QueryFrom, v.QueryTo, v.QuerySubject,
 		v.WithinDays, boolToInt(v.UseRegex), boolToInt(v.UnreadOnly), boolToInt(v.FlaggedOnly), boolToInt(v.HasAttachment),
-		zeroAsNull(v.AccountID), v.Position, formatTime(now), formatTime(now))
+		zeroAsNull(v.AccountID), v.Position, formatTime(now), formatTime(now), d.viewsProfile())
 	if err != nil {
 		return 0, fmt.Errorf("storage: insert view: %w", err)
 	}

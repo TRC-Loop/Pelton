@@ -51,6 +51,11 @@ const (
 	// EventImportProgress fires while mail is being imported from files, and
 	// once more with Running false when the job ends.
 	EventImportProgress = "import:progress"
+	// EventProfileChanged fires when the app switches profile, or when the
+	// profile it is in is edited. Everything the ui holds is scoped to a profile,
+	// so the frontend reloads its preferences, sidebar, list and views rather
+	// than trying to patch them.
+	EventProfileChanged = "profile:changed"
 )
 
 // DownloadProgressEvent is the payload for EventDownloadProgress. Running is
@@ -117,7 +122,7 @@ type SyncStateEvent struct {
 // emit sends a runtime event if the context is set. It is a thin wrapper so call
 // sites stay terse and a nil context (before startup) is a safe no-op.
 func (a *App) emit(name string, payload any) {
-	if a.ctx == nil {
+	if a.ctx == nil || !a.runtimeReady.Load() {
 		return
 	}
 	runtime.EventsEmit(a.ctx, name, payload)

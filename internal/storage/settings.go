@@ -26,10 +26,17 @@ const (
 	SettingProxy = "proxy"
 )
 
+// Every function here reads and writes the settings of the profile the app is
+// in, which the store resolves once per switch: a profile that shares settings
+// with main reads and writes main's rows, so neither the callers nor the keys
+// change. See profilescope.go.
+
 // Get returns the raw stored string for key, or ErrSettingNotFound.
 func (d *DB) Get(ctx context.Context, key string) (string, error) {
 	var value string
-	err := d.sql.QueryRowContext(ctx, `SELECT value FROM settings WHERE key = ?`, key).Scan(&value)
+	err := d.sql.QueryRowContext(ctx,
+		`SELECT value FROM settings WHERE key = ? AND profile_id = ?`,
+		key, d.settingsProfile()).Scan(&value)
 	if errors.Is(err, sql.ErrNoRows) {
 		return "", ErrSettingNotFound
 	}
@@ -42,9 +49,9 @@ func (d *DB) Get(ctx context.Context, key string) (string, error) {
 // Set writes key to value, inserting or updating, and bumps updated_at.
 func (d *DB) Set(ctx context.Context, key, value string) error {
 	const query = `
-INSERT INTO settings (key, value, updated_at) VALUES (?, ?, ?)
-ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`
-	if _, err := d.sql.ExecContext(ctx, query, key, value, nowText()); err != nil {
+INSERT INTO settings (key, profile_id, value, updated_at) VALUES (?, ?, ?, ?)
+ON CONFLICT(key, profile_id) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`
+	if _, err := d.sql.ExecContext(ctx, query, key, d.settingsProfile(), value, nowText()); err != nil {
 		return fmt.Errorf("storage: set setting %q: %w", key, err)
 	}
 	return nil
@@ -118,7 +125,8 @@ type Setting struct {
 
 // AllSettings returns every stored setting, for exporting a full snapshot.
 func (d *DB) AllSettings(ctx context.Context) ([]Setting, error) {
-	rows, err := d.sql.QueryContext(ctx, `SELECT key, value, updated_at FROM settings`)
+	rows, err := d.sql.QueryContext(ctx,
+		`SELECT key, value, updated_at FROM settings WHERE profile_id = ?`, d.settingsProfile())
 	if err != nil {
 		return nil, fmt.Errorf("storage: list settings: %w", err)
 	}
@@ -143,10 +151,10 @@ func (d *DB) AllSettings(ctx context.Context) ([]Setting, error) {
 // snapshot never clobbers a more recent local change (last write wins).
 func (d *DB) SetIfNewer(ctx context.Context, key, value, updatedAt string) error {
 	const query = `
-INSERT INTO settings (key, value, updated_at) VALUES (?, ?, ?)
-ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
+INSERT INTO settings (key, profile_id, value, updated_at) VALUES (?, ?, ?, ?)
+ON CONFLICT(key, profile_id) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
 WHERE excluded.updated_at >= settings.updated_at`
-	if _, err := d.sql.ExecContext(ctx, query, key, value, updatedAt); err != nil {
+	if _, err := d.sql.ExecContext(ctx, query, key, d.settingsProfile(), value, updatedAt); err != nil {
 		return fmt.Errorf("storage: set setting if newer %q: %w", key, err)
 	}
 	return nil

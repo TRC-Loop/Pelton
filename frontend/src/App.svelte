@@ -64,7 +64,7 @@
   import { liabilityAccepted } from './lib/liability'
   import { setDemoActive } from './lib/demo'
   import { recordArchived } from './stores/undoarchive'
-  import { onMailNew, onSyncState, onSyncProgress, onOutboxChanged, onMenu, onViewsChanged, onMailtoCompose, type Unsubscribe, type MailtoDraft } from './lib/events'
+  import { onMailNew, onSyncState, onSyncProgress, onOutboxChanged, onMenu, onViewsChanged, onProfileChanged, onMailtoCompose, type Unsubscribe, type MailtoDraft } from './lib/events'
   import { loadViews, editingView, closeViewEditor, openViewEditor, views as savedViews } from './stores/views'
   import { selectSavedView } from './stores/selection'
   import { isMac } from './lib/i18n'
@@ -83,11 +83,14 @@
     openInTab,
     closeTab,
     closeActiveTab,
+    clearAllTabs,
     focusTab,
     focusPane,
     restoreTabs,
   } from './stores/tabs'
   import { messageDetail } from './stores/message'
+  import { profiles, currentProfile, loadProfiles, switchTo, switchRelative } from './stores/profiles'
+  import { settingsRequest, clearSettingsRequest } from './stores/settingsnav'
   import { errorMessage, toastError, toastInfo, pushAction } from './stores/toast'
   import { friendlyError } from './lib/errors'
   import { setOnline } from './stores/network'
@@ -280,6 +283,7 @@
     // to be known before the first sync raises any prompt.
     void refreshMissingPasswords()
     void restoreTabs(get(prefs).restoreTabs)
+    void loadProfiles()
     initProgress()
     await loadSidebar()
     // the sidebar data has to be here first: a configured or remembered folder
@@ -338,6 +342,7 @@
     )
     unsubscribers.push(onOutboxChanged(() => void loadOutbox()))
     unsubscribers.push(onViewsChanged(() => void loadViews()))
+    unsubscribers.push(onProfileChanged(() => void reloadForProfile()))
     unsubscribers.push(onMenu(handleMenu))
     // a mailto: link opened while the app is already running.
     unsubscribers.push(onMailtoCompose((draft) => openMailtoDraft(draft)))
@@ -650,6 +655,12 @@
       case 'close-tab':
         closeActiveTab()
         break
+      case 'next-profile':
+        void switchRelative(1)
+        break
+      case 'prev-profile':
+        void switchRelative(-1)
+        break
       case 'undo':
         if (!triggerUndo() && !triggerUndoDelete() && !triggerUndoArchive()) {
           toastInfo(get(t)('app.toast.nothingToUndo'))
@@ -721,6 +732,7 @@
       case 'toggle-pin-folder':
       case 'apply-theme':
       case 'edit-view':
+      case 'switch-profile':
         openStepFor(action)
         break
     }
@@ -859,6 +871,9 @@
     unifiedViews: $sidebar.data?.views ?? [],
     savedViews: $savedViews,
     themes: paletteThemes,
+    profiles: $profiles,
+    paletteProfiles: $prefs.paletteProfiles,
+    switchProfile: (id: number) => void switchTo(id),
     openMessage: currentMessage(),
     selected: selectedMessages,
     selectFolder: (folder) => {
@@ -1149,6 +1164,36 @@
     }
     focusTab(tab.id)
     return true
+  }
+
+  // reloadForProfile rebuilds everything the ui holds after a profile switch.
+  // Settings, accounts, signatures and saved views are all scoped to a profile,
+  // and the open message almost certainly belongs to an account this profile
+  // cannot see, so the pane and the tabs are cleared rather than left showing
+  // mail from the profile you just left.
+  async function reloadForProfile(): Promise<void> {
+    openMessageId.set(null)
+    clearAllTabs()
+    clearSelection()
+    await loadProfiles()
+    await initPrefs()
+    await loadSidebar()
+    const data = get(sidebar).data
+    if (data) {
+      await applyStartupSelection(get(prefs).startupSelection, data)
+    }
+    void loadSignatures()
+    void loadVIPSenders()
+    void loadViews()
+    await loadList(get(selection))
+  }
+
+  // anything deep in the tree can ask for the settings screen on a category;
+  // the panel itself is owned here. See stores/settingsnav.ts.
+  $: if ($settingsRequest) {
+    settingsCategory = $settingsRequest
+    settingsOpen = true
+    clearSettingsRequest()
   }
 
   // isEditableTarget reports whether the event originated in a text field, so
