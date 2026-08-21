@@ -151,6 +151,38 @@ export interface SMIMESignature {
 
 export type SMIMEStatus = '' | 'valid' | 'untrusted' | 'invalid'
 
+// MCPPermission is one write tool an agent may be allowed to use. Every tool is
+// switched separately; group only says where the settings ui puts it.
+export interface MCPPermission {
+  tool: string
+  group: string
+  allowed: boolean
+}
+
+// AgentAction is one write an agent made, for the log. summary is written by
+// the backend, never by the agent, so nothing an agent says lands here as fact.
+export interface AgentAction {
+  id: number
+  tool: string
+  summary: string
+  error: string
+  when: string
+}
+
+// AgentProposal is a message an agent wants sent, waiting on you. Nothing has
+// been sent and nothing has reached a server.
+export interface AgentProposal {
+  id: number
+  accountId: number
+  to: string
+  cc: string
+  bcc: string
+  subject: string
+  body: string
+  when: string
+}
+
+
 // SMIMERevocation is what the issuing authority says about a signing
 // certificate now, which the signature itself cannot tell you: a message signed
 // with a stolen key still verifies. status is '' when no check was made, either

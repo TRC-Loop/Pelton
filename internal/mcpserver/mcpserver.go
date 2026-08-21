@@ -34,13 +34,19 @@ type Config struct {
 	Addr    string
 	Token   string
 	Version string
+	// Permissions says which write tools this run allows. The zero value allows
+	// none, so the server is read-only unless something says otherwise.
+	Permissions Permissions
 }
 
 // Server owns the HTTP listener and the MCP server. It is safe for concurrent
 // Start/Stop calls; the desktop layer calls Stop then Start to apply a changed
 // port or a regenerated token.
 type Server struct {
-	mb  Mailbox
+	mb Mailbox
+	// w is nil on a read-only server, and then no write tool is registered at
+	// all. The permission check is the second line, not the only one.
+	w   Writer
 	log *slog.Logger
 
 	mu      sync.Mutex
@@ -48,12 +54,21 @@ type Server struct {
 	ln      net.Listener
 }
 
-// New creates a Server backed by mb. It does not listen until Start is called.
+// New creates a read-only Server backed by mb. It does not listen until Start
+// is called.
 func New(mb Mailbox, log *slog.Logger) *Server {
 	if log == nil {
 		log = slog.Default()
 	}
 	return &Server{mb: mb, log: log}
+}
+
+// NewWithWriter creates a Server that can also act on mail, subject to the
+// permissions given to Start.
+func NewWithWriter(mb Mailbox, w Writer, log *slog.Logger) *Server {
+	s := New(mb, log)
+	s.w = w
+	return s
 }
 
 // Running reports whether the server is currently listening.
@@ -90,8 +105,9 @@ func (s *Server) Start(cfg Config) error {
 		Name:    serverName,
 		Version: cfg.Version,
 		Title:   "Pelton",
-	}, &mcp.ServerOptions{Instructions: serverInstructions})
+	}, &mcp.ServerOptions{Instructions: serverInstructions(cfg.Permissions)})
 	registerTools(mcpSrv, s.mb)
+	registerWriteTools(mcpSrv, s.w, cfg.Permissions)
 
 	// Stateless: every request is self-contained. The read-only tools need no
 	// per-session state, and this makes the server immune to losing a client's

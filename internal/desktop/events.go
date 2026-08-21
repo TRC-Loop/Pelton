@@ -26,6 +26,9 @@ const (
 	EventSyncState = "sync:state"
 	// EventOutboxChanged fires when the outbox contents or a message state change.
 	EventOutboxChanged = "outbox:changed"
+	// EventAgentProposals fires when an agent proposes a message, or one is
+	// approved or discarded, so the queue in the ui matches what is stored.
+	EventAgentProposals = "agent:proposals"
 	// EventMenu fires when a native menu item is chosen. The payload is a short
 	// action string (preferences, compose, sync, add-mailbox, about) the frontend
 	// maps to an action.

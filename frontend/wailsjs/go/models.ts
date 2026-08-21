@@ -798,6 +798,68 @@ export namespace desktop {
 	        this.hasKey = source["hasKey"];
 	    }
 	}
+	export class AgentActionDTO {
+	    id: number;
+	    tool: string;
+	    summary: string;
+	    error: string;
+	    when: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new AgentActionDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.tool = source["tool"];
+	        this.summary = source["summary"];
+	        this.error = source["error"];
+	        this.when = source["when"];
+	    }
+	}
+	export class AgentProposalDTO {
+	    id: number;
+	    accountId: number;
+	    to: string;
+	    cc: string;
+	    bcc: string;
+	    subject: string;
+	    body: string;
+	    when: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new AgentProposalDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.accountId = source["accountId"];
+	        this.to = source["to"];
+	        this.cc = source["cc"];
+	        this.bcc = source["bcc"];
+	        this.subject = source["subject"];
+	        this.body = source["body"];
+	        this.when = source["when"];
+	    }
+	}
+	export class MCPPermissionDTO {
+	    tool: string;
+	    group: string;
+	    allowed: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new MCPPermissionDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.tool = source["tool"];
+	        this.group = source["group"];
+	        this.allowed = source["allowed"];
+	    }
+	}
 	export class SMIMERevocationDTO {
 	    status: string;
 	    detail: string;

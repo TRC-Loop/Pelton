@@ -11,6 +11,7 @@
   import { formatRelative } from '../../lib/format'
   import { cancelDownload, isDevMode, isNightly } from '../../lib/api'
   import ProfileChip from './ProfileChip.svelte'
+  import AgentProposals from './AgentProposals.svelte'
   import { profiles, currentProfile } from '../../stores/profiles'
   import { prefs, setLowPowerMode } from '../../stores/prefs'
   import OutboxPanel from './OutboxPanel.svelte'
@@ -81,6 +82,7 @@
     <!-- which profile you are writing from. Only once there is more than one:
          an install with a single profile has no question to answer. -->
     {#if $profiles.length > 1 && $currentProfile}
+      <AgentProposals />
       <ProfileChip />
     {/if}
     {#if pending.length > 0 || failed.length > 0}

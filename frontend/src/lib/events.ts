@@ -18,6 +18,7 @@ export const EventNames = {
   viewsChanged: 'views:changed',
   profileChanged: 'profile:changed',
   importProgress: 'import:progress',
+  agentProposals: 'agent:proposals',
 } as const
 
 // payloads, mirroring the go event structs.
@@ -165,4 +166,10 @@ export function onViewsChanged(cb: () => void): Unsubscribe {
 // subscriber reloads rather than patching.
 export function onProfileChanged(cb: () => void): Unsubscribe {
   return EventsOn(EventNames.profileChanged, () => cb())
+}
+
+// onAgentProposals fires when an agent proposes a message, or one is approved
+// or discarded, so the approval queue matches what is stored.
+export function onAgentProposals(cb: () => void): Unsubscribe {
+  return EventsOn(EventNames.agentProposals, () => cb())
 }

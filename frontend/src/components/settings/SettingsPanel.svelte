@@ -222,6 +222,8 @@
     { cat: 'external', label: $t('settingsPanel.category.external'), kw: 'default mail client links browser' },
     { cat: 'external', label: $t('settingsPanel.category.importExport'), kw: 'backup restore transfer' },
     { cat: 'external', label: $t('import.title'), kw: 'thunderbird migrate eml mbox switch move' },
+    { cat: 'external', label: $t('mcp.permissions'), kw: 'mcp agent ai permissions write send delete' },
+    { cat: 'external', label: $t('mcp.log'), kw: 'mcp agent ai audit log history' },
     { cat: 'power', label: $t('settingsPanel.toggle.lowPowerMode'), kw: 'battery energy' },
     { cat: 'power', label: $t('settingsPanel.label.autoSyncInterval'), kw: 'sync interval' },
     { cat: 'power', label: $t('settingsPanel.toggle.verboseSync'), kw: 'sync status' },

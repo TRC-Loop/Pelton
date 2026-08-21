@@ -22,6 +22,14 @@ export function AddVIPSender(arg1) {
   return window['go']['desktop']['App']['AddVIPSender'](arg1);
 }
 
+export function AgentActions() {
+  return window['go']['desktop']['App']['AgentActions']();
+}
+
+export function AgentProposals() {
+  return window['go']['desktop']['App']['AgentProposals']();
+}
+
 export function AllAccounts() {
   return window['go']['desktop']['App']['AllAccounts']();
 }
@@ -36,6 +44,10 @@ export function AllowRemoteForMessage(arg1) {
 
 export function AppVersion() {
   return window['go']['desktop']['App']['AppVersion']();
+}
+
+export function ApproveAgentProposal(arg1) {
+  return window['go']['desktop']['App']['ApproveAgentProposal'](arg1);
 }
 
 export function ArchiveMessage(arg1) {
@@ -68,6 +80,10 @@ export function ChooseMailFiles() {
 
 export function ChooseThunderbirdProfile() {
   return window['go']['desktop']['App']['ChooseThunderbirdProfile']();
+}
+
+export function ClearAgentActions() {
+  return window['go']['desktop']['App']['ClearAgentActions']();
 }
 
 export function ClearDevActivity() {
@@ -160,6 +176,10 @@ export function DevProcessStats() {
 
 export function DevToolsEnabled() {
   return window['go']['desktop']['App']['DevToolsEnabled']();
+}
+
+export function DiscardAgentProposal(arg1) {
+  return window['go']['desktop']['App']['DiscardAgentProposal'](arg1);
 }
 
 export function DiscardFailedSend(arg1) {
@@ -390,6 +410,10 @@ export function ListViews() {
   return window['go']['desktop']['App']['ListViews']();
 }
 
+export function MCPPermissions() {
+  return window['go']['desktop']['App']['MCPPermissions']();
+}
+
 export function MarkSenderVIP(arg1) {
   return window['go']['desktop']['App']['MarkSenderVIP'](arg1);
 }
@@ -580,6 +604,10 @@ export function SetFolderSyncExcluded(arg1, arg2) {
 
 export function SetMCPEnabled(arg1) {
   return window['go']['desktop']['App']['SetMCPEnabled'](arg1);
+}
+
+export function SetMCPPermission(arg1, arg2) {
+  return window['go']['desktop']['App']['SetMCPPermission'](arg1, arg2);
 }
 
 export function SetMCPPort(arg1) {
