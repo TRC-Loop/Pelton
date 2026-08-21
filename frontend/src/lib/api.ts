@@ -17,6 +17,9 @@ import {
 import type {
   Account,
   SMIMERevocation,
+  MCPPermission,
+  AgentAction,
+  AgentProposal,
   Folder,
   UnifiedView,
   MessageList,
@@ -433,6 +436,44 @@ export function composeProtectionStatus(
 // point the passphrase prompt at the right one. '' when there is none.
 export function signerFingerprint(accountId: number): Promise<string> {
   return App.SignerFingerprint(accountId)
+}
+
+// --- mcp write actions (#127) ---
+
+// mcpPermissions returns every write tool an agent could use and whether it is
+// allowed. All off until switched on.
+export function mcpPermissions(): Promise<MCPPermission[]> {
+  return App.MCPPermissions().then((p) => p ?? [])
+}
+
+// setMCPPermission turns one write tool on or off and restarts the server.
+export function setMCPPermission(tool: string, allowed: boolean): Promise<void> {
+  return App.SetMCPPermission(tool, allowed)
+}
+
+// agentActions returns the log of writes agents have made.
+export function agentActions(): Promise<AgentAction[]> {
+  return App.AgentActions().then((a) => a ?? [])
+}
+
+// clearAgentActions empties that log.
+export function clearAgentActions(): Promise<void> {
+  return App.ClearAgentActions()
+}
+
+// agentProposals returns messages an agent wants sent, awaiting approval.
+export function agentProposals(): Promise<AgentProposal[]> {
+  return App.AgentProposals().then((p) => p ?? [])
+}
+
+// approveAgentProposal sends a proposed message through the ordinary send path.
+export function approveAgentProposal(id: number): Promise<void> {
+  return App.ApproveAgentProposal(id)
+}
+
+// discardAgentProposal throws a proposed message away unsent.
+export function discardAgentProposal(id: number): Promise<void> {
+  return App.DiscardAgentProposal(id)
 }
 
 // --- s/mime revocation (#226) ---

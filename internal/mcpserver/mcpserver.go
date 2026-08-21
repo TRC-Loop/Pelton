@@ -18,6 +18,7 @@ import (
 	"net"
 	"net/http"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -34,26 +35,61 @@ type Config struct {
 	Addr    string
 	Token   string
 	Version string
+	// Permissions says which write tools this run allows. The zero value allows
+	// none, so the server is read-only unless something says otherwise.
+	Permissions Permissions
 }
 
 // Server owns the HTTP listener and the MCP server. It is safe for concurrent
 // Start/Stop calls; the desktop layer calls Stop then Start to apply a changed
 // port or a regenerated token.
 type Server struct {
-	mb  Mailbox
+	mb Mailbox
+	// w is nil on a read-only server, and then no write tool is registered at
+	// all. The permission check is the second line, not the only one.
+	w   Writer
 	log *slog.Logger
+
+	// perms is read on every call rather than captured when a tool is
+	// registered, so changing a permission does not mean restarting the
+	// listener. Restarting drops the agent's connection and, when a second copy
+	// of Pelton holds the port, fails outright and leaves the server down.
+	perms atomic.Value
 
 	mu      sync.Mutex
 	httpSrv *http.Server
 	ln      net.Listener
 }
 
-// New creates a Server backed by mb. It does not listen until Start is called.
+// New creates a read-only Server backed by mb. It does not listen until Start
+// is called.
 func New(mb Mailbox, log *slog.Logger) *Server {
 	if log == nil {
 		log = slog.Default()
 	}
 	return &Server{mb: mb, log: log}
+}
+
+// NewWithWriter creates a Server that can also act on mail, subject to the
+// permissions given to Start.
+func NewWithWriter(mb Mailbox, w Writer, log *slog.Logger) *Server {
+	s := New(mb, log)
+	s.w = w
+	return s
+}
+
+// SetPermissions replaces the write permissions in place. Tools read them on
+// every call, so this takes effect immediately, including for an agent that is
+// already connected.
+func (s *Server) SetPermissions(p Permissions) {
+	s.perms.Store(p)
+}
+
+// permissions is what the tools consult. A server that never had any stored
+// allows nothing.
+func (s *Server) permissions() Permissions {
+	p, _ := s.perms.Load().(Permissions)
+	return p
 }
 
 // Running reports whether the server is currently listening.
@@ -83,15 +119,17 @@ func (s *Server) Start(cfg Config) error {
 
 	ln, err := net.Listen("tcp", cfg.Addr)
 	if err != nil {
-		return fmt.Errorf("mcpserver: listen on %s: %w", cfg.Addr, err)
+		return listenError(cfg.Addr, err)
 	}
 
 	mcpSrv := mcp.NewServer(&mcp.Implementation{
 		Name:    serverName,
 		Version: cfg.Version,
 		Title:   "Pelton",
-	}, &mcp.ServerOptions{Instructions: serverInstructions})
+	}, &mcp.ServerOptions{Instructions: serverInstructions(s.w != nil)})
+	s.perms.Store(cfg.Permissions)
 	registerTools(mcpSrv, s.mb)
+	registerWriteTools(mcpSrv, s.w, s.permissions)
 
 	// Stateless: every request is self-contained. The read-only tools need no
 	// per-session state, and this makes the server immune to losing a client's
@@ -131,6 +169,25 @@ func (s *Server) Stop(ctx context.Context) error {
 	}
 	s.log.Info("mcp server stopping")
 	return httpSrv.Shutdown(ctx)
+}
+
+// listenError explains a failed bind. A port already in use is nearly always a
+// second copy of Pelton holding it, which the operating system's own wording
+// gives no hint of, so the message says so and says what to do about it.
+func listenError(addr string, err error) error {
+	if addrInUse(err) {
+		return fmt.Errorf("mcpserver: port %s is already in use. Another copy of Pelton is probably running with its MCP server on: quit it, or give this one a different port", portOf(addr))
+	}
+	return fmt.Errorf("mcpserver: listen on %s: %w", addr, err)
+}
+
+// portOf is the port half of a host:port, or the whole string when it will not
+// split, so the message never comes out with a gap in it.
+func portOf(addr string) string {
+	if _, port, err := net.SplitHostPort(addr); err == nil {
+		return port
+	}
+	return addr
 }
 
 // withBearerAuth wraps next so every request must carry an Authorization:

@@ -12,6 +12,10 @@ export function AddPasswordAccount(arg1:desktop.AddAccountRequest):Promise<deskt
 
 export function AddVIPSender(arg1:string):Promise<void>;
 
+export function AgentActions():Promise<Array<desktop.AgentActionDTO>>;
+
+export function AgentProposals():Promise<Array<desktop.AgentProposalDTO>>;
+
 export function AllAccounts():Promise<Array<desktop.AccountDTO>>;
 
 export function AllowDomainImages(arg1:number):Promise<void>;
@@ -19,6 +23,8 @@ export function AllowDomainImages(arg1:number):Promise<void>;
 export function AllowRemoteForMessage(arg1:number):Promise<void>;
 
 export function AppVersion():Promise<string>;
+
+export function ApproveAgentProposal(arg1:number):Promise<void>;
 
 export function ArchiveMessage(arg1:number):Promise<desktop.ArchiveUndoDTO>;
 
@@ -35,6 +41,8 @@ export function ChooseArchiveExportFolder():Promise<string>;
 export function ChooseMailFiles():Promise<Array<string>>;
 
 export function ChooseThunderbirdProfile():Promise<Array<desktop.ThunderbirdProfileDTO>>;
+
+export function ClearAgentActions():Promise<void>;
 
 export function ClearDevActivity():Promise<void>;
 
@@ -81,6 +89,8 @@ export function DevActivity(arg1:number):Promise<desktop.DevActivityDTO>;
 export function DevProcessStats():Promise<desktop.DevProcessDTO>;
 
 export function DevToolsEnabled():Promise<boolean>;
+
+export function DiscardAgentProposal(arg1:number):Promise<void>;
 
 export function DiscardFailedSend(arg1:number):Promise<boolean>;
 
@@ -196,6 +206,8 @@ export function ListVIPSenders():Promise<Array<string>>;
 
 export function ListViews():Promise<Array<desktop.ViewDTO>>;
 
+export function MCPPermissions():Promise<Array<desktop.MCPPermissionDTO>>;
+
 export function MarkSenderVIP(arg1:number):Promise<void>;
 
 export function MoveMessage(arg1:number,arg2:number):Promise<desktop.ArchiveUndoDTO>;
@@ -241,6 +253,8 @@ export function ReorderViews(arg1:Array<number>):Promise<void>;
 export function ResumePendingDownload():Promise<void>;
 
 export function RetrySend(arg1:number):Promise<boolean>;
+
+export function SMIMERevocationEnabled():Promise<boolean>;
 
 export function SaveAllAttachments(arg1:number):Promise<string>;
 
@@ -292,6 +306,8 @@ export function SetFolderSyncExcluded(arg1:number,arg2:boolean):Promise<void>;
 
 export function SetMCPEnabled(arg1:boolean):Promise<void>;
 
+export function SetMCPPermission(arg1:string,arg2:boolean):Promise<void>;
+
 export function SetMCPPort(arg1:number):Promise<void>;
 
 export function SetMailActionsEnabled(arg1:boolean):Promise<void>;
@@ -315,8 +331,6 @@ export function SetVirusTotalEnabled(arg1:boolean):Promise<void>;
 export function SetWindowTheme(arg1:boolean):Promise<void>;
 
 export function SetWindowTitle(arg1:string):Promise<void>;
-
-export function SMIMERevocationEnabled():Promise<boolean>;
 
 export function SignerFingerprint(arg1:number):Promise<string>;
 
@@ -348,9 +362,9 @@ export function UnlockPGPKey(arg1:string,arg2:string,arg3:boolean):Promise<void>
 
 export function UnmarkSenderVIP(arg1:number):Promise<void>;
 
-export function UnsnoozeMessage(arg1:number):Promise<void>;
-
 export function UnsealDraft(arg1:number,arg2:string):Promise<desktop.DraftDTO>;
+
+export function UnsnoozeMessage(arg1:number):Promise<void>;
 
 export function Unsubscribe(arg1:number):Promise<void>;
 

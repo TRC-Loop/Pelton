@@ -64,7 +64,7 @@
   import { liabilityAccepted } from './lib/liability'
   import { setDemoActive } from './lib/demo'
   import { recordArchived } from './stores/undoarchive'
-  import { onMailNew, onSyncState, onSyncProgress, onOutboxChanged, onMenu, onViewsChanged, onProfileChanged, onMailtoCompose, type Unsubscribe, type MailtoDraft } from './lib/events'
+  import { onMailNew, onSyncState, onSyncProgress, onOutboxChanged, onMenu, onViewsChanged, onProfileChanged, onMailtoCompose, onAgentProposals, type Unsubscribe, type MailtoDraft } from './lib/events'
   import { loadViews, editingView, closeViewEditor, openViewEditor, views as savedViews } from './stores/views'
   import { selectSavedView } from './stores/selection'
   import { isMac } from './lib/i18n'
@@ -90,6 +90,7 @@
   } from './stores/tabs'
   import { messageDetail } from './stores/message'
   import { profiles, currentProfile, loadProfiles, switchTo, switchRelative } from './stores/profiles'
+  import { loadProposals } from './stores/agent'
   import { settingsRequest, clearSettingsRequest } from './stores/settingsnav'
   import { errorMessage, toastError, toastInfo, pushAction } from './stores/toast'
   import { friendlyError } from './lib/errors'
@@ -343,6 +344,8 @@
     unsubscribers.push(onOutboxChanged(() => void loadOutbox()))
     unsubscribers.push(onViewsChanged(() => void loadViews()))
     unsubscribers.push(onProfileChanged(() => void reloadForProfile()))
+    unsubscribers.push(onAgentProposals(() => void loadProposals()))
+    void loadProposals()
     unsubscribers.push(onMenu(handleMenu))
     // a mailto: link opened while the app is already running.
     unsubscribers.push(onMailtoCompose((draft) => openMailtoDraft(draft)))

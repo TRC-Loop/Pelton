@@ -12,6 +12,10 @@
     setMCPEnabled,
     setMCPPort,
     regenerateMCPToken,
+    mcpPermissions,
+    setMCPPermission,
+    agentActions,
+    clearAgentActions,
     setVirusTotalEnabled,
     setVirusTotalApiKey,
     setVirusTotalAutoScanLinks,
@@ -20,7 +24,7 @@
   import { virusTotal, loadVirusTotalConfig } from '../../stores/virustotal'
   import { errorMessage, toastError, toastSuccess } from '../../stores/toast'
   import { t } from '../../lib/i18n'
-  import type { MCPConfig } from '../../lib/types'
+  import type { MCPConfig, MCPPermission, AgentAction } from '../../lib/types'
 
   // where a VirusTotal account's api key is found, linked from the key field so
   // the user is not left to hunt for it.
@@ -37,10 +41,73 @@
   // not restart the server on every keystroke.
   let portDraft = 8765
 
+  // what an agent is allowed to do, per tool, and the record of what it did.
+  let permissions: MCPPermission[] = []
+  let actions: AgentAction[] = []
+  let permBusy = false
+
+  // the groups exist so the list reads as three kinds of risk rather than seven
+  // switches. Enforcement is per tool either way.
+  const groupOrder = ['organise', 'delete', 'send']
+  $: permissionGroups = groupOrder
+    .map((name) => ({ name, tools: permissions.filter((p) => p.group === name) }))
+    .filter((g) => g.tools.length > 0)
+
   onMount(async () => {
-    await Promise.all([reload(), loadVirusTotalConfig()])
+    await Promise.all([reload(), loadVirusTotalConfig(), reloadAgent()])
     loading = false
   })
+
+  async function reloadAgent(): Promise<void> {
+    try {
+      ;[permissions, actions] = await Promise.all([mcpPermissions(), agentActions()])
+    } catch {
+      // nothing to show is the safe way to be wrong here: it under-reports what
+      // an agent may do rather than claiming a permission that is not set.
+    }
+  }
+
+  async function setPermission(tool: string, allowed: boolean): Promise<void> {
+    permBusy = true
+    try {
+      await setMCPPermission(tool, allowed)
+      await reloadAgent()
+    } catch (err) {
+      toastError(errorMessage(err))
+    } finally {
+      permBusy = false
+    }
+  }
+
+  // setGroup flips every tool in a group. It is a convenience over the same
+  // per-tool setter, not a separate permission.
+  async function setGroup(group: { tools: MCPPermission[] }, allowed: boolean): Promise<void> {
+    permBusy = true
+    try {
+      for (const tool of group.tools) {
+        if (tool.allowed !== allowed) {
+          await setMCPPermission(tool.tool, allowed)
+        }
+      }
+      await reloadAgent()
+    } catch (err) {
+      toastError(errorMessage(err))
+    } finally {
+      permBusy = false
+    }
+  }
+
+  async function clearLog(): Promise<void> {
+    permBusy = true
+    try {
+      await clearAgentActions()
+      await reloadAgent()
+    } catch (err) {
+      toastError(errorMessage(err))
+    } finally {
+      permBusy = false
+    }
+  }
 
   async function reload(): Promise<void> {
     try {
@@ -197,6 +264,65 @@
           {$t('mcp.copy')}
         </button>
       </div>
+
+      <!-- what an agent may do beyond reading. Every tool is its own switch:
+           filing your mail and mailing your contacts are not the same risk, and
+           one permission should never imply another. -->
+      <div class="field">
+        <span>{$t('mcp.permissions')}</span>
+        <p class="hint">{$t('mcp.permissionsHint')}</p>
+
+        {#each permissionGroups as group (group.name)}
+          <div class="perm-group">
+            <div class="perm-head">
+              <span class="perm-title">{$t(`mcp.group.${group.name}`)}</span>
+              <button
+                type="button"
+                class="ghost small"
+                disabled={permBusy}
+                on:click={() => void setGroup(group, !group.tools.every((t) => t.allowed))}
+              >
+                {group.tools.every((t) => t.allowed) ? $t('mcp.group.none') : $t('mcp.group.all')}
+              </button>
+            </div>
+            <p class="hint">{$t(`mcp.group.${group.name}.hint`)}</p>
+            {#each group.tools as tool (tool.tool)}
+              <div class="perm-row">
+                <span class="row-label">{$t(`mcp.tool.${tool.tool}`)}</span>
+                <ToggleSwitch
+                  checked={tool.allowed}
+                  label={$t(`mcp.tool.${tool.tool}`)}
+                  disabled={permBusy}
+                  on:change={(e) => void setPermission(tool.tool, e.detail)}
+                />
+              </div>
+            {/each}
+          </div>
+        {/each}
+      </div>
+
+      <div class="field">
+        <span>{$t('mcp.log')}</span>
+        <p class="hint">{$t('mcp.logHint')}</p>
+        {#if actions.length === 0}
+          <p class="hint">{$t('mcp.logEmpty')}</p>
+        {:else}
+          <ul class="log">
+            {#each actions as entry (entry.id)}
+              <li class:failed={entry.error !== ''}>
+                <span class="log-when">{entry.when}</span>
+                <span class="log-what">{entry.summary}</span>
+                {#if entry.error}
+                  <span class="log-error">{entry.error}</span>
+                {/if}
+              </li>
+            {/each}
+          </ul>
+          <button type="button" class="ghost self-start" disabled={permBusy} on:click={() => void clearLog()}>
+            {$t('mcp.logClear')}
+          </button>
+        {/if}
+      </div>
     {/if}
   </div>
 
@@ -270,6 +396,77 @@
 {/if}
 
 <style>
+  .perm-group {
+    margin-top: var(--space-3);
+    padding-top: var(--space-3);
+    border-top: var(--hairline) solid var(--border-subtle);
+  }
+
+  .perm-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+  }
+
+  .perm-title {
+    font-size: var(--fz-label);
+    font-weight: var(--fw-semibold);
+    color: var(--text-primary);
+  }
+
+  .perm-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    padding: var(--space-1) 0;
+  }
+
+  .ghost.small {
+    padding: var(--space-1) var(--space-2);
+    font-size: var(--fz-meta);
+  }
+
+  .log {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    margin: var(--space-2) 0;
+    padding: 0;
+    max-height: 220px;
+    overflow-y: auto;
+    list-style: none;
+  }
+
+  .log li {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: var(--space-2);
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-control);
+    background: var(--surface-sunken);
+    font-size: var(--fz-meta);
+  }
+  .log li.failed {
+    background: var(--danger-bg);
+  }
+
+  .log-when {
+    flex-shrink: 0;
+    color: var(--text-tertiary);
+    font-family: var(--font-mono);
+  }
+
+  .log-what {
+    color: var(--text-secondary);
+  }
+
+  .log-error {
+    color: var(--danger);
+  }
+
   h3 {
     margin: 0 0 var(--space-3);
     font-size: var(--fz-heading);
