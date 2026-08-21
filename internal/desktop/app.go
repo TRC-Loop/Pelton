@@ -52,6 +52,12 @@ type App struct {
 	// searchMu serializes index backfills so a startup pass and a post-sync pass
 	// do not advance the watermark concurrently.
 	searchMu sync.Mutex
+	// rejectedLogins holds the accounts whose credentials the server refused,
+	// which is not something the keyring can tell us: the password is stored,
+	// it is simply wrong. It is in memory on purpose, since the only way to
+	// learn it is to try, and a restart tries again. See bind_account_manage.go.
+	rejectedLogins   map[int64]struct{}
+	rejectedLoginsMu sync.Mutex
 	// contacts caches the address book the phishing checks compare senders
 	// against, so reading down a folder does not requery it per message.
 	contacts correspondentCache

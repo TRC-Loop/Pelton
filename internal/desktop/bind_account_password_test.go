@@ -69,6 +69,54 @@ func TestEnvBackedAccountDoesNotNeedAPassword(t *testing.T) {
 	}
 }
 
+// Local Folders holds imported mail and has no server, so an empty keyring is
+// its normal state rather than a missing password.
+func TestLocalAccountDoesNotNeedAPassword(t *testing.T) {
+	a := newAccountTestApp(t)
+	acct := storage.Account{ID: 1, Email: storage.LocalAccountEmail, Local: true}
+
+	if a.needsPassword(acct, credentials.ErrNotFound) {
+		t.Error("the Local Folders account was reported as needing a password")
+	}
+}
+
+// A stored password the server refuses looks fine to the keyring, so the only
+// way to know is what the last login said.
+func TestNoteLoginResult(t *testing.T) {
+	a := newAccountTestApp(t)
+
+	if a.loginRejected(1) {
+		t.Error("an account with no login attempt yet is reported as rejected")
+	}
+
+	a.noteLoginResult(1, fmt.Errorf("login as %q: %w", "me", imap.ErrAuthFailed))
+	if !a.loginRejected(1) {
+		t.Error("a refused login was not remembered")
+	}
+
+	// a server that is down, or a dropped connection, says nothing about the
+	// password: the mark has to survive it rather than being cleared.
+	a.noteLoginResult(1, errors.New("dial tcp: connection refused"))
+	if !a.loginRejected(1) {
+		t.Error("a network error cleared the refused-login mark")
+	}
+
+	a.noteLoginResult(1, nil)
+	if a.loginRejected(1) {
+		t.Error("a successful login did not clear the mark")
+	}
+}
+
+// A network error on an account that was fine must not mark it.
+func TestNoteLoginResultIgnoresNetworkErrors(t *testing.T) {
+	a := newAccountTestApp(t)
+
+	a.noteLoginResult(2, errors.New("dial tcp: no route to host"))
+	if a.loginRejected(2) {
+		t.Error("a network error was reported as a refused login")
+	}
+}
+
 func TestEmptyPasswordIsRefused(t *testing.T) {
 	a := newAccountTestApp(t)
 	if err := a.SetAccountPassword(1, ""); !errors.Is(err, errEmptyPassword) {

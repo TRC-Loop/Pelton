@@ -8,17 +8,21 @@
   //
   // Cancelling is a real answer. It skips that account for this sync rather
   // than blocking the others, and the same prompt comes back next time.
+  // "Don't ask again" is the stronger form: the prompt stops interrupting for
+  // that account entirely and a warning marker next to the mailbox takes over
+  // saying it cannot sync (#290).
   import { fade, scale } from 'svelte/transition'
   import { IconX, IconLock } from '@tabler/icons-svelte'
   import { setAccountPassword } from '../../lib/api'
   import { errorMessage, toastError } from '../../stores/toast'
   import { t } from '../../lib/i18n'
+  import type { PasswordPromptResult } from '../../stores/passwordprompt'
   import type { Account } from '../../lib/types'
 
   /** The account being asked about, or null when the prompt is closed. */
   export let account: Account | null = null
-  /** Called with true once a password was stored, false when cancelled. */
-  export let onDone: (saved: boolean) => void = () => {}
+  /** Called with how the prompt ended. */
+  export let onDone: (result: PasswordPromptResult) => void = () => {}
 
   let password = ''
   let busy = false
@@ -48,7 +52,7 @@
     try {
       await setAccountPassword(account.id, password)
       password = ''
-      onDone(true)
+      onDone('saved')
     } catch (err) {
       toastError(errorMessage(err))
       password = ''
@@ -59,7 +63,12 @@
 
   function cancel(): void {
     password = ''
-    onDone(false)
+    onDone('skipped')
+  }
+
+  function dismiss(): void {
+    password = ''
+    onDone('dismissed')
   }
 
   function onKeydown(event: KeyboardEvent): void {
@@ -93,6 +102,7 @@
     <p class="lead">
       {$t('mailboxes.passwordPrompt.body').replace('{email}', who)}
     </p>
+    <p class="lead">{$t('mailboxes.passwordPrompt.dismissHint')}</p>
 
     <form on:submit|preventDefault={submit}>
       <label class="field">
@@ -102,6 +112,9 @@
       </label>
 
       <div class="actions">
+        <button type="button" class="dismiss" on:click={dismiss}>
+          {$t('mailboxes.passwordPrompt.dismiss')}
+        </button>
         <button type="button" class="cancel" on:click={cancel}>
           {$t('mailboxes.passwordPrompt.skip')}
         </button>
@@ -213,8 +226,25 @@
 
   .actions {
     display: flex;
+    align-items: center;
     justify-content: flex-end;
     gap: var(--space-2);
+  }
+
+  /* the quiet option, kept away from the two that answer the question now. */
+  .dismiss {
+    margin-right: auto;
+    padding: var(--space-2) 0;
+    font-size: var(--fz-label);
+    color: var(--text-tertiary);
+    background: transparent;
+    border: none;
+    cursor: var(--cursor-action);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .dismiss:hover {
+    color: var(--text-primary);
   }
 
   .cancel {

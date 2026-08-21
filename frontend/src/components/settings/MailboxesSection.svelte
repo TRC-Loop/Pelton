@@ -5,7 +5,7 @@
   // through an inline confirm. Email is not editable here, it identifies the
   // account; changing it is a re-add.
   import { onMount } from 'svelte'
-  import { IconPencil, IconTrash, IconCheck, IconX, IconPlus } from '@tabler/icons-svelte'
+  import { IconPencil, IconTrash, IconCheck, IconX, IconPlus, IconAlertTriangle } from '@tabler/icons-svelte'
   import ToggleSwitch from '../common/ToggleSwitch.svelte'
   import {
     listAccounts,
@@ -13,11 +13,11 @@
     deleteAccount,
     getLogStatus,
     deleteLogs,
-    accountsNeedingPassword,
     chooseArchiveExportFolder,
     previewArchiveExportName,
   } from '../../lib/api'
   import { refreshSidebar } from '../../stores/accounts'
+  import { missingPassword, askForPassword, refreshMissingPasswords } from '../../stores/passwordprompt'
   import { errorMessage, toastError, pushAction } from '../../stores/toast'
   import type { Account, TLSMode } from '../../lib/types'
   import { t } from '../../lib/i18n'
@@ -32,9 +32,6 @@
   // the password is not part of the account row (it lives in the keyring and is
   // never sent back), so it is drafted separately. Empty means "leave it".
   let passwordDraft = ''
-  // accounts with nothing in the keyring. An account imported from another mail
-  // client arrives like this: it can never sync until a password is entered.
-  let needsPassword = new Set<number>()
   // the add-mailbox wizard is code-split like the other settings modals, so
   // it only loads once the user actually asks to add a mailbox.
   let wizardOpen = false
@@ -67,7 +64,7 @@
     loading = true
     try {
       accounts = await listAccounts()
-      needsPassword = new Set((await accountsNeedingPassword()).map((a) => a.id))
+      await refreshMissingPasswords()
     } catch (err) {
       toastError(errorMessage(err))
     } finally {
@@ -174,8 +171,7 @@
       })
       accounts = accounts.map((a) => (a.id === updated.id ? updated : a))
       if (passwordDraft !== '') {
-        needsPassword.delete(updated.id)
-        needsPassword = needsPassword
+        void refreshMissingPasswords()
       }
       void refreshSidebar()
       cancelEdit()
@@ -288,13 +284,13 @@
                 bind:value={passwordDraft}
                 autocomplete="off"
                 placeholder={$t(
-                  needsPassword.has(account.id)
+                  $missingPassword.has(account.id)
                     ? 'mailboxes.passwordMissing'
                     : 'mailboxes.passwordUnchanged',
                 )}
               />
             </label>
-            {#if needsPassword.has(account.id)}
+            {#if $missingPassword.has(account.id)}
               <p class="server-hint warn">{$t('mailboxes.passwordNeededHint')}</p>
             {/if}
             <p class="server-hint">{$t('mailboxes.serverChangeHint')}</p>
@@ -366,6 +362,17 @@
             <span class="name">{account.displayName || account.email}</span>
             {#if account.displayName}<span class="addr">{account.email}</span>{/if}
           </div>
+          {#if $missingPassword.has(account.id)}
+            <button
+              type="button"
+              class="icon warn-icon"
+              title={$t('mailboxes.passwordPrompt.marker')}
+              aria-label={$t('mailboxes.passwordPrompt.marker')}
+              on:click={() => askForPassword(account)}
+            >
+              <IconAlertTriangle size={15} stroke={1.8} />
+            </button>
+          {/if}
           {#if confirmingId === account.id}
             <div class="confirm">
               <span class="warn">{$t('mailboxes.deleteConfirm')}</span>
@@ -490,6 +497,15 @@
   }
   .icon.del:hover {
     color: var(--danger);
+  }
+
+  /* the mailbox cannot sync, so this one is coloured at rest rather than on
+     hover like the edit and delete buttons next to it. */
+  .warn-icon {
+    color: var(--warning);
+  }
+  .warn-icon:hover {
+    color: var(--warning);
   }
 
   .confirm {

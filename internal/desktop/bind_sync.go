@@ -192,8 +192,10 @@ func (a *App) syncAccount(account storage.Account) error {
 	}
 	defer client.Close()
 	if err := client.Login(); err != nil {
+		a.noteLoginResult(account.ID, err)
 		return err
 	}
+	a.noteLoginResult(account.ID, nil)
 	defer client.Logout()
 
 	// an account can reach here with no folder rows at all: restored from a
@@ -336,8 +338,10 @@ func (a *App) idleSession(account storage.Account) error {
 	}
 	defer client.Close()
 	if err := client.Login(); err != nil {
+		a.noteLoginResult(account.ID, err)
 		return err
 	}
+	a.noteLoginResult(account.ID, nil)
 	defer client.Logout()
 
 	if !client.SupportsIdle() {

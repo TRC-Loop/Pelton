@@ -43,6 +43,10 @@ type AccountDTO struct {
 	// PGPDefault is how this account starts a new message: '' unprotected,
 	// 'sign', or 'auto' to sign and encrypt whenever every recipient has a key.
 	PGPDefault string `json:"pgpDefault"`
+	// PasswordPromptDismissed is true when the user told the missing-password
+	// prompt to stop asking for this account. The ui marks the mailbox instead
+	// of interrupting.
+	PasswordPromptDismissed bool `json:"passwordPromptDismissed"`
 }
 
 // FolderDTO is one mailbox in an account's tree. ParentID is null at the root.
@@ -255,6 +259,8 @@ func toAccountDTO(a storage.Account) AccountDTO {
 		ExportSubfolders:   a.ExportSubfolders,
 		ExportNameTemplate: a.ExportNameTemplate,
 		PGPDefault:         a.PGPDefault,
+
+		PasswordPromptDismissed: a.PasswordPromptDismissed,
 	}
 }
 
