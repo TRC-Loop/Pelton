@@ -254,6 +254,8 @@ export function ResumePendingDownload():Promise<void>;
 
 export function RetrySend(arg1:number):Promise<boolean>;
 
+export function SMIMERevocationEnabled():Promise<boolean>;
+
 export function SaveAllAttachments(arg1:number):Promise<string>;
 
 export function SaveAttachment(arg1:number,arg2:number):Promise<string>;
@@ -330,8 +332,6 @@ export function SetWindowTheme(arg1:boolean):Promise<void>;
 
 export function SetWindowTitle(arg1:string):Promise<void>;
 
-export function SMIMERevocationEnabled():Promise<boolean>;
-
 export function SignerFingerprint(arg1:number):Promise<string>;
 
 export function SnoozeMessage(arg1:number,arg2:string,arg3:boolean):Promise<void>;
@@ -362,9 +362,9 @@ export function UnlockPGPKey(arg1:string,arg2:string,arg3:boolean):Promise<void>
 
 export function UnmarkSenderVIP(arg1:number):Promise<void>;
 
-export function UnsnoozeMessage(arg1:number):Promise<void>;
-
 export function UnsealDraft(arg1:number,arg2:string):Promise<desktop.DraftDTO>;
+
+export function UnsnoozeMessage(arg1:number):Promise<void>;
 
 export function Unsubscribe(arg1:number):Promise<void>;
 

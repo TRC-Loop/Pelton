@@ -506,6 +506,10 @@ export function RetrySend(arg1) {
   return window['go']['desktop']['App']['RetrySend'](arg1);
 }
 
+export function SMIMERevocationEnabled() {
+  return window['go']['desktop']['App']['SMIMERevocationEnabled']();
+}
+
 export function SaveAllAttachments(arg1) {
   return window['go']['desktop']['App']['SaveAllAttachments'](arg1);
 }
@@ -658,10 +662,6 @@ export function SetWindowTitle(arg1) {
   return window['go']['desktop']['App']['SetWindowTitle'](arg1);
 }
 
-export function SMIMERevocationEnabled() {
-  return window['go']['desktop']['App']['SMIMERevocationEnabled']();
-}
-
 export function SignerFingerprint(arg1) {
   return window['go']['desktop']['App']['SignerFingerprint'](arg1);
 }
@@ -722,12 +722,12 @@ export function UnmarkSenderVIP(arg1) {
   return window['go']['desktop']['App']['UnmarkSenderVIP'](arg1);
 }
 
-export function UnsnoozeMessage(arg1) {
-  return window['go']['desktop']['App']['UnsnoozeMessage'](arg1);
-}
-
 export function UnsealDraft(arg1, arg2) {
   return window['go']['desktop']['App']['UnsealDraft'](arg1, arg2);
+}
+
+export function UnsnoozeMessage(arg1) {
+  return window['go']['desktop']['App']['UnsnoozeMessage'](arg1);
 }
 
 export function Unsubscribe(arg1) {

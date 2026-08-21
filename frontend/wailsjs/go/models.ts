@@ -128,6 +128,52 @@ export namespace desktop {
 	        this.email = source["email"];
 	    }
 	}
+	export class AgentActionDTO {
+	    id: number;
+	    tool: string;
+	    summary: string;
+	    error: string;
+	    when: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new AgentActionDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.tool = source["tool"];
+	        this.summary = source["summary"];
+	        this.error = source["error"];
+	        this.when = source["when"];
+	    }
+	}
+	export class AgentProposalDTO {
+	    id: number;
+	    accountId: number;
+	    to: string;
+	    cc: string;
+	    bcc: string;
+	    subject: string;
+	    body: string;
+	    when: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new AgentProposalDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.accountId = source["accountId"];
+	        this.to = source["to"];
+	        this.cc = source["cc"];
+	        this.bcc = source["bcc"];
+	        this.subject = source["subject"];
+	        this.body = source["body"];
+	        this.when = source["when"];
+	    }
+	}
 	export class ArchiveUndoDTO {
 	    messageId: string;
 	    originalFolderId: number;
@@ -405,7 +451,7 @@ export namespace desktop {
 	        this.next = source["next"];
 	        this.level = source["level"];
 	    }
-
+	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
 		    if (!a) {
 		        return a;
@@ -424,6 +470,7 @@ export namespace desktop {
 		    return a;
 		}
 	}
+	
 	export class DevProcessDTO {
 	    goroutines: number;
 	    heapBytes: number;
@@ -682,6 +729,22 @@ export namespace desktop {
 	        this.running = source["running"];
 	    }
 	}
+	export class MCPPermissionDTO {
+	    tool: string;
+	    group: string;
+	    allowed: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new MCPPermissionDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.tool = source["tool"];
+	        this.group = source["group"];
+	        this.allowed = source["allowed"];
+	    }
+	}
 	export class MailtoDraft {
 	    to: string;
 	    cc: string;
@@ -782,100 +845,6 @@ export namespace desktop {
 	        this.host = source["host"];
 	        this.url = source["url"];
 	        this.reasons = source["reasons"];
-	    }
-	}
-	export class RecipientKeyDTO {
-	    email: string;
-	    hasKey: boolean;
-	
-	    static createFrom(source: any = {}) {
-	        return new RecipientKeyDTO(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.email = source["email"];
-	        this.hasKey = source["hasKey"];
-	    }
-	}
-	export class AgentActionDTO {
-	    id: number;
-	    tool: string;
-	    summary: string;
-	    error: string;
-	    when: string;
-	
-	    static createFrom(source: any = {}) {
-	        return new AgentActionDTO(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.id = source["id"];
-	        this.tool = source["tool"];
-	        this.summary = source["summary"];
-	        this.error = source["error"];
-	        this.when = source["when"];
-	    }
-	}
-	export class AgentProposalDTO {
-	    id: number;
-	    accountId: number;
-	    to: string;
-	    cc: string;
-	    bcc: string;
-	    subject: string;
-	    body: string;
-	    when: string;
-	
-	    static createFrom(source: any = {}) {
-	        return new AgentProposalDTO(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.id = source["id"];
-	        this.accountId = source["accountId"];
-	        this.to = source["to"];
-	        this.cc = source["cc"];
-	        this.bcc = source["bcc"];
-	        this.subject = source["subject"];
-	        this.body = source["body"];
-	        this.when = source["when"];
-	    }
-	}
-	export class MCPPermissionDTO {
-	    tool: string;
-	    group: string;
-	    allowed: boolean;
-	
-	    static createFrom(source: any = {}) {
-	        return new MCPPermissionDTO(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.tool = source["tool"];
-	        this.group = source["group"];
-	        this.allowed = source["allowed"];
-	    }
-	}
-	export class SMIMERevocationDTO {
-	    status: string;
-	    detail: string;
-	    revokedAt: string;
-	    checked: string;
-	
-	    static createFrom(source: any = {}) {
-	        return new SMIMERevocationDTO(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.status = source["status"];
-	        this.detail = source["detail"];
-	        this.revokedAt = source["revokedAt"];
-	        this.checked = source["checked"];
 	    }
 	}
 	export class SMIMEDTO {
@@ -1277,6 +1246,20 @@ export namespace desktop {
 	        this.startViews = source["startViews"];
 	    }
 	}
+	export class RecipientKeyDTO {
+	    email: string;
+	    hasKey: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new RecipientKeyDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.email = source["email"];
+	        this.hasKey = source["hasKey"];
+	    }
+	}
 	export class ProtectionStatusDTO {
 	    canSign: boolean;
 	    signerLocked: boolean;
@@ -1342,6 +1325,25 @@ export namespace desktop {
 	    }
 	}
 	
+	
+	export class SMIMERevocationDTO {
+	    status: string;
+	    detail: string;
+	    revokedAt: string;
+	    checked: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new SMIMERevocationDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.status = source["status"];
+	        this.detail = source["detail"];
+	        this.revokedAt = source["revokedAt"];
+	        this.checked = source["checked"];
+	    }
+	}
 	export class SaveThemeRequest {
 	    id: string;
 	    name: string;
