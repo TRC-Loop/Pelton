@@ -31,6 +31,22 @@ macOS has no such convention and does not use them.
 
 Reply, reply all, forward, mark read or unread, flag, snooze, archive, delete and download-for-offline ship unbound so they cannot collide with anything. Bind them to whatever you like under **Settings, Shortcuts**; each one acts on the currently open message.
 
+## Developer overlays
+
+Only in a development run, started with `PELTON_DEV` (what `make run` sets) or `PELTON_DEVTOOLS=1`. A normal build does not bind these keys at all.
+
+| Shortcut | Action |
+| -------- | ------ |
+| ++f6++ | Activity log: what the backend is doing, live |
+| ++f7++ | Process: goroutines, heap, database and cache sizes |
+| ++f8++ | Frames: frame timing for the ui |
+
+The overlays are draggable and several can be open at once. They always start closed.
+
+The activity log shows the same lines Pelton writes to its log, so it follows the log level. Set `PELTON_DEBUG=1` for the full sync detail.
+
+The webview inspector is the browser's own, not Pelton's: ++f12++ on Windows, ++cmd+alt+i++ on macOS, right-click and Inspect on Linux. It only exists in a development build.
+
 ## Rebinding
 
 **Settings, Shortcuts** lists every action with its current combo. Click one and press the new combination to rebind it, including the defaults above. If a combo is already taken, Pelton tells you what it is bound to.

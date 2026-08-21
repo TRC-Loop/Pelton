@@ -838,3 +838,31 @@ export interface View {
 // 'sidebar' shows it as a group in the mailbox sidebar, 'tab' shows it in a
 // separate Views tab/rail.
 export type ViewsPlacement = 'hidden' | 'sidebar' | 'tab'
+
+// DevLogLine is one line in the developer activity overlay. seq counts every
+// line the session produced, so a gap in it means lines were dropped.
+export interface DevLogLine {
+  seq: number
+  text: string
+}
+
+// DevActivity is a page of the activity overlay: the lines newer than what was
+// asked for, the sequence to ask for next, and the current log threshold.
+export interface DevActivity {
+  lines: DevLogLine[]
+  next: number
+  level: string
+}
+
+// DevProcessStats is what the process overlay shows: the Go runtime's own
+// numbers and the app's footprint on disk, all in bytes.
+export interface DevProcessStats {
+  goroutines: number
+  heapBytes: number
+  heapSysBytes: number
+  gcRuns: number
+  databaseBytes: number
+  attachmentsBytes: number
+  dataDirBytes: number
+  uptimeSeconds: number
+}

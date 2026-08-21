@@ -41,6 +41,9 @@ type Writer struct {
 	// level is referenced by the handler options, so changing it takes effect
 	// on loggers that were already built.
 	level slog.LevelVar
+	// ring buffers recent lines in memory for the developer overlays. Nil
+	// unless something asked for it, so a normal run allocates nothing.
+	ring *Ring
 }
 
 // NewWriter returns a Writer logging to stderr only, at info level.
@@ -101,6 +104,18 @@ func (w *Writer) Disable() error {
 	return err
 }
 
+// Buffer starts keeping the most recent lines in memory and returns the Ring
+// holding them. Calling it again returns the same Ring rather than starting a
+// second one, so every reader sees the same history.
+func (w *Writer) Buffer(capacity int) *Ring {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	if w.ring == nil {
+		w.ring = NewRing(capacity)
+	}
+	return w.ring
+}
+
 // Enabled reports whether lines are currently reaching a file.
 func (w *Writer) Enabled() bool {
 	w.mu.Lock()
@@ -118,10 +133,14 @@ func (w *Writer) Write(p []byte) (int, error) {
 	w.mu.Lock()
 	file := w.file
 	stderr := w.stderr
+	ring := w.ring
 	w.mu.Unlock()
 
 	if stderr != nil {
 		stderr.Write(clean)
+	}
+	if ring != nil {
+		ring.Add(string(clean))
 	}
 	if file != nil {
 		if _, err := file.Write(clean); err != nil {

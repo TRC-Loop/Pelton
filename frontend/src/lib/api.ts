@@ -52,6 +52,8 @@ import type {
   PGPKey,
   LogStatus,
   ThunderbirdProfile,
+  DevActivity,
+  DevProcessStats,
 } from './types'
 
 // isDemoMode reports whether the app launched in the cosmetic --potatoes-are-nice
@@ -1281,4 +1283,34 @@ export function dismissCrashReport(): Promise<void> {
 // copies to the clipboard. It never contains mail or addresses.
 export function getDiagnostics(): Promise<string> {
   return App.GetDiagnostics()
+}
+
+// devToolsEnabled reports whether the developer overlays are available (#188).
+// They are, only when the app was started with PELTON_DEV or PELTON_DEVTOOLS;
+// no setting can turn them on.
+export function devToolsEnabled(): Promise<boolean> {
+  if (isDemoActive()) {
+    return Promise.resolve(false)
+  }
+  return App.DevToolsEnabled()
+}
+
+// devActivity returns the buffered log lines newer than seq, along with the
+// sequence to ask for next. Pass 0 for everything still buffered.
+export function devActivity(after: number): Promise<DevActivity> {
+  return App.DevActivity(after).then((page) => ({
+    lines: page.lines ?? [],
+    next: page.next,
+    level: page.level,
+  }))
+}
+
+// clearDevActivity empties the activity buffer.
+export function clearDevActivity(): Promise<void> {
+  return App.ClearDevActivity()
+}
+
+// devProcessStats samples the Go runtime and the app's on-disk footprint.
+export function devProcessStats(): Promise<DevProcessStats> {
+  return App.DevProcessStats()
 }

@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/TRC-Loop/Pelton/internal/configsync"
 	"github.com/TRC-Loop/Pelton/internal/logging"
@@ -58,6 +59,13 @@ type App struct {
 	// learn it is to try, and a restart tries again. See bind_account_manage.go.
 	rejectedLogins   map[int64]struct{}
 	rejectedLoginsMu sync.Mutex
+	// startedAt is when the process came up, for the process overlay's uptime.
+	startedAt time.Time
+	// dirSizes caches measured directory sizes for the process overlay, which
+	// polls while it is open and must not walk the attachment tree every tick.
+	// See bind_devtools.go.
+	dirSizes   map[string]measuredDir
+	dirSizesMu sync.Mutex
 	// contacts caches the address book the phishing checks compare senders
 	// against, so reading down a folder does not requery it per message.
 	contacts correspondentCache
@@ -146,6 +154,7 @@ func newApp(version, channel string) *App {
 		log:        w.Logger(),
 		version:    version,
 		channel:    channel,
+		startedAt:  time.Now(),
 		storeReady: make(chan struct{}),
 	}
 }
