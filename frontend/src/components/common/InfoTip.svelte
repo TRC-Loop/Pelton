@@ -8,11 +8,38 @@
   export let text: string
   /** Which side of the glyph the bubble opens towards. */
   export let align: 'left' | 'right' = 'left'
+
+  // hover and focus are handled here rather than in css: a :hover rule opens
+  // the bubble for anything that lands inside the element's box, and inside a
+  // label that box is easy to grow by accident.
+  let open = false
+  let timer: ReturnType<typeof setTimeout> | undefined
+
+  function show(): void {
+    clearTimeout(timer)
+    timer = setTimeout(() => (open = true), 150)
+  }
+
+  function hide(): void {
+    clearTimeout(timer)
+    open = false
+  }
 </script>
 
-<button type="button" class="tip {align}" aria-label={text}>
+<button
+  type="button"
+  class="tip {align}"
+  aria-label={text}
+  on:mouseenter={show}
+  on:mouseleave={hide}
+  on:focus={show}
+  on:blur={hide}
+  on:click|preventDefault|stopPropagation={() => (open = !open)}
+>
   <IconInfoCircle size={13} stroke={1.7} />
-  <span class="bubble" aria-hidden="true">{text}</span>
+  {#if open}
+    <span class="bubble" aria-hidden="true">{text}</span>
+  {/if}
 </button>
 
 <style>
@@ -57,22 +84,11 @@
     text-align: left;
     white-space: normal;
     pointer-events: none;
-    opacity: 0;
-    visibility: hidden;
-    transition:
-      opacity 80ms ease 150ms,
-      visibility 0s linear 150ms;
   }
   .left .bubble {
     left: 0;
   }
   .right .bubble {
     right: 0;
-  }
-
-  .tip:hover .bubble,
-  .tip:focus-visible .bubble {
-    opacity: 1;
-    visibility: visible;
   }
 </style>
