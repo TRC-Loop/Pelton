@@ -472,6 +472,9 @@ func (a *App) SetSetting(key, value string) error {
 	if key == settingLogToFile || key == settingLogLevel || key == settingLogMessageMetadata || key == settingCrashLogs {
 		a.applyLogSettings()
 	}
+	if key == settingCharsetFallback {
+		a.applyCharsetFallback()
+	}
 	if key == settingDockBadge {
 		a.applyDockBadge()
 	}

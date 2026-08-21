@@ -245,6 +245,10 @@ export interface MessageDetail extends MessageSummary {
   // phishing is what the local checks made of the message. level 'none' means
   // nothing was found and the ui shows nothing at all.
   phishing: PhishingReport
+  // charsetGuess names what the text was read as when the message declared no
+  // encoding or one nothing knows, and is 'detected' when one was picked
+  // without being reported back. Empty for mail that was right about itself.
+  charsetGuess: string
   // unsubscribe describes the List-Unsubscribe mechanism the message
   // advertises: oneclick (RFC 8058 background POST), mailto (sent via the
   // account's smtp) or link (opened in the browser). null when none is on

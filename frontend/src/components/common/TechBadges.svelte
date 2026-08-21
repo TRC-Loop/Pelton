@@ -14,6 +14,7 @@
     IconCertificate,
     IconCertificateOff,
     IconShieldX,
+    IconLanguage,
   } from '@tabler/icons-svelte'
   import { prefs } from '../../stores/prefs'
   import { t } from '../../lib/i18n'
@@ -29,6 +30,12 @@
   // has turned revocation checking on. An empty status means no check was made
   // and the badge reads exactly as it did before.
   export let revocation: SMIMERevocation | undefined = undefined
+  // what the text was read as when the message did not say, or said something
+  // no table knows: an encoding name, or 'detected' when one was picked without
+  // being reported back. Empty for mail that was right about itself, and the
+  // list rows never pass it: a guess is worth knowing while reading a message,
+  // not on every row.
+  export let charsetGuess: string = ''
 
   // pgp label and icon per status. "none" renders nothing.
   function pgpLabel(status: string, tFn: (key: string) => string): string {
@@ -69,6 +76,13 @@
         ? $t('common.techBadges.smime.checkedNote')
         : ''
 
+  $: showCharset = charsetGuess !== ''
+  $: charsetText = charsetGuess === 'detected' ? $t('common.techBadges.charset.guessed') : charsetGuess
+  $: charsetTitle =
+    charsetGuess === 'detected'
+      ? $t('common.techBadges.charset.title')
+      : $t('common.techBadges.charset.titleNamed').replace('{name}', charsetGuess)
+
   $: showBadge = $prefs.showMailboxBadge && (accountEmail !== '' || folderName !== '')
   $: showPgp = $prefs.showPgp && pgp !== 'none'
   $: showAuth = $prefs.showAuth
@@ -82,7 +96,7 @@
   $: AuthIcon = auth === 'pass' ? IconShieldCheckFilled : auth === 'fail' ? IconShieldExclamation : IconShieldQuestion
 </script>
 
-{#if showBadge || showPgp || showSmime || showAuth}
+{#if showBadge || showPgp || showSmime || showAuth || showCharset}
   <span class="badges">
     {#if showBadge}
       <span class="badge" title={`${accountEmail} · ${folderName}`}>
@@ -112,6 +126,13 @@
           <IconCertificateOff size={12} stroke={1.6} />
         {/if}
         <span class="badge-text">{$t(`common.techBadges.smime.${smimeStatus}`)}</span>
+      </span>
+    {/if}
+
+    {#if showCharset}
+      <span class="badge" title={charsetTitle} aria-label={charsetTitle}>
+        <IconLanguage size={12} stroke={1.6} />
+        <span class="badge-text">{charsetText}</span>
       </span>
     {/if}
 

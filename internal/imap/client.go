@@ -14,6 +14,8 @@ import (
 
 	"github.com/emersion/go-imap/v2"
 	"github.com/emersion/go-imap/v2/imapclient"
+
+	"github.com/TRC-Loop/Pelton/internal/charsetguess"
 )
 
 // DialFunc opens a raw tcp connection; the proxy layer supplies one to route
@@ -111,6 +113,11 @@ func Connect(cfg Config) (*Client, error) {
 	updates := make(chan MailboxUpdate, updateBuffer)
 
 	options := &imapclient.Options{
+		// go-imap's default word decoder knows utf-8 and latin-1 and gives up on
+		// anything else, which leaves a cyrillic or japanese subject sitting in
+		// the message list as its raw =?...?= source. Ours decodes the legacy
+		// tables and guesses at what is left.
+		WordDecoder: charsetguess.WordDecoder(),
 		TLSConfig: &tls.Config{
 			ServerName:         cfg.Host, // needed for hostname verification
 			InsecureSkipVerify: cfg.InsecureSkipVerify,

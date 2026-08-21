@@ -114,6 +114,7 @@ func (a *App) GetMessage(id int64) (MessageDetailDTO, error) {
 		Attachments:       toAttachmentDTOs(atts, m.BodyHTML),
 		Unsubscribe:       a.unsubscribeInfo(m),
 		Phishing:          a.checkPhishing(*m),
+		CharsetGuess:      m.CharsetGuess,
 	}
 	detail.BodyHTMLSafe = a.renderHTML(m.BodyHTML, atts, autoAllow)
 

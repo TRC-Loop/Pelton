@@ -72,6 +72,9 @@ func (e *Engine) fetchAndStore(ctx context.Context, folder storage.Folder, uid u
 		BodyPlain:   msg.Text,
 		BodyHTML:    msg.HTML,
 		SizeBytes:   msg.Size,
+		// set only when the message was wrong about its own encoding and the
+		// text had to be guessed at, which the reader is told about.
+		CharsetGuess: msg.CharsetGuess,
 
 		ListUnsubscribe:     msg.ListUnsubscribe,
 		ListUnsubscribePost: msg.ListUnsubscribePost,

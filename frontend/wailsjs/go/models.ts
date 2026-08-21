@@ -902,6 +902,7 @@ export namespace desktop {
 	    phishing: PhishingDTO;
 	    pgpState: string;
 	    unsubscribe?: UnsubscribeDTO;
+	    charsetGuess: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new MessageDetailDTO(source);
@@ -943,6 +944,7 @@ export namespace desktop {
 	        this.phishing = this.convertValues(source["phishing"], PhishingDTO);
 	        this.pgpState = source["pgpState"];
 	        this.unsubscribe = this.convertValues(source["unsubscribe"], UnsubscribeDTO);
+	        this.charsetGuess = source["charsetGuess"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {

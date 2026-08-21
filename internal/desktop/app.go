@@ -198,6 +198,7 @@ func (a *App) startup(ctx context.Context) {
 	a.store = store
 	a.dataDir = dataDir
 	a.applyLogSettings()
+	a.applyCharsetFallback()
 	a.queue = outbox.NewQueue(store)
 	a.loadProxy()
 	close(a.storeReady)
@@ -239,6 +240,11 @@ func (a *App) startup(ctx context.Context) {
 		a.index = idx
 		goSafe("catching the search index up", a.backfillSearch)
 	}
+
+	// one pass over the cache for mail stored before charset detection existed.
+	// backgrounded: it reads every message body once, which is not something to
+	// hold a window open for.
+	goSafe("checking cached mail for broken text", a.markMangledMail)
 
 	a.startBackgroundServices()
 

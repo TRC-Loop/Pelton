@@ -31,6 +31,10 @@ Off by default, Settings > Privacy and network > "Keep tracking pixels blocked";
 
 Off by default, Settings > External. Requires the user's own API key, stored in the OS keyring. Read-only v3 API: `GET /urls/{base64url_nopad(url)}` and `GET /files/{sha256}`. Never submits or uploads; attachments are looked up by hash only, so an unknown file stays unknown. Auto-scan of links and of attachments are separate toggles, both off by default; on-demand scanning is via right-click on a link or attachment, or the shield button in the message toolbar for a whole message. Verdicts cached locally 7 days, max 25 targets per scan; disabling the integration or clearing the key deletes the cache.
 
+## Text encoding
+
+Mail that declares no charset, or one nothing knows, is detected from the bytes (ICU port, github.com/gogs/chardet) and converted, so nothing invalid reaches the database or the search index. Applies to bodies and to rfc 2047 encoded-words in headers. Settings > Display > "Text encoding fallback": `auto` (default, detect) or a fixed encoding name. Messages read this way carry a badge in the reading pane. Mail cached before this existed is marked and refetched from the server during sync, a few per folder per sync.
+
 ## Logs and crash reports
 
 Off by default, Settings > Privacy and network. Nightly builds default them on. Nothing is uploaded: no crash reporter, no endpoint. Logs are files in `<data dir>/logs`, rotating at 2 MB with 3 kept copies (~8 MB cap). Levels: debug, info, warn, error. Secrets (passwords, app passwords, OAuth tokens) are removed by exact-value match wherever they appear, including inside server error strings. Mail content is never logged; subjects and senders only with the separate "Include message subjects and senders" opt-in. Crash reports hold the stack, version, OS and current activity, and are offered on the next launch. `PELTON_DEBUG` env var and `--debug` flag force logging on at debug level over the setting. Settings > About has "Open log folder" and "Copy diagnostics" (version, platform and settings only, no mail or addresses).

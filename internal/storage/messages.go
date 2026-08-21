@@ -68,6 +68,11 @@ type Message struct {
 	// columns; neither is a failure.
 	ReplyTo string
 	Auth    MessageAuth
+	// CharsetGuess names what the text was read as when the message declared no
+	// charset or one nothing knows, and is 'detected' when the guess was made
+	// where the name does not travel back. Empty for mail that was right about
+	// itself, which is nearly all of it.
+	CharsetGuess string
 }
 
 // MessageAuth is the stored Authentication-Results verdict for one message.
@@ -174,8 +179,9 @@ INSERT INTO messages (
     has_attachments, size_bytes, list_unsubscribe, list_unsubscribe_post,
     smime_status, smime_signer, smime_email, smime_issuer, smime_detail,
     smime_certs, smime_fingerprint,
-    reply_to, auth_spf, auth_dkim, auth_dmarc, auth_spf_domain, auth_dkim_domain
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    reply_to, auth_spf, auth_dkim, auth_dmarc, auth_spf_domain, auth_dkim_domain,
+    charset_guess
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 	res, err := ex.ExecContext(ctx, query,
 		m.AccountID, m.FolderID, m.UID, m.MessageID, m.Subject, m.FromAddress,
 		m.FromName, m.ToAddresses, m.CcAddresses, formatTime(m.Date), uint8(m.Flags),
@@ -183,7 +189,8 @@ INSERT INTO messages (
 		m.ListUnsubscribe, boolToInt(m.ListUnsubscribePost),
 		m.SMIME.Status, m.SMIME.Signer, m.SMIME.Email, m.SMIME.Issuer, m.SMIME.Detail,
 		orEmptyBlob(m.SMIME.Certs), m.SMIME.Fingerprint,
-		m.ReplyTo, m.Auth.SPF, m.Auth.DKIM, m.Auth.DMARC, m.Auth.SPFDomain, m.Auth.DKIMDomain)
+		m.ReplyTo, m.Auth.SPF, m.Auth.DKIM, m.Auth.DMARC, m.Auth.SPFDomain, m.Auth.DKIMDomain,
+		m.CharsetGuess)
 	if err != nil {
 		return 0, fmt.Errorf("storage: insert message uid %d: %w", m.UID, err)
 	}
@@ -285,7 +292,7 @@ SELECT id, account_id, folder_id, uid, message_id, subject, from_address,
        snooze_hidden, offline, list_unsubscribe, list_unsubscribe_post,
        smime_status, smime_signer, smime_email, smime_issuer, smime_detail,
        smime_fingerprint, reply_to, auth_spf, auth_dkim, auth_dmarc, auth_spf_domain,
-       auth_dkim_domain`
+       auth_dkim_domain, charset_guess`
 
 const selectMessageByID = selectMessageColumns + `
 FROM messages WHERE id = ?`
@@ -307,7 +314,7 @@ func scanMessage(row rowScanner) (*Message, error) {
 		&m.ListUnsubscribe, &unsubPost,
 		&m.SMIME.Status, &m.SMIME.Signer, &m.SMIME.Email, &m.SMIME.Issuer,
 		&m.SMIME.Detail, &m.SMIME.Fingerprint, &m.ReplyTo, &m.Auth.SPF, &m.Auth.DKIM, &m.Auth.DMARC,
-		&m.Auth.SPFDomain, &m.Auth.DKIMDomain); err != nil {
+		&m.Auth.SPFDomain, &m.Auth.DKIMDomain, &m.CharsetGuess); err != nil {
 		return nil, err
 	}
 	t, err := parseTime(date)
