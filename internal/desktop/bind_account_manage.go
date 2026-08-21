@@ -117,6 +117,7 @@ func (a *App) SetAccountPassword(accountID int64, password string) error {
 	}); err != nil {
 		return err
 	}
+	a.clearRejectedLogin(accountID)
 	// a dismissal answers "stop asking about this missing password". The
 	// password is no longer missing, so the next one that goes missing gets its
 	// own prompt rather than inheriting this answer.
@@ -124,6 +125,45 @@ func (a *App) SetAccountPassword(accountID int64, password string) error {
 		a.log.Error("clear password prompt dismissal", "account", accountID, "err", err)
 	}
 	return nil
+}
+
+// noteLoginResult records what the server said about an account's credentials.
+// A refusal is remembered so the ui can mark the mailbox and offer the password
+// prompt; anything else (a dropped connection, a server that is down) says
+// nothing about the password and is ignored. A success clears the mark.
+//
+// Callers pass the error from Login directly, including nil.
+func (a *App) noteLoginResult(accountID int64, err error) {
+	if err != nil && !errors.Is(err, pimap.ErrAuthFailed) {
+		return
+	}
+	a.rejectedLoginsMu.Lock()
+	defer a.rejectedLoginsMu.Unlock()
+	if err == nil {
+		delete(a.rejectedLogins, accountID)
+		return
+	}
+	if a.rejectedLogins == nil {
+		a.rejectedLogins = make(map[int64]struct{})
+	}
+	a.rejectedLogins[accountID] = struct{}{}
+}
+
+// loginRejected reports whether the server refused this account's credentials
+// the last time Pelton tried.
+func (a *App) loginRejected(accountID int64) bool {
+	a.rejectedLoginsMu.Lock()
+	defer a.rejectedLoginsMu.Unlock()
+	_, rejected := a.rejectedLogins[accountID]
+	return rejected
+}
+
+// clearRejectedLogin forgets a refusal, so a newly stored password is given a
+// fair try rather than staying marked until the next sync.
+func (a *App) clearRejectedLogin(accountID int64) {
+	a.rejectedLoginsMu.Lock()
+	defer a.rejectedLoginsMu.Unlock()
+	delete(a.rejectedLogins, accountID)
 }
 
 // DismissPasswordPrompt stops the missing-password prompt from interrupting for
@@ -161,10 +201,11 @@ func (a *App) needsPassword(acct storage.Account, secretErr error) bool {
 	return true
 }
 
-// AccountsNeedingPassword lists the accounts that cannot connect because no
-// password was ever stored for them. Importing from another mail client creates
-// the account but cannot take its password, so those arrive here; the frontend
-// prompts for one instead of letting every sync fail quietly.
+// AccountsNeedingPassword lists the accounts that cannot log in: no password was
+// ever stored for them, or the server refused the one that is. Importing from
+// another mail client creates the account but cannot take its password, and a
+// password changed at the provider goes stale; the frontend prompts for a new
+// one instead of letting every sync fail quietly.
 //
 // Accounts whose prompt was dismissed stay in the list. They are still broken,
 // and the ui needs them to place the marker that says so; it reads
@@ -180,7 +221,9 @@ func (a *App) AccountsNeedingPassword() ([]AccountDTO, error) {
 	out := make([]AccountDTO, 0)
 	for _, acct := range accounts {
 		_, secretErr := credentials.Load(acct.ID)
-		if !a.needsPassword(acct, secretErr) {
+		// two ways to be unable to log in: nothing stored, or something stored
+		// that the server refuses. The user fixes both the same way.
+		if !a.needsPassword(acct, secretErr) && !a.loginRejected(acct.ID) {
 			continue
 		}
 		out = append(out, toAccountDTO(acct))

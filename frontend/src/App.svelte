@@ -309,6 +309,9 @@
         if (!e.running) {
           lastSynced.set(Date.now())
           syncFolder.set('')
+          // a password the server refuses is only discovered by trying, so the
+          // markers can only be right after a sync has run.
+          void refreshMissingPasswords()
         }
       }),
     )
