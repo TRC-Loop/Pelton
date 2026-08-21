@@ -996,6 +996,7 @@ const en: Record<string, string> = {
   'mailboxes.saving': 'Saving…',
   'mailboxes.cancel': 'Cancel',
   'mailboxes.deleteConfirm': 'Delete this mailbox? Its downloaded mail, attachments and saved password are removed from this device. Mail on the server is not touched.',
+  'mailboxes.advanced.label': 'archiving and encryption',
   'mailboxes.serverChangeHint': 'Server changes take effect the next time Pelton connects.',
   'mailboxes.passwordUnchanged': 'Leave blank to keep the saved password',
   'mailboxes.passwordMissing': 'Enter a password',

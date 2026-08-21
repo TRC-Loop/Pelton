@@ -996,6 +996,7 @@ const fr: Record<string, string> = {
   'mailboxes.saving': 'Enregistrement…',
   'mailboxes.cancel': 'Annuler',
   'mailboxes.deleteConfirm': 'Supprimer cette boîte ? Les e-mails téléchargés, les pièces jointes et le mot de passe enregistré sont supprimés de cet appareil. Les e-mails sur le serveur ne sont pas touchés.',
+  'mailboxes.advanced.label': 'archivage et chiffrement',
   'mailboxes.serverChangeHint': 'Les modifications du serveur prennent effet à la prochaine connexion de Pelton.',
   'mailboxes.passwordUnchanged': 'Laissez vide pour conserver le mot de passe enregistré',
   'mailboxes.passwordMissing': 'Saisir un mot de passe',

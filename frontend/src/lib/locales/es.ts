@@ -996,6 +996,7 @@ const es: Record<string, string> = {
   'mailboxes.saving': 'Guardando…',
   'mailboxes.cancel': 'Cancelar',
   'mailboxes.deleteConfirm': '¿Eliminar este buzón? El correo descargado, los adjuntos y la contraseña guardada se eliminan de este dispositivo. El correo del servidor no se toca.',
+  'mailboxes.advanced.label': 'archivado y cifrado',
   'mailboxes.serverChangeHint': 'Los cambios del servidor se aplican la próxima vez que Pelton se conecte.',
   'mailboxes.passwordUnchanged': 'Déjalo vacío para conservar la contraseña guardada',
   'mailboxes.passwordMissing': 'Introduce una contraseña',

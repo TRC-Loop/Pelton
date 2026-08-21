@@ -951,6 +951,7 @@ const pl: Record<string, string> = {
   'mailboxes.saving': 'Zapisywanie…',
   'mailboxes.cancel': 'Anuluj',
   'mailboxes.deleteConfirm': 'Usunąć tę skrzynkę? Pobrana poczta, załączniki i zapisane hasło zostaną usunięte z tego urządzenia. Poczta na serwerze pozostaje nietknięta.',
+  'mailboxes.advanced.label': 'archiwizacja i szyfrowanie',
   'mailboxes.serverChangeHint': 'Zmiany serwera zaczną obowiązywać przy następnym połączeniu Pelton.',
   'mailboxes.passwordUnchanged': 'Zostaw puste, aby zachować zapisane hasło',
   'mailboxes.passwordMissing': 'Wpisz hasło',

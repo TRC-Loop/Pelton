@@ -996,6 +996,7 @@ const nl: Record<string, string> = {
   'mailboxes.saving': 'Opslaan…',
   'mailboxes.cancel': 'Annuleren',
   'mailboxes.deleteConfirm': 'Deze mailbox verwijderen? De gedownloade e-mail, bijlagen en het opgeslagen wachtwoord worden van dit apparaat verwijderd. E-mail op de server blijft ongemoeid.',
+  'mailboxes.advanced.label': 'archivering en versleuteling',
   'mailboxes.serverChangeHint': 'Serverwijzigingen worden van kracht bij de volgende verbinding van Pelton.',
   'mailboxes.passwordUnchanged': 'Leeg laten om het opgeslagen wachtwoord te behouden',
   'mailboxes.passwordMissing': 'Voer een wachtwoord in',

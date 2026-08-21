@@ -39,6 +39,9 @@
   // the sample file name the export settings show, rendered by the backend so
   // the ui never has a second copy of the naming rules.
   let namePreview = ''
+  // the archiving and encryption block, collapsed until asked for: it is two
+  // features deep and most edits here are a server or a password.
+  let showAdvanced = false
   // the draft as it opened, so closing knows whether there is anything to lose.
   let opened = ''
 
@@ -85,6 +88,7 @@
     // shows the truth and saving pins it.
     draft = { ...account }
     opened = JSON.stringify(draft)
+    showAdvanced = false
     passwordDraft = ''
     void refreshPreview()
   }
@@ -334,60 +338,69 @@
         <p class="server-hint warn">{$t('mailboxes.passwordNeededHint')}</p>
       {/if}
 
-      <div class="toggle">
-        <span>{$t('mailboxes.export.toggle')}</span>
-        <ToggleSwitch
-          checked={draft.exportOnArchive}
-          disabled={!draft.exportDir}
-          label={$t('mailboxes.export.toggle')}
-          on:change={(e) => setExportOnArchive(e.detail)}
-        />
-      </div>
-      <p class="server-hint">{$t('mailboxes.export.hint')}</p>
-      <div class="folder-row">
-        <span class="path" class:unset={!draft.exportDir}>
-          {draft.exportDir || $t('mailboxes.export.noFolder')}
-        </span>
-        <button type="button" class="ghost" on:click={pickExportFolder}>
-          {$t('mailboxes.export.choose')}
-        </button>
-      </div>
-      <span class="field">
-        <span>{$t('mailboxes.export.subfolders')}</span>
-        <div class="seg" role="radiogroup" aria-label={$t('mailboxes.export.subfolders')}>
-          {#each subfolderModes as mode (mode)}
-            <button type="button" class:on={draft.exportSubfolders === mode} on:click={() => setSubfolders(mode)}>
-              {$t(`mailboxes.export.subfolders.${mode}`)}
-            </button>
-          {/each}
-        </div>
-      </span>
-      <label class="field">
-        <span>{$t('mailboxes.export.template')}</span>
-        <input
-          type="text"
-          bind:value={draft.exportNameTemplate}
-          on:input={refreshPreview}
-          placeholder="{'{date}'}_{'{subject}'}"
-        />
-      </label>
-      <p class="server-hint">{$t('mailboxes.export.placeholders')}</p>
-      <span class="field">
-        <span>{$t('mailboxes.pgpDefault')}</span>
-        <div class="seg" role="radiogroup" aria-label={$t('mailboxes.pgpDefault')}>
-          {#each pgpDefaults as mode (mode)}
-            <button type="button" class:on={draft.pgpDefault === mode} on:click={() => setPGPDefault(mode)}>
-              {$t(`mailboxes.pgpDefault.${mode || 'off'}`)}
-            </button>
-          {/each}
-        </div>
-      </span>
-      <p class="server-hint">{$t('mailboxes.pgpDefaultHint')}</p>
-
-      {#if namePreview}
-        <p class="server-hint preview">{$t('mailboxes.export.preview')} <code>{namePreview}</code></p>
-      {/if}
     </div>
+
+    <button type="button" class="disclosure" on:click={() => (showAdvanced = !showAdvanced)}>
+      {showAdvanced ? $t('wizard.advanced.hide') : $t('wizard.advanced.show')} {$t('mailboxes.advanced.label')}
+    </button>
+
+    {#if showAdvanced}
+      <div class="form advanced">
+        <div class="toggle">
+          <span>{$t('mailboxes.export.toggle')}</span>
+          <ToggleSwitch
+            checked={draft.exportOnArchive}
+            disabled={!draft.exportDir}
+            label={$t('mailboxes.export.toggle')}
+            on:change={(e) => setExportOnArchive(e.detail)}
+          />
+        </div>
+        <p class="server-hint">{$t('mailboxes.export.hint')}</p>
+        <div class="folder-row">
+          <span class="path" class:unset={!draft.exportDir}>
+            {draft.exportDir || $t('mailboxes.export.noFolder')}
+          </span>
+          <button type="button" class="ghost" on:click={pickExportFolder}>
+            {$t('mailboxes.export.choose')}
+          </button>
+        </div>
+        <span class="field">
+          <span>{$t('mailboxes.export.subfolders')}</span>
+          <div class="seg" role="radiogroup" aria-label={$t('mailboxes.export.subfolders')}>
+            {#each subfolderModes as mode (mode)}
+              <button type="button" class:on={draft.exportSubfolders === mode} on:click={() => setSubfolders(mode)}>
+                {$t(`mailboxes.export.subfolders.${mode}`)}
+              </button>
+            {/each}
+          </div>
+        </span>
+        <label class="field">
+          <span>{$t('mailboxes.export.template')}</span>
+          <input
+            type="text"
+            bind:value={draft.exportNameTemplate}
+            on:input={refreshPreview}
+            placeholder="{'{date}'}_{'{subject}'}"
+          />
+        </label>
+        <p class="server-hint">{$t('mailboxes.export.placeholders')}</p>
+        <span class="field">
+          <span>{$t('mailboxes.pgpDefault')}</span>
+          <div class="seg" role="radiogroup" aria-label={$t('mailboxes.pgpDefault')}>
+            {#each pgpDefaults as mode (mode)}
+              <button type="button" class:on={draft.pgpDefault === mode} on:click={() => setPGPDefault(mode)}>
+                {$t(`mailboxes.pgpDefault.${mode || 'off'}`)}
+              </button>
+            {/each}
+          </div>
+        </span>
+        <p class="server-hint">{$t('mailboxes.pgpDefaultHint')}</p>
+
+        {#if namePreview}
+          <p class="server-hint preview">{$t('mailboxes.export.preview')} <code>{namePreview}</code></p>
+        {/if}
+      </div>
+    {/if}
 
     <svelte:fragment slot="footer">
       <button type="button" class="ghost" on:click={cancelEdit}>{$t('mailboxes.cancel')}</button>
@@ -524,6 +537,27 @@
   .warn {
     font-size: var(--fz-meta);
     color: var(--text-secondary);
+  }
+
+  /* a lightweight text toggle, the same one the add-mailbox wizard uses. */
+  .disclosure {
+    align-self: flex-start;
+    margin: var(--space-3) 0 0;
+    padding: var(--space-1) 0;
+    border: none;
+    background: transparent;
+    color: var(--accent);
+    font-size: var(--fz-label);
+    cursor: var(--cursor-action);
+  }
+  .disclosure:hover {
+    text-decoration: underline;
+  }
+
+  .advanced {
+    margin-top: var(--space-3);
+    padding-top: var(--space-3);
+    border-top: var(--hairline) solid var(--border-subtle);
   }
 
   .form {

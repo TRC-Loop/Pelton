@@ -996,6 +996,7 @@ const de: Record<string, string> = {
   'mailboxes.saving': 'Wird gespeichert…',
   'mailboxes.cancel': 'Abbrechen',
   'mailboxes.deleteConfirm': 'Dieses Postfach löschen? Die geladenen Mails, Anhänge und das gespeicherte Passwort werden von diesem Gerät entfernt. Die Mails auf dem Server bleiben unberührt.',
+  'mailboxes.advanced.label': 'Archivierung und Verschlüsselung',
   'mailboxes.serverChangeHint': 'Serveränderungen werden bei der nächsten Verbindung von Pelton wirksam.',
   'mailboxes.passwordUnchanged': 'Leer lassen, um das gespeicherte Passwort zu behalten',
   'mailboxes.passwordMissing': 'Passwort eingeben',
