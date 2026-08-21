@@ -10,21 +10,21 @@ require (
 	github.com/emersion/go-imap/v2 v2.0.0-beta.8
 	github.com/emersion/go-message v0.18.2
 	github.com/emersion/go-sasl v0.0.0-20241020182733-b788ff22d5a6
-	github.com/emersion/go-smtp v0.24.0
+	github.com/emersion/go-smtp v0.25.0
 	github.com/energye/systray v1.0.3
 	github.com/gen2brain/beeep v0.11.2
 	github.com/godbus/dbus/v5 v5.2.2
 	github.com/microcosm-cc/bluemonday v1.0.27
 	github.com/modelcontextprotocol/go-sdk v1.7.0
 	github.com/smallstep/pkcs7 v0.2.3
-	github.com/wailsapp/wails/v2 v2.14.0
+	github.com/wailsapp/wails/v2 v2.15.0
 	github.com/yuin/goldmark v1.8.5
 	github.com/zalando/go-keyring v0.2.8
-	golang.org/x/crypto v0.54.0
-	golang.org/x/image v0.44.0
-	golang.org/x/net v0.57.0
+	golang.org/x/crypto v0.55.0
+	golang.org/x/image v0.45.0
+	golang.org/x/net v0.58.0
 	golang.org/x/oauth2 v0.36.0
-	golang.org/x/text v0.40.0
+	golang.org/x/text v0.41.0
 	modernc.org/sqlite v1.56.0
 )
 
