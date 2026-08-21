@@ -164,11 +164,13 @@ func verifySignature(msg *pimap.Message) storage.SMIMESignature {
 		return storage.SMIMESignature{}
 	}
 	return storage.SMIMESignature{
-		Status: string(sig.Status),
-		Signer: sig.SignerName,
-		Email:  sig.SignerEmail,
-		Issuer: sig.Issuer,
-		Detail: sig.Detail,
+		Status:      string(sig.Status),
+		Signer:      sig.SignerName,
+		Email:       sig.SignerEmail,
+		Issuer:      sig.Issuer,
+		Detail:      sig.Detail,
+		Certs:       storage.EncodeCerts(sig.Certs),
+		Fingerprint: crypto.CertFingerprint(sig.Certs),
 	}
 }
 

@@ -17,7 +17,7 @@
   } from '@tabler/icons-svelte'
   import { prefs } from '../../stores/prefs'
   import { t } from '../../lib/i18n'
-  import type { PGPStatus, SMIMESignature } from '../../lib/types'
+  import type { PGPStatus, SMIMESignature, SMIMERevocation } from '../../lib/types'
 
   export let accountEmail: string = ''
   export let folderName: string = ''
@@ -25,6 +25,10 @@
   export let auth: string = 'unavailable'
   // the s/mime signature verdict; an empty status renders nothing.
   export let smime: SMIMESignature | undefined = undefined
+  // what the issuing authority says about that certificate now, when the reader
+  // has turned revocation checking on. An empty status means no check was made
+  // and the badge reads exactly as it did before.
+  export let revocation: SMIMERevocation | undefined = undefined
 
   // pgp label and icon per status. "none" renders nothing.
   function pgpLabel(status: string, tFn: (key: string) => string): string {
@@ -36,7 +40,11 @@
   // the s/mime badge rides the same preference as pgp: both answer "is this
   // message cryptographically protected", and splitting them into two toggles
   // would make the reader think about a distinction they do not care about.
-  $: smimeStatus = smime?.status ?? ''
+  // a withdrawn certificate outranks the signature verdict. The bytes are still
+  // intact, but the authority is positively saying the key must not be relied
+  // on, and "Signature verified" would be the one badge that actively misleads.
+  $: revoked = revocation?.status === 'revoked'
+  $: smimeStatus = revoked ? 'revoked' : (smime?.status ?? '')
   $: showSmime = $prefs.showPgp && smimeStatus !== ''
   // the signer is what the badge is actually asserting, so it leads the tooltip
   // and falls back to the address when the certificate carries no name.
@@ -44,11 +52,22 @@
     ? [
         $t(`common.techBadges.smime.${smimeStatus}`),
         smime.signer || smime.email,
-        smime.detail,
+        revoked ? revocation?.detail : smime.detail,
+        revocationNote,
       ]
-        .filter((part) => part !== '')
+        .filter((part) => part !== '' && part !== undefined)
         .join(' · ')
     : ''
+
+  // the soft-fail line. Being offline says nothing about a certificate, so a
+  // check that could not be made leaves the verdict alone and says so in words
+  // rather than by changing what the badge claims.
+  $: revocationNote =
+    revocation?.status === 'unknown'
+      ? $t('common.techBadges.smime.uncheckedNote')
+      : revocation?.status === 'good'
+        ? $t('common.techBadges.smime.checkedNote')
+        : ''
 
   $: showBadge = $prefs.showMailboxBadge && (accountEmail !== '' || folderName !== '')
   $: showPgp = $prefs.showPgp && pgp !== 'none'
@@ -87,7 +106,7 @@
       <span class="badge smime {smimeStatus}" title={smimeTitle} aria-label={smimeTitle}>
         {#if smimeStatus === 'valid'}
           <IconCertificate size={12} stroke={1.6} />
-        {:else if smimeStatus === 'invalid'}
+        {:else if smimeStatus === 'invalid' || smimeStatus === 'revoked'}
           <IconShieldX size={12} stroke={1.6} />
         {:else}
           <IconCertificateOff size={12} stroke={1.6} />
@@ -146,6 +165,7 @@
     color: var(--success);
     border-color: var(--success);
   }
+  .smime.revoked,
   .smime.invalid {
     color: var(--danger);
     border-color: var(--danger);

@@ -798,6 +798,24 @@ export namespace desktop {
 	        this.hasKey = source["hasKey"];
 	    }
 	}
+	export class SMIMERevocationDTO {
+	    status: string;
+	    detail: string;
+	    revokedAt: string;
+	    checked: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new SMIMERevocationDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.status = source["status"];
+	        this.detail = source["detail"];
+	        this.revokedAt = source["revokedAt"];
+	        this.checked = source["checked"];
+	    }
+	}
 	export class SMIMEDTO {
 	    status: string;
 	    signer: string;

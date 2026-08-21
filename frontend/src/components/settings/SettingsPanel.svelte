@@ -233,6 +233,7 @@
     { cat: 'power', label: $t('settingsPanel.label.downloadOffline'), kw: 'download offline cache' },
     { cat: 'encryption', label: $t('encryption.import'), kw: 'pgp gpg openpgp key import' },
     { cat: 'encryption', label: $t('encryption.signingTitle'), kw: 'pgp sign key account' },
+    { cat: 'encryption', label: $t('encryption.revocationTitle'), kw: 'smime revocation ocsp crl certificate withdrawn' },
     { cat: 'shortcuts', label: $t('settingsPanel.toggle.shortcutHints'), kw: 'keyboard hints' },
     { cat: 'shortcuts', label: $t('settingsPanel.toggle.paletteQuickSelect'), kw: 'command palette quick select numbers' },
     { cat: 'shortcuts', label: $t('onboarding.extras.appVim'), kw: 'vim navigation' },

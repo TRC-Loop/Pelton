@@ -82,6 +82,12 @@ type Signature struct {
 	// Detail explains a non-valid status in one sentence, for a tooltip. Empty
 	// when the status is valid.
 	Detail string
+	// Certs is the signing certificate followed by its issuer, in DER. The
+	// message itself is not kept after a sync, so these are what a later
+	// revocation check has to work from; asking the authority needs both, the
+	// issuer to check the reply is genuine. Empty for PGP and for any signature
+	// whose chain could not be built.
+	Certs [][]byte
 }
 
 // systemRoots is the platform trust store. It is a variable so tests can supply
@@ -100,8 +106,9 @@ const maxSignatureSize = 1 << 20
 // It never returns an error: a message that is not signed, or whose signature
 // cannot be read, is a result rather than a failure, and the caller shows the
 // status either way. Verification is a pure function of the bytes and the
-// platform trust store, and makes no network calls, so a revoked certificate
-// still reports as valid until revocation checking exists.
+// platform trust store, and makes no network calls. Whether the certificate has
+// since been withdrawn is a separate question, answered by CheckRevocation only
+// when the reader has turned that on.
 func VerifySMIME(raw []byte, fromAddress string) Signature {
 	der, content, ok := smimeParts(raw)
 	if !ok {
@@ -143,12 +150,14 @@ func VerifySMIME(raw []byte, fromAddress string) Signature {
 		return sig
 	}
 
-	if detail := trustProblem(signer, p7.Certificates, fromAddress); detail != "" {
+	chain, detail := trustedChain(signer, p7.Certificates, fromAddress)
+	if detail != "" {
 		sig.Status = SigUntrusted
 		sig.Detail = detail
 		return sig
 	}
 	sig.Status = SigValid
+	sig.Certs = chain
 	return sig
 }
 
@@ -179,29 +188,41 @@ func signingWindowProblem(e *pkcs7.SigningTimeNotValidError) string {
 	return "the signing certificate was not yet valid when the message was signed"
 }
 
-// trustProblem returns a one-sentence reason the certificate cannot be trusted,
-// or empty when it can.
-func trustProblem(signer *x509.Certificate, chain []*x509.Certificate, fromAddress string) string {
+// trustedChain validates the certificate and returns the signer and its issuer
+// in DER, or a one-sentence reason it cannot be trusted. The issuer comes from
+// the chain the platform actually built rather than from the bundle the message
+// carried, so it is the one that was verified against.
+func trustedChain(signer *x509.Certificate, bundle []*x509.Certificate, fromAddress string) ([][]byte, string) {
 	roots, err := systemRoots()
 	if err != nil || roots == nil {
-		return "the system certificate store could not be read"
+		return nil, "the system certificate store could not be read"
 	}
 	intermediates := x509.NewCertPool()
-	for _, c := range chain {
+	for _, c := range bundle {
 		if !c.Equal(signer) {
 			intermediates.AddCert(c)
 		}
 	}
-	if _, err := signer.Verify(x509.VerifyOptions{
+	chains, err := signer.Verify(x509.VerifyOptions{
 		Roots:         roots,
 		Intermediates: intermediates,
 		KeyUsages:     []x509.ExtKeyUsage{x509.ExtKeyUsageEmailProtection},
-	}); err != nil {
-		return chainProblem(err)
+	})
+	if err != nil {
+		return nil, chainProblem(err)
 	}
 
 	// A certificate that is genuine but issued to somebody else does not
 	// establish that this sender wrote the message.
+	if detail := addressProblem(signer, fromAddress); detail != "" {
+		return nil, detail
+	}
+	return signerAndIssuer(chains), ""
+}
+
+// addressProblem reports that the certificate names somebody other than the
+// sender, or empty when it names them.
+func addressProblem(signer *x509.Certificate, fromAddress string) string {
 	want := bareAddress(fromAddress)
 	if want == "" {
 		return ""
@@ -215,6 +236,18 @@ func trustProblem(signer *x509.Certificate, chain []*x509.Certificate, fromAddre
 		return fmt.Sprintf("the certificate was issued to %s, not %s", got, want)
 	}
 	return fmt.Sprintf("the certificate does not name %s", want)
+}
+
+// signerAndIssuer takes the two certificates a revocation check needs out of a
+// verified chain. A self-signed certificate cannot be reached here, since it
+// would not have verified, so a chain always has at least two entries.
+func signerAndIssuer(chains [][]*x509.Certificate) [][]byte {
+	for _, chain := range chains {
+		if len(chain) >= 2 {
+			return [][]byte{chain[0].Raw, chain[1].Raw}
+		}
+	}
+	return nil
 }
 
 // chainProblem turns an x509 verification failure into a sentence a reader can
