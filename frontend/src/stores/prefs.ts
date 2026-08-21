@@ -49,6 +49,7 @@ const defaults: UIPrefs = {
   showOfflineIndicator: true,
   showUnsyncedFolder: true,
   restoreTabs: false,
+  paletteProfiles: false,
   swipeEnabled: true,
   swipeLeftAction: 'delete',
   swipeRightAction: 'unread',
@@ -273,6 +274,12 @@ export function setShowUnsyncedFolder(value: boolean): void {
 export function setRestoreTabs(value: boolean): void {
   prefs.update((p) => ({ ...p, restoreTabs: value }))
   void setSetting(SettingKeys.restoreTabs, String(value))
+}
+
+// setPaletteProfiles toggles listing profiles directly in the command palette.
+export function setPaletteProfiles(value: boolean): void {
+  prefs.update((p) => ({ ...p, paletteProfiles: value }))
+  void setSetting(SettingKeys.paletteProfiles, String(value))
 }
 
 // setSwipeEnabled toggles trackpad swipe gestures on message rows.

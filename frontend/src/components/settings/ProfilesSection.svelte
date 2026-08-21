@@ -7,7 +7,9 @@
   // is the whole model, and it reads the same when creating and when editing
   // (where copy has already happened, so it shows as its result: not shared).
   import { onMount } from 'svelte'
-  import { IconPencil, IconTrash, IconPlus, IconCheck, IconX } from '@tabler/icons-svelte'
+  import { IconPencil, IconTrash, IconPlus, IconCheck, IconX, IconStarFilled } from '@tabler/icons-svelte'
+  import ToggleSwitch from '../common/ToggleSwitch.svelte'
+  import { prefs, setPaletteProfiles } from '../../stores/prefs'
   import { profiles, currentProfile, loadProfiles, switchTo } from '../../stores/profiles'
   import { allAccounts, createProfile, updateProfile, deleteProfile } from '../../lib/api'
   import { errorMessage, toastError } from '../../stores/toast'
@@ -20,6 +22,44 @@
 
   const starts: ProfileStart[] = ['share', 'copy', 'fresh']
 
+  // the icons on offer. A picker rather than a text field: this is a label you
+  // recognise at a glance in the status bar, not somewhere to paste anything.
+  const iconChoices = [
+    // people and places
+    '🧑', '👤', '👥', '🧑‍💻', '🧑‍🎓', '🧑‍🏫', '🧑‍⚕️', '🧑‍🔧', '🧑‍🍳', '🧑‍🎨',
+    '🏠', '🏡', '🏢', '🏫', '🏥', '🏦', '🏭', '🏛️', '⛺', '🌆',
+    // work and study
+    '💼', '📁', '🗂️', '📋', '📌', '📎', '🖇️', '📐', '📏', '✏️',
+    '🖊️', '🖋️', '📝', '📚', '📖', '🎓', '🧾', '💳', '💰', '📊',
+    '📈', '📉', '🗓️', '⏰', '⌛', '🔔', '📣', '🗣️', '🤝', '🧠',
+    // mail and comms
+    '✉️', '📮', '📨', '📬', '📭', '📦', '📡', '☎️', '📱', '💬',
+    // making and fixing
+    '🛠️', '🔧', '🔩', '⚙️', '🧰', '🔬', '🧪', '⚗️', '🧬', '🔭',
+    '💡', '🔌', '🔋', '🖥️', '💻', '⌨️', '🖱️', '🖨️', '💾', '🗄️',
+    // art, music, play
+    '🎨', '🖌️', '🎭', '🎬', '📷', '📹', '🎧', '🎵', '🎸', '🎹',
+    '🥁', '🎤', '🎮', '🕹️', '🎲', '♟️', '🧩', '🎯', '🎳', '🏆',
+    // sport and outdoors
+    '⚽', '🏀', '🏈', '🎾', '🏐', '🏓', '🥊', '🚴', '🏃', '🧗',
+    '🏊', '⛷️', '🏕️', '🥾', '🚵', '🛹', '🛼', '🪁', '🎣', '🧘',
+    // travel
+    '✈️', '🚀', '🚗', '🚌', '🚂', '🚢', '⛵', '🛵', '🚲', '🗺️',
+    '🧳', '🏝️', '🏔️', '🌋', '🗽', '🎡', '🎢', '🌉', '⛱️', '🧭',
+    // nature and weather
+    '🌍', '🌙', '⭐', '🌟', '☀️', '⛅', '🌈', '❄️', '🔥', '💧',
+    '🌊', '🌱', '🌳', '🌵', '🍀', '🌸', '🌻', '🍁', '🍄', '🪴',
+    // animals
+    '🐢', '🐝', '🐞', '🦊', '🐻', '🐼', '🐨', '🐧', '🦉', '🦅',
+    '🐬', '🐙', '🦀', '🐈', '🐕', '🐎', '🦋', '🐳', '🦔', '🦕',
+    // food and drink
+    '🥔', '☕', '🍵', '🍺', '🍷', '🥂', '🍎', '🍌', '🍓', '🍇',
+    '🍕', '🍔', '🌮', '🍜', '🍣', '🥐', '🥗', '🍪', '🎂', '🍫',
+    // symbols
+    '❤️', '💙', '💚', '💛', '💜', '🖤', '🤍', '🧡', '💫', '✨',
+    '🔒', '🔑', '🛡️', '⚡', '♻️', '⚓', '🧿', '🔮', '🎁', '🏁',
+  ]
+
   let accounts: Account[] = []
   let loading = true
   let draft: ProfileDraft | null = null
@@ -28,6 +68,10 @@
   let creating = false
   let saving = false
   let confirmingId: number | null = null
+
+  // editing the main profile: it owns the rows the others read, so it has no
+  // sharing choices of its own to make.
+  $: editingMain = !creating && $profiles.some((p) => p.id === draft?.id && p.main)
 
   onMount(load)
 
@@ -162,6 +206,16 @@
   </button>
 </div>
 
+<div class="toggle" title={$t('profiles.paletteHint')}>
+  <span class="row-label">{$t('profiles.paletteToggle')}</span>
+  <ToggleSwitch
+    checked={$prefs.paletteProfiles}
+    label={$t('profiles.paletteToggle')}
+    on:change={(e) => setPaletteProfiles(e.detail)}
+  />
+</div>
+<p class="hint">{$t('profiles.paletteHint')}</p>
+
 {#if loading}
   <p class="empty">{$t('mailboxes.loading')}</p>
 {:else}
@@ -172,6 +226,11 @@
           <span class="name">
             {#if profile.icon}<span class="glyph">{profile.icon}</span>{/if}
             {profile.name}
+            {#if profile.main}
+              <span class="star" title={$t('profiles.mainTitle')} aria-label={$t('profiles.mainTitle')}>
+                <IconStarFilled size={11} />
+              </span>
+            {/if}
           </span>
           <span class="meta">
             {#if profile.id === $currentProfile?.id}
@@ -215,10 +274,34 @@
         <span>{$t('profiles.field.name')}</span>
         <input type="text" bind:value={draft.name} placeholder={$t('profiles.field.namePlaceholder')} />
       </label>
-      <label class="field narrow">
-        <span>{$t('profiles.field.icon')}</span>
-        <input type="text" bind:value={draft.icon} placeholder="💼" maxlength="8" />
-      </label>
+    </div>
+
+    <h5>{$t('profiles.field.icon')}</h5>
+    <div class="icons" role="radiogroup" aria-label={$t('profiles.field.icon')}>
+      <button
+        type="button"
+        class="icon-choice none"
+        class:on={draft.icon === ''}
+        role="radio"
+        aria-checked={draft.icon === ''}
+        title={$t('profiles.icon.none')}
+        aria-label={$t('profiles.icon.none')}
+        on:click={() => draft && (draft.icon = '')}
+      >
+        <IconX size={14} stroke={2} />
+      </button>
+      {#each iconChoices as choice (choice)}
+        <button
+          type="button"
+          class="icon-choice"
+          class:on={draft.icon === choice}
+          role="radio"
+          aria-checked={draft.icon === choice}
+          on:click={() => draft && (draft.icon = choice)}
+        >
+          {choice}
+        </button>
+      {/each}
     </div>
 
     <h5>{$t('profiles.accounts')}</h5>
@@ -240,8 +323,12 @@
       </div>
     {/if}
 
-    <h5>{$t('profiles.sharing')}</h5>
-    <p class="hint">{$t('profiles.sharingHint')}</p>
+    <!-- main is what the other profiles share from, so it has nothing to
+         share with and the whole block is off the page for it. -->
+    {#if !editingMain}
+      <h5>{$t('profiles.sharing')}</h5>
+      <p class="hint">{$t('profiles.sharingHint')}</p>
+    {/if}
 
     {#if creating}
       <div class="row all">
@@ -254,7 +341,7 @@
       </div>
     {/if}
 
-    {#each areas as area (area)}
+    {#each editingMain ? [] : areas as area (area)}
       <div class="row">
         <span class="row-label">{$t(`profiles.area.${area}`)}</span>
         <div class="seg" role="radiogroup" aria-label={$t(`profiles.area.${area}`)}>
@@ -419,16 +506,62 @@
     gap: var(--space-3);
   }
 
+  .toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    padding: var(--space-2) 0;
+  }
+
+  .star {
+    display: inline-flex;
+    color: var(--warning);
+  }
+
+  /* a big grid that scrolls rather than pushing the rest of the form down the
+     page. Roomy enough to scan, capped so it never owns the screen. */
+  .icons {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(30px, 1fr));
+    gap: var(--space-1);
+    max-height: 190px;
+    overflow-y: auto;
+    padding: var(--space-1);
+    margin-bottom: var(--space-2);
+    border: var(--hairline) solid var(--border-subtle);
+    border-radius: var(--radius-control);
+    background: var(--surface-raised);
+    scrollbar-width: thin;
+  }
+
+  .icon-choice {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    font-size: 15px;
+    border: var(--hairline) solid transparent;
+    border-radius: var(--radius-control);
+    background: var(--surface-raised);
+    color: var(--text-tertiary);
+    cursor: var(--cursor-action);
+  }
+  .icon-choice:hover {
+    border-color: var(--border-default);
+  }
+  .icon-choice.on {
+    border-color: var(--accent);
+    background: var(--surface-hover);
+  }
+
   .field {
     display: flex;
     flex-direction: column;
     gap: var(--space-2);
     flex: 1;
   }
-  .field.narrow {
-    flex: 0 0 90px;
-  }
-
   .field span {
     font-size: var(--fz-meta);
     color: var(--text-secondary);

@@ -57,6 +57,7 @@ const (
 	settingShowOffline         = "show_offline_indicator"
 	settingShowUnsyncedFolder  = "show_unsynced_folder"
 	settingRestoreTabs         = "restore_reading_tabs"
+	settingPaletteProfiles     = "palette_profiles"
 	settingSwipeEnabled        = "swipe_enabled"
 	settingSwipeLeft           = "swipe_left_action"
 	settingSwipeRight          = "swipe_right_action"
@@ -241,6 +242,10 @@ type UIPrefsDTO struct {
 	// ShowUnsyncedFolder marks folders the user excluded from sync in the
 	// sidebar, so a folder that stopped receiving new mail says why.
 	ShowUnsyncedFolder bool `json:"showUnsyncedFolder"`
+	// PaletteProfiles lists every profile directly in the command palette, so
+	// one is a keystroke away rather than behind the switcher step. Off by
+	// default: with a single profile the entries would be noise.
+	PaletteProfiles bool `json:"paletteProfiles"`
 	// RestoreTabs brings back the reading-pane tabs that were open at quit.
 	// Off by default: a tab is a temporary place to park a message, and most
 	// of them are finished with by the time the app closes.
@@ -390,6 +395,7 @@ func (a *App) GetUIPrefs() (UIPrefsDTO, error) {
 		ShowOfflineIndicator:       a.boolSetting(settingShowOffline, true),
 		ShowUnsyncedFolder:         a.boolSetting(settingShowUnsyncedFolder, true),
 		RestoreTabs:                a.boolSetting(settingRestoreTabs, false),
+		PaletteProfiles:            a.boolSetting(settingPaletteProfiles, false),
 		SwipeEnabled:               a.boolSetting(settingSwipeEnabled, true),
 		SwipeLeftAction:            a.stringSetting(settingSwipeLeft, "delete"),
 		SwipeRightAction:           a.stringSetting(settingSwipeRight, "unread"),

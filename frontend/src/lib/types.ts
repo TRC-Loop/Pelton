@@ -383,6 +383,9 @@ export interface UIPrefs {
   // restoreTabs brings back the reading-pane tabs that were open at quit. Off
   // by default: a tab is a temporary place to park a message.
   restoreTabs: boolean
+  // list every profile directly in the command palette, so switching is one
+  // keystroke rather than a picker step.
+  paletteProfiles: boolean
   // swipe gestures on message rows (trackpad only).
   swipeEnabled: boolean
   swipeLeftAction: string

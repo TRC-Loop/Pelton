@@ -79,6 +79,8 @@ export interface CommandContext {
   themes: ThemeInfo[]
   /** Every profile, for the switcher step. Empty hides the entry. */
   profiles: Profile[]
+  /** Whether each profile also gets its own top-level palette entry. */
+  paletteProfiles: boolean
   /** The message in the reading pane, or null. */
   openMessage: MessageSummary | null
   /** The message list's multi-selection, empty when there is none. */
@@ -300,6 +302,24 @@ function steppedCommands(ctx: CommandContext): PaletteCommand[] {
       icon: IconUsers,
       run: () => profileStep(ctx),
     })
+    // with the setting on, each profile is its own entry, so activating one is
+    // a keystroke instead of a picker step. Off by default: the entries are
+    // only worth their place in the list if you switch often.
+    if (ctx.paletteProfiles) {
+      for (const profile of ctx.profiles) {
+        if (profile.active) {
+          continue
+        }
+        out.push({
+          id: `action:profile-${profile.id}`,
+          group: 'action',
+          label: ctx.t('profiles.switchToName').replace('{name}', profile.name),
+          keywords: ctx.t('profiles.switch'),
+          icon: IconUsers,
+          run: () => ctx.switchProfile(profile.id),
+        })
+      }
+    }
   }
 
   out.push({

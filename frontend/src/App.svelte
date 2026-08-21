@@ -872,6 +872,7 @@
     savedViews: $savedViews,
     themes: paletteThemes,
     profiles: $profiles,
+    paletteProfiles: $prefs.paletteProfiles,
     switchProfile: (id: number) => void switchTo(id),
     openMessage: currentMessage(),
     selected: selectedMessages,
