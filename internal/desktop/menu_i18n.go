@@ -28,6 +28,8 @@ type menuStrings struct {
 	viewMenu         string
 	toggleFullscreen string
 	lowPowerMode     string
+	openInTab        string
+	closeTab         string
 }
 
 // menuLocales mirrors the frontend's supported languages (en/de/fr/nl/es).
@@ -61,6 +63,8 @@ var menuLocales = map[string]menuStrings{
 		viewMenu:         "View",
 		toggleFullscreen: "Toggle Fullscreen",
 		lowPowerMode:     "Low Power Mode",
+		openInTab:        "Open in New Tab",
+		closeTab:         "Close Tab",
 	},
 	"de": {
 		appMenu:          "Pelton",
@@ -87,6 +91,8 @@ var menuLocales = map[string]menuStrings{
 		viewMenu:         "Ansicht",
 		toggleFullscreen: "Vollbild umschalten",
 		lowPowerMode:     "Energiesparmodus",
+		openInTab:        "In neuem Tab öffnen",
+		closeTab:         "Tab schließen",
 	},
 	"fr": {
 		appMenu:          "Pelton",
@@ -113,6 +119,8 @@ var menuLocales = map[string]menuStrings{
 		viewMenu:         "Affichage",
 		toggleFullscreen: "Basculer le plein écran",
 		lowPowerMode:     "Mode basse consommation",
+		openInTab:        "Ouvrir dans un nouvel onglet",
+		closeTab:         "Fermer l'onglet",
 	},
 	"nl": {
 		appMenu:          "Pelton",
@@ -139,6 +147,8 @@ var menuLocales = map[string]menuStrings{
 		viewMenu:         "Beeld",
 		toggleFullscreen: "Volledig scherm in-/uitschakelen",
 		lowPowerMode:     "Energiebesparende modus",
+		openInTab:        "Openen in nieuw tabblad",
+		closeTab:         "Tabblad sluiten",
 	},
 	"es": {
 		appMenu:          "Pelton",
@@ -165,6 +175,8 @@ var menuLocales = map[string]menuStrings{
 		viewMenu:         "Ver",
 		toggleFullscreen: "Alternar pantalla completa",
 		lowPowerMode:     "Modo de bajo consumo",
+		openInTab:        "Abrir en una pestaña nueva",
+		closeTab:         "Cerrar pestaña",
 	},
 	"pl": {
 		appMenu:          "Pelton",
@@ -191,6 +203,8 @@ var menuLocales = map[string]menuStrings{
 		viewMenu:         "Widok",
 		toggleFullscreen: "Przełącz pełny ekran",
 		lowPowerMode:     "Tryb oszczędzania energii",
+		openInTab:        "Otwórz w nowej karcie",
+		closeTab:         "Zamknij kartę",
 	},
 }
 

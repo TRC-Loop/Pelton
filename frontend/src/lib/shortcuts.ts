@@ -51,6 +51,10 @@ export type ShortcutAction =
   | 'toggle-pin-folder'
   | 'apply-theme'
   | 'edit-view'
+  // reading-pane tabs (#197). Unbound by default: the feature is invisible
+  // until you use it, and a default key would not be.
+  | 'open-in-tab'
+  | 'close-tab'
 
 // Shortcut pairs an action with its default combo and the label key for display.
 export interface Shortcut {
@@ -105,6 +109,8 @@ export const shortcuts: Shortcut[] = [
   { action: 'toggle-pin-folder', combo: '', labelKey: 'palette.action.pinFolder' },
   { action: 'empty-trash', combo: '', labelKey: 'folders.emptyTrash' },
   { action: 'apply-theme', combo: '', labelKey: 'palette.action.applyTheme' },
+  { action: 'open-in-tab', combo: '', labelKey: 'messageList.menu.openInTab' },
+  { action: 'close-tab', combo: '', labelKey: 'tabs.close' },
 ]
 
 // ParsedCombo is a combo broken into its modifier flags and final key.

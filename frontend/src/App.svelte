@@ -76,6 +76,18 @@
   import { recordDeleted, triggerUndoDelete } from './stores/undodelete'
   import { triggerUndoArchive } from './stores/undoarchive'
   import { openMessageId, openMessage } from './stores/selection'
+  import {
+    visibleMessageId,
+    tabs,
+    activeTabId,
+    openInTab,
+    closeTab,
+    closeActiveTab,
+    focusTab,
+    focusPane,
+    restoreTabs,
+  } from './stores/tabs'
+  import { messageDetail } from './stores/message'
   import { errorMessage, toastError, toastInfo, pushAction } from './stores/toast'
   import { friendlyError } from './lib/errors'
   import { setOnline } from './stores/network'
@@ -181,7 +193,7 @@
 
   // the native Mail menu's message actions are only usable while a message is
   // open; keep them greyed in step with the open message.
-  $: setMailActionsEnabled($openMessageId != null)
+  $: setMailActionsEnabled($visibleMessageId != null)
 
   // the dock badge follows the unified inbox, which the sidebar already
   // recomputes after a sync and after anything that changes read state, so
@@ -191,7 +203,7 @@
   // keep the native window title in sync with context: "Settings" while the
   // settings screen is open, the open message's subject when reading, otherwise
   // the current folder/view name.
-  $: updateWindowTitle(settingsOpen, $openMessageId, $selection, $messageList, $t)
+  $: updateWindowTitle(settingsOpen, $visibleMessageId, $selection, $messageList, $t)
   function updateWindowTitle(
     inSettings: boolean,
     id: number | null,
@@ -267,6 +279,7 @@
     // the sidebar marks mailboxes with no stored password, so the markers have
     // to be known before the first sync raises any prompt.
     void refreshMissingPasswords()
+    void restoreTabs(get(prefs).restoreTabs)
     initProgress()
     await loadSidebar()
     // the sidebar data has to be here first: a configured or remembered folder
@@ -474,7 +487,7 @@
   // export the currently open message to a print/pdf view, or tell the user to
   // open one first.
   function exportPdf(): void {
-    const id = get(openMessageId)
+    const id = get(visibleMessageId)
     if (id === null) {
       toastInfo(get(t)('app.toast.exportOpenFirst'))
       return
@@ -482,14 +495,23 @@
     exportMessagePrintView(id).catch((err) => toastError(errorMessage(err)))
   }
 
-  // currentMessage resolves the open message summary from the loaded list, so the
-  // message-level shortcuts can act on it.
-  function currentMessage() {
-    const id = get(openMessageId)
+  // currentMessage resolves the message on screen so the message-level shortcuts
+  // can act on it: the active tab's, or the one picked in the list.
+  //
+  // A tab can hold a message from a folder the list is not showing, so the
+  // loaded detail stands in when the row is not there. MessageDetail extends
+  // MessageSummary, so it is the same shape with more on it.
+  function currentMessage(): MessageSummary | null {
+    const id = get(visibleMessageId)
     if (id === null) {
       return null
     }
-    return get(messageList).data?.items?.find((m) => m.id === id) ?? null
+    const row = get(messageList).data?.items?.find((m) => m.id === id)
+    if (row) {
+      return row
+    }
+    const detail = get(messageDetail).data
+    return detail && detail.id === id ? detail : null
   }
 
   // messageAction runs a message-level shortcut on the open message, mirroring the
@@ -532,6 +554,7 @@
           await deleteMessage(msg.id)
           recordDeleted(msg)
           removeFromList(msg.id)
+          closeTab(msg.id)
           if (get(openMessageId) === msg.id) {
             openMessageId.set(null)
           }
@@ -557,6 +580,7 @@
             recordArchived(msg, undo.messageId, undo.originalFolderId)
           }
           removeFromList(msg.id)
+          closeTab(msg.id)
           if (get(openMessageId) === msg.id) {
             openMessageId.set(null)
           }
@@ -613,6 +637,18 @@
       case 'archive':
       case 'unsubscribe':
         void messageAction(action)
+        break
+      case 'open-in-tab': {
+        const msg = currentMessage()
+        if (msg) {
+          openInTab(msg.id, msg.subject)
+        } else {
+          toastInfo(get(t)('app.toast.openMessageFirst'))
+        }
+        break
+      }
+      case 'close-tab':
+        closeActiveTab()
         break
       case 'undo':
         if (!triggerUndo() && !triggerUndoDelete() && !triggerUndoArchive()) {
@@ -904,6 +940,13 @@
       wizardOpen = false
       return
     }
+    // a reading-pane tab is the next thing in, the way a browser tab is: with
+    // one showing, this closes it and leaves the window alone. On the untabbed
+    // pane, or with no tabs at all, it goes on to close the window.
+    if (get(activeTabId) !== null) {
+      closeActiveTab()
+      return
+    }
     // nothing layered on top, so this closes the window itself. the backend owns
     // what that means: it follows the close action setting, and hides through
     // the same call the close button uses, which the dock icon can undo.
@@ -1065,7 +1108,47 @@
       }
       event.preventDefault()
       dispatchAction(action)
+      return
     }
+    // cmd/ctrl+1 to 9 jump between the reading-pane chips, the way they jump
+    // between tabs in a browser: 1 is the pane, 9 is the last tab. Checked after
+    // the bindings, so a key the user assigned themselves still wins, and only
+    // while tabs exist, so the combination is otherwise left alone.
+    if (selectTabByNumber(event)) {
+      event.preventDefault()
+    }
+  }
+
+  // selectTabByNumber handles cmd/ctrl+1 to 9 and reports whether it acted. The
+  // chips are the untabbed pane followed by the tabs, so 1 is the pane and the
+  // numbers after it count along the bar. 9 is the last chip however many there
+  // are, which is what a browser does.
+  function selectTabByNumber(event: KeyboardEvent): boolean {
+    if (!(event.metaKey || event.ctrlKey) || event.shiftKey || event.altKey) {
+      return false
+    }
+    const slot = Number(event.key)
+    if (!Number.isInteger(slot) || slot < 1 || slot > 9) {
+      return false
+    }
+    const open = get(tabs)
+    if (open.length === 0) {
+      return false
+    }
+    if (slot === 9) {
+      focusTab(open[open.length - 1].id)
+      return true
+    }
+    if (slot === 1) {
+      focusPane()
+      return true
+    }
+    const tab = open[slot - 2]
+    if (!tab) {
+      return false
+    }
+    focusTab(tab.id)
+    return true
   }
 
   // isEditableTarget reports whether the event originated in a text field, so

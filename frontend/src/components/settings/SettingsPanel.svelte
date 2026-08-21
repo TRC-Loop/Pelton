@@ -62,6 +62,7 @@
     setShowSelectedCount,
     setSidebarIndentGuides,
     setShowUnsyncedFolder,
+    setRestoreTabs,
     setStartupSelection,
     setShowFlaggedCount,
     setViewsPlacement,
@@ -1245,6 +1246,15 @@
       {:else if active === 'display'}
         <section>
           <h3>{$t('settingsPanel.category.reading')}</h3>
+          <div class="toggle" title={$t('settingsPanel.hint.restoreTabs')}>
+            <span class="row-label">{$t('settingsPanel.toggle.restoreTabs')}</span>
+            <ToggleSwitch
+              checked={$prefs.restoreTabs}
+              label={$t('settingsPanel.toggle.restoreTabs')}
+              on:change={(e) => setRestoreTabs(e.detail)}
+            />
+          </div>
+          <p class="hint">{$t('settingsPanel.hint.restoreTabs')}</p>
           <SegmentedSetting
             label={$t('onboarding.extras.fontSize')}
             value={String($prefs.messageFontSize)}

@@ -213,6 +213,7 @@
     aria-selected={selected}
     on:click
     on:dblclick
+    on:auxclick
     on:contextmenu
     on:wheel={onWheel}
   >
