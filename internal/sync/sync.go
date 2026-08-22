@@ -22,6 +22,10 @@ type mailClient interface {
 	// lines the debug overlay shows.
 	Addr() string
 	FetchMessage(uid imap.UID) (*pimap.Message, error)
+	// FetchMessages pulls a set of messages in one command, handing each to fn
+	// as it arrives. A first sync is otherwise bound by the round trip to the
+	// server rather than by bandwidth.
+	FetchMessages(uids []imap.UID, fn func(uid imap.UID, msg *pimap.Message, err error) error) error
 	AddFlags(uid imap.UID, flags ...imap.Flag) error
 	DeleteMessages(uids ...imap.UID) error
 	MoveMessages(uids []imap.UID, mailbox string) error
@@ -62,10 +66,11 @@ type Engine struct {
 	OnStored func(folder storage.Folder, ids []int64)
 }
 
-// yieldBatch is how many messages are stored between OnStored calls. Small
-// enough that the list visibly fills, large enough that a 14k mailbox is not
-// 14k refreshes.
-const yieldBatch = 25
+// fetchBatch is how many message bodies one command asks for. Big enough that
+// the round trip stops being what a large sync is made of, small enough that a
+// send waiting to go out is never more than a batch away from its turn, and
+// that a failure costs one batch rather than a folder.
+const fetchBatch = 50
 
 // yieldPoll is how long the sync waits before asking again whether it may
 // continue. It is a pause between messages, so the send it is standing aside
@@ -211,6 +216,41 @@ func (e *Engine) syncFolder(ctx context.Context, folder storage.Folder, backfill
 	return res, nil
 }
 
+// fetchNew downloads the bodies of the given uids, newest first, in batches.
+//
+// One command per batch rather than one per message: the bytes are the same
+// either way, but 14k separate fetches means paying the round trip to the
+// server 14k times before anything else can happen on the connection (#310).
+// Between batches the sync stands aside for anything the user asked for and
+// tells the ui what has arrived, so a long download stays interruptible and
+// visible rather than being one opaque stretch.
+func (e *Engine) fetchNew(ctx context.Context, folder storage.Folder, uids []uint32, res *FolderSyncResult) {
+	for start := 0; start < len(uids); start += fetchBatch {
+		if err := ctx.Err(); err != nil {
+			e.log.Warn("sync cancelled mid-folder", "folder", folder.IMAPPath)
+			return
+		}
+		// anything the user asked for goes first. A body fetch is the expensive
+		// step in a sync, so between batches is the point to stand aside at.
+		e.yield(ctx)
+
+		end := min(start+fetchBatch, len(uids))
+		ids, err := e.fetchBatch(ctx, folder, uids[start:end])
+		if err != nil {
+			e.log.Error("fetch batch failed", "folder", folder.IMAPPath, "err", err)
+		}
+		res.New += len(ids)
+		res.NewIDs = append(res.NewIDs, ids...)
+		e.announce(folder, ids)
+		if err != nil {
+			// the connection is in an unknown state after a failed fetch, so the
+			// rest of this folder waits for the next sync rather than piling more
+			// commands onto it.
+			return
+		}
+	}
+}
+
 // yield waits while the caller's YieldTo says something more important is
 // happening. A cancelled context ends the wait, since the sync is stopping
 // anyway.
@@ -326,10 +366,9 @@ func (e *Engine) adoptColors(ctx context.Context, folder storage.Folder, serverC
 // or block the rest of the folder.
 func (e *Engine) executePlan(ctx context.Context, folder storage.Folder, plan []Decision, localByUID map[uint32]storage.MessageState, res *FolderSyncResult) {
 	var pendingDeletes []storage.MessageState
-	// ids stored since the last time the ui was told, so a long fetch run shows
-	// mail arriving rather than nothing at all.
-	var streamed []int64
-	defer func() { e.announce(folder, streamed) }()
+	// uids whose bodies have to come down, gathered here and fetched in batches
+	// once the cheap decisions are out of the way.
+	var toFetch []uint32
 
 	// walked back to front, because BuildPlan orders by ascending uid and a full
 	// body fetch is the expensive step here. Front to back means the oldest mail
@@ -352,21 +391,9 @@ func (e *Engine) executePlan(ctx context.Context, folder storage.Folder, plan []
 			// already in agreement
 
 		case ActionFetchNew:
-			// anything the user asked for goes first. A body fetch is the
-			// expensive step in a sync, so this is the point to stand aside at.
-			e.yield(ctx)
-			id, err := e.fetchAndStore(ctx, folder, d.UID)
-			if err != nil {
-				e.log.Error("fetch new message failed", "uid", d.UID, "err", err)
-				continue
-			}
-			res.New++
-			res.NewIDs = append(res.NewIDs, id)
-			streamed = append(streamed, id)
-			if len(streamed) >= yieldBatch {
-				e.announce(folder, streamed)
-				streamed = streamed[:0]
-			}
+			// collected and fetched below, in one command per batch rather than
+			// one per message.
+			toFetch = append(toFetch, d.UID)
 
 		case ActionDeleteLocal:
 			if err := e.deleteLocal(ctx, folder, localByUID[d.UID]); err != nil {
@@ -399,6 +426,8 @@ func (e *Engine) executePlan(ctx context.Context, folder storage.Folder, plan []
 			pendingDeletes = append(pendingDeletes, localByUID[d.UID])
 		}
 	}
+
+	e.fetchNew(ctx, folder, toFetch, res)
 
 	if len(pendingDeletes) > 0 {
 		if err := e.pushDeletes(ctx, folder, pendingDeletes); err != nil {

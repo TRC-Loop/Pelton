@@ -115,3 +115,50 @@ func TestSyncAnnouncesNothingWhenNothingIsNew(t *testing.T) {
 		t.Errorf("announced %d times with nothing new", called)
 	}
 }
+
+// a first sync used to cost one fetch command per message, so a large mailbox
+// paid the round trip to the server thousands of times before anything else
+// could happen on the connection.
+func TestSyncFetchesBodiesInBatches(t *testing.T) {
+	ctx := context.Background()
+	db, folder := newSyncTestFolder(t)
+	uids := make([]uint32, 120)
+	for i := range uids {
+		uids[i] = uint32(i + 1)
+	}
+	client := &fakeClient{uids: uids}
+	engine := NewEngine(client, db, nil)
+
+	res, err := engine.SyncFolder(ctx, folder)
+	if err != nil {
+		t.Fatalf("sync: %v", err)
+	}
+	if res.New != len(uids) {
+		t.Fatalf("stored %d messages, want %d", res.New, len(uids))
+	}
+	want := (len(uids) + fetchBatch - 1) / fetchBatch
+	if client.commands != want {
+		t.Errorf("issued %d fetch commands for %d messages, want %d", client.commands, len(uids), want)
+	}
+	if len(client.fetched) != len(uids) {
+		t.Errorf("fetched %d messages, want %d", len(client.fetched), len(uids))
+	}
+}
+
+// newest first still holds: the newest uid has to be in the first batch, or a
+// large mailbox shows years-old mail for as long as it takes to reach today.
+func TestSyncFetchesNewestBatchFirst(t *testing.T) {
+	ctx := context.Background()
+	db, folder := newSyncTestFolder(t)
+	uids := make([]uint32, 120)
+	for i := range uids {
+		uids[i] = uint32(i + 1)
+	}
+	client := &fakeClient{uids: uids}
+	if _, err := NewEngine(client, db, nil).SyncFolder(ctx, folder); err != nil {
+		t.Fatalf("sync: %v", err)
+	}
+	if client.fetched[0] != 120 {
+		t.Errorf("first message fetched was uid %d, want the newest (120)", client.fetched[0])
+	}
+}

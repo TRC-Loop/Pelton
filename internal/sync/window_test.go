@@ -212,6 +212,9 @@ type fakeClient struct {
 	deleted []imap.UID
 	moved   []imap.UID
 	movedTo string
+	// commands counts fetch commands rather than messages, which is what a
+	// round trip to the server costs.
+	commands int
 }
 
 func (c *fakeClient) Select(string) (*pimap.Mailbox, error) {
@@ -236,6 +239,23 @@ func (c *fakeClient) FetchMessage(uid imap.UID) (*pimap.Message, error) {
 }
 
 func (c *fakeClient) Addr() string { return "imap.example.com:993" }
+
+func (c *fakeClient) FetchMessages(uids []imap.UID, fn func(imap.UID, *pimap.Message, error) error) error {
+	c.commands++
+	for _, uid := range uids {
+		msg, err := c.FetchMessage(uid)
+		if err != nil {
+			if fnErr := fn(uid, nil, err); fnErr != nil {
+				return fnErr
+			}
+			continue
+		}
+		if fnErr := fn(uid, msg, nil); fnErr != nil {
+			return fnErr
+		}
+	}
+	return nil
+}
 
 func (c *fakeClient) AddFlags(imap.UID, ...imap.Flag) error { return nil }
 func (c *fakeClient) DeleteMessages(uids ...imap.UID) error {

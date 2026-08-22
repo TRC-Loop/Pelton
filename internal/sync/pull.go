@@ -55,7 +55,47 @@ func (e *Engine) fetchAndStore(ctx context.Context, folder storage.Folder, uid u
 	if err != nil {
 		return 0, fmt.Errorf("sync: fetch message uid %d: %w", uid, err)
 	}
+	return e.storeMessage(ctx, folder, msg)
+}
 
+// fetchBatch pulls a run of messages in one command and stores each as it
+// arrives, returning the ids it stored. A message that cannot be fetched or
+// parsed is logged and skipped: the rest of the batch is already on its way
+// down the connection and the next sync asks for the skipped one again.
+func (e *Engine) fetchBatch(ctx context.Context, folder storage.Folder, uids []uint32) ([]int64, error) {
+	ids := make([]int64, 0, len(uids))
+	set := make([]imap.UID, 0, len(uids))
+	for _, uid := range uids {
+		set = append(set, imap.UID(uid))
+	}
+
+	err := e.client.FetchMessages(set, func(uid imap.UID, msg *pimap.Message, parseErr error) error {
+		if parseErr != nil {
+			e.log.Error("parse fetched message failed", "uid", uint32(uid), "err", parseErr)
+			return nil
+		}
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		id, err := e.storeMessage(ctx, folder, msg)
+		if err != nil {
+			e.log.Error("store fetched message failed", "uid", uint32(uid), "err", err)
+			return nil
+		}
+		ids = append(ids, id)
+		return nil
+	})
+	if err != nil {
+		// whatever was stored before the failure stays stored; the ids go back so
+		// the caller can count and announce them.
+		return ids, fmt.Errorf("sync: fetch batch in %q: %w", folder.IMAPPath, err)
+	}
+	return ids, nil
+}
+
+// storeMessage writes one fetched message and its attachments to the cache.
+func (e *Engine) storeMessage(ctx context.Context, folder storage.Folder, msg *pimap.Message) (int64, error) {
+	uid := uint32(msg.UID)
 	stored := &storage.Message{
 		AccountID: folder.AccountID,
 		FolderID:  folder.ID,
