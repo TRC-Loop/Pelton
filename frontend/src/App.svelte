@@ -30,7 +30,7 @@
   import { loadSignatures } from './stores/signatures'
   import { loadVIPSenders } from './stores/vip'
   import { loadVirusTotalConfig } from './stores/virustotal'
-  import { loadOutbox, syncing, lastSynced, syncFolder } from './stores/outbox'
+  import { loadOutbox, syncing, lastSynced, syncFolder, syncServer } from './stores/outbox'
   import { selection, applyStartupSelection, searchQuery } from './stores/selection'
   import { loadList, messageList } from './stores/messages'
   import { initProgress } from './stores/progress'
@@ -336,6 +336,7 @@
         if (!e.running) {
           lastSynced.set(Date.now())
           syncFolder.set('')
+          syncServer.set('')
           // a password the server refuses is only discovered by trying, so the
           // markers can only be right after a sync has run.
           void refreshMissingPasswords()
@@ -346,7 +347,9 @@
       onSyncProgress((e) => {
         // the trailing done==total event carries no folder; treat it as a clear
         // so the verbose line does not linger on the last mailbox.
-        syncFolder.set(e.done < e.total ? e.folder : '')
+        const running = e.done < e.total
+        syncFolder.set(running ? e.folder : '')
+        syncServer.set(running ? e.server : '')
       }),
     )
     unsubscribers.push(onOutboxChanged(() => void loadOutbox()))

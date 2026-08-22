@@ -304,6 +304,7 @@ const de: Record<string, string> = {
   'common.statusBar.syncing': 'Synchronisiert…',
   'common.statusBar.syncingMailbox': 'Synchronisiere {mailbox}…',
   'common.statusBar.synced': 'Synchronisiert',
+  'common.statusBar.syncingMailboxOn': '{mailbox} wird von {server} abgeglichen…',
   'common.techBadges.encrypted': 'Verschlüsselt',
   'common.techBadges.signed': 'Signiert',
   'common.techBadges.smime.valid': 'Signatur geprüft',

@@ -123,16 +123,76 @@ func (c *Client) FetchRecentHeaders(limit int) ([]MessageHeader, error) {
 	return headers, nil
 }
 
-// FetchMessage fetches and parses a full message by UID.
-func (c *Client) FetchMessage(uid imap.UID) (*Message, error) {
-	// PEEK so reading the body does not set \Seen
+// bodyFetchOptions asks for everything a stored message needs: the envelope for
+// the list columns, the flags, and the source with PEEK so reading it does not
+// set \Seen. The section value is also how the body is found in the response,
+// so it is built once and shared.
+func bodyFetchOptions() (*imap.FetchItemBodySection, *imap.FetchOptions) {
 	section := &imap.FetchItemBodySection{Peek: true}
-	options := &imap.FetchOptions{
+	return section, &imap.FetchOptions{
 		Envelope:    true,
 		Flags:       true,
 		UID:         true,
 		BodySection: []*imap.FetchItemBodySection{section},
 	}
+}
+
+// FetchMessages fetches a set of messages in one command and hands each to fn as
+// it arrives.
+//
+// One command rather than one per message is the difference between a first
+// sync being bound by bandwidth and being bound by round trips: 14k messages
+// fetched one at a time is 14k times the latency to the server before a single
+// byte of anything else moves (#310). Messages are handled as they stream in, so
+// only one is held at a time and rows appear while the rest are still coming.
+//
+// fn is called once per message the server returns, in the order it returns
+// them, with the parse error instead of a message when the source could not be
+// walked. The caller decides what a bad message costs: returning an error from
+// fn abandons the rest of the batch, returning nil carries on. The connection
+// is left clean either way.
+func (c *Client) FetchMessages(uids []imap.UID, fn func(uid imap.UID, msg *Message, err error) error) error {
+	if len(uids) == 0 {
+		return nil
+	}
+	section, options := bodyFetchOptions()
+	cmd := c.raw.Fetch(imap.UIDSetNum(uids...), options)
+	defer cmd.Close()
+
+	for {
+		data := cmd.Next()
+		if data == nil {
+			break
+		}
+		buf, err := data.Collect()
+		if err != nil {
+			return fmt.Errorf("imap: fetch batch of %d: %w", len(uids), err)
+		}
+		raw := buf.FindBodySection(section)
+		if raw == nil {
+			// the server listed the message but gave no body for it. Skipping it
+			// leaves it uncached and the next sync asks again, which is better
+			// than storing an empty message.
+			continue
+		}
+		msg := messageFromBuffer(buf, section, raw)
+		parseErr := parseBody(raw, msg)
+		if parseErr != nil {
+			msg = nil
+		}
+		if err := fn(buf.UID, msg, parseErr); err != nil {
+			return err
+		}
+	}
+	if err := cmd.Close(); err != nil {
+		return fmt.Errorf("imap: fetch batch of %d: %w", len(uids), err)
+	}
+	return nil
+}
+
+// FetchMessage fetches and parses a full message by UID.
+func (c *Client) FetchMessage(uid imap.UID) (*Message, error) {
+	section, options := bodyFetchOptions()
 
 	buffers, err := c.raw.Fetch(imap.UIDSetNum(uid), options).Collect()
 	if err != nil {
@@ -147,7 +207,17 @@ func (c *Client) FetchMessage(uid imap.UID) (*Message, error) {
 	if raw == nil {
 		return nil, fmt.Errorf("imap: message uid %d returned no body", uid)
 	}
+	msg := messageFromBuffer(buf, section, raw)
+	if err := parseBody(raw, msg); err != nil {
+		return nil, fmt.Errorf("imap: parse message uid %d: %w", uid, err)
+	}
+	return msg, nil
+}
 
+// messageFromBuffer turns one fetch response into a Message, envelope fields and
+// all. The body walk is the caller's, since the single fetch reports a parse
+// failure as its own error and the batch one keeps going.
+func messageFromBuffer(buf *imapclient.FetchMessageBuffer, section *imap.FetchItemBodySection, raw []byte) *Message {
 	msg := &Message{UID: buf.UID, Flags: buf.Flags, Size: int64(len(raw)), Raw: raw}
 	if buf.Envelope != nil {
 		msg.MessageID = buf.Envelope.MessageID
@@ -157,11 +227,7 @@ func (c *Client) FetchMessage(uid imap.UID) (*Message, error) {
 		msg.Cc = formatAddresses(buf.Envelope.Cc)
 		msg.Date = buf.Envelope.Date
 	}
-
-	if err := parseBody(raw, msg); err != nil {
-		return nil, fmt.Errorf("imap: parse message uid %d: %w", uid, err)
-	}
-	return msg, nil
+	return msg
 }
 
 // FetchRawMessage returns a message's RFC 822 source by UID, exactly as the

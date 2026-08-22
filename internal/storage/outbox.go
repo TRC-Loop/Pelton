@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -214,4 +215,26 @@ func scanOutbox(row rowScanner) (*OutboxRow, error) {
 	r.NextAttemptAt = nextAt
 	r.CreatedAt = createdAt
 	return &r, nil
+}
+
+// CountOutboxInStates returns how many rows are in any of the given states.
+// Background sync uses it to stand aside while something is waiting to be sent:
+// a message the user pressed send on should not queue behind a mailbox that is
+// downloading fourteen thousand messages (#310).
+func (d *DB) CountOutboxInStates(ctx context.Context, states ...string) (int, error) {
+	if len(states) == 0 {
+		return 0, nil
+	}
+	marks := make([]string, len(states))
+	args := make([]any, len(states))
+	for i, state := range states {
+		marks[i] = "?"
+		args[i] = state
+	}
+	var n int
+	query := `SELECT COUNT(*) FROM outbox WHERE state IN (` + strings.Join(marks, ", ") + `)`
+	if err := d.sql.QueryRowContext(ctx, query, args...).Scan(&n); err != nil {
+		return 0, fmt.Errorf("storage: count outbox rows: %w", err)
+	}
+	return n, nil
 }

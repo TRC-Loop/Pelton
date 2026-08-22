@@ -198,3 +198,16 @@ func toMessage(r storage.OutboxRow) Message {
 		CreatedAt:     r.CreatedAt,
 	}
 }
+
+// Pending reports whether anything is waiting to be sent or is mid-send. Sync
+// asks before each message it downloads, so a send never waits behind a large
+// mailbox.
+func (q *Queue) Pending(ctx context.Context) bool {
+	n, err := q.db.CountOutboxInStates(ctx, StateQueued, StateSending)
+	if err != nil {
+		// unreadable is not a reason to stall a sync; the send worker has its
+		// own view of the queue and will report the failure.
+		return false
+	}
+	return n > 0
+}

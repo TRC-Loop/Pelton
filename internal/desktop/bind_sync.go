@@ -231,7 +231,8 @@ func (a *App) syncFolders(client *pimap.Client, accountID int64) error {
 	newTotal := 0
 	for i, f := range folders {
 		a.emit(EventSyncProgress, SyncProgressEvent{
-			AccountID: accountID, Folder: f.Name, Done: i, Total: len(folders),
+			AccountID: accountID, Folder: f.Name, Server: client.Addr(),
+			Done: i, Total: len(folders),
 		})
 		res, err := engine.SyncFolder(a.ctx, f)
 		if err != nil {
@@ -395,11 +396,65 @@ func (a *App) newSyncEngine(client *pimap.Client, accountID int64) *psync.Engine
 	engine := psync.NewEngine(client, a.store, a.log)
 	engine.ColorSync = a.boolSetting(settingFlagColorSync, false)
 	engine.InitialLimit = a.syncMessageLimit()
+	// a message the user pressed send on goes out during a sync, not after it.
+	engine.YieldTo = a.outboxPending
+	// and the list fills as mail arrives rather than staying empty until the
+	// whole folder is down.
+	engine.OnStored = a.announceStored
 	if trash, ok := a.findTrashFolder(accountID); ok {
 		engine.TrashPath = trash.IMAPPath
 		engine.TrashFolderID = trash.ID
 	}
 	return engine
+}
+
+// streamInterval is the shortest gap between two "mail arrived" events during a
+// sync. Each one costs the ui a list reload, and a fast server can store a
+// batch every few milliseconds; twice a second looks live without the list
+// spending the sync redrawing itself.
+const streamInterval = 500 * time.Millisecond
+
+// streamGate rate-limits those events. It is a value on App rather than a
+// package variable so two accounts syncing at once do not silence each other
+// unfairly, and it is safe for the concurrent syncs that produce them.
+type streamGate struct {
+	mu   sync.Mutex
+	last time.Time
+}
+
+func (g *streamGate) ready() bool {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	now := time.Now()
+	if now.Sub(g.last) < streamInterval {
+		return false
+	}
+	g.last = now
+	return true
+}
+
+// outboxPending reports whether anything is waiting to be sent. Sync asks it
+// between messages and stands aside while it is true.
+func (a *App) outboxPending() bool {
+	if a.queue == nil {
+		return false
+	}
+	return a.queue.Pending(a.ctx)
+}
+
+// announceStored tells the ui about mail stored so far in a folder that is
+// still syncing. The list reloads on it, which is cheap now that the read is
+// indexed, so a first sync looks like mail arriving instead of a frozen window.
+// Notifications are not sent from here: those still go out once per folder, so
+// a first sync of fourteen thousand messages does not become fourteen thousand
+// notifications.
+func (a *App) announceStored(folder storage.Folder, ids []int64) {
+	if !a.streamTick.ready() {
+		return
+	}
+	a.emit(EventMailNew, MailNewEvent{
+		AccountID: folder.AccountID, FolderID: folder.ID, Count: len(ids),
+	})
 }
 
 // findTrashFolder returns the account's trash-role folder. Without one, a

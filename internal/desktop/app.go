@@ -50,6 +50,10 @@ type App struct {
 	// though a nil check keeps it from crashing.
 	storeReady chan struct{}
 	index      *search.Index
+	// streamTick rate-limits the "mail arrived" events a running sync emits, so
+	// a fast first sync fills the list without asking the ui to redraw it
+	// hundreds of times a minute.
+	streamTick streamGate
 	// searchMu serializes index backfills so a startup pass and a post-sync pass
 	// do not advance the watermark concurrently.
 	searchMu sync.Mutex
