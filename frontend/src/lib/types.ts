@@ -508,8 +508,12 @@ export interface UIPrefs {
   // notifyNewMail raises a native OS notification for new inbox mail. VIP
   // senders notify regardless of this (see stores/vip.ts).
   notifyNewMail: boolean
-  // verboseSync shows which mailbox is currently syncing in the status line.
+  // verboseSync shows which mailbox is currently syncing in the status line,
+  // with the account and the server it is talking to.
   verboseSync: boolean
+  // syncProgressBar puts a progress bar beside that line, counting message
+  // bodies rather than mailboxes. On by default.
+  syncProgressBar: boolean
   // closeAction is what the window's close button does: 'background' keeps
   // Pelton running and syncing with the window hidden, 'quit' exits.
   closeAction: CloseAction

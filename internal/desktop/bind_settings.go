@@ -109,6 +109,9 @@ const (
 	// verbose sync surfaces the mailbox currently being synced in the status
 	// line instead of a plain "Syncing" (#128). Off by default.
 	settingVerboseSync = "verbose_sync"
+	// settingSyncProgress shows a progress bar with real message counts while a
+	// sync or a backfill runs, rather than a spinner (#313).
+	settingSyncProgress = "sync_progress_bar"
 	// what the window's close button does: "background" (default) or "quit".
 	// See close.go.
 	settingCloseAction = "close_button_action"
@@ -326,8 +329,11 @@ type UIPrefsDTO struct {
 	// inbox. Off by default. VIP-sender notifications fire regardless of this
 	// (see bind_vip.go), so important senders cut through when it is off.
 	NotifyNewMail bool `json:"notifyNewMail"`
-	// VerboseSync shows which mailbox is currently syncing in the status line.
-	VerboseSync bool `json:"verboseSync"`
+	// VerboseSync shows which mailbox is currently syncing in the status line,
+	// with the account and server it is talking to. SyncProgressBar puts a real
+	// progress bar next to it, counting message bodies rather than mailboxes.
+	VerboseSync     bool `json:"verboseSync"`
+	SyncProgressBar bool `json:"syncProgressBar"`
 	// CloseAction is what the window's close button does: "background" keeps
 	// Pelton running and syncing with the window hidden, "quit" exits.
 	CloseAction string `json:"closeAction"`
@@ -427,6 +433,7 @@ func (a *App) GetUIPrefs() (UIPrefsDTO, error) {
 		MonoFont:                   a.stringSetting(settingMonoFont, "default"),
 		NotifyNewMail:              a.boolSetting(settingNotifyNewMail, false),
 		VerboseSync:                a.boolSetting(settingVerboseSync, false),
+		SyncProgressBar:            a.boolSetting(settingSyncProgress, true),
 		CloseAction:                a.stringSetting(settingCloseAction, closeActionBackground),
 		SyncMessageLimit:           a.syncMessageLimit(),
 		SyncAutoBackfill:           a.boolSetting(settingSyncAutoBackfill, true),

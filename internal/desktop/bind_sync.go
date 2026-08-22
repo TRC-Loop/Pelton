@@ -227,13 +227,13 @@ func (a *App) syncFolders(client *pimap.Client, accountID int64) error {
 		}
 	}
 	engine := a.newSyncEngine(client, accountID)
+	email := a.accountEmail(accountID)
+	a.syncTally.begin(len(folders))
 
 	newTotal := 0
 	for i, f := range folders {
-		a.emit(EventSyncProgress, SyncProgressEvent{
-			AccountID: accountID, Folder: f.Name, Server: client.Addr(),
-			Done: i, Total: len(folders),
-		})
+		a.syncTally.enterFolder(i, f.Name)
+		a.emitSyncProgress(accountID, email, client.Addr(), a.syncTally.counts())
 		res, err := engine.SyncFolder(a.ctx, f)
 		if err != nil {
 			a.log.Error("sync folder", "folder", f.Name, "err", err)
@@ -246,9 +246,13 @@ func (a *App) syncFolders(client *pimap.Client, accountID int64) error {
 		}
 		a.afterRepairs(f, res.RepairedIDs)
 	}
-	a.emit(EventSyncProgress, SyncProgressEvent{
-		AccountID: accountID, Done: len(folders), Total: len(folders),
-	})
+	// an empty folder name is how the ui knows the run is over and clears its
+	// line; the counts ride along so a finished bar reads full rather than
+	// snapping back to nothing.
+	final := a.syncTally.counts()
+	final.Folder = ""
+	final.FoldersDone = len(folders)
+	a.emitSyncProgress(accountID, email, client.Addr(), final)
 
 	// index the freshly synced mail so it becomes searchable. run it off the sync
 	// path so the search backfill never holds up the next sync.
@@ -401,6 +405,18 @@ func (a *App) newSyncEngine(client *pimap.Client, accountID int64) *psync.Engine
 	// and the list fills as mail arrives rather than staying empty until the
 	// whole folder is down.
 	engine.OnStored = a.announceStored
+	// the counts behind the progress bar. The account and server are captured
+	// here because the engine does not know them and the line names them.
+	email := a.accountEmail(accountID)
+	// the trash-folder tests build an engine with no client, and a progress line
+	// is not worth a panic over.
+	server := ""
+	if client != nil {
+		server = client.Addr()
+	}
+	engine.OnProgress = func(p psync.FolderProgress) {
+		a.emitSyncProgress(accountID, email, server, a.syncTally.record(p))
+	}
 	if trash, ok := a.findTrashFolder(accountID); ok {
 		engine.TrashPath = trash.IMAPPath
 		engine.TrashFolderID = trash.ID
@@ -431,6 +447,27 @@ func (g *streamGate) ready() bool {
 	}
 	g.last = now
 	return true
+}
+
+// emitSyncProgress sends one progress event. It is the only place the event is
+// built, so the folder line and the message counts can never disagree.
+func (a *App) emitSyncProgress(accountID int64, email, server string, c syncCounts) {
+	a.emit(EventSyncProgress, SyncProgressEvent{
+		AccountID: accountID, AccountEmail: email, Server: server,
+		Folder: c.Folder, Done: c.Done, Total: c.Total,
+		FolderDone: c.FolderDone, FolderTotal: c.FolderTotal,
+		FoldersDone: c.FoldersDone, FoldersTotal: c.FoldersTotal,
+	})
+}
+
+// accountEmail is the address to name in a progress line, empty when the
+// account cannot be read. A progress line is not worth failing a sync over.
+func (a *App) accountEmail(accountID int64) string {
+	account, err := a.store.GetAccount(a.ctx, accountID)
+	if err != nil {
+		return ""
+	}
+	return account.Email
 }
 
 // outboxPending reports whether anything is waiting to be sent. Sync asks it

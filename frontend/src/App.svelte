@@ -30,7 +30,7 @@
   import { loadSignatures } from './stores/signatures'
   import { loadVIPSenders } from './stores/vip'
   import { loadVirusTotalConfig } from './stores/virustotal'
-  import { loadOutbox, syncing, lastSynced, syncFolder, syncServer } from './stores/outbox'
+  import { loadOutbox, syncing, lastSynced, syncFolder, syncServer, syncAccount, syncCounts, emptySyncCounts } from './stores/outbox'
   import { selection, applyStartupSelection, searchQuery } from './stores/selection'
   import { loadList, messageList } from './stores/messages'
   import { initProgress } from './stores/progress'
@@ -337,6 +337,8 @@
           lastSynced.set(Date.now())
           syncFolder.set('')
           syncServer.set('')
+          syncAccount.set('')
+          syncCounts.set(emptySyncCounts)
           // a password the server refuses is only discovered by trying, so the
           // markers can only be right after a sync has run.
           void refreshMissingPasswords()
@@ -345,11 +347,25 @@
     )
     unsubscribers.push(
       onSyncProgress((e) => {
-        // the trailing done==total event carries no folder; treat it as a clear
-        // so the verbose line does not linger on the last mailbox.
-        const running = e.done < e.total
+        // the closing event carries no folder name; that is what says the run
+        // is over, rather than the counts, which for a resync of a cached
+        // mailbox can be 0 of 0 the whole way through.
+        const running = e.folder !== ''
         syncFolder.set(running ? e.folder : '')
         syncServer.set(running ? e.server : '')
+        syncAccount.set(running ? e.accountEmail : '')
+        syncCounts.set(
+          running
+            ? {
+                done: e.done,
+                total: e.total,
+                folderDone: e.folderDone,
+                folderTotal: e.folderTotal,
+                foldersDone: e.foldersDone,
+                foldersTotal: e.foldersTotal,
+              }
+            : emptySyncCounts,
+        )
       }),
     )
     unsubscribers.push(onOutboxChanged(() => void loadOutbox()))
