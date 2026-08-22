@@ -17,6 +17,7 @@
   import ContextMenu from './components/common/ContextMenu.svelte'
   import Resizer from './components/common/Resizer.svelte'
   import SnoozeDialog from './components/detail/SnoozeDialog.svelte'
+  import ConfirmDialog from './components/common/ConfirmDialog.svelte'
   import FolderDialog from './components/sidebar/FolderDialog.svelte'
   import AttachmentPreview from './components/detail/AttachmentPreview.svelte'
   import MoveDialog from './components/detail/MoveDialog.svelte'
@@ -34,7 +35,7 @@
   import { loadList, messageList } from './stores/messages'
   import { initProgress } from './stores/progress'
   import { composeSessions, openCompose, openComposeWith, initComposePrefs, openReply, openForward, requestComposeClose } from './stores/compose'
-  import { openSnooze } from './stores/snooze'
+  import { openSnooze, openSnoozeMany } from './stores/snooze'
   import { patchInList, removeFromList } from './stores/messages'
   import {
     triggerSync,
@@ -95,10 +96,10 @@
   import { errorMessage, toastError, toastInfo, pushAction } from './stores/toast'
   import { friendlyError } from './lib/errors'
   import { setOnline } from './stores/network'
-  import { moveTarget } from './stores/move'
+  import { moveTargets } from './stores/move'
   import { snoozeTarget } from './stores/snooze'
   import { previewTarget } from './stores/preview'
-  import { openMove } from './stores/move'
+  import { openMove, openMoveMany } from './stores/move'
   import { selectedIds, clearSelection } from './stores/listselect'
   import { selectFolder, selectView } from './stores/selection'
   import { setTheme, setThemeId } from './stores/prefs'
@@ -529,9 +530,52 @@
     return detail && detail.id === id ? detail : null
   }
 
-  // messageAction runs a message-level shortcut on the open message, mirroring the
-  // right-click menu. it no-ops (with a hint) when no message is open.
+  // bulkAction runs a shortcut against a multi-selection in the list, and reports
+  // whether it took the action. Selecting eleven messages and pressing archive
+  // means all eleven (#309); the reading pane's own buttons are unaffected,
+  // since those are about the message on screen.
+  //
+  // Actions with no bulk meaning (reply, forward, unsubscribe) are not handled
+  // here and fall through to the open message.
+  function bulkAction(action: ShortcutAction, items: MessageSummary[]): boolean {
+    switch (action) {
+      case 'mark-read':
+        void bulkMarkSeen(items, true)
+        return true
+      case 'mark-unread':
+        void bulkMarkSeen(items, false)
+        return true
+      case 'flag':
+        // a mixed selection flags rather than unflags: the odd one out joining
+        // the rest is recoverable, clearing ten flags is annoying.
+        void bulkMarkFlagged(items, items.some((m) => !m.flagged))
+        return true
+      case 'delete-message':
+        void bulkTrash(items)
+        return true
+      case 'archive':
+        void bulkArchive(items)
+        return true
+      case 'download-offline':
+        void bulkSetOffline(items, true)
+        return true
+      case 'snooze':
+        openSnoozeMany(items.map((m) => m.id))
+        clearSelection()
+        return true
+      default:
+        return false
+    }
+  }
+
+  // messageAction runs a message-level shortcut. With more than one message
+  // selected in the list it acts on the whole selection; otherwise on the open
+  // message, mirroring the right-click menu. it no-ops (with a hint) when
+  // neither exists.
   async function messageAction(action: ShortcutAction): Promise<void> {
+    if (selectedMessages.length > 1 && bulkAction(action, selectedMessages)) {
+      return
+    }
     const msg = currentMessage()
     if (!msg) {
       toastInfo(get(t)('app.toast.openMessageFirst'))
@@ -715,6 +759,12 @@
         break
       }
       case 'move-to': {
+        if (selectedMessages.length > 1) {
+          const items = selectedMessages
+          clearSelection()
+          openMoveMany(items)
+          break
+        }
         const msg = currentMessage()
         if (msg) {
           openMove(msg)
@@ -724,6 +774,10 @@
         break
       }
       case 'remove-offline': {
+        if (selectedMessages.length > 1) {
+          void bulkSetOffline(selectedMessages, false)
+          break
+        }
         const msg = currentMessage()
         if (msg) {
           void setOffline(msg, false)
@@ -1039,7 +1093,7 @@
       wizardOpen ||
       onboardingOpen ||
       $composeSessions.length > 0 ||
-      $moveTarget !== null ||
+      $moveTargets.length > 0 ||
       $snoozeTarget !== null ||
       $previewTarget !== null ||
       $paletteOpen
@@ -1337,6 +1391,7 @@
 
 <Toasts />
 <ContextMenu />
+<ConfirmDialog />
 <SnoozeDialog />
 <FolderDialog />
 <AttachmentPreview />
