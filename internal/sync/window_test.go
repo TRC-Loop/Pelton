@@ -235,6 +235,8 @@ func (c *fakeClient) FetchMessage(uid imap.UID) (*pimap.Message, error) {
 	return &pimap.Message{UID: uid, Subject: "test"}, nil
 }
 
+func (c *fakeClient) Addr() string { return "imap.example.com:993" }
+
 func (c *fakeClient) AddFlags(imap.UID, ...imap.Flag) error { return nil }
 func (c *fakeClient) DeleteMessages(uids ...imap.UID) error {
 	c.deleted = append(c.deleted, uids...)

@@ -304,6 +304,7 @@ const es: Record<string, string> = {
   'common.statusBar.syncing': 'Sincronizando…',
   'common.statusBar.syncingMailbox': 'Sincronizando {mailbox}…',
   'common.statusBar.synced': 'Sincronizado',
+  'common.statusBar.syncingMailboxOn': 'Sincronizando {mailbox} desde {server}…',
   'common.techBadges.encrypted': 'Cifrado',
   'common.techBadges.signed': 'Firmado',
   'common.techBadges.smime.valid': 'Firma verificada',

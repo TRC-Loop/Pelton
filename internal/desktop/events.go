@@ -121,10 +121,13 @@ type MailRepairedEvent struct {
 
 // SyncProgressEvent is the payload for EventSyncProgress.
 type SyncProgressEvent struct {
-	AccountID int64  `json:"accountId"`
-	Folder    string `json:"folder"`
-	Done      int    `json:"done"`
-	Total     int    `json:"total"`
+	AccountID int64 `json:"accountId"`
+	// Server is the imap host and port the folder is being synced from, so a
+	// line says which account it belongs to when several sync at once (#310).
+	Server string `json:"server"`
+	Folder string `json:"folder"`
+	Done   int    `json:"done"`
+	Total  int    `json:"total"`
 }
 
 // SyncStateEvent is the payload for EventSyncState. Error is empty on success.

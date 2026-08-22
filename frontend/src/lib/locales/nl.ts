@@ -304,6 +304,7 @@ const nl: Record<string, string> = {
   'common.statusBar.syncing': 'Synchroniseren…',
   'common.statusBar.syncingMailbox': '{mailbox} synchroniseren…',
   'common.statusBar.synced': 'Gesynchroniseerd',
+  'common.statusBar.syncingMailboxOn': '{mailbox} synchroniseren vanaf {server}…',
   'common.techBadges.encrypted': 'Versleuteld',
   'common.techBadges.signed': 'Ondertekend',
   'common.techBadges.smime.valid': 'Handtekening geverifieerd',

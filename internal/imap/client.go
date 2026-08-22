@@ -96,6 +96,17 @@ type Client struct {
 	updates chan MailboxUpdate
 }
 
+// Addr is the server this client is connected to, as host:port. Sync puts it in
+// its log lines so a line in the debug overlay says which account it belongs to
+// when several are syncing at once.
+func (c *Client) Addr() string {
+	port := c.cfg.Port
+	if port == 0 {
+		port = DefaultPort
+	}
+	return net.JoinHostPort(c.cfg.Host, strconv.Itoa(port))
+}
+
 // Connect opens a TLS connection but does not authenticate; call Login next.
 func Connect(cfg Config) (*Client, error) {
 	if cfg.Host == "" {

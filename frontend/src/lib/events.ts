@@ -39,6 +39,9 @@ export interface MailRepairedEvent {
 
 export interface SyncProgressEvent {
   accountId: number
+  // the imap host and port the folder is coming from, so a line says which
+  // account it belongs to when several are syncing.
+  server: string
   folder: string
   done: number
   total: number

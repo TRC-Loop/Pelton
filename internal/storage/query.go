@@ -27,14 +27,7 @@ func (d *DB) QueryMessages(ctx context.Context, q MessageQuery) ([]Message, erro
 		return nil, nil
 	}
 
-	where, args := messageWhere(q)
-	query := selectMessageColumns + `
-FROM messages
-WHERE ` + where + `
-ORDER BY date DESC, uid DESC
-LIMIT ? OFFSET ?`
-	args = append(args, normalizeLimit(q.Limit), q.Offset)
-
+	query, args := pageQuery(q)
 	rows, err := d.sql.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("storage: query messages: %w", err)
@@ -53,6 +46,56 @@ LIMIT ? OFFSET ?`
 		return nil, fmt.Errorf("storage: iterate messages: %w", err)
 	}
 	return messages, nil
+}
+
+// pageQuery builds the read for one page of the list.
+//
+// One folder is a straight ordered read: the list index carries folder, date and
+// uid in the order the page wants them, so sqlite walks it and stops at the
+// limit.
+//
+// Several folders cannot work that way. An index is sorted per folder, so an
+// `IN (...)` over five of them has no single ordered path through and sqlite
+// falls back to collecting every matching row and sorting the lot, which at 14k
+// messages is the slowest screen in the app. Instead each folder is asked for
+// its own newest rows through the index and the small results are merged. Only
+// the first offset+limit of any one folder can appear in the page, so that is
+// all each subquery has to return: five reads of a few hundred rows rather than
+// one sort of everything.
+func pageQuery(q MessageQuery) (string, []any) {
+	limit := normalizeLimit(q.Limit)
+	if len(q.FolderIDs) == 1 {
+		where, args := messageWhere(q)
+		query := selectMessageColumns + `
+FROM messages
+WHERE ` + where + `
+ORDER BY date DESC, uid DESC
+LIMIT ? OFFSET ?`
+		return query, append(args, limit, q.Offset)
+	}
+
+	// how deep into one folder the page could possibly reach. A no-cap limit
+	// leaves the subqueries uncapped too, which is the export path rather than
+	// the list.
+	perFolder := limit
+	if perFolder > 0 {
+		perFolder += q.Offset
+	}
+
+	parts := make([]string, 0, len(q.FolderIDs))
+	args := make([]any, 0, len(q.FolderIDs)*3+2)
+	for _, id := range q.FolderIDs {
+		where, folderArgs := messageWhere(MessageQuery{FolderIDs: []int64{id}, RequireFlags: q.RequireFlags})
+		parts = append(parts, `SELECT * FROM (`+selectMessageColumns+`
+FROM messages WHERE `+where+`
+ORDER BY date DESC, uid DESC LIMIT ?)`)
+		args = append(args, folderArgs...)
+		args = append(args, perFolder)
+	}
+	query := strings.Join(parts, "\nUNION ALL\n") + `
+ORDER BY date DESC, uid DESC
+LIMIT ? OFFSET ?`
+	return query, append(args, limit, q.Offset)
 }
 
 // CountMessages returns how many messages match q ignoring its limit and offset,

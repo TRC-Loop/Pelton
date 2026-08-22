@@ -21,6 +21,11 @@ export const lastSynced = writable<number | null>(null)
 // fed by sync:progress events and cleared when a sync ends.
 export const syncFolder = writable<string>('')
 
+// syncServer holds the imap host and port that mailbox is coming from, shown
+// beside it in the verbose status line so two accounts syncing at once are
+// telling apart. Empty when idle or between folders.
+export const syncServer = writable<string>('')
+
 // loadOutbox refetches the queue. it swallows errors into an empty list since the
 // outbox view is secondary; a transient failure should not break the app. when
 // the refetch reveals freshly-sent messages it shows a brief confirmation and
