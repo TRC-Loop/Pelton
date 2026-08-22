@@ -50,6 +50,9 @@ type App struct {
 	// though a nil check keeps it from crashing.
 	storeReady chan struct{}
 	index      *search.Index
+	// syncTally holds the message counts behind the sync progress bar for the
+	// run in flight.
+	syncTally syncTally
 	// streamTick rate-limits the "mail arrived" events a running sync emits, so
 	// a fast first sync fills the list without asking the ui to redraw it
 	// hundreds of times a minute.

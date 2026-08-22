@@ -59,11 +59,26 @@ type Engine struct {
 	// message the user pressed send on goes out during a first sync rather than
 	// after it (#310).
 	YieldTo func() bool
+	// OnProgress, when set, is told how far the current folder has got: how many
+	// message bodies this sync intends to fetch from it and how many are in.
+	// The count comes from the reconcile plan, so it is what will actually be
+	// downloaded rather than the size of the mailbox, and a resync of a cached
+	// folder reports the handful it is really fetching (#313).
+	OnProgress func(p FolderProgress)
 	// OnStored, when set, is called as messages are stored rather than only when
 	// the folder finishes, so a first sync fills the list as mail arrives
 	// instead of showing nothing for several minutes. It is called with the
 	// folder and the ids stored since the last call.
 	OnStored func(folder storage.Folder, ids []int64)
+}
+
+// FolderProgress is how far a folder's fetch has got. Total is what the plan
+// says is coming and never changes during a folder; Done counts up to it.
+// A Total of 0 means there is nothing to fetch from this folder.
+type FolderProgress struct {
+	Folder storage.Folder
+	Done   int
+	Total  int
 }
 
 // fetchBatch is how many message bodies one command asks for. Big enough that
@@ -225,6 +240,12 @@ func (e *Engine) syncFolder(ctx context.Context, folder storage.Folder, backfill
 // tells the ui what has arrived, so a long download stays interruptible and
 // visible rather than being one opaque stretch.
 func (e *Engine) fetchNew(ctx context.Context, folder storage.Folder, uids []uint32, res *FolderSyncResult) {
+	// reported before the first batch so the bar starts at 0 of n rather than
+	// appearing part way through, and reported for an empty plan too so a
+	// folder with nothing to do does not leave the previous folder's numbers on
+	// screen.
+	e.report(folder, 0, len(uids))
+	done := 0
 	for start := 0; start < len(uids); start += fetchBatch {
 		if err := ctx.Err(); err != nil {
 			e.log.Warn("sync cancelled mid-folder", "folder", folder.IMAPPath)
@@ -242,6 +263,11 @@ func (e *Engine) fetchNew(ctx context.Context, folder storage.Folder, uids []uin
 		res.New += len(ids)
 		res.NewIDs = append(res.NewIDs, ids...)
 		e.announce(folder, ids)
+		// counted by what the batch asked for, not by what came back: a message
+		// the server refused is still one fewer left to wait for, and a bar that
+		// stops short of its total is worse than one that counts a skip.
+		done += end - start
+		e.report(folder, done, len(uids))
 		if err != nil {
 			// the connection is in an unknown state after a failed fetch, so the
 			// rest of this folder waits for the next sync rather than piling more
@@ -270,6 +296,14 @@ func (e *Engine) yield(ctx context.Context) {
 		case <-time.After(yieldPoll):
 		}
 	}
+}
+
+// report tells the caller how far this folder has got, if anyone is listening.
+func (e *Engine) report(folder storage.Folder, done, total int) {
+	if e.OnProgress == nil {
+		return
+	}
+	e.OnProgress(FolderProgress{Folder: folder, Done: done, Total: total})
 }
 
 // announce hands a batch of freshly stored ids to OnStored, if anyone is

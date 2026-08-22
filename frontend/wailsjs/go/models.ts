@@ -1753,6 +1753,7 @@ export namespace desktop {
 	    monoFont: string;
 	    notifyNewMail: boolean;
 	    verboseSync: boolean;
+	    syncProgressBar: boolean;
 	    closeAction: string;
 	    syncMessageLimit: number;
 	    syncAutoBackfill: boolean;
@@ -1834,6 +1835,7 @@ export namespace desktop {
 	        this.monoFont = source["monoFont"];
 	        this.notifyNewMail = source["notifyNewMail"];
 	        this.verboseSync = source["verboseSync"];
+	        this.syncProgressBar = source["syncProgressBar"];
 	        this.closeAction = source["closeAction"];
 	        this.syncMessageLimit = source["syncMessageLimit"];
 	        this.syncAutoBackfill = source["syncAutoBackfill"];

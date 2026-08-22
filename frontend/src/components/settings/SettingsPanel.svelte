@@ -83,6 +83,7 @@
     setLowPowerMode,
     setAutoSyncInterval,
     setVerboseSync,
+    setSyncProgressBar,
     setCloseAction,
     setSyncMessageLimit,
     setSyncAutoBackfill,
@@ -228,6 +229,7 @@
     { cat: 'power', label: $t('settingsPanel.toggle.lowPowerMode'), kw: 'battery energy' },
     { cat: 'power', label: $t('settingsPanel.label.autoSyncInterval'), kw: 'sync interval' },
     { cat: 'power', label: $t('settingsPanel.toggle.verboseSync'), kw: 'sync status' },
+    { cat: 'power', label: $t('settingsPanel.toggle.syncProgressBar'), kw: 'sync progress bar percent count' },
     { cat: 'power', label: $t('settingsPanel.label.closeAction'), kw: 'close button tray background quit exit' },
     { cat: 'power', label: $t('settingsPanel.label.syncMessageLimit'), kw: 'sync limit messages older initial download' },
     { cat: 'power', label: $t('settingsPanel.toggle.syncAutoBackfill'), kw: 'older mail backfill scroll load more' },
@@ -1468,6 +1470,17 @@
           </div>
           <p class="hint">
             {$t('settingsPanel.hint.verboseSyncDetail')}
+          </p>
+          <div class="toggle" title={$t('settingsPanel.hint.syncProgressBar')}>
+            <span class="row-label">{$t('settingsPanel.toggle.syncProgressBar')}</span>
+            <ToggleSwitch
+              checked={$prefs.syncProgressBar}
+              label={$t('settingsPanel.toggle.syncProgressBar')}
+              on:change={(e) => setSyncProgressBar(e.detail)}
+            />
+          </div>
+          <p class="hint">
+            {$t('settingsPanel.hint.syncProgressBarDetail')}
           </p>
           <StepSlider
             label={$t('settingsPanel.label.syncMessageLimit')}

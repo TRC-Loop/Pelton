@@ -81,6 +81,7 @@ const defaults: UIPrefs = {
   monoFont: 'default',
   notifyNewMail: false,
   verboseSync: false,
+  syncProgressBar: true,
   closeAction: 'background',
   syncMessageLimit: 50,
   syncAutoBackfill: true,
@@ -473,6 +474,14 @@ export function setMonoFont(value: string): void {
 export function setVerboseSync(value: boolean): void {
   prefs.update((p) => ({ ...p, verboseSync: value }))
   void setSetting(SettingKeys.verboseSync, String(value))
+}
+
+// setSyncProgressBar toggles the progress bar in the status line. It covers
+// backfills as well as syncs, since scrolling into older mail is the other
+// place you sit and wait.
+export function setSyncProgressBar(value: boolean): void {
+  prefs.update((p) => ({ ...p, syncProgressBar: value }))
+  void setSetting(SettingKeys.syncProgressBar, String(value))
 }
 
 // setCloseAction picks what the window's close button does. The backend reads

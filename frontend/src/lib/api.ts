@@ -1065,6 +1065,7 @@ export const SettingKeys = {
   monoFont: 'mono_font',
   notifyNewMail: 'notify_new_mail',
   verboseSync: 'verbose_sync',
+  syncProgressBar: 'sync_progress_bar',
   closeAction: 'close_button_action',
   syncMessageLimit: 'sync_message_limit',
   syncAutoBackfill: 'sync_auto_backfill',

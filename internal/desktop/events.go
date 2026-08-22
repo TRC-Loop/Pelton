@@ -119,15 +119,31 @@ type MailRepairedEvent struct {
 	Count     int   `json:"count"`
 }
 
-// SyncProgressEvent is the payload for EventSyncProgress.
+// SyncProgressEvent is the payload for EventSyncProgress. An empty Folder means
+// the run finished and the ui clears its line.
 type SyncProgressEvent struct {
 	AccountID int64 `json:"accountId"`
-	// Server is the imap host and port the folder is being synced from, so a
-	// line says which account it belongs to when several sync at once (#310).
-	Server string `json:"server"`
-	Folder string `json:"folder"`
-	Done   int    `json:"done"`
-	Total  int    `json:"total"`
+	// AccountEmail and Server name who is syncing and where from, for the
+	// verbose line: two accounts syncing at once are otherwise two identical
+	// "Syncing INBOX" lines (#310).
+	AccountEmail string `json:"accountEmail"`
+	Server       string `json:"server"`
+	Folder       string `json:"folder"`
+	// Done and Total count message bodies for the run so far, which is what a
+	// progress bar is about. Total is what the reconcile plans have asked for up
+	// to now, not the size of the mailboxes: a resync of a cached folder is a
+	// handful of messages and the bar says so (#313). It grows as folders open,
+	// and a Total of 0 means nothing is known yet and the bar is indeterminate.
+	Done  int `json:"done"`
+	Total int `json:"total"`
+	// FolderDone and FolderTotal are the same counts for the folder named above,
+	// since one mailbox is often most of the work.
+	FolderDone  int `json:"folderDone"`
+	FolderTotal int `json:"folderTotal"`
+	// FoldersDone and FoldersTotal count mailboxes rather than messages, for
+	// the "mailbox 3 of 12" part of the line.
+	FoldersDone  int `json:"foldersDone"`
+	FoldersTotal int `json:"foldersTotal"`
 }
 
 // SyncStateEvent is the payload for EventSyncState. Error is empty on success.
