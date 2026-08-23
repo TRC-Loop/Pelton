@@ -39,6 +39,10 @@ Status bar shows a progress bar while a sync or a backfill runs, counting messag
 
 Mail that declares no charset, or one nothing knows, is detected from the bytes (ICU port, github.com/gogs/chardet) and converted, so nothing invalid reaches the database or the search index. Applies to bodies and to rfc 2047 encoded-words in headers. Settings > Display > "Text encoding fallback": `auto` (default, detect) or a fixed encoding name. Messages read this way carry a badge in the reading pane. Mail cached before this existed is marked and refetched from the server during sync, a few per folder per sync.
 
+## Message fonts
+
+On by default, Settings > Display > "Let emails use their own fonts". A message's own font families are kept, so designed mail reads the way it was written. No network is involved: the reading pane's CSP limits font-src to `data:`, so a named family resolves from a font already installed or falls back to the reader font. Off, the sanitizer strips `font-family` and `<font face>` and every message renders in Settings > Display > reader font. Font sizes and line heights are kept either way.
+
 ## Logs and crash reports
 
 Off by default, Settings > Privacy and network. Nightly builds default them on. Nothing is uploaded: no crash reporter, no endpoint. Logs are files in `<data dir>/logs`, rotating at 2 MB with 3 kept copies (~8 MB cap). Levels: debug, info, warn, error. Secrets (passwords, app passwords, OAuth tokens) are removed by exact-value match wherever they appear, including inside server error strings. Mail content is never logged; subjects and senders only with the separate "Include message subjects and senders" opt-in. Crash reports hold the stack, version, OS and current activity, and are offered on the next launch. `PELTON_DEBUG` env var and `--debug` flag force logging on at debug level over the setting. Settings > About has "Open log folder" and "Copy diagnostics" (version, platform and settings only, no mail or addresses).

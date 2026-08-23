@@ -505,6 +505,9 @@ export interface UIPrefs {
   // curated key or 'sys:<family>'; 'default' keeps the built-in fonts).
   uiFont: string
   monoFont: string
+  // senderFonts lets a message use the font families it asks for. On by
+  // default; off renders every message in bodyFont.
+  senderFonts: boolean
   // notifyNewMail raises a native OS notification for new inbox mail. VIP
   // senders notify regardless of this (see stores/vip.ts).
   notifyNewMail: boolean
@@ -837,6 +840,16 @@ export interface TestConnectionRequest {
   // tested with the same security the account will use, not a guess from the port.
   imapTls: TLSMode
   password: string
+}
+
+// PasswordCheck is what the server said when a password was tried against an
+// existing account. rejected means the login was refused; an empty error with
+// ok false means the server could not be reached, which says nothing about the
+// password.
+export interface PasswordCheck {
+  ok: boolean
+  rejected: boolean
+  error: string
 }
 
 // folder roles mirror the backend's folderRole classification.

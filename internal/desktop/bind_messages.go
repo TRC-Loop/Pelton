@@ -186,7 +186,14 @@ func (a *App) renderHTML(html string, atts []storage.Attachment, allowRemote boo
 		html = mailview.StripTrackers(html, mailview.ScanRemoteImages(html).TrackerURLs())
 	}
 	resolved := mailview.ResolveCIDs(html, a.inlineDataURLs(atts))
-	return mailview.Sanitize(resolved, allowRemote)
+	return mailview.Sanitize(resolved, allowRemote, a.senderFonts())
+}
+
+// senderFonts reports whether a message may use the font families it asks for.
+// On by default: that is what every other mail client does, and a font family
+// is a name, not a download.
+func (a *App) senderFonts() bool {
+	return a.boolSetting(settingSenderFonts, true)
 }
 
 // renderHTMLWithTrackers renders with remote content on and nothing held back,
@@ -195,7 +202,7 @@ func (a *App) renderHTMLWithTrackers(html string, atts []storage.Attachment) str
 	if html == "" {
 		return ""
 	}
-	return mailview.Sanitize(mailview.ResolveCIDs(html, a.inlineDataURLs(atts)), true)
+	return mailview.Sanitize(mailview.ResolveCIDs(html, a.inlineDataURLs(atts)), true, a.senderFonts())
 }
 
 // blockTrackers reports the block-tracking-pixels preference. Off by default:

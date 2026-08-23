@@ -100,6 +100,7 @@
     setHandCursor,
     setThemeDarkTimes,
     setBodyFont,
+    setSenderFonts,
     setUIFont,
     setMonoFont,
     setLogToFile,
@@ -196,6 +197,7 @@
     { cat: 'display', label: $t('onboarding.extras.fontSize'), kw: 'message font size' },
     { cat: 'display', label: $t('settingsPanel.label.timeFormat'), kw: 'clock 24 hour' },
     { cat: 'display', label: $t('settingsPanel.label.bodyFont'), kw: 'font' },
+    { cat: 'display', label: $t('settingsPanel.toggle.senderFonts'), kw: 'font email typeface sender' },
     { cat: 'display', label: $t('settingsPanel.label.uiFont'), kw: 'font interface' },
     { cat: 'display', label: $t('settingsPanel.label.monoFont'), kw: 'font monospace code' },
     { cat: 'display', label: $t('settingsPanel.label.charsetFallback'), kw: 'encoding charset unicode gibberish mojibake utf8 latin' },
@@ -1331,6 +1333,15 @@
             </select>
           </div>
           <p class="hint">{$t('settingsPanel.hint.bodyFont')}</p>
+          <div class="toggle" title={$t('settingsPanel.hint.senderFonts')}>
+            <span class="row-label">{$t('settingsPanel.toggle.senderFonts')}</span>
+            <ToggleSwitch
+              checked={$prefs.senderFonts}
+              label={$t('settingsPanel.toggle.senderFonts')}
+              on:change={(e) => setSenderFonts(e.detail)}
+            />
+          </div>
+          <p class="hint">{$t('settingsPanel.hint.senderFonts')}</p>
           <div class="row">
             <span class="row-label">{$t('settingsPanel.label.uiFont')}</span>
             <select class="select" value={$prefs.uiFont} on:change={onUIFont}>

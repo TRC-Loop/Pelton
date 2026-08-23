@@ -32,6 +32,8 @@ export function CancelDownload():Promise<void>;
 
 export function CancelSend(arg1:number):Promise<boolean>;
 
+export function CheckAccountPassword(arg1:number,arg2:string):Promise<desktop.PasswordCheckDTO>;
+
 export function CheckForUpdates():Promise<desktop.UpdateCheckResult>;
 
 export function CheckSMIMERevocation(arg1:number):Promise<desktop.SMIMERevocationDTO>;

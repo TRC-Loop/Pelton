@@ -13,8 +13,8 @@
   // saying it cannot sync (#290).
   import { IconLock } from '@tabler/icons-svelte'
   import Modal from '../common/Modal.svelte'
-  import { setAccountPassword } from '../../lib/api'
-  import { errorMessage, toastError } from '../../stores/toast'
+  import { checkAccountPassword, setAccountPassword } from '../../lib/api'
+  import { errorMessage, toastError, toastInfo } from '../../stores/toast'
   import { t } from '../../lib/i18n'
   import type { PasswordPromptResult } from '../../stores/passwordprompt'
   import type { Account } from '../../lib/types'
@@ -27,6 +27,10 @@
   let password = ''
   let busy = false
   let seededFor: unknown = null
+  // set once the server has refused what is typed. It turns the error line on
+  // and offers to store it anyway, for the case where the server is wrong and
+  // you know better.
+  let refused = false
 
   // the address, not the display name. Several mailboxes named "Work" and
   // "Private" all look the same in this prompt, and the address is the part
@@ -42,32 +46,78 @@
     seededFor = account
     password = ''
     busy = false
+    refused = false
   }
 
+  // typing again is the answer to a refusal, so the error clears with the first
+  // keystroke rather than sitting under a password it no longer describes.
+  function onInput(): void {
+    refused = false
+  }
+
+  // submit tries the password against the server before storing it. Waiting for
+  // the next sync to find out it is still wrong is the whole bug: a mailbox that
+  // was marked stays marked and nothing says why.
   async function submit(): Promise<void> {
     if (!account || busy || password === '') {
       return
     }
     busy = true
     try {
-      await setAccountPassword(account.id, password)
-      password = ''
-      onDone('saved')
+      const result = await checkAccountPassword(account.id, password)
+      if (result.rejected) {
+        refused = true
+        return
+      }
+      // anything else that went wrong is the server being unreachable, which
+      // says nothing about the password. Store it and say it is unchecked; the
+      // marker clears on the first sync that gets through.
+      await store()
+      if (!result.ok) {
+        toastInfo($t('mailboxes.passwordPrompt.unverified'))
+      }
     } catch (err) {
       toastError(errorMessage(err))
-      password = ''
     } finally {
       busy = false
     }
   }
 
+  // saveAnyway skips the check. The server refused it, but a server can be
+  // wrong about its own users, so this is not a dead end.
+  async function saveAnyway(): Promise<void> {
+    if (!account || busy || password === '') {
+      return
+    }
+    busy = true
+    try {
+      await store()
+    } catch (err) {
+      toastError(errorMessage(err))
+    } finally {
+      busy = false
+    }
+  }
+
+  async function store(): Promise<void> {
+    if (!account) {
+      return
+    }
+    await setAccountPassword(account.id, password)
+    password = ''
+    refused = false
+    onDone('saved')
+  }
+
   function cancel(): void {
     password = ''
+    refused = false
     onDone('skipped')
   }
 
   function dismiss(): void {
     password = ''
+    refused = false
     onDone('dismissed')
   }
 
@@ -86,9 +136,12 @@
       <label class="field">
         <span>{$t('wizard.field.password')}</span>
         <!-- svelte-ignore a11y-autofocus -->
-        <input type="password" bind:value={password} autofocus autocomplete="off" spellcheck="false" />
+        <input type="password" bind:value={password} on:input={onInput} autofocus autocomplete="off" spellcheck="false" />
       </label>
 
+      {#if refused}
+        <p class="refused" role="alert">{$t('mailboxes.passwordPrompt.refused')}</p>
+      {/if}
     </form>
 
     <svelte:fragment slot="footer">
@@ -98,8 +151,13 @@
       <button type="button" class="cancel" on:click={cancel}>
         {$t('mailboxes.passwordPrompt.skip')}
       </button>
+      {#if refused}
+        <button type="button" class="cancel" disabled={busy} on:click={saveAnyway}>
+          {$t('mailboxes.passwordPrompt.saveAnyway')}
+        </button>
+      {/if}
       <button type="button" class="go" disabled={busy || password === ''} on:click={submit}>
-        {busy ? $t('mailboxes.saving') : $t('mailboxes.save')}
+        {busy ? $t('mailboxes.passwordPrompt.checking') : $t('mailboxes.save')}
       </button>
     </svelte:fragment>
   </Modal>
@@ -128,6 +186,12 @@
   .field span {
     font-size: var(--fz-meta);
     color: var(--text-secondary);
+  }
+
+  .refused {
+    margin: 0;
+    font-size: var(--fz-meta);
+    color: var(--danger);
   }
 
   .field input {

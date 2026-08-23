@@ -85,9 +85,9 @@
   let tick = Date.now()
   const timer = setInterval(() => (tick = Date.now()), 30000)
   onDestroy(() => clearInterval(timer))
-  $: syncedLabel = $lastSynced ? relativeAt($lastSynced, tick) : ''
-  function relativeAt(ts: number, _tick: number): string {
-    return formatRelative(ts)
+  $: syncedLabel = $lastSynced ? relativeAt($lastSynced, tick, $t) : ''
+  function relativeAt(ts: number, _tick: number, translate: (key: string) => string): string {
+    return formatRelative(ts, translate)
   }
 </script>
 

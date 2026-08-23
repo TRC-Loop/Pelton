@@ -1162,6 +1162,22 @@ export namespace desktop {
 	        this.bits = source["bits"];
 	    }
 	}
+	export class PasswordCheckDTO {
+	    ok: boolean;
+	    rejected: boolean;
+	    error: string;
+
+	    static createFrom(source: any = {}) {
+	        return new PasswordCheckDTO(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.ok = source["ok"];
+	        this.rejected = source["rejected"];
+	        this.error = source["error"];
+	    }
+	}
 	export class PendingMailtoDTO {
 	    present: boolean;
 	    draft: MailtoDraft;
@@ -1751,6 +1767,7 @@ export namespace desktop {
 	    bodyFont: string;
 	    uiFont: string;
 	    monoFont: string;
+	    senderFonts: boolean;
 	    notifyNewMail: boolean;
 	    verboseSync: boolean;
 	    syncProgressBar: boolean;
@@ -1833,6 +1850,7 @@ export namespace desktop {
 	        this.bodyFont = source["bodyFont"];
 	        this.uiFont = source["uiFont"];
 	        this.monoFont = source["monoFont"];
+	        this.senderFonts = source["senderFonts"];
 	        this.notifyNewMail = source["notifyNewMail"];
 	        this.verboseSync = source["verboseSync"];
 	        this.syncProgressBar = source["syncProgressBar"];
