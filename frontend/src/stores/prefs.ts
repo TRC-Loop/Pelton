@@ -77,6 +77,7 @@ const defaults: UIPrefs = {
   themeDarkStart: '19:00',
   themeDarkEnd: '07:00',
   bodyFont: 'default',
+  senderFonts: true,
   uiFont: 'default',
   monoFont: 'default',
   notifyNewMail: false,
@@ -391,6 +392,14 @@ export function setAccent(accent: string): void {
 export function setBodyFont(value: string): void {
   prefs.update((p) => ({ ...p, bodyFont: value }))
   void setSetting(SettingKeys.bodyFont, value)
+}
+
+// setSenderFonts decides whether a message may use the fonts it asks for. Off,
+// everything renders in the reader font above. Takes effect on the next message
+// opened, since the sanitizing happens backend-side.
+export function setSenderFonts(value: boolean): void {
+  prefs.update((p) => ({ ...p, senderFonts: value }))
+  void setSetting(SettingKeys.senderFonts, String(value))
 }
 
 // setThemeDarkTimes updates the schedule mode's dark window and reapplies the

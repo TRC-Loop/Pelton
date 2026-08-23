@@ -1767,6 +1767,7 @@ export namespace desktop {
 	    bodyFont: string;
 	    uiFont: string;
 	    monoFont: string;
+	    senderFonts: boolean;
 	    notifyNewMail: boolean;
 	    verboseSync: boolean;
 	    syncProgressBar: boolean;
@@ -1849,6 +1850,7 @@ export namespace desktop {
 	        this.bodyFont = source["bodyFont"];
 	        this.uiFont = source["uiFont"];
 	        this.monoFont = source["monoFont"];
+	        this.senderFonts = source["senderFonts"];
 	        this.notifyNewMail = source["notifyNewMail"];
 	        this.verboseSync = source["verboseSync"];
 	        this.syncProgressBar = source["syncProgressBar"];

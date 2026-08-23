@@ -39,6 +39,11 @@ const (
 	// not also confirm the open to the sender (#205). Off by default, since the
 	// detection is a heuristic that will sometimes be wrong.
 	settingBlockTrackers = "block_tracking_pixels"
+	// settingSenderFonts keeps the font families a message asks for. On by
+	// default: every other mail client honours them, and a named family cannot
+	// fetch anything (the reading pane's csp limits font-src to data:). Off puts
+	// every message in the reader font.
+	settingSenderFonts    = "sender_fonts"
 	settingAvatarSource   = "avatar_source"
 	settingAvatarStyle    = "avatar_style"
 	settingMultiSelect    = "multi_select_enabled"
@@ -325,6 +330,9 @@ type UIPrefsDTO struct {
 	// UIFont and MonoFont override the interface and monospace font tokens.
 	UIFont   string `json:"uiFont"`
 	MonoFont string `json:"monoFont"`
+	// SenderFonts lets a message use the font families it asks for. Off renders
+	// every message in BodyFont instead.
+	SenderFonts bool `json:"senderFonts"`
 	// NotifyNewMail raises a native OS notification when new mail lands in an
 	// inbox. Off by default. VIP-sender notifications fire regardless of this
 	// (see bind_vip.go), so important senders cut through when it is off.
@@ -431,6 +439,7 @@ func (a *App) GetUIPrefs() (UIPrefsDTO, error) {
 		BodyFont:                   a.stringSetting(settingBodyFont, "default"),
 		UIFont:                     a.stringSetting(settingUIFont, "default"),
 		MonoFont:                   a.stringSetting(settingMonoFont, "default"),
+		SenderFonts:                a.senderFonts(),
 		NotifyNewMail:              a.boolSetting(settingNotifyNewMail, false),
 		VerboseSync:                a.boolSetting(settingVerboseSync, false),
 		SyncProgressBar:            a.boolSetting(settingSyncProgress, true),

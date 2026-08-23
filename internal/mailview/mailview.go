@@ -50,19 +50,24 @@ var remoteURLPattern = regexp.MustCompile(`(?i)(src|background|href)\s*=\s*["']?
 // content id, with or without surrounding quotes.
 var cidRefPattern = regexp.MustCompile(`(?i)cid:([^"'>\s)]+)`)
 
-// blockRemotePolicy and allowRemotePolicy are built once. They share the ugc
-// base; the only difference is which url schemes images and links may use. With
-// remote blocked, only data: and cid: image sources survive, so http(s) images
-// (and tracking pixels) are dropped entirely.
-var (
-	blockRemotePolicy = buildPolicy(false)
-	allowRemotePolicy = buildPolicy(true)
-)
+// the policies are built once, one per combination of the two choices that
+// change them. They share the ugc base. allowRemote decides which url schemes
+// images and links may use: with remote blocked, only data: and cid: image
+// sources survive, so http(s) images (and tracking pixels) are dropped
+// entirely. allowFonts decides whether the sender's own typefaces survive.
+var policies = map[[2]bool]*bluemonday.Policy{
+	{false, false}: buildPolicy(false, false),
+	{false, true}:  buildPolicy(false, true),
+	{true, false}:  buildPolicy(true, false),
+	{true, true}:   buildPolicy(true, true),
+}
 
 // buildPolicy returns a sanitizer policy. allowRemote decides whether remote
 // http(s) resources are permitted; when false only inline data: and cid: image
-// sources are kept.
-func buildPolicy(allowRemote bool) *bluemonday.Policy {
+// sources are kept. allowFonts keeps the font families the message asks for,
+// so designed mail reads the way it was written instead of everything arriving
+// in the reader's own font.
+func buildPolicy(allowRemote, allowFonts bool) *bluemonday.Policy {
 	p := bluemonday.UGCPolicy()
 
 	// allow images with sizing/alt but constrain their source scheme below.
@@ -81,13 +86,26 @@ func buildPolicy(allowRemote bool) *bluemonday.Policy {
 		"font-weight", "font-style", "text-decoration", "font-size", "line-height",
 		"margin", "padding", "border", "border-color").Globally()
 
+	// font-family is the sender's own typeface. It cannot pull anything down:
+	// the reading pane's csp limits font-src to data:, so a named family either
+	// resolves from a font already on this machine or falls back to the reader's
+	// own. Off, the message renders entirely in the reader font.
+	if allowFonts {
+		p.AllowStyles("font-family").Globally()
+	}
+
 	// the legacy bgcolor attribute is the other common way mail sets a section
 	// background (on the body and table cells); preserve it for the same
 	// readability reason, alongside <font color> so its paired text color stays
 	// with the background instead of falling back to our dark default.
 	p.AllowAttrs("bgcolor").OnElements("body", "table", "thead", "tbody", "tfoot", "tr", "td", "th")
 	p.AllowElements("font")
-	p.AllowAttrs("color", "face", "size").OnElements("font")
+	if allowFonts {
+		p.AllowAttrs("color", "face", "size").OnElements("font")
+	} else {
+		// face is the legacy spelling of font-family, so it goes with it.
+		p.AllowAttrs("color", "size").OnElements("font")
+	}
 
 	// tables are heavily used by html mail.
 	p.AllowTables()
@@ -125,11 +143,14 @@ func buildPolicy(allowRemote bool) *bluemonday.Policy {
 // applies to links as well, and it would take every href in a message with it
 // until the reader loaded images. A link is not a leak: it goes nowhere until
 // it is clicked.
-func Sanitize(html string, allowRemote bool) string {
+// allowFonts keeps the message's own font families; with it off everything
+// renders in the reader's font.
+func Sanitize(html string, allowRemote, allowFonts bool) string {
+	p := policies[[2]bool{allowRemote, allowFonts}]
 	if allowRemote {
-		return allowRemotePolicy.Sanitize(html)
+		return p.Sanitize(html)
 	}
-	return blockRemotePolicy.Sanitize(stripRemoteImages(html))
+	return p.Sanitize(stripRemoteImages(html))
 }
 
 // HasRemoteContent reports whether the raw html references any remote http(s)

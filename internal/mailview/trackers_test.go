@@ -194,7 +194,7 @@ func TestScanIsCapped(t *testing.T) {
 func TestSanitizeBlocksRemoteImageSources(t *testing.T) {
 	const html = `<p>hi</p><img src="https://cdn.example.com/hero.jpg" width="600">`
 
-	blocked := Sanitize(html, false)
+	blocked := Sanitize(html, false, true)
 	if strings.Contains(blocked, "cdn.example.com") {
 		t.Errorf("remote src survived the blocking policy:\n%s", blocked)
 	}
@@ -202,7 +202,7 @@ func TestSanitizeBlocksRemoteImageSources(t *testing.T) {
 		t.Errorf("body text was lost with it:\n%s", blocked)
 	}
 
-	allowed := Sanitize(html, true)
+	allowed := Sanitize(html, true, true)
 	if !strings.Contains(allowed, "cdn.example.com") {
 		t.Errorf("remote src dropped by the allowing policy:\n%s", allowed)
 	}
@@ -210,7 +210,7 @@ func TestSanitizeBlocksRemoteImageSources(t *testing.T) {
 
 func TestSanitizeKeepsInlineAndMailtoURLs(t *testing.T) {
 	const html = `<img src="cid:logo@example"><img src="data:image/gif;base64,R0lGOD"><a href="mailto:me@example.com">mail</a>`
-	got := Sanitize(html, false)
+	got := Sanitize(html, false, true)
 	for _, want := range []string{"cid:logo@example", "data:image/gif", "mailto:me@example.com"} {
 		if !strings.Contains(got, want) {
 			t.Errorf("sanitize dropped %q:\n%s", want, got)
@@ -224,7 +224,7 @@ func TestSanitizeKeepsInlineAndMailtoURLs(t *testing.T) {
 // leak: it goes nowhere until it is clicked.
 func TestSanitizeKeepsLinksWhenRemoteIsBlocked(t *testing.T) {
 	const html = `<a href="https://example.com/article">read this</a>`
-	got := Sanitize(html, false)
+	got := Sanitize(html, false, true)
 	if !strings.Contains(got, "https://example.com/article") {
 		t.Errorf("link href was stripped before the user loaded anything:\n%s", got)
 	}
@@ -232,7 +232,7 @@ func TestSanitizeKeepsLinksWhenRemoteIsBlocked(t *testing.T) {
 
 func TestSanitizeStripsRemoteBackgroundAttribute(t *testing.T) {
 	const html = `<td background="https://track.example.net/bg.gif">cell</td>`
-	got := Sanitize(html, false)
+	got := Sanitize(html, false, true)
 	if strings.Contains(got, "track.example.net") {
 		t.Errorf("remote background attribute survived:\n%s", got)
 	}
@@ -277,5 +277,32 @@ func TestScanOnARealisticNewsletter(t *testing.T) {
 	}
 	if scan.OtherCount() != 4 {
 		t.Errorf("OtherCount() = %d, want 4", scan.OtherCount())
+	}
+}
+
+// mail that designs itself with a typeface should read the way it was written,
+// which it cannot do if font-family is stripped on the way in.
+func TestSanitizeKeepsSenderFontsOnlyWhenAllowed(t *testing.T) {
+	const html = `<p style="font-family:Georgia,serif;font-size:15px">hello</p><font face="Courier">code</font>`
+
+	kept := Sanitize(html, false, true)
+	for _, want := range []string{"Georgia", "font-size", `face="Courier"`} {
+		if !strings.Contains(kept, want) {
+			t.Errorf("sender fonts on dropped %q:\n%s", want, kept)
+		}
+	}
+
+	stripped := Sanitize(html, false, false)
+	for _, gone := range []string{"Georgia", "Courier"} {
+		if strings.Contains(stripped, gone) {
+			t.Errorf("sender fonts off kept %q:\n%s", gone, stripped)
+		}
+	}
+	// only the family goes: size is a layout choice, not a typeface.
+	if !strings.Contains(stripped, "font-size") {
+		t.Errorf("font-size went with the family:\n%s", stripped)
+	}
+	if !strings.Contains(stripped, "hello") || !strings.Contains(stripped, "code") {
+		t.Errorf("text was lost with the fonts:\n%s", stripped)
 	}
 }

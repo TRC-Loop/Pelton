@@ -1068,6 +1068,7 @@ export const SettingKeys = {
   themeDarkStart: 'theme_dark_start',
   themeDarkEnd: 'theme_dark_end',
   bodyFont: 'body_font',
+  senderFonts: 'sender_fonts',
   uiFont: 'ui_font',
   monoFont: 'mono_font',
   notifyNewMail: 'notify_new_mail',

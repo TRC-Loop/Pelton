@@ -84,8 +84,10 @@
   // postMessage to hand the url back to the parent, has no such dependency on
   // cross-frame event delivery.
   function buildSrcdoc(html: string, allowRemote: boolean, fontSize: number, bodyFont: string, nonce: string, offerScan: boolean): string {
-    // the reader font preference only sets the fallback; mail that declares
-    // its own fonts keeps them since this is just the base font-family.
+    // the reader font preference sets the base font-family, so it applies to
+    // mail that declares none. Mail that declares its own overrides it, unless
+    // the sender-fonts setting is off, in which case the sanitizer has already
+    // taken those declarations out and this is what everything renders in.
     const font = bodyFontStack(bodyFont) ?? readVar('--font-ui')
     // the .pelton-vt colors are the light-theme semantic token values written
     // out literally, for the same reason the page colors above are: this

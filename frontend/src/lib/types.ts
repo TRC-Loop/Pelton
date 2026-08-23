@@ -505,6 +505,9 @@ export interface UIPrefs {
   // curated key or 'sys:<family>'; 'default' keeps the built-in fonts).
   uiFont: string
   monoFont: string
+  // senderFonts lets a message use the font families it asks for. On by
+  // default; off renders every message in bodyFont.
+  senderFonts: boolean
   // notifyNewMail raises a native OS notification for new inbox mail. VIP
   // senders notify regardless of this (see stores/vip.ts).
   notifyNewMail: boolean
