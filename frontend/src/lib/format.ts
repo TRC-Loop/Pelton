@@ -139,20 +139,22 @@ export function formatBytes(bytes: number): string {
 }
 
 // formatRelative renders an epoch-ms timestamp as a short relative time for the
-// status bar: "just now", "5m ago", "2h ago", otherwise a date.
-export function formatRelative(epochMs: number): string {
+// status bar: "just now", "5m ago", "2h ago", otherwise a date. The wording is
+// translated, so the caller passes the t() lookup rather than this reaching for
+// the store itself: that keeps the label recomputing when the language changes.
+export function formatRelative(epochMs: number, t: (key: string) => string): string {
   const diff = Date.now() - epochMs
   const sec = Math.floor(diff / 1000)
   if (sec < 45) {
-    return 'just now'
+    return t('common.time.justNow')
   }
-  const min = Math.floor(sec / 60)
+  const min = Math.max(1, Math.floor(sec / 60))
   if (min < 60) {
-    return `${min}m ago`
+    return t('common.time.minutesAgo').replace('{n}', String(min))
   }
   const hr = Math.floor(min / 60)
   if (hr < 24) {
-    return `${hr}h ago`
+    return t('common.time.hoursAgo').replace('{n}', String(hr))
   }
   return new Date(epochMs).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })
 }
