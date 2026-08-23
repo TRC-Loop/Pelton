@@ -154,6 +154,10 @@ func (a *App) TriggerSync() error {
 		}
 		synced++
 	}
+	// the marks are what carries a partial failure now, so they are pushed
+	// whatever this returns: an account that failed while the others got
+	// through used to leave the ui saying the sync was clean.
+	a.emitAccountSyncStates()
 	// the Local Folders account is not counted: an install holding only
 	// imported mail has nothing to sync, which is not a credentials problem.
 	if synced == 0 && syncable > 0 {
@@ -167,14 +171,24 @@ func (a *App) TriggerSync() error {
 	return nil
 }
 
-// syncAccount connects with the account's resolved credentials, syncs every
-// folder emitting progress and new-mail events, then logs out.
+// syncAccount syncs one account and records how it went, so a failure survives
+// the run it happened in. Every caller goes through here rather than
+// syncAccountOnce, since an unrecorded failure is the bug (#322).
 func (a *App) syncAccount(account storage.Account) error {
 	// Local Folders has no server behind it: imported mail is never uploaded,
-	// reconciled or expunged.
+	// reconciled or expunged. It has no sync state either, since it is not
+	// failing to do something it never does.
 	if account.Local {
 		return nil
 	}
+	err := a.syncAccountOnce(account)
+	a.noteSyncOutcome(account.ID, err)
+	return err
+}
+
+// syncAccountOnce connects with the account's resolved credentials, syncs every
+// folder emitting progress and new-mail events, then logs out.
+func (a *App) syncAccountOnce(account storage.Account) error {
 	cfg, err := a.resolveIMAP(account)
 	if err != nil {
 		return err
@@ -458,6 +472,45 @@ func (a *App) emitSyncProgress(accountID int64, email, server string, c syncCoun
 		FolderDone: c.FolderDone, FolderTotal: c.FolderTotal,
 		FoldersDone: c.FoldersDone, FoldersTotal: c.FoldersTotal,
 	})
+}
+
+// the coarse kinds of sync failure. The ui has a sentence for each; the raw
+// error travels alongside as detail for whoever wants the server's own words.
+const (
+	syncFailAuth        = "auth"
+	syncFailNetwork     = "network"
+	syncFailCredentials = "credentials"
+	syncFailOther       = "other"
+)
+
+// noteSyncOutcome records how an account's sync went. This is what makes a
+// failure outlive the run it happened in: before it, one broken account among
+// several left nothing behind but a log line, and logging is off by default
+// (#322).
+func (a *App) noteSyncOutcome(accountID int64, err error) {
+	if err == nil {
+		if e := a.store.RecordSyncOK(a.ctx, accountID); e != nil {
+			a.log.Error("record sync ok", "account", accountID, "err", e)
+		}
+		return
+	}
+	if e := a.store.RecordSyncFailure(a.ctx, accountID, syncFailureReason(err), err.Error()); e != nil {
+		a.log.Error("record sync failure", "account", accountID, "err", e)
+	}
+}
+
+// syncFailureReason classifies a sync error into the kinds the ui can explain.
+func syncFailureReason(err error) string {
+	switch {
+	case errors.Is(err, errNoCredentials):
+		return syncFailCredentials
+	case errors.Is(err, pimap.ErrAuthFailed):
+		return syncFailAuth
+	case isNetworkError(err):
+		return syncFailNetwork
+	default:
+		return syncFailOther
+	}
 }
 
 // accountEmail is the address to name in a progress line, empty when the

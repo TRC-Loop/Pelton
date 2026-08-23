@@ -7,6 +7,7 @@
   import { IconSend, IconAlertTriangle, IconRefresh, IconCheck, IconDownload, IconBatteryEco, IconX, IconBug, IconWifiOff } from '@tabler/icons-svelte'
   import { outbox, syncing, lastSynced, syncFolder, syncServer, syncAccount, syncCounts } from '../../stores/outbox'
   import { online } from '../../stores/network'
+  import { failedSyncs, showSyncFailure } from '../../stores/syncfailures'
   import { downloadProgress, attachmentProgress } from '../../stores/progress'
   import { formatRelative } from '../../lib/format'
   import { cancelDownload, isDevMode, isNightly } from '../../lib/api'
@@ -85,6 +86,13 @@
   let tick = Date.now()
   const timer = setInterval(() => (tick = Date.now()), 30000)
   onDestroy(() => clearInterval(timer))
+  // one mailbox is named; more than one is counted, since the names would not
+  // fit and the dialog lists them anyway.
+  $: failedLabel =
+    $failedSyncs.length === 1
+      ? $t('common.statusBar.syncFailedOne').replace('{mailbox}', $failedSyncs[0].email)
+      : $t('common.statusBar.syncFailedMany').replace('{n}', String($failedSyncs.length))
+
   $: syncedLabel = $lastSynced ? relativeAt($lastSynced, tick, $t) : ''
   function relativeAt(ts: number, _tick: number, translate: (key: string) => string): string {
     return formatRelative(ts, translate)
@@ -220,6 +228,14 @@
           {/if}
         {/if}
       </span>
+    {:else if $failedSyncs.length > 0}
+      <!-- a run that failed one mailbox out of several used to report a clean
+           sync, which is how a mailbox goes quiet for weeks without anyone
+           noticing (#322). -->
+      <button type="button" class="sync sync-failed" on:click={() => showSyncFailure($failedSyncs[0])}>
+        <IconAlertTriangle size={13} stroke={1.8} />
+        {failedLabel}
+      </button>
     {:else if $lastSynced}
       <span class="sync">
         <IconCheck size={13} stroke={1.7} />
@@ -408,6 +424,19 @@
 
   .sync.syncing {
     color: var(--text-secondary);
+  }
+
+  .sync-failed {
+    padding: 0;
+    font: inherit;
+    color: var(--danger);
+    background: transparent;
+    border: none;
+    cursor: var(--cursor-action);
+  }
+  .sync-failed:hover {
+    text-decoration: underline;
+    text-underline-offset: 2px;
   }
 
   /* the label is the only part allowed to change width; the bar and the count

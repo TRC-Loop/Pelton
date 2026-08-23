@@ -3,6 +3,7 @@
 // single unsubscribe function, and keeps the event-name strings in one place.
 
 import { EventsOn } from '../../wailsjs/runtime/runtime'
+import type { AccountSyncState } from './types'
 
 // event names, matching the go constants exactly.
 export const EventNames = {
@@ -10,6 +11,7 @@ export const EventNames = {
   mailRepaired: 'mail:repaired',
   syncProgress: 'sync:progress',
   syncState: 'sync:state',
+  accountSyncState: 'sync:accounts',
   outboxChanged: 'outbox:changed',
   menu: 'menu:action',
   downloadProgress: 'download:progress',
@@ -62,6 +64,13 @@ export interface SyncProgressEvent {
 export interface SyncStateEvent {
   running: boolean
   error: string
+}
+
+// AccountSyncStateEvent carries how every account fared, fired when a sync run
+// ends. A run that failed one account out of several used to report nothing at
+// all, which is how a mailbox can go quiet for weeks.
+export interface AccountSyncStateEvent {
+  states: AccountSyncState[]
 }
 
 export interface DownloadProgressEvent {
@@ -143,6 +152,11 @@ export function onSyncProgress(cb: (e: SyncProgressEvent) => void): Unsubscribe 
 // onSyncState fires when background sync starts or stops.
 export function onSyncState(cb: (e: SyncStateEvent) => void): Unsubscribe {
   return EventsOn(EventNames.syncState, (e: SyncStateEvent) => cb(e))
+}
+
+// onAccountSyncState fires when a sync run ends, with each account's outcome.
+export function onAccountSyncState(cb: (e: AccountSyncStateEvent) => void): Unsubscribe {
+  return EventsOn(EventNames.accountSyncState, (e: AccountSyncStateEvent) => cb(e))
 }
 
 // onOutboxChanged fires when the outbox contents or a message state change. it
