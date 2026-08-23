@@ -31,6 +31,10 @@ Off by default, Settings > Privacy and network > "Keep tracking pixels blocked";
 
 Off by default, Settings > External. Requires the user's own API key, stored in the OS keyring. Read-only v3 API: `GET /urls/{base64url_nopad(url)}` and `GET /files/{sha256}`. Never submits or uploads; attachments are looked up by hash only, so an unknown file stays unknown. Auto-scan of links and of attachments are separate toggles, both off by default; on-demand scanning is via right-click on a link or attachment, or the shield button in the message toolbar for a whole message. Verdicts cached locally 7 days, max 25 targets per scan; disabling the integration or clearing the key deletes the cache.
 
+## Sync progress
+
+Status bar shows a progress bar while a sync or a backfill runs, counting message bodies. The total comes from the reconcile plan (what will be fetched), not from the mailbox size, and grows as folders open; before the first folder is reconciled the bar is indeterminate. Settings > Power > "Sync progress bar", on by default. With Settings > Power > "Verbose sync" on, the line also names the mailbox, the account and the imap host and port.
+
 ## Text encoding
 
 Mail that declares no charset, or one nothing knows, is detected from the bytes (ICU port, github.com/gogs/chardet) and converted, so nothing invalid reaches the database or the search index. Applies to bodies and to rfc 2047 encoded-words in headers. Settings > Display > "Text encoding fallback": `auto` (default, detect) or a fixed encoding name. Messages read this way carry a badge in the reading pane. Mail cached before this existed is marked and refetched from the server during sync, a few per folder per sync.

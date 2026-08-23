@@ -5,7 +5,7 @@
   // honest, always-visible window into background activity.
   import { onDestroy, onMount } from 'svelte'
   import { IconSend, IconAlertTriangle, IconRefresh, IconCheck, IconDownload, IconBatteryEco, IconX, IconBug, IconWifiOff } from '@tabler/icons-svelte'
-  import { outbox, syncing, lastSynced, syncFolder, syncServer } from '../../stores/outbox'
+  import { outbox, syncing, lastSynced, syncFolder, syncServer, syncAccount, syncCounts } from '../../stores/outbox'
   import { online } from '../../stores/network'
   import { downloadProgress, attachmentProgress } from '../../stores/progress'
   import { formatRelative } from '../../lib/format'
@@ -48,6 +48,32 @@
     $attachmentProgress && $attachmentProgress.bytesTotal > 0
       ? Math.round(($attachmentProgress.bytesDone / $attachmentProgress.bytesTotal) * 100)
       : 0
+
+  // the sync line. Verbose names the mailbox, and the account and server behind
+  // it, which is the difference between two identical "Syncing INBOX" lines and
+  // knowing which mailbox is the slow one.
+  $: syncLabel = buildSyncLabel($prefs.verboseSync, $syncFolder, $syncAccount, $syncServer)
+
+  function buildSyncLabel(verbose: boolean, folder: string, account: string, server: string): string {
+    if (!verbose || folder === '') {
+      return $t('common.statusBar.syncing')
+    }
+    if (account !== '' && server !== '') {
+      return $t('common.statusBar.syncingMailboxFull')
+        .replace('{mailbox}', folder)
+        .replace('{account}', account)
+        .replace('{server}', server)
+    }
+    if (server !== '') {
+      return $t('common.statusBar.syncingMailboxOn').replace('{mailbox}', folder).replace('{server}', server)
+    }
+    return $t('common.statusBar.syncingMailbox').replace('{mailbox}', folder)
+  }
+
+  // a total of 0 means no folder has been reconciled yet, so there is nothing
+  // honest to draw a proportion from and the bar sweeps instead.
+  $: determinate = $syncCounts.total > 0
+  $: percent = determinate ? Math.min(100, Math.round(($syncCounts.done / $syncCounts.total) * 100)) : 0
 
   let panelOpen = false
 
@@ -173,12 +199,25 @@
     {#if $syncing}
       <span class="sync syncing">
         <IconRefresh size={13} stroke={1.7} class="spin" />
-        {#if $prefs.verboseSync && $syncFolder}
-          {$syncServer
-            ? $t('common.statusBar.syncingMailboxOn').replace('{mailbox}', $syncFolder).replace('{server}', $syncServer)
-            : $t('common.statusBar.syncingMailbox').replace('{mailbox}', $syncFolder)}
-        {:else}
-          {$t('common.statusBar.syncing')}
+        <span class="sync-text">{syncLabel}</span>
+        {#if $prefs.syncProgressBar}
+          <!-- the bar sits after the text at a fixed width, so a label that
+               grows from "Syncing" to a mailbox name and a count does not shove
+               it sideways while you are watching it. -->
+          <span
+            class="bar"
+            class:indeterminate={!determinate}
+            role="progressbar"
+            aria-valuemin={0}
+            aria-valuemax={determinate ? $syncCounts.total : undefined}
+            aria-valuenow={determinate ? $syncCounts.done : undefined}
+            aria-label={$t('common.statusBar.syncProgress')}
+          >
+            <span class="bar-fill" style={determinate ? `width:${percent}%` : ''}></span>
+          </span>
+          {#if determinate}
+            <span class="counts">{$syncCounts.done.toLocaleString()} / {$syncCounts.total.toLocaleString()}</span>
+          {/if}
         {/if}
       </span>
     {:else if $lastSynced}
@@ -369,6 +408,56 @@
 
   .sync.syncing {
     color: var(--text-secondary);
+  }
+
+  /* the label is the only part allowed to change width; the bar and the count
+     keep their own space so nothing shifts as a sync runs. */
+  .sync-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 46ch;
+  }
+
+  .bar {
+    position: relative;
+    flex-shrink: 0;
+    width: 90px;
+    height: 4px;
+    overflow: hidden;
+    border-radius: var(--radius-control);
+    background: var(--surface-sunken);
+  }
+
+  .bar-fill {
+    display: block;
+    height: 100%;
+    width: 0;
+    border-radius: inherit;
+    background: var(--accent);
+    transition: width 200ms linear;
+  }
+
+  /* nothing to be proportional about yet, so it sweeps rather than sitting at
+     zero and looking stuck. */
+  .bar.indeterminate .bar-fill {
+    width: 40%;
+    animation: sweep 1.1s ease-in-out infinite;
+  }
+
+  @keyframes sweep {
+    0% {
+      transform: translateX(-100%);
+    }
+    100% {
+      transform: translateX(250%);
+    }
+  }
+
+  .counts {
+    flex-shrink: 0;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-tertiary);
   }
 
   .sync :global(.spin) {

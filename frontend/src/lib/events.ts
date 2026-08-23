@@ -37,14 +37,26 @@ export interface MailRepairedEvent {
   count: number
 }
 
+// SyncProgressEvent reports a running sync or backfill. An empty folder means
+// the run is over.
 export interface SyncProgressEvent {
   accountId: number
-  // the imap host and port the folder is coming from, so a line says which
-  // account it belongs to when several are syncing.
+  // who is syncing and where from, for the verbose line.
+  accountEmail: string
   server: string
   folder: string
+  // message bodies fetched so far in this run, and how many the reconcile
+  // plans have asked for up to now. total grows as folders open, and 0 means
+  // nothing is known yet, which the bar shows as indeterminate rather than
+  // guessing.
   done: number
   total: number
+  // the same counts for the folder named above.
+  folderDone: number
+  folderTotal: number
+  // mailboxes rather than messages.
+  foldersDone: number
+  foldersTotal: number
 }
 
 export interface SyncStateEvent {

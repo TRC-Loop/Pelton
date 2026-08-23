@@ -119,16 +119,19 @@ func (a *App) backfillAccount(accountID int64, folders []storage.Folder) (int, b
 	defer client.Logout()
 
 	engine := a.newSyncEngine(client, accountID)
+	email := a.accountEmail(accountID)
+	// a backfill is a sync run of its own as far as the progress bar is
+	// concerned: a known number of older messages, fetched now.
+	a.syncTally.begin(len(folders))
 
 	batch := a.backfillBatch()
 	var (
 		fetched  int
 		hasOlder bool
 	)
-	for _, f := range folders {
-		a.emit(EventSyncProgress, SyncProgressEvent{
-			AccountID: accountID, Folder: f.Name, Done: 0, Total: len(folders),
-		})
+	for i, f := range folders {
+		a.syncTally.enterFolder(i, f.Name)
+		a.emitSyncProgress(accountID, email, client.Addr(), a.syncTally.counts())
 		res, err := engine.BackfillFolder(a.ctx, f, batch)
 		if err != nil {
 			a.log.Error("backfill folder", "folder", f.Name, "err", err)
@@ -137,9 +140,10 @@ func (a *App) backfillAccount(accountID int64, folders []storage.Folder) (int, b
 		fetched += res.New
 		hasOlder = hasOlder || res.HasOlder
 	}
-	a.emit(EventSyncProgress, SyncProgressEvent{
-		AccountID: accountID, Done: len(folders), Total: len(folders),
-	})
+	final := a.syncTally.counts()
+	final.Folder = ""
+	final.FoldersDone = len(folders)
+	a.emitSyncProgress(accountID, email, client.Addr(), final)
 	return fetched, hasOlder, nil
 }
 
