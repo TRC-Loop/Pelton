@@ -127,6 +127,60 @@ func (a *App) SetAccountPassword(accountID int64, password string) error {
 	return nil
 }
 
+// PasswordCheckDTO reports how a password fared against the account's imap
+// server. Rejected separates "the server said no" from "nothing answered": the
+// first means the password is wrong, the second says nothing about it at all.
+type PasswordCheckDTO struct {
+	OK       bool   `json:"ok"`
+	Rejected bool   `json:"rejected"`
+	Error    string `json:"error"`
+}
+
+// CheckAccountPassword tries a password against an existing account's imap
+// server without storing it, so a mailbox marked as refused can be fixed on the
+// spot instead of the user finding out at the next sync.
+//
+// A refusal and an unreachable server are both returned as a result, not an
+// error: the caller shows them differently. Only a problem with the request
+// itself (no such account, nothing typed) is an error.
+func (a *App) CheckAccountPassword(accountID int64, password string) (PasswordCheckDTO, error) {
+	if err := a.ready(); err != nil {
+		return PasswordCheckDTO{}, err
+	}
+	if password == "" {
+		return PasswordCheckDTO{}, errEmptyPassword
+	}
+	account, err := a.store.GetAccount(a.ctx, accountID)
+	if err != nil {
+		return PasswordCheckDTO{}, err
+	}
+	if existing, err := credentials.Load(accountID); err == nil && existing.Method == credentials.MethodOAuth {
+		return PasswordCheckDTO{}, errAccountUsesOAuth
+	}
+	client, err := pimap.Connect(pimap.Config{
+		Host:     account.IMAPHost,
+		Port:     account.IMAPPort,
+		Username: loginName(*account),
+		Password: password,
+		TLS:      imapTLSMode(account.IMAPTLS),
+		Dial:     a.proxyDial(),
+	})
+	if err != nil {
+		return PasswordCheckDTO{Error: err.Error()}, nil
+	}
+	defer client.Close()
+	if err := client.Login(); err != nil {
+		if errors.Is(err, pimap.ErrAuthFailed) {
+			return PasswordCheckDTO{Rejected: true, Error: err.Error()}, nil
+		}
+		return PasswordCheckDTO{Error: err.Error()}, nil
+	}
+	if err := client.Logout(); err != nil {
+		a.log.Debug("logout after password check", "account", accountID, "err", err)
+	}
+	return PasswordCheckDTO{OK: true}, nil
+}
+
 // noteLoginResult records what the server said about an account's credentials.
 // A refusal is remembered so the ui can mark the mailbox and offer the password
 // prompt; anything else (a dropped connection, a server that is down) says

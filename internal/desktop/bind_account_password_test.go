@@ -138,3 +138,17 @@ func TestImapFromEnvNeedsAMatchingUser(t *testing.T) {
 		t.Errorf("a matching IMAP_USER was rejected: %v", err)
 	}
 }
+
+// the reachable paths of CheckAccountPassword need a server and a keyring, so
+// what is pinned here is that the two arguments it can reject on its own are
+// rejected before either is touched.
+func TestCheckAccountPasswordRejectsBadArguments(t *testing.T) {
+	a := newAccountTestApp(t)
+
+	if _, err := a.CheckAccountPassword(1, ""); !errors.Is(err, errEmptyPassword) {
+		t.Errorf("CheckAccountPassword(empty) = %v, want errEmptyPassword", err)
+	}
+	if _, err := a.CheckAccountPassword(404, "secret"); err == nil {
+		t.Error("CheckAccountPassword accepted an account that does not exist")
+	}
+}

@@ -60,6 +60,7 @@ import type {
   DevProcessStats,
   Profile,
   ProfileDraft,
+  PasswordCheck,
 } from './types'
 
 // isDemoMode reports whether the app launched in the cosmetic --potatoes-are-nice
@@ -142,6 +143,12 @@ export function chooseArchiveExportFolder(): Promise<string> {
 // message, so the settings screen can show what a pattern produces.
 export function previewArchiveExportName(template: string, subfolders: string): Promise<string> {
   return App.PreviewArchiveExportName(template, subfolders)
+}
+
+// checkAccountPassword tries a password against the account's imap server
+// without storing it, so the prompt can say straight away whether it works.
+export function checkAccountPassword(accountId: number, password: string): Promise<PasswordCheck> {
+  return App.CheckAccountPassword(accountId, password) as unknown as Promise<PasswordCheck>
 }
 
 // setAccountPassword stores a login password for an account, replacing any

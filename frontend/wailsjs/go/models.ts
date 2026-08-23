@@ -1162,6 +1162,22 @@ export namespace desktop {
 	        this.bits = source["bits"];
 	    }
 	}
+	export class PasswordCheckDTO {
+	    ok: boolean;
+	    rejected: boolean;
+	    error: string;
+
+	    static createFrom(source: any = {}) {
+	        return new PasswordCheckDTO(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.ok = source["ok"];
+	        this.rejected = source["rejected"];
+	        this.error = source["error"];
+	    }
+	}
 	export class PendingMailtoDTO {
 	    present: boolean;
 	    draft: MailtoDraft;

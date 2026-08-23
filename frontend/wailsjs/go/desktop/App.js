@@ -62,6 +62,10 @@ export function CancelSend(arg1) {
   return window['go']['desktop']['App']['CancelSend'](arg1);
 }
 
+export function CheckAccountPassword(arg1, arg2) {
+  return window['go']['desktop']['App']['CheckAccountPassword'](arg1, arg2);
+}
+
 export function CheckForUpdates() {
   return window['go']['desktop']['App']['CheckForUpdates']();
 }

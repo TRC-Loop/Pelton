@@ -839,6 +839,16 @@ export interface TestConnectionRequest {
   password: string
 }
 
+// PasswordCheck is what the server said when a password was tried against an
+// existing account. rejected means the login was refused; an empty error with
+// ok false means the server could not be reached, which says nothing about the
+// password.
+export interface PasswordCheck {
+  ok: boolean
+  rejected: boolean
+  error: string
+}
+
 // folder roles mirror the backend's folderRole classification.
 export type FolderRole =
   | 'inbox'
