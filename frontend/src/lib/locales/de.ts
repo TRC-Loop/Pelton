@@ -531,6 +531,7 @@ const de: Record<string, string> = {
   'shortcuts.pressKeys': 'Tasten drücken…',
   'shortcuts.toCancel': 'zum Abbrechen',
   'shortcuts.notSet': 'Nicht festgelegt',
+  'shortcuts.or': 'oder',
   'shortcuts.recording': 'Aufzeichnung läuft',
   'shortcuts.change': 'Ändern',
   'shortcuts.resetToDefault': 'Auf Standard zurücksetzen',

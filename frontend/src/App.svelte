@@ -598,7 +598,12 @@
   // message, mirroring the right-click menu. it no-ops (with a hint) when
   // neither exists.
   async function messageAction(action: ShortcutAction): Promise<void> {
-    if (selectedMessages.length > 1 && bulkAction(action, selectedMessages)) {
+    // one selected row counts as a selection, not as nothing. Opening a message
+    // does not select it, so a selection of one only exists because it was
+    // picked deliberately, and the right-click menu already acts on it. Without
+    // this, selecting a row and pressing delete answered "open a message
+    // first" (#329).
+    if (selectedMessages.length >= 1 && bulkAction(action, selectedMessages)) {
       return
     }
     const msg = currentMessage()

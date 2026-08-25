@@ -531,6 +531,7 @@ const en: Record<string, string> = {
   'shortcuts.pressKeys': 'Press keys…',
   'shortcuts.toCancel': 'to cancel',
   'shortcuts.notSet': 'Not set',
+  'shortcuts.or': 'or',
   'shortcuts.recording': 'Recording',
   'shortcuts.change': 'Change',
   'shortcuts.resetToDefault': 'Reset to default',

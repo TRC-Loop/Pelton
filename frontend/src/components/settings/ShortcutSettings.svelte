@@ -93,6 +93,12 @@
           <span class="recording">{$t('shortcuts.pressKeys')} <kbd>Esc</kbd> {$t('shortcuts.toCancel')}</span>
         {:else if $bindings[sc.action]}
           <kbd>{shortcutLabel($bindings[sc.action])}</kbd>
+          <!-- an action with an alternate answers to both keys until it is
+               rebound, so listing only one would be a half truth. -->
+          {#if sc.alt && $bindings[sc.action] === sc.combo}
+            <span class="alt-sep">{$t('shortcuts.or')}</span>
+            <kbd>{shortcutLabel(sc.alt)}</kbd>
+          {/if}
         {:else}
           <span class="unset">{$t('shortcuts.notSet')}</span>
         {/if}
@@ -226,6 +232,11 @@
     border: var(--hairline) solid var(--border-default);
     border-radius: var(--radius-control);
     padding: 2px var(--space-2);
+  }
+
+  .alt-sep {
+    font-size: var(--fz-meta);
+    color: var(--text-tertiary);
   }
 
   .recording {

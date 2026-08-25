@@ -66,6 +66,15 @@ export interface Shortcut {
   action: ShortcutAction
   combo: string
   labelKey: string
+  /**
+   * A second key that fires the same action while the binding is untouched.
+   * It exists for actions where two platforms disagree about which key is
+   * obvious and neither key does anything else: delete is Backspace on macOS
+   * and Delete elsewhere, and the key you reach for should work whichever
+   * machine you learned it on. Rebinding the action replaces the pair, since
+   * at that point you have said which key you want.
+   */
+  alt?: string
 }
 
 // the default registry, also used to seed the editable bindings and render the
@@ -95,7 +104,10 @@ export const shortcuts: Shortcut[] = [
   { action: 'flag', combo: '', labelKey: 'shortcut.flag' },
   { action: 'snooze', combo: '', labelKey: 'shortcut.snooze' },
   { action: 'download-offline', combo: '', labelKey: 'shortcut.downloadOffline' },
-  { action: 'delete-message', combo: '', labelKey: 'shortcut.deleteMessage' },
+  // bound by default, unlike the rest of the message actions: every mail client
+  // deletes on this key, neither key types anything in a list, and delete means
+  // move to trash with one undo behind it (#329).
+  { action: 'delete-message', combo: 'backspace', alt: 'delete', labelKey: 'shortcut.deleteMessage' },
   { action: 'archive', combo: '', labelKey: 'shortcut.archive' },
   { action: 'unsubscribe', combo: '', labelKey: 'shortcut.unsubscribe' },
   // saved views (preset searches), unbound by default so the user opts in.
@@ -216,6 +228,12 @@ export function matchShortcut(
       continue
     }
     if (comboMatches(event, combo)) {
+      return action as ShortcutAction
+    }
+    // the alternate key, only while the binding is still the default one: a
+    // rebound action answers to what it was rebound to and nothing else.
+    const def = shortcuts.find((s) => s.action === action)
+    if (def?.alt && combo === def.combo && comboMatches(event, def.alt)) {
       return action as ShortcutAction
     }
   }

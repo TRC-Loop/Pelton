@@ -531,6 +531,7 @@ const nl: Record<string, string> = {
   'shortcuts.pressKeys': 'Druk op toetsen…',
   'shortcuts.toCancel': 'om te annuleren',
   'shortcuts.notSet': 'Niet ingesteld',
+  'shortcuts.or': 'of',
   'shortcuts.recording': 'Opnemen',
   'shortcuts.change': 'Wijzigen',
   'shortcuts.resetToDefault': 'Terugzetten naar standaard',

@@ -61,7 +61,7 @@ App passwords required by most large providers. iCloud: appleid.apple.com > App-
 
 ## Default shortcuts
 
-mod = Cmd on macOS, Ctrl elsewhere. mod+N compose, mod+F search, mod+R sync, mod+M add mailbox, mod+, settings, mod+P export PDF, mod+Z undo send/delete/archive, Ctrl+Cmd+F fullscreen. Message-level actions (reply, reply-all, forward, read/unread, flag, snooze, archive, delete, offline download) are unbound by default; user binds them in Settings > Shortcuts.
+mod = Cmd on macOS, Ctrl elsewhere. mod+N compose, mod+F search, mod+R sync, mod+M add mailbox, mod+, settings, mod+P export PDF, mod+Z undo send/delete/archive, Ctrl+Cmd+F fullscreen. Backspace deletes the selection, or the open message when nothing is selected, and Delete does the same until the binding is changed. The other message-level actions (reply, reply-all, forward, read/unread, flag, snooze, archive, offline download) are unbound by default; user binds them in Settings > Shortcuts. A bound action shows its key beside the matching right-click entry and in the toolbar tooltip, unless Settings > Shortcuts > "Show keyboard shortcut hints in the app" is off.
 
 ## Theme format (.peltontheme)
 
