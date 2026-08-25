@@ -78,6 +78,8 @@
   import { recordDeleted } from '../../stores/undodelete'
   import { recordArchived } from '../../stores/undoarchive'
   import { openContextMenu, type MenuEntry } from '../../stores/contextmenu'
+  import { menuHint } from '../../stores/shortcuts'
+  import type { ShortcutAction } from '../../lib/shortcuts'
   import { openInTab } from '../../stores/tabs'
   import { errorMessage, toastError } from '../../stores/toast'
   import { isVIPAddress } from '../../stores/vip'
@@ -155,6 +157,14 @@
       viewportHeight = listEl.clientHeight || viewportHeight
     }
   })
+
+  // withHint appends an action's shortcut to a button tooltip, so hovering the
+  // delete button says which key does the same thing (#329). Unbound actions,
+  // and hints turned off, leave the tooltip as it was.
+  function withHint(label: string, action: ShortcutAction): string {
+    const hint = menuHint(action)
+    return hint ? `${label}  ${hint}` : label
+  }
 
   // selectionKey identifies a selection so we reload only when it actually
   // changes, not on unrelated store updates.
@@ -530,14 +540,14 @@
         // and applies to the same selection they name.
         { kind: 'colors', current: 0, onPick: (color) => void bulkSetColor(color) },
         'separator',
-        { label: $t('messageList.bulk.snoozeCount').replace('{n}', n), icon: IconClockPause, action: bulkSnooze },
-        { label: $t('messageList.bulk.moveCount').replace('{n}', n), icon: IconFolderSymlink, action: bulkMove },
-        { label: $t('messageList.bulk.archiveCount').replace('{n}', n), icon: IconArchive, action: () => void bulkArchiveSelection() },
+        { label: $t('messageList.bulk.snoozeCount').replace('{n}', n), icon: IconClockPause, hint: menuHint('snooze'), action: bulkSnooze },
+        { label: $t('messageList.bulk.moveCount').replace('{n}', n), icon: IconFolderSymlink, hint: menuHint('move-to'), action: bulkMove },
+        { label: $t('messageList.bulk.archiveCount').replace('{n}', n), icon: IconArchive, hint: menuHint('archive'), action: () => void bulkArchiveSelection() },
         anyOnline
           ? { label: $t('messageList.bulk.downloadCount').replace('{n}', n), icon: IconDownload, action: () => void bulkSetOfflineCopies(true) }
           : { label: $t('messageList.bulk.removeOfflineCount').replace('{n}', n), icon: IconDownloadOff, action: () => void bulkSetOfflineCopies(false) },
         'separator',
-        { label: $t('messageList.bulk.deleteCount').replace('{n}', n), icon: IconTrash, danger: true, action: () => void bulkDelete() },
+        { label: $t('messageList.bulk.deleteCount').replace('{n}', n), icon: IconTrash, danger: true, hint: menuHint('delete-message'), action: () => void bulkDelete() },
       ]
       openContextMenu(event.clientX, event.clientY, entries)
       return
@@ -552,28 +562,28 @@
     const entries: MenuEntry[] = [
       { label: $t('messageList.menu.open'), icon: IconMail, action: () => open(items.indexOf(item)) },
       { label: $t('messageList.menu.openInTab'), icon: IconLayoutColumns, action: () => openInTab(item.id, item.subject) },
-      { label: $t('action.reply'), icon: IconArrowBackUp, action: () => void replyTo(item, false) },
-      { label: $t('shortcut.replyAll'), icon: IconArrowBackUp, action: () => void replyTo(item, true) },
-      { label: $t('action.forward'), icon: IconArrowForwardUp, action: () => void forward(item) },
+      { label: $t('action.reply'), icon: IconArrowBackUp, hint: menuHint('reply'), action: () => void replyTo(item, false) },
+      { label: $t('shortcut.replyAll'), icon: IconArrowBackUp, hint: menuHint('reply-all'), action: () => void replyTo(item, true) },
+      { label: $t('action.forward'), icon: IconArrowForwardUp, hint: menuHint('forward'), action: () => void forward(item) },
       'separator',
       item.seen
-        ? { label: $t('shortcut.markUnread'), icon: IconMailFilled, action: () => void toggleSeen(item) }
-        : { label: $t('shortcut.markRead'), icon: IconMailOpened, action: () => void toggleSeen(item) },
+        ? { label: $t('shortcut.markUnread'), icon: IconMailFilled, hint: menuHint('mark-unread'), action: () => void toggleSeen(item) }
+        : { label: $t('shortcut.markRead'), icon: IconMailOpened, hint: menuHint('mark-read'), action: () => void toggleSeen(item) },
       item.flagged
-        ? { label: $t('messageList.unflag'), icon: IconFlag, action: () => void toggleFlag(item) }
-        : { label: $t('messageList.flag'), icon: IconFlagFilled, action: () => void toggleFlag(item) },
+        ? { label: $t('messageList.unflag'), icon: IconFlag, hint: menuHint('flag'), action: () => void toggleFlag(item) }
+        : { label: $t('messageList.flag'), icon: IconFlagFilled, hint: menuHint('flag'), action: () => void toggleFlag(item) },
       { kind: 'colors', current: item.flagColor, onPick: (color) => void setColor(item, color) },
       isVIPAddress(item.fromAddress)
         ? { label: $t('vip.unmark'), icon: IconStar, action: () => void toggleVIP(item) }
         : { label: $t('vip.mark'), icon: IconStarFilled, action: () => void toggleVIP(item) },
       'separator',
-      { label: $t('messageList.menu.snooze'), icon: IconClockPause, action: () => openSnooze(item.id, item.subject) },
-      { label: $t('messageList.menu.moveTo'), icon: IconFolderSymlink, action: () => openMove(item) },
+      { label: $t('messageList.menu.snooze'), icon: IconClockPause, hint: menuHint('snooze'), action: () => openSnooze(item.id, item.subject) },
+      { label: $t('messageList.menu.moveTo'), icon: IconFolderSymlink, hint: menuHint('move-to'), action: () => openMove(item) },
       item.offline
-        ? { label: $t('messageList.menu.removeOffline'), icon: IconDownloadOff, action: () => void toggleOffline(item) }
-        : { label: $t('shortcut.downloadOffline'), icon: IconDownload, action: () => void toggleOffline(item) },
+        ? { label: $t('messageList.menu.removeOffline'), icon: IconDownloadOff, hint: menuHint('remove-offline'), action: () => void toggleOffline(item) }
+        : { label: $t('shortcut.downloadOffline'), icon: IconDownload, hint: menuHint('download-offline'), action: () => void toggleOffline(item) },
       'separator',
-      { label: $t('action.delete'), icon: IconTrash, danger: true, action: () => void remove(item) },
+      { label: $t('action.delete'), icon: IconTrash, danger: true, hint: menuHint('delete-message'), action: () => void remove(item) },
     ]
     openContextMenu(event.clientX, event.clientY, entries)
   }
@@ -650,30 +660,30 @@
       {/if}
       <span class="sel-spacer"></span>
       {#if selectedItems.some((m) => !m.seen)}
-        <button type="button" class="act" title={$t('shortcut.markRead')} on:click={() => bulkSetSeen(true)}>
+        <button type="button" class="act" title={withHint($t('shortcut.markRead'), 'mark-read')} on:click={() => bulkSetSeen(true)}>
           <IconMailOpened size={16} stroke={1.7} />
         </button>
       {:else}
-        <button type="button" class="act" title={$t('shortcut.markUnread')} on:click={() => bulkSetSeen(false)}>
+        <button type="button" class="act" title={withHint($t('shortcut.markUnread'), 'mark-unread')} on:click={() => bulkSetSeen(false)}>
           <IconMailFilled size={16} stroke={1.7} />
         </button>
       {/if}
       {#if selectedItems.some((m) => !m.flagged)}
-        <button type="button" class="act" title={$t('messageList.flag')} on:click={() => bulkSetFlagged(true)}>
+        <button type="button" class="act" title={withHint($t('messageList.flag'), 'flag')} on:click={() => bulkSetFlagged(true)}>
           <IconFlagFilled size={16} stroke={1.7} />
         </button>
       {:else}
-        <button type="button" class="act" title={$t('messageList.unflag')} on:click={() => bulkSetFlagged(false)}>
+        <button type="button" class="act" title={withHint($t('messageList.unflag'), 'flag')} on:click={() => bulkSetFlagged(false)}>
           <IconFlag size={16} stroke={1.7} />
         </button>
       {/if}
-      <button type="button" class="act" title={$t('action.archive')} on:click={bulkArchiveSelection}>
+      <button type="button" class="act" title={withHint($t('action.archive'), 'archive')} on:click={bulkArchiveSelection}>
         <IconArchive size={16} stroke={1.7} />
       </button>
-      <button type="button" class="act" title={$t('messageList.menu.moveTo')} on:click={bulkMove}>
+      <button type="button" class="act" title={withHint($t('messageList.menu.moveTo'), 'move-to')} on:click={bulkMove}>
         <IconFolderSymlink size={16} stroke={1.7} />
       </button>
-      <button type="button" class="act danger" title={$t('action.delete')} on:click={bulkDelete}>
+      <button type="button" class="act danger" title={withHint($t('action.delete'), 'delete-message')} on:click={bulkDelete}>
         <IconTrash size={16} stroke={1.7} />
       </button>
     </div>

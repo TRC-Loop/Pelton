@@ -12,6 +12,12 @@ export interface MenuItem {
   action: () => void
   icon?: ComponentType
   danger?: boolean
+  /**
+   * The keyboard shortcut for this entry, already rendered for display. Build
+   * it with menuHint so an unbound action leaves it empty and the row simply
+   * has no hint.
+   */
+  hint?: string
 }
 
 // a color-swatch row for picking a message flag color inline. current is the

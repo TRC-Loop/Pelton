@@ -18,6 +18,7 @@ Pelton uses ++cmd++ on macOS and ++ctrl++ on Windows and Linux for the same bind
 | ++cmd+h++ | Hide window (macOS) |
 | ++cmd+w++ | Close the front compose window, settings, or the window itself |
 | ++cmd+q++ | Quit |
+| ++backspace++ | Delete the selected messages, or the open one |
 
 ## Menu bar access keys
 
@@ -29,7 +30,11 @@ macOS has no such convention and does not use them.
 
 ## Message actions
 
-Reply, reply all, forward, mark read or unread, flag, snooze, archive, delete and download-for-offline ship unbound so they cannot collide with anything. Bind them to whatever you like under **Settings, Shortcuts**; each one acts on the currently open message.
+Delete is bound: ++backspace++, and ++delete++ does the same thing until you change the binding. It moves what you have selected to Trash, or the open message when nothing is selected, and ++cmd+z++ brings it back.
+
+Reply, reply all, forward, mark read or unread, flag, snooze, archive and download-for-offline ship unbound so they cannot collide with anything. Bind them to whatever you like under **Settings, Shortcuts**. Each one acts on the messages you have selected, or on the open one when nothing is selected.
+
+Whatever you bind shows up next to the matching entry when you right-click a message, and in the toolbar tooltips. Turn that off under **Settings, Shortcuts** with "Show keyboard shortcut hints in the app".
 
 ## Reading tabs
 

@@ -389,7 +389,8 @@ export interface UIPrefs {
   sendDelaySeconds: number
   // flagHighlight controls how flagged rows stand out: flag, left, both, off.
   flagHighlight: string
-  // showShortcutHints toggles inline keyboard shortcut chips (off by default).
+  // showShortcutHints toggles the keyboard shortcut shown beside a context-menu
+  // entry that has one. On by default.
   showShortcutHints: boolean
   // showAccountEmail shows the account email instead of its name in the sidebar.
   showAccountEmail: boolean

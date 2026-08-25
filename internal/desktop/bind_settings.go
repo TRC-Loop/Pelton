@@ -403,7 +403,7 @@ func (a *App) GetUIPrefs() (UIPrefsDTO, error) {
 		ListWidth:           a.intSetting(settingListWidth, defaultListWidth),
 		SendDelaySeconds:    a.intSetting(settingSendDelay, 0),
 		FlagHighlight:       a.stringSetting(settingFlagHighlight, defaultFlagHighlight),
-		ShowShortcutHints:   a.boolSetting(settingShortcutHints, false),
+		ShowShortcutHints:   a.boolSetting(settingShortcutHints, true),
 		ShowAccountEmail:    a.boolSetting(settingAccountEmail, false),
 		AlwaysLoadImages:    a.boolSetting(settingRemoteAlways, false),
 		BlockTrackingPixels: a.blockTrackers(),

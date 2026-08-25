@@ -28,7 +28,7 @@ const defaults: UIPrefs = {
   listWidth: 380,
   sendDelaySeconds: 0,
   flagHighlight: 'flag',
-  showShortcutHints: false,
+  showShortcutHints: true,
   showAccountEmail: false,
   alwaysLoadImages: false,
   blockTrackingPixels: false,

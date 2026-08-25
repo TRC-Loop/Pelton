@@ -96,6 +96,9 @@
             <span class="icon"><svelte:component this={entry.icon} size={15} stroke={1.7} /></span>
           {/if}
           <span class="label">{entry.label}</span>
+          {#if entry.hint}
+            <kbd class="hint">{entry.hint}</kbd>
+          {/if}
         </button>
       {/if}
     {/each}
@@ -155,6 +158,21 @@
 
   .item:hover .icon {
     color: inherit;
+  }
+
+  /* the hint sits at the right edge, so the keys line up down the menu however
+     long the labels are. */
+  .hint {
+    margin-left: auto;
+    padding-left: var(--space-4);
+    font-family: inherit;
+    font-size: var(--fz-meta);
+    color: var(--text-tertiary);
+    white-space: nowrap;
+  }
+
+  .item:hover .hint {
+    color: var(--text-secondary);
   }
 
   .sep {
