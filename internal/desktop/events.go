@@ -97,15 +97,19 @@ type AttachmentProgressEvent struct {
 // BytesDone/BytesTotal measure the source files, because an mbox does not say
 // how many messages it holds until it has been read.
 type ImportProgressEvent struct {
-	Running    bool     `json:"running"`
-	Folder     string   `json:"folder"`
-	Imported   int      `json:"imported"`
-	Skipped    int      `json:"skipped"`
-	Failed     int      `json:"failed"`
-	BytesDone  int64    `json:"bytesDone"`
-	BytesTotal int64    `json:"bytesTotal"`
-	Folders    []string `json:"folders"`
-	Error      string   `json:"error"`
+	Running    bool   `json:"running"`
+	Folder     string `json:"folder"`
+	Imported   int    `json:"imported"`
+	Skipped    int    `json:"skipped"`
+	Failed     int    `json:"failed"`
+	BytesDone  int64  `json:"bytesDone"`
+	BytesTotal int64  `json:"bytesTotal"`
+	// FileIndex is which mailbox is being read, counting from 1, out of
+	// FileTotal. Bytes say how far along the import is; these say where it is.
+	FileIndex int      `json:"fileIndex"`
+	FileTotal int      `json:"fileTotal"`
+	Folders   []string `json:"folders"`
+	Error     string   `json:"error"`
 }
 
 // MailNewEvent is the payload for EventMailNew.

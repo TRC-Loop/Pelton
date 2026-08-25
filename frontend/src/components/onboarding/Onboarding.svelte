@@ -695,7 +695,7 @@
 {/if}
 
 {#if showImport}
-  {#await import('../settings/ImportClientModal.svelte') then m}
+  {#await import('../settings/ImportThunderbirdModal.svelte') then m}
     <svelte:component this={m.default} on:close={() => (showImport = false)} />
   {/await}
 {/if}

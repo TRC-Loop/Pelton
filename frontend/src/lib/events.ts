@@ -105,6 +105,10 @@ export interface ImportProgressEvent {
   failed: number
   bytesDone: number
   bytesTotal: number
+  // which mailbox is being read, counting from 1, out of fileTotal. Bytes say
+  // how far along the import is; these say where it is.
+  fileIndex: number
+  fileTotal: number
   folders: string[]
   error: string
 }

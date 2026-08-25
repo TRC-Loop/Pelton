@@ -224,3 +224,36 @@ func TestImportReportsProgress(t *testing.T) {
 		t.Fatalf("progress has no byte counters: %+v", last)
 	}
 }
+
+// bytes alone say how far along an import is, not where it is. "Archive,
+// mailbox 3 of 12" is what makes a long import feel like it is moving, so the
+// position has to be reported per source (#308).
+func TestImportReportsWhichFileItIsOn(t *testing.T) {
+	db := newTestStore(t)
+	dir := t.TempDir()
+	sources := []Source{
+		{Path: writeFile(t, dir, "one.eml", emlMessage), Folder: "One"},
+		{Path: writeFile(t, dir, "two.eml", emlMessage), Folder: "Two"},
+		{Path: writeFile(t, dir, "three.eml", emlMessage), Folder: "Three"},
+	}
+
+	seen := map[string]Progress{}
+	importer := New(db, nil)
+	importer.OnProgress = func(p Progress) { seen[p.Folder] = p }
+	if _, err := importer.Import(context.Background(), sources); err != nil {
+		t.Fatalf("import: %v", err)
+	}
+
+	for i, folder := range []string{"One", "Two", "Three"} {
+		p, ok := seen[folder]
+		if !ok {
+			t.Fatalf("no progress reported for %s", folder)
+		}
+		if p.FileIndex != i+1 {
+			t.Errorf("%s reported as file %d, want %d", folder, p.FileIndex, i+1)
+		}
+		if p.FileTotal != len(sources) {
+			t.Errorf("%s reported %d files in total, want %d", folder, p.FileTotal, len(sources))
+		}
+	}
+}

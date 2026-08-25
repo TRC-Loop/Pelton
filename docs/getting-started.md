@@ -34,6 +34,12 @@ Everything Pelton stores locally sits in one folder:
 
 Inside you will find the local mail cache and settings database (`pelton.db`), the search index, and installed themes under `themes/`. Credentials are not in there; they live in the OS keyring.
 
+## Coming from another client
+
+**Settings, Import / Export** has two entries for this. **Move in from Thunderbird** finds the profiles Thunderbird keeps on this machine and shows what is in each one: how many accounts, which addresses, how much local mail. Pick a profile and you get its accounts and its local mailboxes with checkboxes, so you choose what comes across rather than taking all of it. Passwords do not come across, because Thunderbird keeps its own; each mailbox asks for one the first time it syncs.
+
+**Import mail files** takes .eml and .mbox files from anywhere. Imported mail goes to Local Folders, which stays on this computer and is never uploaded.
+
 For backups, use **Settings, Import / Export**. It exports settings, mailboxes and signatures as a JSON file, and can include your mail credentials encrypted with a password you choose (AES-256-GCM, scrypt-derived key).
 
 ## Privacy defaults
