@@ -330,6 +330,8 @@ const en: Record<string, string> = {
   'settingsPanel.selectAllScope.offer': 'The loaded messages, then offer the rest',
   'settingsPanel.selectAllScope.all': 'Everything in the current list',
   'settingsPanel.selectAllScope.loaded': 'Only the loaded messages',
+  'settingsPanel.toggle.selectAllUnified': 'Select all in unified views',
+  'settingsPanel.hint.selectAllUnified': 'A unified list spans every mailbox you have, so select all is left out of it by default. Folders, saved views and search results always have it.',
   'settingsPanel.hint.selectAllScope': 'What the checkbox above the list and Cmd+A reach. A list only holds the pages you scrolled to, so selecting the whole mailbox is a separate step unless you ask for it here.',
   'common.time.justNow': 'just now',
   'common.time.minutesAgo': '{n}m ago',

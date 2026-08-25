@@ -412,6 +412,9 @@ export interface UIPrefs {
   // messages and offers the rest, 'all' takes the whole list at once, 'loaded'
   // stops at what is loaded.
   selectAllScope: SelectAllScope
+  // selectAllUnified offers select-all in the unified views too. Off by
+  // default, since those span every account.
+  selectAllUnified: boolean
   // sidebarIndentGuides draws vertical guide lines for nested folders.
   sidebarIndentGuides: boolean
   // rowTemplate selects the list row layout: relaxed, comfortable, compact, single.

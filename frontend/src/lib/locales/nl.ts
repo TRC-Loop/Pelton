@@ -330,6 +330,8 @@ const nl: Record<string, string> = {
   'settingsPanel.selectAllScope.offer': 'De geladen berichten, de rest aanbieden',
   'settingsPanel.selectAllScope.all': 'Alles in de huidige lijst',
   'settingsPanel.selectAllScope.loaded': 'Alleen de geladen berichten',
+  'settingsPanel.toggle.selectAllUnified': 'Alles selecteren in gebundelde weergaven',
+  'settingsPanel.hint.selectAllUnified': 'Een gebundelde lijst omvat al je mailboxen, dus alles selecteren zit daar standaard niet in. Mappen, opgeslagen weergaven en zoekresultaten hebben het altijd.',
   'settingsPanel.hint.selectAllScope': 'Hoe ver het vakje boven de lijst en Cmd+A reiken. Een lijst bevat alleen de pagina’s waar je naartoe gescrold bent, dus de hele mailbox is een aparte stap tenzij je het hier anders instelt.',
   'common.time.justNow': 'zojuist',
   'common.time.minutesAgo': '{n} min geleden',

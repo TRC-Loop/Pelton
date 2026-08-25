@@ -330,6 +330,8 @@ const es: Record<string, string> = {
   'settingsPanel.selectAllScope.offer': 'Los mensajes cargados y ofrecer el resto',
   'settingsPanel.selectAllScope.all': 'Todo lo de la lista actual',
   'settingsPanel.selectAllScope.loaded': 'Solo los mensajes cargados',
+  'settingsPanel.toggle.selectAllUnified': 'Seleccionar todo en vistas unificadas',
+  'settingsPanel.hint.selectAllUnified': 'Una lista unificada abarca todos tus buzones, así que ahí no se ofrece seleccionar todo por defecto. Las carpetas, las vistas guardadas y los resultados de búsqueda siempre lo tienen.',
   'settingsPanel.hint.selectAllScope': 'Hasta dónde llegan la casilla sobre la lista y Cmd+A. Una lista solo contiene las páginas que has recorrido, así que abarcar todo el buzón es un paso aparte salvo que lo cambies aquí.',
   'common.time.justNow': 'ahora mismo',
   'common.time.minutesAgo': 'hace {n} min',

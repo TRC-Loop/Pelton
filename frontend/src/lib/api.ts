@@ -1077,6 +1077,7 @@ export const SettingKeys = {
   avatarStyle: 'avatar_style',
   multiSelectEnabled: 'multi_select_enabled',
   selectAllScope: 'select_all_scope',
+  selectAllUnified: 'select_all_unified',
   showSelectedCount: 'show_selected_count',
   sidebarIndentGuides: 'sidebar_indent_guides',
   rowTemplate: 'row_template',

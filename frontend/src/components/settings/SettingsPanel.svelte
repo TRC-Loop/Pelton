@@ -61,6 +61,7 @@
     setAvatarStyle,
     setMultiSelectEnabled,
     setSelectAllScope,
+    setSelectAllUnified,
     setShowSelectedCount,
     setSidebarIndentGuides,
     setShowUnsyncedFolder,
@@ -200,6 +201,7 @@
     { cat: 'display', label: $t('settingsPanel.label.bodyFont'), kw: 'font' },
     { cat: 'display', label: $t('settingsPanel.toggle.senderFonts'), kw: 'font email typeface sender' },
     { cat: 'list', label: $t('settingsPanel.label.selectAllScope'), kw: 'select all bulk selection' },
+    { cat: 'list', label: $t('settingsPanel.toggle.selectAllUnified'), kw: 'select all unified inbox' },
     { cat: 'display', label: $t('settingsPanel.label.uiFont'), kw: 'font interface' },
     { cat: 'display', label: $t('settingsPanel.label.monoFont'), kw: 'font monospace code' },
     { cat: 'display', label: $t('settingsPanel.label.charsetFallback'), kw: 'encoding charset unicode gibberish mojibake utf8 latin' },
@@ -1064,6 +1066,16 @@
             </select>
           </div>
           <p class="hint">{$t('settingsPanel.hint.selectAllScope')}</p>
+          <div class="toggle" class:disabled={!$prefs.multiSelectEnabled} title={$t('settingsPanel.hint.selectAllUnified')}>
+            <span class="row-label">{$t('settingsPanel.toggle.selectAllUnified')}</span>
+            <ToggleSwitch
+              checked={$prefs.selectAllUnified}
+              disabled={!$prefs.multiSelectEnabled}
+              label={$t('settingsPanel.toggle.selectAllUnified')}
+              on:change={(e) => setSelectAllUnified(e.detail)}
+            />
+          </div>
+          <p class="hint">{$t('settingsPanel.hint.selectAllUnified')}</p>
 
           <h4 class="subhead">{$t('settingsPanel.category.sidebar')}</h4>
           <div class="toggle" title={$t('settingsPanel.hint.indentGuides')}>

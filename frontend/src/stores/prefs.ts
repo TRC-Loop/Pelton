@@ -37,6 +37,7 @@ const defaults: UIPrefs = {
   multiSelectEnabled: true,
   showSelectedCount: true,
   selectAllScope: 'offer',
+  selectAllUnified: false,
   sidebarIndentGuides: false,
   rowTemplate: 'relaxed',
   rowShowAvatar: true,
@@ -607,6 +608,12 @@ export function setShowSelectedCount(value: boolean): void {
 export function setSelectAllScope(value: SelectAllScope): void {
   prefs.update((p) => ({ ...p, selectAllScope: value }))
   void setSetting(SettingKeys.selectAllScope, value)
+}
+
+// setSelectAllUnified offers select-all in the unified views as well.
+export function setSelectAllUnified(value: boolean): void {
+  prefs.update((p) => ({ ...p, selectAllUnified: value }))
+  void setSetting(SettingKeys.selectAllUnified, String(value))
 }
 
 // setStartupSelection picks what the sidebar opens on at launch: 'view:<key>',

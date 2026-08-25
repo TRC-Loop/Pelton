@@ -330,6 +330,8 @@ const de: Record<string, string> = {
   'settingsPanel.selectAllScope.offer': 'Die geladenen Nachrichten, den Rest anbieten',
   'settingsPanel.selectAllScope.all': 'Alles in der aktuellen Liste',
   'settingsPanel.selectAllScope.loaded': 'Nur die geladenen Nachrichten',
+  'settingsPanel.toggle.selectAllUnified': 'Alle auswählen in vereinten Ansichten',
+  'settingsPanel.hint.selectAllUnified': 'Eine vereinte Liste umfasst alle deine Postfächer, deshalb ist "Alle auswählen" dort standardmäßig nicht dabei. In Ordnern, gespeicherten Ansichten und Suchergebnissen gibt es sie immer.',
   'settingsPanel.hint.selectAllScope': 'Wie weit das Kästchen über der Liste und Cmd+A reichen. Eine Liste enthält nur die Seiten, zu denen du gescrollt hast, also ist das ganze Postfach ein eigener Schritt, wenn du es hier nicht anders einstellst.',
   'common.time.justNow': 'gerade eben',
   'common.time.minutesAgo': 'vor {n} Min.',

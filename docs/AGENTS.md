@@ -41,7 +41,7 @@ Mail that declares no charset, or one nothing knows, is detected from the bytes 
 
 ## Select all
 
-A checkbox above the message list, and Cmd/Ctrl+A while the list has focus. The list only holds the pages that were scrolled to, so how far it reaches is a setting: Settings > List > "Select all selects", one of "the loaded messages, then offer the rest" (default), "everything in the current list", "only the loaded messages". The default selects what is loaded and offers the rest in a banner over the list. Widening asks first above 500 messages and is capped at 50,000, which it says when it hits. It follows whatever the list shows: a folder, a unified view, a saved view or a search result set.
+A checkbox above the message list, and Cmd/Ctrl+A while the list has focus. The list only holds the pages that were scrolled to, so how far it reaches is a setting: Settings > List > "Select all selects", one of "the loaded messages, then offer the rest" (default), "everything in the current list", "only the loaded messages". The default selects what is loaded and offers the rest in a banner over the list. Widening asks first above 500 messages and is capped at 50,000, which it says when it hits. It follows whatever the list shows: a folder, a saved view or a search result set. The unified views are left out by default, since one of those lists spans every account; Settings > List > "Select all in unified views" turns both the checkbox and the shortcut on there.
 
 ## Failed mailbox sync
 

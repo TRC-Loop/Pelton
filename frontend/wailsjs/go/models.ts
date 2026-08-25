@@ -1763,6 +1763,7 @@ export namespace desktop {
 	    multiSelectEnabled: boolean;
 	    showSelectedCount: boolean;
 	    selectAllScope: string;
+	    selectAllUnified: boolean;
 	    sidebarIndentGuides: boolean;
 	    rowTemplate: string;
 	    rowShowAvatar: boolean;
@@ -1847,6 +1848,7 @@ export namespace desktop {
 	        this.multiSelectEnabled = source["multiSelectEnabled"];
 	        this.showSelectedCount = source["showSelectedCount"];
 	        this.selectAllScope = source["selectAllScope"];
+	        this.selectAllUnified = source["selectAllUnified"];
 	        this.sidebarIndentGuides = source["sidebarIndentGuides"];
 	        this.rowTemplate = source["rowTemplate"];
 	        this.rowShowAvatar = source["rowShowAvatar"];

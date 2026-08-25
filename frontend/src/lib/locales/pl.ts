@@ -330,6 +330,8 @@ const pl: Record<string, string> = {
   'settingsPanel.selectAllScope.offer': 'Wczytane wiadomości, resztę zaproponuj',
   'settingsPanel.selectAllScope.all': 'Wszystko na bieżącej liście',
   'settingsPanel.selectAllScope.loaded': 'Tylko wczytane wiadomości',
+  'settingsPanel.toggle.selectAllUnified': 'Zaznacz wszystko w widokach zbiorczych',
+  'settingsPanel.hint.selectAllUnified': 'Widok zbiorczy obejmuje wszystkie Twoje skrzynki, więc domyślnie nie ma tam zaznaczania wszystkiego. Foldery, zapisane widoki i wyniki wyszukiwania mają je zawsze.',
   'settingsPanel.hint.selectAllScope': 'Jak daleko sięgają pole nad listą i Cmd+A. Lista zawiera tylko strony, do których przewinięto, więc objęcie całej skrzynki to osobny krok, chyba że zmienisz to tutaj.',
   'common.time.justNow': 'przed chwilą',
   'common.time.minutesAgo': '{n} min temu',

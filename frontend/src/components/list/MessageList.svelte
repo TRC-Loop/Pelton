@@ -222,6 +222,16 @@
   // actions never act on rows that have scrolled out of the data.
   $: selectedItems = items.filter((m) => $selectedIds.has(m.id))
 
+  // select-all is not offered in the unified views unless it is asked for: one
+  // of those lists spans every account, so "everything in this list" is a much
+  // bigger claim there than in a single mailbox. A search result set counts as
+  // a search wherever it was run from, and a saved view is a stored search.
+  $: selectAllAvailable =
+    $prefs.multiSelectEnabled &&
+    (($messageList.data?.searching ?? false) ||
+      $selection.kind !== 'view' ||
+      $prefs.selectAllUnified)
+
   // the header checkbox is ticked only when every loaded row is in the
   // selection, and dashed for anything in between.
   $: allLoadedSelected = items.length > 0 && items.every((m) => $selectedIds.has(m.id))
@@ -326,7 +336,7 @@
     // cmd/ctrl+a while the list has focus. What it reaches is a preference:
     // the loaded rows with the rest offered, the whole list, or only what is
     // loaded (#320).
-    if ($prefs.multiSelectEnabled && (event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'a') {
+    if (selectAllAvailable && (event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'a') {
       event.preventDefault()
       await selectAllInList(items.map((m) => m.id))
       return
@@ -615,7 +625,7 @@
 
   {#if selectionCount > 0}
     <div class="select-bar">
-      {#if $prefs.multiSelectEnabled}
+      {#if selectAllAvailable}
         <button
           type="button"
           class="select-all"
@@ -669,7 +679,7 @@
     </div>
   {:else}
     <div class="meta-bar">
-      {#if $prefs.multiSelectEnabled && items.length > 0}
+      {#if selectAllAvailable && items.length > 0}
         <button
           type="button"
           class="select-all"

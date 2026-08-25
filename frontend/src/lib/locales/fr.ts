@@ -330,6 +330,8 @@ const fr: Record<string, string> = {
   'settingsPanel.selectAllScope.offer': 'Les messages chargés, puis proposer le reste',
   'settingsPanel.selectAllScope.all': 'Tout ce que contient la liste actuelle',
   'settingsPanel.selectAllScope.loaded': 'Seulement les messages chargés',
+  'settingsPanel.toggle.selectAllUnified': 'Tout sélectionner dans les vues unifiées',
+  'settingsPanel.hint.selectAllUnified': 'Une liste unifiée couvre toutes vos boîtes, donc tout sélectionner n’y est pas proposé par défaut. Les dossiers, les vues enregistrées et les résultats de recherche l’ont toujours.',
   'settingsPanel.hint.selectAllScope': 'Ce que la case au-dessus de la liste et Cmd+A atteignent. Une liste ne contient que les pages parcourues, donc prendre toute la boîte est une étape distincte sauf si vous le réglez ici.',
   'common.time.justNow': 'à l’instant',
   'common.time.minutesAgo': 'il y a {n} min',
