@@ -152,3 +152,54 @@ func TestCheckAccountPasswordRejectsBadArguments(t *testing.T) {
 		t.Error("CheckAccountPassword accepted an account that does not exist")
 	}
 }
+
+// the sidebar mark and the sentence under it both come from this classification,
+// so a network blip must never read as a rejected password.
+func TestSyncFailureReason(t *testing.T) {
+	for _, tt := range []struct {
+		name string
+		err  error
+		want string
+	}{
+		{"nothing stored", errNoCredentials, syncFailCredentials},
+		{"wrapped no credentials", fmt.Errorf("resolve: %w", errNoCredentials), syncFailCredentials},
+		{"server refused the login", fmt.Errorf("login as %q: %w", "me", imap.ErrAuthFailed), syncFailAuth},
+		{"dial failed", errors.New("dial tcp 1.2.3.4:993: connection refused"), syncFailNetwork},
+		{"dns failed", errors.New("lookup imap.example.test: no such host"), syncFailNetwork},
+		{"anything else", errors.New("SELECT INBOX: unexpected response"), syncFailOther},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := syncFailureReason(tt.err); got != tt.want {
+				t.Errorf("syncFailureReason(%v) = %q, want %q", tt.err, got, tt.want)
+			}
+		})
+	}
+}
+
+// a recorded failure has to survive the run it happened in, and a later success
+// has to clear it: that is the whole difference from the log line it replaces.
+func TestNoteSyncOutcomeRecordsAndClears(t *testing.T) {
+	a := newAccountTestApp(t)
+	id, err := a.store.CreateAccount(a.ctx, &storage.Account{Email: "me@example.test"})
+	if err != nil {
+		t.Fatalf("create account: %v", err)
+	}
+
+	a.noteSyncOutcome(id, fmt.Errorf("login as %q: %w", "me", imap.ErrAuthFailed))
+	states, err := a.AccountSyncStates()
+	if err != nil {
+		t.Fatalf("read states: %v", err)
+	}
+	if len(states) != 1 || states[0].FailedAt == "" || states[0].Reason != syncFailAuth {
+		t.Fatalf("states = %+v, want one auth failure", states)
+	}
+	if states[0].LastOK != "" {
+		t.Errorf("LastOK = %q, want empty for an account that never synced", states[0].LastOK)
+	}
+
+	a.noteSyncOutcome(id, nil)
+	states, _ = a.AccountSyncStates()
+	if len(states) != 1 || states[0].FailedAt != "" || states[0].Reason != "" {
+		t.Errorf("states = %+v, want the failure cleared", states)
+	}
+}

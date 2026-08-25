@@ -27,6 +27,10 @@ const (
 	EventSyncProgress = "sync:progress"
 	// EventSyncState fires when background sync starts or stops, with any error.
 	EventSyncState = "sync:state"
+	// EventAccountSyncState fires when a sync run finishes, carrying how each
+	// account fared, so a mailbox that failed while the others succeeded gets
+	// marked instead of being reported as a clean sync.
+	EventAccountSyncState = "sync:accounts"
 	// EventOutboxChanged fires when the outbox contents or a message state change.
 	EventOutboxChanged = "outbox:changed"
 	// EventAgentProposals fires when an agent proposes a message, or one is
@@ -150,6 +154,12 @@ type SyncProgressEvent struct {
 type SyncStateEvent struct {
 	Running bool   `json:"running"`
 	Error   string `json:"error"`
+}
+
+// AccountSyncStateEvent is the payload for EventAccountSyncState: every account
+// that has a recorded outcome, failing or not.
+type AccountSyncStateEvent struct {
+	States []AccountSyncStateDTO `json:"states"`
 }
 
 // emit sends a runtime event if the context is set. It is a thin wrapper so call

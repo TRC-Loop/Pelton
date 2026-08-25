@@ -61,6 +61,7 @@ import type {
   Profile,
   ProfileDraft,
   PasswordCheck,
+  AccountSyncState,
 } from './types'
 
 // isDemoMode reports whether the app launched in the cosmetic --potatoes-are-nice
@@ -592,6 +593,21 @@ export function listOutbox(): Promise<OutboxRow[]> {
 // triggerSync runs one sync pass on demand.
 export function triggerSync(): Promise<void> {
   return App.TriggerSync()
+}
+
+// accountSyncStates returns how each account's last sync went. Accounts that
+// have never synced are absent rather than reported as failing.
+export function accountSyncStates(): Promise<AccountSyncState[]> {
+  if (isDemoActive()) {
+    return Promise.resolve([])
+  }
+  return App.AccountSyncStates().then((list) => (list ?? []) as unknown as AccountSyncState[])
+}
+
+// syncAccountNow syncs one account, for the retry on a failed mailbox. It
+// rejects with what went wrong this time.
+export function syncAccountNow(accountId: number): Promise<void> {
+  return App.SyncAccountNow(accountId)
 }
 
 // appVersion returns the build version string (injected via ldflags), shown in

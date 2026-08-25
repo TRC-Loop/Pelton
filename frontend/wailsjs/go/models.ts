@@ -58,6 +58,28 @@ export namespace desktop {
 	        this.footerId = source["footerId"];
 	    }
 	}
+	export class AccountSyncStateDTO {
+	    accountId: number;
+	    email: string;
+	    lastOk: string;
+	    failedAt: string;
+	    reason: string;
+	    detail: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new AccountSyncStateDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.accountId = source["accountId"];
+	        this.email = source["email"];
+	        this.lastOk = source["lastOk"];
+	        this.failedAt = source["failedAt"];
+	        this.reason = source["reason"];
+	        this.detail = source["detail"];
+	    }
+	}
 	export class AddAccountRequest {
 	    email: string;
 	    displayName: string;
@@ -1166,11 +1188,11 @@ export namespace desktop {
 	    ok: boolean;
 	    rejected: boolean;
 	    error: string;
-
+	
 	    static createFrom(source: any = {}) {
 	        return new PasswordCheckDTO(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.ok = source["ok"];

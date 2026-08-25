@@ -18,6 +18,8 @@
   import Resizer from './components/common/Resizer.svelte'
   import SnoozeDialog from './components/detail/SnoozeDialog.svelte'
   import ConfirmDialog from './components/common/ConfirmDialog.svelte'
+  import SyncFailureDialog from './components/common/SyncFailureDialog.svelte'
+  import { loadSyncStates, watchSyncStates } from './stores/syncfailures'
   import FolderDialog from './components/sidebar/FolderDialog.svelte'
   import AttachmentPreview from './components/detail/AttachmentPreview.svelte'
   import MoveDialog from './components/detail/MoveDialog.svelte'
@@ -284,6 +286,9 @@
     // the sidebar marks mailboxes with no stored password, so the markers have
     // to be known before the first sync raises any prompt.
     void refreshMissingPasswords()
+    // a mailbox that failed its last sync is marked from the first paint, not
+    // only once another sync run happens to end.
+    void loadSyncStates()
     void restoreTabs(get(prefs).restoreTabs)
     void loadProfiles()
     initProgress()
@@ -368,6 +373,7 @@
         )
       }),
     )
+    unsubscribers.push(watchSyncStates())
     unsubscribers.push(onOutboxChanged(() => void loadOutbox()))
     unsubscribers.push(onViewsChanged(() => void loadViews()))
     unsubscribers.push(onProfileChanged(() => void reloadForProfile()))
@@ -1419,6 +1425,8 @@
 <CommandPalette commands={paletteCommands} mail={paletteMailCommands} />
 
 <AccountPasswordDialog account={$passwordPrompt} onDone={answerPasswordPrompt} />
+
+<SyncFailureDialog />
 
 <DevOverlays />
 

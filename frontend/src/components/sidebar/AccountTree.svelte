@@ -2,7 +2,7 @@
   // one account's section in the sidebar: a header with the address and the full
   // folder tree below it. the header chevron collapses the whole account. root
   // folders are those without a parent; the rest nest via FolderNode recursion.
-  import { IconChevronRight, IconFolderPlus, IconAlertTriangle } from '@tabler/icons-svelte'
+  import { IconChevronRight, IconFolderPlus, IconAlertTriangle, IconCloudOff } from '@tabler/icons-svelte'
   import FolderNode from './FolderNode.svelte'
   import DragGrip from './DragGrip.svelte'
   import { prefs } from '../../stores/prefs'
@@ -12,6 +12,7 @@
   import { reorder, type ReorderDetail } from '../../lib/reorder'
   import { refreshSidebar } from '../../stores/accounts'
   import { missingPassword, askForPassword } from '../../stores/passwordprompt'
+  import { failedSyncs, showSyncFailure } from '../../stores/syncfailures'
   import { reorderFolders } from '../../lib/api'
   import { toastError, errorMessage } from '../../stores/toast'
   import type { Account, Folder } from '../../lib/types'
@@ -52,6 +53,12 @@
   // an account with nothing in the keyring cannot sync at all. The prompt can be
   // dismissed (#290), so this marker is what is left saying so.
   $: needsPassword = $missingPassword.has(account.id)
+
+  // an account whose last sync failed. Not the password triangle: that one says
+  // "give me a password", this one says "the last sync did not work", and only
+  // one of the two is the user's to fix. A missing password already has its own
+  // mark, so this stands down for it rather than showing two (#322).
+  $: syncFailure = needsPassword ? undefined : $failedSyncs.find((s) => s.accountId === account.id)
 </script>
 
 <section class="account" class:dimmed data-reorder-id={account.id}>
@@ -76,6 +83,17 @@
         on:click={() => askForPassword(account)}
       >
         <IconAlertTriangle size={14} stroke={1.9} />
+      </button>
+    {/if}
+    {#if syncFailure}
+      <button
+        type="button"
+        class="sync-failed"
+        title={$t('syncFailure.marker')}
+        aria-label={$t('syncFailure.marker')}
+        on:click={() => showSyncFailure(syncFailure)}
+      >
+        <IconCloudOff size={14} stroke={1.9} />
       </button>
     {/if}
     <button
@@ -162,6 +180,24 @@
   }
 
   .needs-password:hover {
+    background: var(--surface-sunken);
+  }
+
+  /* danger rather than the password mark's warning: this one is not a question
+     being asked, it is something that already went wrong. */
+  .sync-failed {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    padding: var(--space-1);
+    border: none;
+    background: transparent;
+    color: var(--danger);
+    border-radius: var(--radius-control);
+    cursor: var(--cursor-action);
+  }
+  .sync-failed:hover {
     background: var(--surface-sunken);
   }
 

@@ -842,6 +842,22 @@ export interface TestConnectionRequest {
   password: string
 }
 
+// SyncFailureReason is the coarse class of a failed sync, which the ui turns
+// into a sentence. Anything unrecognized reads as 'other'.
+export type SyncFailureReason = 'auth' | 'network' | 'credentials' | 'other'
+
+// AccountSyncState is how one account's last sync went. lastOk survives a later
+// failure, so "broken since" is answerable. Both times are rfc3339, empty for
+// never. A non-empty failedAt means the account is currently failing.
+export interface AccountSyncState {
+  accountId: number
+  email: string
+  lastOk: string
+  failedAt: string
+  reason: SyncFailureReason
+  detail: string
+}
+
 // PasswordCheck is what the server said when a password was tried against an
 // existing account. rejected means the login was refused; an empty error with
 // ok false means the server could not be reached, which says nothing about the

@@ -39,6 +39,10 @@ Status bar shows a progress bar while a sync or a backfill runs, counting messag
 
 Mail that declares no charset, or one nothing knows, is detected from the bytes (ICU port, github.com/gogs/chardet) and converted, so nothing invalid reaches the database or the search index. Applies to bodies and to rfc 2047 encoded-words in headers. Settings > Display > "Text encoding fallback": `auto` (default, detect) or a fixed encoding name. Messages read this way carry a badge in the reading pane. Mail cached before this existed is marked and refetched from the server during sync, a few per folder per sync.
 
+## Failed mailbox sync
+
+A sync run used to report success as long as one account got through, so a mailbox that had stopped syncing was invisible. Each account's last outcome is stored (account_sync_state), so it survives a restart. An account whose last sync failed gets a cloud-off mark next to it in the sidebar, and the status bar says which mailbox failed instead of "Synced". Both open the same dialog: what went wrong (refused password, unreachable server, no password stored, or something else), the server's own words, when the mailbox last synced through, and a button to try that one account again. A mailbox with no password stored keeps its existing warning triangle instead, since that is a different question.
+
 ## Message fonts
 
 On by default, Settings > Display > "Let emails use their own fonts". A message's own font families are kept, so designed mail reads the way it was written. No network is involved: the reading pane's CSP limits font-src to `data:`, so a named family resolves from a font already installed or falls back to the reader font. Off, the sanitizer strips `font-family` and `<font face>` and every message renders in Settings > Display > reader font. Font sizes and line heights are kept either way.
