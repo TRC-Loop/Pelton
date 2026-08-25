@@ -31,12 +31,6 @@ Mail that was already in your cache before this existed was stored broken and
 cannot be repaired locally, so Pelton fetches those messages from your server
 again, a few per sync.
 
-## Can I rename a mailbox without telling everyone I write to?
-
-Yes. **Settings, Mailboxes** has two names. The **From name** is your outward identity and goes in the From header of every message you send. Turning on **Use a different name in the sidebar** adds a **sidebar label**, which is what Pelton calls the mailbox everywhere on screen. The label stays on your machine, so calling a mailbox "work junk" is between you and your sidebar.
-
-Switching the toggle back off keeps the label you typed, in case you want it again.
-
 ## How do I back up my accounts and settings?
 
 **Settings, Import / Export**. The export is a single JSON file with your settings, mailboxes and signatures. Mail credentials can be included too, encrypted with a password you choose. The cached mail itself is not part of the export; it re-syncs from your server after an import.
