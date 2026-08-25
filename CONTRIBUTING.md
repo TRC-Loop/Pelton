@@ -26,22 +26,21 @@ Report problems to [me@arne.sh ↗](mailto:me@arne.sh). Reports are handled priv
 
 ## AI-Assisted Development
 
-Pelton has files to guide AI, starting with [AGENTS.md](https://github.com/TRC-Loop/Pelton/blob/main/AGENTS.md) serving as an entrypoint.
+Pelton has files to guide AI, starting with [AGENTS.md](https://github.com/TRC-Loop/Pelton/blob/main/AGENTS.md) as the entrypoint.
 
 **Allowance**
 
-You may use AI like Claude Code, Codex, Aider or any other AI tool except for fully autonomous systems.
-
+You may use AI tools such as Claude Code, Codex, Aider, or similar. Fully autonomous systems that open PRs without human review are not allowed.
 
 **Limits**
 
-AI can be used for writing Code, but architecture, ways things should work, look and be implemented have to come from a human.
-Fully autonomous AI systems which spam PRs are not welcome.
+AI can be used for writing code, but architecture and the way things should work, look, and be implemented has to come from a human.
 
-Also when working on the frontend, stick to Peltons Design and dont let AI add those stereotypical things like the purple-blue gradient.
+When working on the frontend, stick to Pelton's existing design — don't let AI introduce generic patterns like purple-blue gradients.
 
 **Disclosure**
-When using AI it's appreciated stating this in the Commit/PR. 
+
+Contributers must state AI usage in the commit or PR description, e.g. `Assisted-by: Claude Code`. This is for transparency only and doesn't lead to different handling of the contribution. It's fully okay. 
 
 *TLDR; Yes.*
 
