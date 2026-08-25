@@ -4,6 +4,8 @@ export namespace desktop {
 	    id: number;
 	    email: string;
 	    displayName: string;
+	    localLabel: string;
+	    useLocalLabel: boolean;
 	    username: string;
 	    imapHost: string;
 	    imapPort: number;
@@ -28,6 +30,8 @@ export namespace desktop {
 	        this.id = source["id"];
 	        this.email = source["email"];
 	        this.displayName = source["displayName"];
+	        this.localLabel = source["localLabel"];
+	        this.useLocalLabel = source["useLocalLabel"];
 	        this.username = source["username"];
 	        this.imapHost = source["imapHost"];
 	        this.imapPort = source["imapPort"];
@@ -83,6 +87,8 @@ export namespace desktop {
 	export class AddAccountRequest {
 	    email: string;
 	    displayName: string;
+	    localLabel: string;
+	    useLocalLabel: boolean;
 	    username: string;
 	    imapHost: string;
 	    imapPort: number;
@@ -103,6 +109,8 @@ export namespace desktop {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.email = source["email"];
 	        this.displayName = source["displayName"];
+	        this.localLabel = source["localLabel"];
+	        this.useLocalLabel = source["useLocalLabel"];
 	        this.username = source["username"];
 	        this.imapHost = source["imapHost"];
 	        this.imapPort = source["imapPort"];
@@ -1928,6 +1936,8 @@ export namespace desktop {
 	export class UpdateAccountRequest {
 	    id: number;
 	    displayName: string;
+	    localLabel: string;
+	    useLocalLabel: boolean;
 	    username: string;
 	    imapHost: string;
 	    imapPort: number;
@@ -1950,6 +1960,8 @@ export namespace desktop {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.id = source["id"];
 	        this.displayName = source["displayName"];
+	        this.localLabel = source["localLabel"];
+	        this.useLocalLabel = source["useLocalLabel"];
 	        this.username = source["username"];
 	        this.imapHost = source["imapHost"];
 	        this.imapPort = source["imapPort"];

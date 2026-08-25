@@ -24,6 +24,7 @@ import {
 import { menuActionCatalog, type MenuActionId } from './menuactions'
 import { settingsCategories } from './settingscategories'
 import { flagColors } from '../theme/flagcolors'
+import { accountLabel } from './format'
 import type { Account, Folder, UnifiedView, View, MessageSummary, ThemeInfo, Profile } from './types'
 
 /** Which section of the palette an entry belongs to. */
@@ -496,7 +497,7 @@ function settingCommands(ctx: CommandContext): PaletteCommand[] {
     out.push({
       id: `account:${account.id}`,
       group: 'setting',
-      label: account.displayName || account.email,
+      label: accountLabel(account),
       hint: account.email,
       icon: IconMailbox,
       run: () => ctx.openSettings('mailboxes'),

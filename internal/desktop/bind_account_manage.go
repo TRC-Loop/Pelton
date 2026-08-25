@@ -21,8 +21,13 @@ var errAccountUsesOAuth = errors.New("pelton: this mailbox signs in with your pr
 // ownership and the display identity, so changing it belongs to a re-add rather
 // than an in-place edit.
 type UpdateAccountRequest struct {
-	ID          int64  `json:"id"`
-	DisplayName string `json:"displayName"`
+	ID int64 `json:"id"`
+	// DisplayName is the From name recipients see. LocalLabel is the name this
+	// app shows for the mailbox instead when UseLocalLabel is set; it is stored
+	// either way, so switching the toggle off does not throw it away.
+	DisplayName   string `json:"displayName"`
+	LocalLabel    string `json:"localLabel"`
+	UseLocalLabel bool   `json:"useLocalLabel"`
 	// Username is the login name when it differs from the email; empty logs in
 	// with the account's email.
 	Username string `json:"username"`
@@ -67,6 +72,8 @@ func (a *App) UpdateAccount(req UpdateAccountRequest) (AccountDTO, error) {
 		return AccountDTO{}, err
 	}
 	account.DisplayName = req.DisplayName
+	account.LocalLabel = req.LocalLabel
+	account.UseLocalLabel = req.UseLocalLabel
 	account.Username = req.Username
 	account.IMAPHost = req.IMAPHost
 	account.IMAPPort = req.IMAPPort
