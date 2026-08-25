@@ -40,7 +40,7 @@ When working on the frontend, stick to Pelton's existing design — don't let AI
 
 **Disclosure**
 
-Contributers must state AI usage in the commit or PR description, e.g. `Assisted-by: Claude Code`. This is for transparency only and doesn't lead to different handling of the contribution. It's fully okay. 
+Contributors must state AI usage in the commit or PR description, e.g. `Assisted-by: Claude Code`. This is for transparency only and doesn't lead to different handling of the contribution. It's fully okay. 
 
 *TLDR; Yes.*
 
@@ -54,7 +54,7 @@ The full, unmodified text of the Developer Certificate of Origin 1.1 is in [DCO.
 
 Two things matter when you send code to Pelton:
 
-1. You actually wrote it, or you're allowed to submit it. Code copied from a GPL project, code owned by your employer, or code an AI generated from copyrighted training data can't be accepted unless the permissions check out.
+1. You actually wrote it, or you have the right to submit it under the project's GPL-3.0 license. Code copied from a GPL project, code owned by your employer, or AI-generated code can't be accepted unless the permissions check out.
 2. You're fine with it being GPL-3.0 from that point on. Once it's merged it stays under that license.
 
 The DCO is how you confirm both, in one line, per commit.
@@ -76,7 +76,7 @@ git commit -s -m "fix: handle nil response in HTTP check"
 
 That adds a line at the bottom of your commit message:
 
-```
+```text
 Signed-off-by: John S. <john@example.com>
 ```
 
@@ -92,7 +92,7 @@ Pelton uses [Conventional Commits](https://www.conventionalcommits.org/) for com
 
 Each commit message should follow this format:
 
-```
+```text
 <type>(<optional scope>): <short description>
 
 <optional body>
@@ -103,7 +103,7 @@ Each commit message should follow this format:
 **Common types:**
 - `feat` — a new feature
 - `fix` — a bug fix
-- `docs` — documentation only changes
+- `docs` — documentation-only changes
 - `style` — formatting, missing semicolons, etc. (no code logic change)
 - `refactor` — code change that neither fixes a bug nor adds a feature
 - `perf` — performance improvement
@@ -111,14 +111,14 @@ Each commit message should follow this format:
 - `chore` — build process, tooling, dependency updates
 
 **Examples:**
-```
+```text
 feat(oauth): add Google OAuth token refresh
 fix(inbox): resolve crash when marking empty selection as read
 docs: update setup instructions in README
 ```
 
 Breaking changes should be indicated with a `!` after the type/scope, and explained in the footer:
-```
+```text
 feat(api)!: change account sync response format
 
 BREAKING CHANGE: sync endpoint now returns paginated results
