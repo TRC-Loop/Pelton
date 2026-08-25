@@ -9,6 +9,7 @@
   import MessageRow from './MessageRow.svelte'
   import SearchBar from './SearchBar.svelte'
   import Spinner from '../common/Spinner.svelte'
+  import MessageSkeleton from './MessageSkeleton.svelte'
   import EmptyState from '../common/EmptyState.svelte'
   import ErrorState from '../common/ErrorState.svelte'
   import {
@@ -21,6 +22,9 @@
     IconFlagFilled,
     IconTrash,
     IconX,
+    IconSquare,
+    IconSquareCheck,
+    IconSquareMinus,
     IconClockPause,
     IconDownload,
     IconDownloadOff,
@@ -53,6 +57,14 @@
     toggleSelect,
     selectRange,
   } from '../../stores/listselect'
+  import {
+    expandOffer,
+    expanding,
+    selectAllInList,
+    expandSelection,
+    clearExpandOffer,
+    clearAll,
+  } from '../../stores/selectall'
   import { prefs } from '../../stores/prefs'
   import {
     setSeen,
@@ -209,6 +221,30 @@
   // the live multi-selection, intersected with what is still loaded so bulk
   // actions never act on rows that have scrolled out of the data.
   $: selectedItems = items.filter((m) => $selectedIds.has(m.id))
+
+  // select-all is not offered in the unified views unless it is asked for: one
+  // of those lists spans every account, so "everything in this list" is a much
+  // bigger claim there than in a single mailbox. A search result set counts as
+  // a search wherever it was run from, and a saved view is a stored search.
+  $: selectAllAvailable =
+    $prefs.multiSelectEnabled &&
+    (($messageList.data?.searching ?? false) ||
+      $selection.kind !== 'view' ||
+      $prefs.selectAllUnified)
+
+  // the header checkbox is ticked only when every loaded row is in the
+  // selection, and dashed for anything in between.
+  $: allLoadedSelected = items.length > 0 && items.every((m) => $selectedIds.has(m.id))
+
+  // clicking it clears a full selection and otherwise selects, which is what a
+  // checkbox in that state looks like it will do.
+  async function onSelectAllClick(): Promise<void> {
+    if (allLoadedSelected && selectionCount > 0) {
+      clearAll()
+      return
+    }
+    await selectAllInList(items.map((m) => m.id))
+  }
   $: selectionCount = selectedItems.length
 
   // keep the keyboard-nav highlight in sync with whichever message is open,
@@ -291,10 +327,18 @@
   // keyboard navigation over the rows.
   async function onKeydown(event: KeyboardEvent): Promise<void> {
     if (event.key === 'Escape' && selectionCount > 0) {
-      clearSelection()
+      clearAll()
       return
     }
     if (items.length === 0) {
+      return
+    }
+    // cmd/ctrl+a while the list has focus. What it reaches is a preference:
+    // the loaded rows with the rest offered, the whole list, or only what is
+    // loaded (#320).
+    if (selectAllAvailable && (event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'a') {
+      event.preventDefault()
+      await selectAllInList(items.map((m) => m.id))
       return
     }
     if (event.key === 'ArrowDown') {
@@ -581,7 +625,24 @@
 
   {#if selectionCount > 0}
     <div class="select-bar">
-      <button type="button" class="clear" aria-label={$t('messageList.clearSelection')} on:click={clearSelection}>
+      {#if selectAllAvailable}
+        <button
+          type="button"
+          class="select-all"
+          role="checkbox"
+          aria-checked={allLoadedSelected ? 'true' : 'mixed'}
+          aria-label={$t('list.selectAll.label')}
+          title={$t('list.selectAll.label')}
+          on:click={onSelectAllClick}
+        >
+          {#if allLoadedSelected}
+            <IconSquareCheck size={16} stroke={1.7} />
+          {:else}
+            <IconSquareMinus size={16} stroke={1.7} />
+          {/if}
+        </button>
+      {/if}
+      <button type="button" class="clear" aria-label={$t('messageList.clearSelection')} on:click={clearAll}>
         <IconX size={15} stroke={1.9} />
       </button>
       {#if $prefs.showSelectedCount}
@@ -618,6 +679,19 @@
     </div>
   {:else}
     <div class="meta-bar">
+      {#if selectAllAvailable && items.length > 0}
+        <button
+          type="button"
+          class="select-all"
+          role="checkbox"
+          aria-checked="false"
+          aria-label={$t('list.selectAll.label')}
+          title={$t('list.selectAll.label')}
+          on:click={onSelectAllClick}
+        >
+          <IconSquare size={16} stroke={1.7} />
+        </button>
+      {/if}
       <span class="title">{viewTitle($selection)}</span>
       {#if $messageList.data}
         <span class="count">
@@ -639,6 +713,21 @@
     </div>
   {/if}
 
+  <!-- selecting the loaded rows is not the same as selecting the mailbox, so
+       the difference is offered rather than assumed (#320). -->
+  {#if $expandOffer}
+    <div class="expand-offer">
+      <span>
+        {$t('list.selectAll.loadedSelected').replace('{n}', $expandOffer.loaded.toLocaleString())}
+      </span>
+      <button type="button" class="expand-btn" disabled={$expanding} on:click={() => void expandSelection()}>
+        {$expanding
+          ? $t('list.selectAll.expanding')
+          : $t('list.selectAll.expand').replace('{n}', $expandOffer.matching.toLocaleString())}
+      </button>
+    </div>
+  {/if}
+
   <div
     class="rows"
     role="listbox"
@@ -651,7 +740,9 @@
     on:scroll={onScroll}
   >
     {#if $messageList.status === 'loading' && items.length === 0}
-      <Spinner label={$t('messageList.loading')} />
+      <!-- placeholders rather than a spinner, and only once the load has taken
+           long enough to be felt. -->
+      <MessageSkeleton active rows={10} />
     {:else if $messageList.status === 'error'}
       <ErrorState message={$messageList.error} onRetry={() => loadList($selection)} />
     {:else if items.length === 0}
@@ -683,7 +774,7 @@
         <div class="spacer" style={`height:${bottomPad}px`} aria-hidden="true"></div>
       {/if}
       {#if $messageList.status === 'loading'}
-        <Spinner label={$t('messageList.loadingMore')} inline />
+        <MessageSkeleton active rows={3} inline />
       {:else if backfilling}
         <Spinner label={$t('messageList.fetchingOlder')} inline />
       {:else if showLoadOlder}
@@ -792,6 +883,7 @@
     flex: 1;
   }
 
+  .select-all,
   .clear,
   .act {
     display: inline-flex;
@@ -805,10 +897,46 @@
     border-radius: var(--radius-control);
   }
 
+  .select-all:hover,
   .clear:hover,
   .act:hover {
     background: var(--surface-hover);
     color: var(--text-primary);
+  }
+
+  /* in the quiet bar the checkbox sits with the title, so it takes the tertiary
+     colour rather than announcing itself above an untouched list. */
+  .meta-bar .select-all {
+    padding: 0 var(--space-2) 0 0;
+    color: var(--text-tertiary);
+  }
+
+  .expand-offer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-3);
+    padding: var(--space-2) var(--row-pad-x);
+    font-size: var(--fz-meta);
+    color: var(--text-secondary);
+    background: var(--selection-bg);
+    border-bottom: var(--hairline) solid var(--border-subtle);
+  }
+
+  .expand-btn {
+    padding: 0;
+    font: inherit;
+    color: var(--accent);
+    background: transparent;
+    border: none;
+    cursor: var(--cursor-action);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .expand-btn:disabled {
+    color: var(--text-tertiary);
+    text-decoration: none;
+    cursor: default;
   }
 
   .act.danger:hover {

@@ -426,6 +426,10 @@ export function MarkSenderVIP(arg1) {
   return window['go']['desktop']['App']['MarkSenderVIP'](arg1);
 }
 
+export function MessageIDs(arg1) {
+  return window['go']['desktop']['App']['MessageIDs'](arg1);
+}
+
 export function MoveMessage(arg1, arg2) {
   return window['go']['desktop']['App']['MoveMessage'](arg1, arg2);
 }
@@ -564,6 +568,10 @@ export function Search(arg1) {
 
 export function SearchAddresses(arg1, arg2) {
   return window['go']['desktop']['App']['SearchAddresses'](arg1, arg2);
+}
+
+export function SearchMessageIDs(arg1) {
+  return window['go']['desktop']['App']['SearchMessageIDs'](arg1);
 }
 
 export function SendMessage(arg1) {

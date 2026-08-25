@@ -987,6 +987,22 @@ export namespace desktop {
 		    return a;
 		}
 	}
+	export class MessageIDsDTO {
+	    ids: number[];
+	    capped: boolean;
+	    matching: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new MessageIDsDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.ids = source["ids"];
+	        this.capped = source["capped"];
+	        this.matching = source["matching"];
+	    }
+	}
 	export class MessageSummaryDTO {
 	    id: number;
 	    accountId: number;
@@ -1746,6 +1762,8 @@ export namespace desktop {
 	    avatarStyle: string;
 	    multiSelectEnabled: boolean;
 	    showSelectedCount: boolean;
+	    selectAllScope: string;
+	    selectAllUnified: boolean;
 	    sidebarIndentGuides: boolean;
 	    rowTemplate: string;
 	    rowShowAvatar: boolean;
@@ -1829,6 +1847,8 @@ export namespace desktop {
 	        this.avatarStyle = source["avatarStyle"];
 	        this.multiSelectEnabled = source["multiSelectEnabled"];
 	        this.showSelectedCount = source["showSelectedCount"];
+	        this.selectAllScope = source["selectAllScope"];
+	        this.selectAllUnified = source["selectAllUnified"];
 	        this.sidebarIndentGuides = source["sidebarIndentGuides"];
 	        this.rowTemplate = source["rowTemplate"];
 	        this.rowShowAvatar = source["rowShowAvatar"];

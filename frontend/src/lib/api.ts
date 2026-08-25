@@ -557,6 +557,45 @@ export function search(req: SearchRequest): Promise<SearchResult> {
   return App.Search(new desktop.SearchRequestDTO(req))
 }
 
+// MessageIDs is every id a list matches. capped means the backend stopped at
+// its limit, so the selection is the newest ids rather than all of them.
+export interface MessageIDs {
+  ids: number[]
+  capped: boolean
+  matching: number
+}
+
+// messageIds returns every message id in a list, ignoring paging, for select
+// all. The list in the ui only holds the pages that were scrolled to, so
+// selecting a whole mailbox has to come from the query.
+export function messageIds(sel: Selection): Promise<MessageIDs> {
+  if (isDemoActive()) {
+    return Promise.resolve({ ids: [], capped: false, matching: 0 })
+  }
+  if (sel.kind === 'view') {
+    return App.MessageIDs(
+      new desktop.ListMessagesRequest({ kind: 'view', folderId: 0, view: sel.view, limit: 0, offset: 0 }),
+    )
+  }
+  if (sel.kind === 'savedView') {
+    return App.MessageIDs(
+      new desktop.ListMessagesRequest({ kind: 'savedView', folderId: 0, view: '', viewId: sel.viewId, limit: 0, offset: 0 }),
+    )
+  }
+  return App.MessageIDs(
+    new desktop.ListMessagesRequest({ kind: 'folder', folderId: sel.folderId, view: '', limit: 0, offset: 0 }),
+  )
+}
+
+// searchMessageIds is messageIds for a result set: every match of the current
+// search, ids only.
+export function searchMessageIds(req: SearchRequest): Promise<MessageIDs> {
+  if (isDemoActive()) {
+    return Promise.resolve({ ids: [], capped: false, matching: 0 })
+  }
+  return App.SearchMessageIDs(new desktop.SearchRequestDTO(req))
+}
+
 // saveAttachment prompts for a path and writes the file, returning the path or
 // an empty string if the user cancelled.
 export function saveAttachment(messageId: number, attachmentId: number): Promise<string> {
@@ -1037,6 +1076,8 @@ export const SettingKeys = {
   avatarSource: 'avatar_source',
   avatarStyle: 'avatar_style',
   multiSelectEnabled: 'multi_select_enabled',
+  selectAllScope: 'select_all_scope',
+  selectAllUnified: 'select_all_unified',
   showSelectedCount: 'show_selected_count',
   sidebarIndentGuides: 'sidebar_indent_guides',
   rowTemplate: 'row_template',

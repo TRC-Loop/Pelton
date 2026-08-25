@@ -48,6 +48,15 @@ const (
 	settingAvatarStyle    = "avatar_style"
 	settingMultiSelect    = "multi_select_enabled"
 	settingSelectedCount  = "show_selected_count"
+	// settingSelectAllScope is how far select-all reaches. The default offers
+	// the rest rather than taking it: a mailbox holds more than the pages that
+	// were scrolled to, and silently selecting all of it is not what a click on
+	// a checkbox looks like it does.
+	settingSelectAllScope = "select_all_scope"
+	// settingSelectAllUnified offers select-all in the unified views too. Off by
+	// default: those span every account, so "everything in this list" is a much
+	// bigger claim there than in one mailbox.
+	settingSelectAllUnified = "select_all_unified"
 	settingIndentGuides   = "sidebar_indent_guides"
 	settingRowTemplate    = "row_template"
 	settingRowAvatar      = "row_show_avatar"
@@ -221,6 +230,13 @@ type UIPrefsDTO struct {
 	// multi-select stays on.
 	MultiSelectEnabled bool `json:"multiSelectEnabled"`
 	ShowSelectedCount  bool `json:"showSelectedCount"`
+	// SelectAllScope is how far select-all reaches: "offer" selects the loaded
+	// messages and offers the rest, "all" takes the whole list at once, "loaded"
+	// stops at what is on screen.
+	SelectAllScope string `json:"selectAllScope"`
+	// SelectAllUnified offers select-all in the unified views as well. Off by
+	// default: a unified list spans every account.
+	SelectAllUnified bool `json:"selectAllUnified"`
 	// SidebarIndentGuides draws vertical guide lines for nested folders.
 	SidebarIndentGuides bool `json:"sidebarIndentGuides"`
 	// RowTemplate selects the message-list row layout: relaxed, comfortable,
@@ -395,6 +411,8 @@ func (a *App) GetUIPrefs() (UIPrefsDTO, error) {
 		AvatarStyle:         a.stringSetting(settingAvatarStyle, defaultAvatarStyle),
 		MultiSelectEnabled:  a.boolSetting(settingMultiSelect, true),
 		ShowSelectedCount:   a.boolSetting(settingSelectedCount, true),
+		SelectAllScope:      a.stringSetting(settingSelectAllScope, "offer"),
+		SelectAllUnified:    a.boolSetting(settingSelectAllUnified, false),
 		SidebarIndentGuides: a.boolSetting(settingIndentGuides, false),
 		RowTemplate:         a.stringSetting(settingRowTemplate, defaultRowTemplate),
 		RowShowAvatar:       a.boolSetting(settingRowAvatar, true),
