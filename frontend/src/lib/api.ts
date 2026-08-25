@@ -117,6 +117,8 @@ export function listAccounts(): Promise<Account[]> {
 export function updateAccount(req: {
   id: number
   displayName: string
+  localLabel: string
+  useLocalLabel: boolean
   username: string
   imapHost: string
   imapPort: number

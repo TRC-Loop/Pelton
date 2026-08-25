@@ -21,6 +21,7 @@
   import { refreshSidebar } from '../../stores/accounts'
   import { missingPassword, askForPassword, refreshMissingPasswords } from '../../stores/passwordprompt'
   import { errorMessage, toastError, pushAction } from '../../stores/toast'
+  import { accountLabel } from '../../lib/format'
   import type { Account, TLSMode } from '../../lib/types'
   import { t } from '../../lib/i18n'
 
@@ -107,6 +108,12 @@
     }
   }
 
+  function setUseLocalLabel(on: boolean): void {
+    if (draft) {
+      draft.useLocalLabel = on
+    }
+  }
+
   function setExportOnArchive(on: boolean): void {
     if (draft) {
       draft.exportOnArchive = on
@@ -166,6 +173,8 @@
       const updated = await updateAccount({
         id: draft.id,
         displayName: draft.displayName,
+        localLabel: draft.localLabel,
+        useLocalLabel: draft.useLocalLabel,
         username: draft.username,
         imapHost: draft.imapHost,
         imapPort: draft.imapPort,
@@ -252,8 +261,8 @@
     {#each accounts as account (account.id)}
       <li>
         <div class="who">
-          <span class="name">{account.displayName || account.email}</span>
-          {#if account.displayName}<span class="addr">{account.email}</span>{/if}
+          <span class="name">{accountLabel(account)}</span>
+          {#if accountLabel(account) !== account.email}<span class="addr">{account.email}</span>{/if}
         </div>
         {#if $missingPassword.has(account.id)}
           <button
@@ -290,11 +299,30 @@
     <div class="form">
       <label class="field">
         <span>
-          {$t('wizard.field.displayName')}
-          <InfoTip text={$t('mailboxes.displayNameHint')} />
+          {$t('wizard.field.fromName')}
+          <InfoTip text={$t('mailboxes.fromNameHint')} />
         </span>
         <input type="text" bind:value={draft.displayName} />
       </label>
+      <!-- the local label is the one that never leaves the machine, so it says
+           so, and switching it off keeps what was typed (#326). -->
+      <div class="toggle">
+        <span>{$t('mailboxes.localLabel.toggle')}</span>
+        <ToggleSwitch
+          checked={draft.useLocalLabel}
+          label={$t('mailboxes.localLabel.toggle')}
+          on:change={(e) => setUseLocalLabel(e.detail)}
+        />
+      </div>
+      {#if draft.useLocalLabel}
+        <label class="field">
+          <span>
+            {$t('wizard.field.localLabel')}
+            <InfoTip text={$t('mailboxes.localLabelHint')} />
+          </span>
+          <input type="text" bind:value={draft.localLabel} placeholder={draft.displayName || draft.email} />
+        </label>
+      {/if}
       <label class="field">
         <span>{$t('wizard.field.username')}</span>
         <input type="text" bind:value={draft.username} placeholder={draft.email} />

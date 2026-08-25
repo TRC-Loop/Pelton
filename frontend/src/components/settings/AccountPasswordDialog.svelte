@@ -17,6 +17,7 @@
   import { errorMessage, toastError, toastInfo } from '../../stores/toast'
   import { t } from '../../lib/i18n'
   import type { PasswordPromptResult } from '../../stores/passwordprompt'
+  import { accountLabel } from '../../lib/format'
   import type { Account } from '../../lib/types'
 
   /** The account being asked about, or null when the prompt is closed. */
@@ -37,10 +38,12 @@
   // that says which login is being asked for, so it is the part that must
   // never be the one dropped. The name comes along when there is one and it
   // adds something.
-  $: who =
-    account && account.displayName && account.displayName !== account.email
-      ? `${account.displayName} (${account.email})`
-      : (account?.email ?? '')
+  $: who = account ? namedAccount(account) : ''
+
+  function namedAccount(account: Account): string {
+    const label = accountLabel(account)
+    return label === account.email ? account.email : `${label} (${account.email})`
+  }
 
   $: if (account !== seededFor) {
     seededFor = account

@@ -17,14 +17,19 @@ import (
 
 // AccountDTO is non sensitive account metadata for the sidebar.
 type AccountDTO struct {
-	ID          int64  `json:"id"`
-	Email       string `json:"email"`
-	DisplayName string `json:"displayName"`
-	Username    string `json:"username"`
-	IMAPHost    string `json:"imapHost"`
-	IMAPPort    int    `json:"imapPort"`
-	SMTPHost    string `json:"smtpHost"`
-	SMTPPort    int    `json:"smtpPort"`
+	ID    int64  `json:"id"`
+	Email string `json:"email"`
+	// DisplayName goes out in the From header of mail sent from this account.
+	// LocalLabel is what the ui calls the mailbox instead, when UseLocalLabel is
+	// set, and is never sent anywhere.
+	DisplayName   string `json:"displayName"`
+	LocalLabel    string `json:"localLabel"`
+	UseLocalLabel bool   `json:"useLocalLabel"`
+	Username      string `json:"username"`
+	IMAPHost      string `json:"imapHost"`
+	IMAPPort      int    `json:"imapPort"`
+	SMTPHost      string `json:"smtpHost"`
+	SMTPPort      int    `json:"smtpPort"`
 	// Local marks the Local Folders account, which holds imported mail and has
 	// no server. The ui labels it and hides the server-side actions.
 	Local bool `json:"local"`
@@ -247,17 +252,19 @@ func validFolderRole(role string) bool {
 // toAccountDTO flattens a storage account.
 func toAccountDTO(a storage.Account) AccountDTO {
 	return AccountDTO{
-		ID:          a.ID,
-		Email:       a.Email,
-		DisplayName: a.DisplayName,
-		Username:    a.Username,
-		IMAPHost:    a.IMAPHost,
-		IMAPPort:    a.IMAPPort,
-		SMTPHost:    a.SMTPHost,
-		SMTPPort:    a.SMTPPort,
-		Local:       a.Local,
-		IMAPTLS:     effectiveIMAPTLS(a),
-		SMTPTLS:     effectiveSMTPTLS(a),
+		ID:            a.ID,
+		Email:         a.Email,
+		DisplayName:   a.DisplayName,
+		LocalLabel:    a.LocalLabel,
+		UseLocalLabel: a.UseLocalLabel,
+		Username:      a.Username,
+		IMAPHost:      a.IMAPHost,
+		IMAPPort:      a.IMAPPort,
+		SMTPHost:      a.SMTPHost,
+		SMTPPort:      a.SMTPPort,
+		Local:         a.Local,
+		IMAPTLS:       effectiveIMAPTLS(a),
+		SMTPTLS:       effectiveSMTPTLS(a),
 
 		ExportOnArchive:    a.ExportOnArchive,
 		ExportDir:          a.ExportDir,

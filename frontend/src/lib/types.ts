@@ -8,7 +8,13 @@
 export interface Account {
   id: number
   email: string
+  // the name recipients see in the From header of mail sent from this account.
   displayName: string
+  // what this app calls the mailbox instead, when useLocalLabel is set. it is
+  // never sent anywhere, and stays stored when the toggle goes off. use
+  // accountLabel() rather than reading these two directly.
+  localLabel: string
+  useLocalLabel: boolean
   // the login name when it differs from the email; empty logs in with email.
   username: string
   imapHost: string
@@ -822,7 +828,10 @@ export interface Discovered {
 // password auth; provider + clientId are set for oauth (per-user PKCE).
 export interface AddAccountRequest {
   email: string
+  // the From name recipients see, and the local-only label for the sidebar.
   displayName: string
+  localLabel: string
+  useLocalLabel: boolean
   // the login name when it differs from the email; empty logs in with email.
   username: string
   imapHost: string

@@ -200,7 +200,9 @@ func (m *mcpMailbox) ListAccounts(ctx context.Context) ([]mcpserver.Account, err
 	}
 	out := make([]mcpserver.Account, 0, len(accts))
 	for _, a := range accts {
-		out = append(out, mcpserver.Account{ID: a.ID, Email: a.Email, DisplayName: a.DisplayName})
+		// an agent runs on this machine, so it gets the name the user calls the
+		// mailbox rather than the one recipients see.
+		out = append(out, mcpserver.Account{ID: a.ID, Email: a.Email, DisplayName: a.Label()})
 	}
 	return out, nil
 }

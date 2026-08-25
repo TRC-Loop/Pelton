@@ -103,11 +103,16 @@ func (a *App) TestConnection(req TestConnectionRequest) error {
 // AddAccountRequest is the metadata the wizard collected. For password auth
 // Password is set; for oauth Provider and ClientID are set and the flow runs.
 type AddAccountRequest struct {
-	Email       string `json:"email"`
-	DisplayName string `json:"displayName"`
+	Email string `json:"email"`
+	// DisplayName is the From name recipients see. LocalLabel is what this app
+	// calls the mailbox instead when UseLocalLabel is set, and goes nowhere near
+	// an outgoing message.
+	DisplayName   string `json:"displayName"`
+	LocalLabel    string `json:"localLabel"`
+	UseLocalLabel bool   `json:"useLocalLabel"`
 	// Username is the login name when it differs from the email; empty logs in
 	// with Email.
-	Username    string `json:"username"`
+	Username string `json:"username"`
 	IMAPHost string `json:"imapHost"`
 	IMAPPort int    `json:"imapPort"`
 	SMTPHost string `json:"smtpHost"`
@@ -179,15 +184,17 @@ func (a *App) createAccount(req AddAccountRequest, secret credentials.Secret) (A
 		return AccountDTO{}, errUnknownTLSMode
 	}
 	account := &storage.Account{
-		Email:       req.Email,
-		DisplayName: req.DisplayName,
-		Username:    req.Username,
-		IMAPHost:    req.IMAPHost,
-		IMAPPort:    req.IMAPPort,
-		SMTPHost:    req.SMTPHost,
-		SMTPPort:    req.SMTPPort,
-		IMAPTLS:     req.IMAPTLS,
-		SMTPTLS:     req.SMTPTLS,
+		Email:         req.Email,
+		DisplayName:   req.DisplayName,
+		LocalLabel:    req.LocalLabel,
+		UseLocalLabel: req.UseLocalLabel,
+		Username:      req.Username,
+		IMAPHost:      req.IMAPHost,
+		IMAPPort:      req.IMAPPort,
+		SMTPHost:      req.SMTPHost,
+		SMTPPort:      req.SMTPPort,
+		IMAPTLS:       req.IMAPTLS,
+		SMTPTLS:       req.SMTPTLS,
 	}
 	id, err := a.store.CreateAccount(a.ctx, account)
 	if err != nil {

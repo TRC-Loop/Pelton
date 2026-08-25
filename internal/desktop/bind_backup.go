@@ -60,14 +60,20 @@ type whitelistBackup struct {
 // never in plain text, and never using the same password as anything else in
 // Pelton (there's no vault-unlock password to reuse).
 type mailboxBackup struct {
-	Email       string         `json:"email"`
-	DisplayName string         `json:"displayName"`
-	Username    string         `json:"username,omitempty"`
-	IMAPHost    string         `json:"imapHost"`
-	IMAPPort    int            `json:"imapPort"`
-	SMTPHost    string         `json:"smtpHost"`
-	SMTPPort    int            `json:"smtpPort"`
-	Secret      *encryptedBlob `json:"secret,omitempty"`
+	Email       string `json:"email"`
+	DisplayName string `json:"displayName"`
+	// LocalLabel and UseLocalLabel are the mailbox's local name and whether it
+	// is in use. A backup is the user's own copy, so restoring it puts the
+	// mailboxes back under the names they had here. Older backups have neither
+	// and restore under the display name, which is what they meant.
+	LocalLabel    string         `json:"localLabel,omitempty"`
+	UseLocalLabel bool           `json:"useLocalLabel,omitempty"`
+	Username      string         `json:"username,omitempty"`
+	IMAPHost      string         `json:"imapHost"`
+	IMAPPort      int            `json:"imapPort"`
+	SMTPHost      string         `json:"smtpHost"`
+	SMTPPort      int            `json:"smtpPort"`
+	Secret        *encryptedBlob `json:"secret,omitempty"`
 }
 
 // signatureBackup is one reusable header/footer block as exported.
@@ -194,13 +200,15 @@ func (a *App) exportMailboxes(credentialPassword string) ([]mailboxBackup, error
 			continue
 		}
 		m := mailboxBackup{
-			Email:       acc.Email,
-			DisplayName: acc.DisplayName,
-			Username:    acc.Username,
-			IMAPHost:    acc.IMAPHost,
-			IMAPPort:    acc.IMAPPort,
-			SMTPHost:    acc.SMTPHost,
-			SMTPPort:    acc.SMTPPort,
+			Email:         acc.Email,
+			DisplayName:   acc.DisplayName,
+			LocalLabel:    acc.LocalLabel,
+			UseLocalLabel: acc.UseLocalLabel,
+			Username:      acc.Username,
+			IMAPHost:      acc.IMAPHost,
+			IMAPPort:      acc.IMAPPort,
+			SMTPHost:      acc.SMTPHost,
+			SMTPPort:      acc.SMTPPort,
 		}
 		if credentialPassword != "" {
 			secret, err := credentials.Load(acc.ID)
@@ -426,13 +434,15 @@ func (a *App) importMailboxes(mailboxes []mailboxBackup, credentialPassword stri
 			continue
 		}
 		account := storage.Account{
-			Email:       m.Email,
-			DisplayName: m.DisplayName,
-			Username:    m.Username,
-			IMAPHost:    m.IMAPHost,
-			IMAPPort:    m.IMAPPort,
-			SMTPHost:    m.SMTPHost,
-			SMTPPort:    m.SMTPPort,
+			Email:         m.Email,
+			DisplayName:   m.DisplayName,
+			LocalLabel:    m.LocalLabel,
+			UseLocalLabel: m.UseLocalLabel,
+			Username:      m.Username,
+			IMAPHost:      m.IMAPHost,
+			IMAPPort:      m.IMAPPort,
+			SMTPHost:      m.SMTPHost,
+			SMTPPort:      m.SMTPPort,
 		}
 		id, err := a.store.CreateAccount(a.ctx, &account)
 		if err != nil {

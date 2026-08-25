@@ -14,6 +14,7 @@
   import { missingPassword, askForPassword } from '../../stores/passwordprompt'
   import { failedSyncs, showSyncFailure } from '../../stores/syncfailures'
   import { reorderFolders } from '../../lib/api'
+  import { accountLabel } from '../../lib/format'
   import { toastError, errorMessage } from '../../stores/toast'
   import type { Account, Folder } from '../../lib/types'
   import { t } from '../../lib/i18n'
@@ -41,14 +42,14 @@
     await refreshSidebar()
   }
 
-  // the header shows the display name, or the email when the user prefers it (or
-  // when there is no display name to show). Local Folders has no real address,
-  // so it is named rather than addressed.
+  // the header shows what the user calls the mailbox, or the email when they
+  // prefer it. Local Folders has no real address, so it is named rather than
+  // addressed.
   $: label = account.local
     ? $t('sidebar.localFolders')
     : $prefs.showAccountEmail
       ? account.email
-      : account.displayName || account.email
+      : accountLabel(account)
 
   // an account with nothing in the keyring cannot sync at all. The prompt can be
   // dismissed (#290), so this marker is what is left saying so.

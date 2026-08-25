@@ -164,6 +164,29 @@ export function displayName(name: string, email: string): string {
   return name.trim() || email
 }
 
+// AccountNames is the part of an Account that names it. Taking the fields
+// rather than the whole account keeps this usable from the wizard, which is
+// still building one.
+export interface AccountNames {
+  email: string
+  displayName: string
+  localLabel: string
+  useLocalLabel: boolean
+}
+
+/**
+ * accountLabel returns what to call a mailbox in this app: the local label when
+ * one is set and switched on, otherwise the From name, otherwise the address.
+ * The From name is what recipients see, so anything on screen that is not the
+ * outgoing identity should go through here.
+ */
+export function accountLabel(account: AccountNames): string {
+  if (account.useLocalLabel && account.localLabel.trim()) {
+    return account.localLabel.trim()
+  }
+  return account.displayName.trim() || account.email
+}
+
 // TextSegment is one piece of linkified plain text: either literal text to
 // render as-is, or a url/mailto to render as a clickable link.
 export type TextSegment = { text: string; href?: string }

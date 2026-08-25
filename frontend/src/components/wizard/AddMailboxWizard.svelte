@@ -10,6 +10,7 @@
   import { IconX, IconArrowLeft, IconCheck, IconArrowRight, IconMailbox, IconPlus } from '@tabler/icons-svelte'
   import WizardProviders from './WizardProviders.svelte'
   import Spinner from '../common/Spinner.svelte'
+  import ToggleSwitch from '../common/ToggleSwitch.svelte'
   import { BrowserOpenURL } from '../../../wailsjs/runtime/runtime'
   import { discoverConfig, testConnection, addPasswordAccount, addOAuthAccount, listFolders, setFolderSyncExcluded, startAccountSync } from '../../lib/api'
   import { errorMessage, toastError } from '../../stores/toast'
@@ -50,6 +51,8 @@
     return {
       email: '',
       displayName: '',
+      localLabel: '',
+      useLocalLabel: false,
       username: '',
       imapHost: '',
       imapPort: 993,
@@ -346,11 +349,28 @@
         </label>
         <label class="field">
           <span>
-            {$t('wizard.field.displayName')}
-            <InfoTip text={$t('mailboxes.displayNameHint')} />
+            {$t('wizard.field.fromName')}
+            <InfoTip text={$t('mailboxes.fromNameHint')} />
           </span>
           <input type="text" bind:value={draft.displayName} placeholder={$t('wizard.field.displayNamePlaceholder')} />
         </label>
+        <div class="toggle">
+          <span>{$t('mailboxes.localLabel.toggle')}</span>
+          <ToggleSwitch
+            checked={draft.useLocalLabel}
+            label={$t('mailboxes.localLabel.toggle')}
+            on:change={(e) => (draft.useLocalLabel = e.detail)}
+          />
+        </div>
+        {#if draft.useLocalLabel}
+          <label class="field">
+            <span>
+              {$t('wizard.field.localLabel')}
+              <InfoTip text={$t('mailboxes.localLabelHint')} />
+            </span>
+            <input type="text" bind:value={draft.localLabel} placeholder={draft.displayName || draft.email} />
+          </label>
+        {/if}
         <label class="field">
           <span>{$t('wizard.field.password')}</span>
           <input
@@ -436,11 +456,28 @@
         </label>
         <label class="field">
           <span>
-            {$t('wizard.field.displayName')}
-            <InfoTip text={$t('mailboxes.displayNameHint')} />
+            {$t('wizard.field.fromName')}
+            <InfoTip text={$t('mailboxes.fromNameHint')} />
           </span>
           <input type="text" bind:value={draft.displayName} placeholder={$t('wizard.field.displayNamePlaceholder')} />
         </label>
+        <div class="toggle">
+          <span>{$t('mailboxes.localLabel.toggle')}</span>
+          <ToggleSwitch
+            checked={draft.useLocalLabel}
+            label={$t('mailboxes.localLabel.toggle')}
+            on:change={(e) => (draft.useLocalLabel = e.detail)}
+          />
+        </div>
+        {#if draft.useLocalLabel}
+          <label class="field">
+            <span>
+              {$t('wizard.field.localLabel')}
+              <InfoTip text={$t('mailboxes.localLabelHint')} />
+            </span>
+            <input type="text" bind:value={draft.localLabel} placeholder={draft.displayName || draft.email} />
+          </label>
+        {/if}
         <label class="field">
           <span>{$t('wizard.field.oauthClientId')}</span>
           <input type="text" bind:value={draft.clientId} placeholder="xxxxx.apps.googleusercontent.com" />
@@ -765,6 +802,18 @@
 
   .servers .field.narrow {
     flex: 0 0 88px;
+  }
+
+  /* the switch that reveals the local label field, laid out like a field row
+     so it sits in the same rhythm as the inputs around it. */
+  .toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    margin-bottom: var(--space-3);
+    font-size: var(--fz-label);
+    color: var(--text-tertiary);
   }
 
   /* a lightweight text toggle that reveals the advanced settings. */

@@ -14,9 +14,17 @@ var ErrAccountNotFound = errors.New("storage: account not found")
 // Account is non sensitive account metadata. Passwords and tokens are never
 // stored here, they live in the os keyring keyed by this row's ID.
 type Account struct {
-	ID          int64
-	Email       string
+	ID    int64
+	Email string
+	// DisplayName is the outward identity: the name recipients see next to the
+	// address on mail sent from this account. It never doubles as the local
+	// name for the mailbox, LocalLabel does that.
 	DisplayName string
+	// LocalLabel is what this app calls the mailbox, shown wherever the account
+	// is named locally and sent nowhere. UseLocalLabel is whether it applies;
+	// switching it off keeps the label stored rather than discarding it.
+	LocalLabel    string
+	UseLocalLabel bool
 	// Username is the login name when it differs from the email address. Empty
 	// means authenticate with Email.
 	Username string
@@ -56,6 +64,17 @@ type Account struct {
 	Local bool
 }
 
+// Label returns the name to show for this account in the app: the local label
+// when there is one and it is switched on, the outward display name otherwise.
+// An account with neither returns an empty string and the caller falls back to
+// the address.
+func (a Account) Label() string {
+	if a.UseLocalLabel && a.LocalLabel != "" {
+		return a.LocalLabel
+	}
+	return a.DisplayName
+}
+
 // LocalAccountEmail is the reserved address of the Local Folders account. It is
 // not a routable address; it exists so the account row has the stable, unique
 // identifier every other lookup in the app keys off.
@@ -70,7 +89,7 @@ const LocalAccountName = "Local Folders"
 const accountColumns = `id, email, display_name, username, imap_host, imap_port,
        smtp_host, smtp_port, imap_tls, smtp_tls, created_at, position, is_local,
        export_on_archive, export_dir, export_subfolders, export_name_template,
-       pgp_default, password_prompt_dismissed`
+       pgp_default, password_prompt_dismissed, local_label, use_local_label`
 
 // CreateAccount inserts an account and returns its new id. CreatedAt is set to
 // now if the caller left it zero.
@@ -81,11 +100,12 @@ func (d *DB) CreateAccount(ctx context.Context, a *Account) (int64, error) {
 	}
 
 	const query = `
-INSERT INTO accounts (email, display_name, username, imap_host, imap_port, smtp_host, smtp_port, imap_tls, smtp_tls, created_at, is_local)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+INSERT INTO accounts (email, display_name, username, imap_host, imap_port, smtp_host, smtp_port, imap_tls, smtp_tls, created_at, is_local, local_label, use_local_label)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 	res, err := d.sql.ExecContext(ctx, query,
 		a.Email, a.DisplayName, a.Username, a.IMAPHost, a.IMAPPort, a.SMTPHost, a.SMTPPort,
-		a.IMAPTLS, a.SMTPTLS, formatTime(created), boolToInt(a.Local))
+		a.IMAPTLS, a.SMTPTLS, formatTime(created), boolToInt(a.Local),
+		a.LocalLabel, boolToInt(a.UseLocalLabel))
 	if err != nil {
 		return 0, fmt.Errorf("storage: insert account %q: %w", a.Email, err)
 	}
@@ -165,11 +185,11 @@ func (d *DB) UpdateAccount(ctx context.Context, a *Account) error {
 	const query = `
 UPDATE accounts
 SET email = ?, display_name = ?, username = ?, imap_host = ?, imap_port = ?, smtp_host = ?, smtp_port = ?,
-    imap_tls = ?, smtp_tls = ?
+    imap_tls = ?, smtp_tls = ?, local_label = ?, use_local_label = ?
 WHERE id = ?`
 	res, err := d.sql.ExecContext(ctx, query,
 		a.Email, a.DisplayName, a.Username, a.IMAPHost, a.IMAPPort, a.SMTPHost, a.SMTPPort,
-		a.IMAPTLS, a.SMTPTLS, a.ID)
+		a.IMAPTLS, a.SMTPTLS, a.LocalLabel, boolToInt(a.UseLocalLabel), a.ID)
 	if err != nil {
 		return fmt.Errorf("storage: update account %d: %w", a.ID, err)
 	}
@@ -240,15 +260,17 @@ func scanAccount(row rowScanner) (*Account, error) {
 		local     int
 		exportOn  int
 		dismissed int
+		useLabel  int
 	)
 	if err := row.Scan(&a.ID, &a.Email, &a.DisplayName, &a.Username, &a.IMAPHost, &a.IMAPPort,
 		&a.SMTPHost, &a.SMTPPort, &a.IMAPTLS, &a.SMTPTLS, &created, &a.Position, &local,
 		&exportOn, &a.ExportDir, &a.ExportSubfolders, &a.ExportNameTemplate,
-		&a.PGPDefault, &dismissed); err != nil {
+		&a.PGPDefault, &dismissed, &a.LocalLabel, &useLabel); err != nil {
 		return nil, err
 	}
 	a.ExportOnArchive = exportOn != 0
 	a.PasswordPromptDismissed = dismissed != 0
+	a.UseLocalLabel = useLabel != 0
 	t, err := parseTime(created)
 	if err != nil {
 		return nil, err

@@ -16,6 +16,7 @@
   import { allAccounts, createProfile, updateProfile, deleteProfile } from '../../lib/api'
   import { errorMessage, toastError } from '../../stores/toast'
   import { t } from '../../lib/i18n'
+  import { accountLabel } from '../../lib/format'
   import type { Account, Profile, ProfileDraft, ProfileStart } from '../../lib/types'
 
   // the areas a profile can own or share, in the order the form lists them.
@@ -163,10 +164,11 @@
     }
   }
 
-  function accountLabel(account: Account): string {
-    return account.displayName && account.displayName !== account.email
-      ? `${account.displayName} (${account.email})`
-      : account.email
+  // the address is what says which mailbox a row is, so it is always there; the
+  // name the user gave it comes along when it adds something.
+  function accountRow(account: Account): string {
+    const label = accountLabel(account)
+    return label === account.email ? account.email : `${label} (${account.email})`
   }
 </script>
 
@@ -281,7 +283,7 @@
               checked={draft.accountIds.includes(account.id)}
               on:change={() => toggleAccount(account.id)}
             />
-            <span>{accountLabel(account)}</span>
+            <span>{accountRow(account)}</span>
           </label>
         {/each}
       </div>
