@@ -525,7 +525,7 @@
 <!-- the import flow is the same modal Settings uses, code-split so the wizard
      does not carry it unless the user asks for it. -->
 {#if showImport}
-  {#await import('../settings/ImportClientModal.svelte') then m}
+  {#await import('../settings/ImportThunderbirdModal.svelte') then m}
     <svelte:component this={m.default} on:close={() => (showImport = false)} />
   {/await}
 {/if}
