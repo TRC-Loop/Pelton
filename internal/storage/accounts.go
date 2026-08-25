@@ -86,10 +86,24 @@ const LocalAccountName = "Local Folders"
 
 // accountColumns is the select list every account query shares, in the order
 // scanAccount reads them.
-const accountColumns = `id, email, display_name, username, imap_host, imap_port,
-       smtp_host, smtp_port, imap_tls, smtp_tls, created_at, position, is_local,
-       export_on_archive, export_dir, export_subfolders, export_name_template,
-       pgp_default, password_prompt_dismissed, local_label, use_local_label`
+// The sidebar rank comes from the layout join rather than the account row: the
+// order of the sections belongs to a profile (#325), which is also the only
+// place that can see the whole list.
+const accountColumns = `a.id, a.email, a.display_name, a.username, a.imap_host, a.imap_port,
+       a.smtp_host, a.smtp_port, a.imap_tls, a.smtp_tls, a.created_at,
+       coalesce(o.position, 0), a.is_local,
+       a.export_on_archive, a.export_dir, a.export_subfolders, a.export_name_template,
+       a.pgp_default, a.password_prompt_dismissed, a.local_label, a.use_local_label`
+
+// accountFrom joins an account to the active profile's section order. Every
+// query using accountColumns takes the layout profile id as its first argument.
+const accountFrom = `
+FROM accounts a
+LEFT JOIN profile_account_order o ON o.account_id = a.id AND o.profile_id = ?`
+
+// accountOrder puts the sections the user arranged first, then the rest by id,
+// so an install that never reordered keeps creation order.
+const accountOrder = `ORDER BY coalesce(o.position, 0) = 0, o.position, a.id`
 
 // CreateAccount inserts an account and returns its new id. CreatedAt is set to
 // now if the caller left it zero.
@@ -126,9 +140,9 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 // GetAccount returns one account by id, or ErrAccountNotFound.
 func (d *DB) GetAccount(ctx context.Context, id int64) (*Account, error) {
 	const query = `
-SELECT ` + accountColumns + `
-FROM accounts WHERE id = ?`
-	a, err := scanAccount(d.sql.QueryRowContext(ctx, query, id))
+SELECT ` + accountColumns + accountFrom + `
+WHERE a.id = ?`
+	a, err := scanAccount(d.sql.QueryRowContext(ctx, query, d.layoutProfile(), id))
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrAccountNotFound
 	}
@@ -142,11 +156,10 @@ FROM accounts WHERE id = ?`
 // reordered first, in that order, then the rest by id.
 func (d *DB) ListAccounts(ctx context.Context) ([]Account, error) {
 	const query = `
-SELECT ` + accountColumns + `
-FROM accounts
-WHERE id IN (SELECT account_id FROM profile_accounts WHERE profile_id = ?)
-ORDER BY position = 0, position, id`
-	return d.listAccounts(ctx, query, d.ScopedProfileID())
+SELECT ` + accountColumns + accountFrom + `
+WHERE a.id IN (SELECT account_id FROM profile_accounts WHERE profile_id = ?)
+` + accountOrder
+	return d.listAccounts(ctx, query, d.layoutProfile(), d.ScopedProfileID())
 }
 
 // ListAllAccounts returns every account on the install, whether or not the
@@ -154,9 +167,9 @@ ORDER BY position = 0, position, id`
 // this; everything else works with what the profile can see.
 func (d *DB) ListAllAccounts(ctx context.Context) ([]Account, error) {
 	const query = `
-SELECT ` + accountColumns + `
-FROM accounts ORDER BY position = 0, position, id`
-	return d.listAccounts(ctx, query)
+SELECT ` + accountColumns + accountFrom + `
+` + accountOrder
+	return d.listAccounts(ctx, query, d.layoutProfile())
 }
 
 func (d *DB) listAccounts(ctx context.Context, query string, args ...any) ([]Account, error) {
@@ -245,7 +258,11 @@ func (d *DB) SetAccountPasswordPromptDismissed(ctx context.Context, id int64, di
 // transaction. Accounts not listed keep their current position. Positions start
 // at 1, since 0 means "never reordered".
 func (d *DB) SetAccountPositions(ctx context.Context, orderedIDs []int64) error {
-	return d.setPositions(ctx, `UPDATE accounts SET position = ? WHERE id = ?`, orderedIDs, "accounts")
+	return d.setLayoutPositions(ctx, `
+INSERT INTO profile_account_order (profile_id, account_id, position)
+VALUES (?1, ?2, ?3)
+ON CONFLICT(profile_id, account_id) DO UPDATE SET position = excluded.position`,
+		orderedIDs, "accounts")
 }
 
 // rowScanner is satisfied by both *sql.Row and *sql.Rows.

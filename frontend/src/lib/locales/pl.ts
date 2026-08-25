@@ -840,6 +840,7 @@ const pl: Record<string, string> = {
   'profiles.area.settings': 'Ustawienia',
   'profiles.area.signatures': 'Podpisy',
   'profiles.area.views': 'Zapisane widoki',
+  'profiles.area.layout': 'Układ panelu bocznego',
   'profiles.start.share': 'Współdziel',
   'profiles.start.copy': 'Kopiuj',
   'profiles.start.fresh': 'Puste',

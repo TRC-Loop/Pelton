@@ -20,7 +20,7 @@
   import type { Account, Profile, ProfileDraft, ProfileStart } from '../../lib/types'
 
   // the areas a profile can own or share, in the order the form lists them.
-  const areas = ['settings', 'signatures', 'views'] as const
+  const areas = ['settings', 'signatures', 'views', 'layout'] as const
   type Area = (typeof areas)[number]
 
   const starts: ProfileStart[] = ['share', 'copy', 'fresh']
@@ -68,6 +68,9 @@
       startSettings: 'copy',
       startSignatures: 'fresh',
       startViews: 'fresh',
+      // a new working context arranges its own sidebar, but starting from the
+      // arrangement you already have beats starting from nothing.
+      startLayout: 'copy',
     })
   }
 
@@ -83,6 +86,7 @@
       startSettings: profile.shareSettings ? 'share' : 'fresh',
       startSignatures: profile.shareSignatures ? 'share' : 'fresh',
       startViews: profile.shareViews ? 'share' : 'fresh',
+      startLayout: profile.shareLayout ? 'share' : 'fresh',
     })
   }
 
@@ -105,8 +109,10 @@
       draft.startSettings = value
     } else if (area === 'signatures') {
       draft.startSignatures = value
-    } else {
+    } else if (area === 'views') {
       draft.startViews = value
+    } else {
+      draft.startLayout = value
     }
   }
 
@@ -114,7 +120,13 @@
     if (!draft) {
       return 'fresh'
     }
-    return area === 'settings' ? draft.startSettings : area === 'signatures' ? draft.startSignatures : draft.startViews
+    if (area === 'settings') {
+      return draft.startSettings
+    }
+    if (area === 'signatures') {
+      return draft.startSignatures
+    }
+    return area === 'views' ? draft.startViews : draft.startLayout
   }
 
   // the row at the top of the form: one click to put every area on the same

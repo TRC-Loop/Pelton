@@ -55,6 +55,9 @@ type ProfileDTO struct {
 	ShareSettings   bool `json:"shareSettings"`
 	ShareSignatures bool `json:"shareSignatures"`
 	ShareViews      bool `json:"shareViews"`
+	// ShareLayout links the sidebar layout to main: pinned folders and the order
+	// of folders and account sections.
+	ShareLayout bool `json:"shareLayout"`
 	// AccountIDs are the accounts this profile shows.
 	AccountIDs []int64 `json:"accountIds"`
 }
@@ -74,6 +77,7 @@ type ProfileRequest struct {
 	StartSettings   string `json:"startSettings"`
 	StartSignatures string `json:"startSignatures"`
 	StartViews      string `json:"startViews"`
+	StartLayout     string `json:"startLayout"`
 }
 
 // ListProfiles returns every profile on the install, main first.
@@ -131,6 +135,7 @@ func (a *App) CreateProfile(req ProfileRequest) (ProfileDTO, error) {
 		ShareSettings:   req.StartSettings == startShare,
 		ShareSignatures: req.StartSignatures == startShare,
 		ShareViews:      req.StartViews == startShare,
+		ShareLayout:     req.StartLayout == startShare,
 	}
 	if _, err := a.store.CreateProfile(a.ctx, &profile); err != nil {
 		return ProfileDTO{}, err
@@ -156,6 +161,7 @@ func (a *App) copyStartingRows(mainID, profileID int64, req ProfileRequest) erro
 		{req.StartSettings, a.store.CopyProfileSettings},
 		{req.StartSignatures, a.store.CopyProfileSignatures},
 		{req.StartViews, a.store.CopyProfileViews},
+		{req.StartLayout, a.store.CopyProfileLayout},
 	}
 	for _, c := range copies {
 		if c.mode != startCopy {
@@ -192,6 +198,7 @@ func (a *App) UpdateProfile(req ProfileRequest) (ProfileDTO, error) {
 		profile.ShareSettings = req.StartSettings == startShare
 		profile.ShareSignatures = req.StartSignatures == startShare
 		profile.ShareViews = req.StartViews == startShare
+		profile.ShareLayout = req.StartLayout == startShare
 	}
 	if err := a.store.UpdateProfile(a.ctx, *profile); err != nil {
 		return ProfileDTO{}, err
@@ -318,6 +325,7 @@ func (a *App) toProfileDTO(p storage.Profile) (ProfileDTO, error) {
 		ShareSettings:   p.ShareSettings,
 		ShareSignatures: p.ShareSignatures,
 		ShareViews:      p.ShareViews,
+		ShareLayout:     p.ShareLayout,
 		AccountIDs:      accounts,
 	}, nil
 }

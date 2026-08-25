@@ -996,6 +996,9 @@ export interface Profile {
   shareSettings: boolean
   shareSignatures: boolean
   shareViews: boolean
+  // the sidebar layout: which folders are pinned, and the order of folders and
+  // account sections.
+  shareLayout: boolean
   accountIds: number[]
 }
 
@@ -1012,4 +1015,5 @@ export interface ProfileDraft {
   startSettings: ProfileStart
   startSignatures: ProfileStart
   startViews: ProfileStart
+  startLayout: ProfileStart
 }

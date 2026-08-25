@@ -842,6 +842,7 @@ const fr: Record<string, string> = {
   'profiles.area.settings': 'Réglages',
   'profiles.area.signatures': 'Signatures',
   'profiles.area.views': 'Vues enregistrées',
+  'profiles.area.layout': 'Disposition de la barre latérale',
   'profiles.start.share': 'Partager',
   'profiles.start.copy': 'Copier',
   'profiles.start.fresh': 'Vierge',
