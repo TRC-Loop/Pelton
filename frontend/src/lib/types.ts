@@ -408,6 +408,10 @@ export interface UIPrefs {
   multiSelectEnabled: boolean
   // showSelectedCount toggles the "N selected" count text in the selection bar.
   showSelectedCount: boolean
+  // selectAllScope is how far select-all reaches: 'offer' selects the loaded
+  // messages and offers the rest, 'all' takes the whole list at once, 'loaded'
+  // stops at what is loaded.
+  selectAllScope: SelectAllScope
   // sidebarIndentGuides draws vertical guide lines for nested folders.
   sidebarIndentGuides: boolean
   // rowTemplate selects the list row layout: relaxed, comfortable, compact, single.
@@ -894,6 +898,7 @@ export type EditorMode = 'plaintext' | 'markdown' | 'wysiwyg'
 // theme and density preference values.
 export type ThemePref = 'system' | 'light' | 'dark' | 'schedule'
 export type DensityPref = 'compact' | 'medium' | 'luxe'
+export type SelectAllScope = 'offer' | 'all' | 'loaded'
 
 // Selection identifies what the message list is currently showing: a unified
 // cross-account view, a single account folder, or a user-defined saved View

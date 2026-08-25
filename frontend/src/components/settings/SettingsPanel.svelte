@@ -60,6 +60,7 @@
     setAvatarSource,
     setAvatarStyle,
     setMultiSelectEnabled,
+    setSelectAllScope,
     setShowSelectedCount,
     setSidebarIndentGuides,
     setShowUnsyncedFolder,
@@ -115,7 +116,7 @@
   import { downloadProgress } from '../../stores/progress'
   import { toastInfo, toastError, errorMessage } from '../../stores/toast'
   import { t } from '../../lib/i18n'
-  import type { ThemePref, DensityPref, EditorMode, ViewsPlacement, CloseAction, LogLevel, LogStatus } from '../../lib/types'
+  import type { ThemePref, DensityPref, EditorMode, ViewsPlacement, CloseAction, LogLevel, LogStatus, SelectAllScope } from '../../lib/types'
 
   let editorModeOptions: { key: EditorMode; label: string }[] = []
   $: editorModeOptions = [
@@ -198,6 +199,7 @@
     { cat: 'display', label: $t('settingsPanel.label.timeFormat'), kw: 'clock 24 hour' },
     { cat: 'display', label: $t('settingsPanel.label.bodyFont'), kw: 'font' },
     { cat: 'display', label: $t('settingsPanel.toggle.senderFonts'), kw: 'font email typeface sender' },
+    { cat: 'list', label: $t('settingsPanel.label.selectAllScope'), kw: 'select all bulk selection' },
     { cat: 'display', label: $t('settingsPanel.label.uiFont'), kw: 'font interface' },
     { cat: 'display', label: $t('settingsPanel.label.monoFont'), kw: 'font monospace code' },
     { cat: 'display', label: $t('settingsPanel.label.charsetFallback'), kw: 'encoding charset unicode gibberish mojibake utf8 latin' },
@@ -437,6 +439,9 @@
     return translated === lookup ? fallback : translated
   }
 
+  function onSelectAllScope(event: Event): void {
+    setSelectAllScope((event.currentTarget as HTMLSelectElement).value as SelectAllScope)
+  }
   function onBodyFont(event: Event): void {
     setBodyFont((event.currentTarget as HTMLSelectElement).value)
   }
@@ -1044,6 +1049,21 @@
               on:change={(e) => setShowSelectedCount(e.detail)}
             />
           </div>
+
+          <div class="row" class:disabled={!$prefs.multiSelectEnabled}>
+            <span class="row-label">{$t('settingsPanel.label.selectAllScope')}</span>
+            <select
+              class="select"
+              value={$prefs.selectAllScope}
+              disabled={!$prefs.multiSelectEnabled}
+              on:change={onSelectAllScope}
+            >
+              <option value="offer">{$t('settingsPanel.selectAllScope.offer')}</option>
+              <option value="all">{$t('settingsPanel.selectAllScope.all')}</option>
+              <option value="loaded">{$t('settingsPanel.selectAllScope.loaded')}</option>
+            </select>
+          </div>
+          <p class="hint">{$t('settingsPanel.hint.selectAllScope')}</p>
 
           <h4 class="subhead">{$t('settingsPanel.category.sidebar')}</h4>
           <div class="toggle" title={$t('settingsPanel.hint.indentGuides')}>

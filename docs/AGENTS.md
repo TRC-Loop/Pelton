@@ -39,6 +39,10 @@ Status bar shows a progress bar while a sync or a backfill runs, counting messag
 
 Mail that declares no charset, or one nothing knows, is detected from the bytes (ICU port, github.com/gogs/chardet) and converted, so nothing invalid reaches the database or the search index. Applies to bodies and to rfc 2047 encoded-words in headers. Settings > Display > "Text encoding fallback": `auto` (default, detect) or a fixed encoding name. Messages read this way carry a badge in the reading pane. Mail cached before this existed is marked and refetched from the server during sync, a few per folder per sync.
 
+## Select all
+
+A checkbox above the message list, and Cmd/Ctrl+A while the list has focus. The list only holds the pages that were scrolled to, so how far it reaches is a setting: Settings > List > "Select all selects", one of "the loaded messages, then offer the rest" (default), "everything in the current list", "only the loaded messages". The default selects what is loaded and offers the rest in a banner over the list. Widening asks first above 500 messages and is capped at 50,000, which it says when it hits. It follows whatever the list shows: a folder, a unified view, a saved view or a search result set.
+
 ## Failed mailbox sync
 
 A sync run used to report success as long as one account got through, so a mailbox that had stopped syncing was invisible. Each account's last outcome is stored (account_sync_state), so it survives a restart. An account whose last sync failed gets a cloud-off mark next to it in the sidebar, and the status bar says which mailbox failed instead of "Synced". Both open the same dialog: what went wrong (refused password, unreachable server, no password stored, or something else), the server's own words, when the mailbox last synced through, and a button to try that one account again. A mailbox with no password stored keeps its existing warning triangle instead, since that is a different question.

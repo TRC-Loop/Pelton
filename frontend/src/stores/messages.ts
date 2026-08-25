@@ -11,6 +11,9 @@ import {
   listSavedViewMessages,
   fetchOlderMessages,
   search,
+  messageIds,
+  searchMessageIds,
+  type MessageIDs,
 } from '../lib/api'
 import { type AsyncState, idle, loading, ready, failed } from '../lib/async'
 import { errorMessage, push, toastError } from './toast'
@@ -272,6 +275,30 @@ const searchPageSize = 200
 // the search the current result set belongs to, so loadMore can ask for the
 // next page of the same query. null whenever the list is not a result set.
 let currentSearch: { query: string; filter: SearchFilter } | null = null
+
+// allMatchingIds returns every id the current list matches, ignoring paging,
+// for select all. It follows whatever the list is showing: a result set asks
+// the search index, everything else asks the message query.
+export function allMatchingIds(): Promise<MessageIDs> {
+  const active = currentSearch
+  if (active) {
+    return searchMessageIds({
+      query: active.query,
+      afterUnix: active.filter.afterUnix,
+      beforeUnix: active.filter.beforeUnix,
+      from: active.filter.from,
+      to: active.filter.to,
+      subject: active.filter.subject,
+      hasAttachment: active.filter.hasAttachment,
+      limit: 0,
+      offset: 0,
+    })
+  }
+  if (!currentSelection) {
+    return Promise.resolve({ ids: [], capped: false, matching: 0 })
+  }
+  return messageIds(currentSelection)
+}
 
 // searchPage fetches one page of ranked results.
 function searchPage(

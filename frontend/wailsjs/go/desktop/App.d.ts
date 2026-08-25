@@ -214,6 +214,8 @@ export function MCPPermissions():Promise<Array<desktop.MCPPermissionDTO>>;
 
 export function MarkSenderVIP(arg1:number):Promise<void>;
 
+export function MessageIDs(arg1:desktop.ListMessagesRequest):Promise<desktop.MessageIDsDTO>;
+
 export function MoveMessage(arg1:number,arg2:number):Promise<desktop.ArchiveUndoDTO>;
 
 export function OpenCrashReport():Promise<void>;
@@ -283,6 +285,8 @@ export function ScanURL(arg1:string):Promise<desktop.VerdictDTO>;
 export function Search(arg1:desktop.SearchRequestDTO):Promise<desktop.SearchResultDTO>;
 
 export function SearchAddresses(arg1:string,arg2:number):Promise<Array<desktop.AddressBookEntryDTO>>;
+
+export function SearchMessageIDs(arg1:desktop.SearchRequestDTO):Promise<desktop.MessageIDsDTO>;
 
 export function SendMessage(arg1:desktop.ComposeRequest):Promise<number>;
 

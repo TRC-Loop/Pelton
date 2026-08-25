@@ -5,7 +5,7 @@
 // source of truth.
 
 import { writable } from 'svelte/store'
-import type { UIPrefs, ThemePref, DensityPref, EditorMode, ViewsPlacement, CloseAction, LogLevel } from '../lib/types'
+import type { UIPrefs, ThemePref, DensityPref, EditorMode, ViewsPlacement, CloseAction, LogLevel, SelectAllScope } from '../lib/types'
 import { getUIPrefs, setSetting, SettingKeys, systemColorScheme, setWindowTheme, getThemeApply } from '../lib/api'
 import { applyTheme, applyDensity, applyAccent, applyScale, applyReduceMotion, applyHandCursor, setThemeSchedule, applyUIFont, applyMonoFont, applyCorners, watchSystemTheme, setSystemSchemeOverride, resolveTheme } from '../theme/theme'
 import { applyUserTheme } from '../theme/usertheme'
@@ -36,6 +36,7 @@ const defaults: UIPrefs = {
   avatarStyle: 'initials',
   multiSelectEnabled: true,
   showSelectedCount: true,
+  selectAllScope: 'offer',
   sidebarIndentGuides: false,
   rowTemplate: 'relaxed',
   rowShowAvatar: true,
@@ -600,6 +601,12 @@ export function setMultiSelectEnabled(value: boolean): void {
 export function setShowSelectedCount(value: boolean): void {
   prefs.update((p) => ({ ...p, showSelectedCount: value }))
   void setSetting(SettingKeys.showSelectedCount, String(value))
+}
+
+// setSelectAllScope picks how far select-all reaches.
+export function setSelectAllScope(value: SelectAllScope): void {
+  prefs.update((p) => ({ ...p, selectAllScope: value }))
+  void setSetting(SettingKeys.selectAllScope, value)
 }
 
 // setStartupSelection picks what the sidebar opens on at launch: 'view:<key>',

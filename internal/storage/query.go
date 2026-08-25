@@ -98,6 +98,37 @@ LIMIT ? OFFSET ?`
 	return query, append(args, limit, q.Offset)
 }
 
+// QueryMessageIDs returns the ids of every message a query matches, newest
+// first, ignoring Limit and Offset. Select-all is what wants this: the list
+// holds only the pages that were scrolled to, and selecting a whole mailbox
+// means naming every row in it, which is one id column rather than the bodies
+// that make a page read expensive.
+func (d *DB) QueryMessageIDs(ctx context.Context, q MessageQuery) ([]int64, error) {
+	if len(q.FolderIDs) == 0 {
+		return nil, nil
+	}
+	where, args := messageWhere(q)
+	rows, err := d.sql.QueryContext(ctx,
+		`SELECT id FROM messages WHERE `+where+` ORDER BY date DESC, uid DESC`, args...)
+	if err != nil {
+		return nil, fmt.Errorf("storage: query message ids: %w", err)
+	}
+	defer rows.Close()
+
+	ids := make([]int64, 0, 256)
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			return nil, fmt.Errorf("storage: scan message id: %w", err)
+		}
+		ids = append(ids, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("storage: iterate message ids: %w", err)
+	}
+	return ids, nil
+}
+
 // CountMessages returns how many messages match q ignoring its limit and offset,
 // so the ui can show totals and decide whether more pages exist.
 func (d *DB) CountMessages(ctx context.Context, q MessageQuery) (int, error) {
