@@ -34,8 +34,9 @@ func (d *DB) EnsureLocalAccount(ctx context.Context) (Account, error) {
 // nothing has been imported yet. The sidebar shows the section only once this
 // exists, so an install that never imported anything never sees it.
 func (d *DB) LocalAccount(ctx context.Context) (Account, error) {
-	const query = `SELECT ` + accountColumns + ` FROM accounts WHERE is_local = 1 ORDER BY id LIMIT 1`
-	a, err := scanAccount(d.sql.QueryRowContext(ctx, query))
+	const query = `SELECT ` + accountColumns + accountFrom + `
+WHERE a.is_local = 1 ORDER BY a.id LIMIT 1`
+	a, err := scanAccount(d.sql.QueryRowContext(ctx, query, d.layoutProfile()))
 	if errors.Is(err, sql.ErrNoRows) {
 		return Account{}, ErrAccountNotFound
 	}
@@ -49,8 +50,9 @@ func (d *DB) LocalAccount(ctx context.Context) (Account, error) {
 // creating it if it does not exist. Names are matched exactly, so importing
 // twice into the same name appends rather than making a second folder.
 func (d *DB) EnsureLocalFolder(ctx context.Context, accountID int64, name string) (Folder, error) {
-	const query = `SELECT ` + folderColumns + ` FROM folders WHERE account_id = ? AND imap_path = ?`
-	f, err := scanFolder(d.sql.QueryRowContext(ctx, query, accountID, name))
+	const query = `SELECT ` + folderColumns + folderFrom + `
+WHERE f.account_id = ? AND f.imap_path = ?`
+	f, err := scanFolder(d.sql.QueryRowContext(ctx, query, d.layoutProfile(), accountID, name))
 	if err == nil {
 		return *f, nil
 	}

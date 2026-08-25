@@ -36,11 +36,16 @@ type Profile struct {
 	ShareSettings   bool
 	ShareSignatures bool
 	ShareViews      bool
-	CreatedAt       time.Time
+	// ShareLayout does the same for the sidebar layout: which folders are
+	// pinned, and the order of folders and account sections. A profile that
+	// shares keeps its own layout rows, unused, so unticking it brings the
+	// arrangement back rather than starting over.
+	ShareLayout bool
+	CreatedAt   time.Time
 }
 
 const profileColumns = `id, name, icon, position, is_main, is_active,
-       share_settings, share_signatures, share_views, created_at`
+       share_settings, share_signatures, share_views, share_layout, created_at`
 
 // ListProfiles returns every profile, main first and the rest by position then
 // id, which is the order the switcher shows them in.
@@ -110,12 +115,12 @@ func (d *DB) MainProfile(ctx context.Context) (*Profile, error) {
 func (d *DB) CreateProfile(ctx context.Context, p *Profile) (int64, error) {
 	const query = `
 INSERT INTO profiles (name, icon, position, is_main, is_active,
-                      share_settings, share_signatures, share_views, created_at)
-VALUES (?, ?, ?, 0, 0, ?, ?, ?, ?)`
+                      share_settings, share_signatures, share_views, share_layout, created_at)
+VALUES (?, ?, ?, 0, 0, ?, ?, ?, ?, ?)`
 	res, err := d.sql.ExecContext(ctx, query,
 		p.Name, p.Icon, p.Position,
 		boolToInt(p.ShareSettings), boolToInt(p.ShareSignatures), boolToInt(p.ShareViews),
-		nowText())
+		boolToInt(p.ShareLayout), nowText())
 	if err != nil {
 		return 0, fmt.Errorf("storage: insert profile %q: %w", p.Name, err)
 	}
@@ -132,12 +137,12 @@ VALUES (?, ?, ?, 0, 0, ?, ?, ?, ?)`
 func (d *DB) UpdateProfile(ctx context.Context, p Profile) error {
 	const query = `
 UPDATE profiles
-SET name = ?, icon = ?, share_settings = ?, share_signatures = ?, share_views = ?
+SET name = ?, icon = ?, share_settings = ?, share_signatures = ?, share_views = ?, share_layout = ?
 WHERE id = ?`
 	res, err := d.sql.ExecContext(ctx, query,
 		p.Name, p.Icon,
 		boolToInt(p.ShareSettings), boolToInt(p.ShareSignatures), boolToInt(p.ShareViews),
-		p.ID)
+		boolToInt(p.ShareLayout), p.ID)
 	if err != nil {
 		return fmt.Errorf("storage: update profile %d: %w", p.ID, err)
 	}
@@ -211,9 +216,11 @@ func (d *DB) SetActiveProfile(ctx context.Context, id int64) error {
 	return nil
 }
 
-// SetProfilePositions rewrites the order the switcher lists profiles in.
+// SetProfilePositions rewrites the order the switcher lists profiles in. The
+// switcher is the one list that is not per profile, for the obvious reason, so
+// this ignores the layout profile the helper passes as ?1.
 func (d *DB) SetProfilePositions(ctx context.Context, orderedIDs []int64) error {
-	return d.setPositions(ctx, `UPDATE profiles SET position = ? WHERE id = ?`, orderedIDs, "profiles")
+	return d.setLayoutPositions(ctx, `UPDATE profiles SET position = ?3 WHERE id = ?2`, orderedIDs, "profiles")
 }
 
 // ProfileAccountIDs returns the accounts a profile shows.
@@ -315,6 +322,29 @@ FROM views WHERE profile_id = ?`
 	return nil
 }
 
+// CopyProfileLayout duplicates one profile's sidebar layout onto another: its
+// pinned folders, its folder order and its account section order. Like the
+// other copies it is a snapshot, so rearranging one afterwards leaves the other
+// alone.
+func (d *DB) CopyProfileLayout(ctx context.Context, from, to int64) error {
+	const folders = `
+INSERT INTO profile_sidebar_layout (profile_id, folder_id, position, pinned_position)
+SELECT ?, folder_id, position, pinned_position FROM profile_sidebar_layout WHERE profile_id = ?
+ON CONFLICT(profile_id, folder_id) DO UPDATE
+SET position = excluded.position, pinned_position = excluded.pinned_position`
+	if _, err := d.sql.ExecContext(ctx, folders, to, from); err != nil {
+		return fmt.Errorf("storage: copy folder layout %d to %d: %w", from, to, err)
+	}
+	const accounts = `
+INSERT INTO profile_account_order (profile_id, account_id, position)
+SELECT ?, account_id, position FROM profile_account_order WHERE profile_id = ?
+ON CONFLICT(profile_id, account_id) DO UPDATE SET position = excluded.position`
+	if _, err := d.sql.ExecContext(ctx, accounts, to, from); err != nil {
+		return fmt.Errorf("storage: copy account order %d to %d: %w", from, to, err)
+	}
+	return nil
+}
+
 func scanProfile(row rowScanner) (*Profile, error) {
 	var (
 		p          Profile
@@ -323,10 +353,11 @@ func scanProfile(row rowScanner) (*Profile, error) {
 		settings   int
 		signatures int
 		views      int
+		layout     int
 		created    string
 	)
 	if err := row.Scan(&p.ID, &p.Name, &p.Icon, &p.Position, &main, &active,
-		&settings, &signatures, &views, &created); err != nil {
+		&settings, &signatures, &views, &layout, &created); err != nil {
 		return nil, err
 	}
 	p.Main = main != 0
@@ -334,6 +365,7 @@ func scanProfile(row rowScanner) (*Profile, error) {
 	p.ShareSettings = settings != 0
 	p.ShareSignatures = signatures != 0
 	p.ShareViews = views != 0
+	p.ShareLayout = layout != 0
 	t, err := parseTime(created)
 	if err != nil {
 		return nil, err

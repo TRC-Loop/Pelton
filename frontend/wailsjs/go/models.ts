@@ -1267,6 +1267,7 @@ export namespace desktop {
 	    shareSettings: boolean;
 	    shareSignatures: boolean;
 	    shareViews: boolean;
+	    shareLayout: boolean;
 	    accountIds: number[];
 	
 	    static createFrom(source: any = {}) {
@@ -1283,6 +1284,7 @@ export namespace desktop {
 	        this.shareSettings = source["shareSettings"];
 	        this.shareSignatures = source["shareSignatures"];
 	        this.shareViews = source["shareViews"];
+	        this.shareLayout = source["shareLayout"];
 	        this.accountIds = source["accountIds"];
 	    }
 	}
@@ -1294,6 +1296,7 @@ export namespace desktop {
 	    startSettings: string;
 	    startSignatures: string;
 	    startViews: string;
+	    startLayout: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new ProfileRequest(source);
@@ -1308,6 +1311,7 @@ export namespace desktop {
 	        this.startSettings = source["startSettings"];
 	        this.startSignatures = source["startSignatures"];
 	        this.startViews = source["startViews"];
+	        this.startLayout = source["startLayout"];
 	    }
 	}
 	export class RecipientKeyDTO {

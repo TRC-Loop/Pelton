@@ -27,6 +27,7 @@ func (d *DB) UseProfile(p Profile, mainID int64) {
 	d.scope.settings.Store(owner(p.ID, mainID, p.ShareSettings))
 	d.scope.signatures.Store(owner(p.ID, mainID, p.ShareSignatures))
 	d.scope.views.Store(owner(p.ID, mainID, p.ShareViews))
+	d.scope.layout.Store(owner(p.ID, mainID, p.ShareLayout))
 }
 
 // UseActiveProfile points the store at whichever profile is marked active. It
@@ -61,6 +62,10 @@ func (d *DB) signaturesProfile() int64 { return orMain(d.scope.signatures.Load()
 
 func (d *DB) viewsProfile() int64 { return orMain(d.scope.views.Load()) }
 
+// layoutProfile owns the sidebar layout rows: which folders are pinned and the
+// order of folders and account sections.
+func (d *DB) layoutProfile() int64 { return orMain(d.scope.layout.Load()) }
+
 // owner picks whose rows an area reads.
 func owner(profileID, mainID int64, shared bool) int64 {
 	if shared {
@@ -87,4 +92,5 @@ type scope struct {
 	settings   atomic.Int64
 	signatures atomic.Int64
 	views      atomic.Int64
+	layout     atomic.Int64
 }

@@ -842,6 +842,7 @@ const nl: Record<string, string> = {
   'profiles.area.settings': 'Instellingen',
   'profiles.area.signatures': 'Ondertekeningen',
   'profiles.area.views': 'Opgeslagen weergaven',
+  'profiles.area.layout': 'Indeling van de zijbalk',
   'profiles.start.share': 'Delen',
   'profiles.start.copy': 'Kopiëren',
   'profiles.start.fresh': 'Leeg',

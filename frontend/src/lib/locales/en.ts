@@ -842,6 +842,7 @@ const en: Record<string, string> = {
   'profiles.area.settings': 'Settings',
   'profiles.area.signatures': 'Signatures',
   'profiles.area.views': 'Saved views',
+  'profiles.area.layout': 'Sidebar layout',
   'profiles.start.share': 'Share',
   'profiles.start.copy': 'Copy',
   'profiles.start.fresh': 'Fresh',
