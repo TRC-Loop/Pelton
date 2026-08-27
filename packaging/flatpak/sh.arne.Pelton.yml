@@ -85,8 +85,8 @@ modules:
 
     sources:
       - type: archive
-        url: https://github.com/TRC-Loop/Pelton/releases/download/v2026.3.3/Pelton-v2026.3.3-vendored.tar.gz
-        sha256: 0000000000000000000000000000000000000000000000000000000000000000
+        url: https://github.com/TRC-Loop/Pelton/releases/download/v2026.4/Pelton-v2026.4-vendored.tar.gz
+        sha256: 17d76ce81d00125ccf75b9a07d6a2e5078c5820c2798998d8cea4fe40e4df459
         # Lets Flathub's external data checker open the version bump PR on its
         # own once a release publishes the tarball.
         x-checker-data:
