@@ -29,6 +29,7 @@ const defaults: UIPrefs = {
   sendDelaySeconds: 0,
   flagHighlight: 'flag',
   showShortcutHints: true,
+  harvestAddresses: true,
   showAccountEmail: false,
   alwaysLoadImages: false,
   blockTrackingPixels: false,
@@ -554,6 +555,13 @@ export function setFlagHighlight(style: string): void {
 export function setShortcutHints(value: boolean): void {
   prefs.update((p) => ({ ...p, showShortcutHints: value }))
   void setSetting(SettingKeys.shortcutHints, String(value))
+}
+
+// setHarvestAddresses toggles learning addresses from mail for autocomplete.
+// Off, only contacts from a synced address book are offered.
+export function setHarvestAddresses(value: boolean): void {
+  prefs.update((p) => ({ ...p, harvestAddresses: value }))
+  void setSetting(SettingKeys.harvestAddresses, String(value))
 }
 
 // setShowAccountEmail toggles showing the account email instead of its name.

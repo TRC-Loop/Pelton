@@ -121,6 +121,10 @@ func (a *App) runInitialSyncAndIdle() {
 		}
 		goSafe("waiting for new mail", func() { a.idleLoop(account) })
 	}
+	// contacts ride along with the mail sync (#168). It is one cheap request
+	// per address book when nothing changed, and it runs after the mail so a
+	// slow contacts server never delays the inbox.
+	a.syncContactsInBackground()
 }
 
 // TriggerSync syncs all accounts on demand (the ui refresh action). It returns a
@@ -158,6 +162,10 @@ func (a *App) TriggerSync() error {
 	// whatever this returns: an account that failed while the others got
 	// through used to leave the ui saying the sync was clean.
 	a.emitAccountSyncStates()
+	// the address books refresh with the mail rather than on a timer of their
+	// own, off the calling goroutine so a contacts server that is down cannot
+	// make the refresh button hang (#168).
+	a.syncContactsInBackground()
 	// the Local Folders account is not counted: an install holding only
 	// imported mail has nothing to sync, which is not a credentials problem.
 	if synced == 0 && syncable > 0 {

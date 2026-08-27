@@ -16,6 +16,7 @@ import {
   IconRefresh,
   IconPlus,
   IconMailbox,
+  IconAddressBook,
   IconArrowBackUp,
   IconMailOpened,
   IconMail,
@@ -56,6 +57,7 @@ export type MenuActionId =
   | 'undo'
   | 'toggle-low-power'
   | 'open-mailboxes'
+  | 'open-contacts'
   | 'hide-window'
 
 // MenuActionDef describes one assignable action: how it labels and renders, and
@@ -93,6 +95,7 @@ export const menuActionCatalog: MenuActionDef[] = [
   { action: 'sync', labelKey: 'menu.sync', iconName: 'refresh', icon: IconRefresh },
   { action: 'add-mailbox', labelKey: 'menu.addMailbox', iconName: 'plus', icon: IconPlus },
   { action: 'open-mailboxes', labelKey: 'menu.manageMailboxes', iconName: 'mailbox', icon: IconMailbox },
+  { action: 'open-contacts', labelKey: 'menu.contacts', iconName: 'address-book', icon: IconAddressBook },
   { action: 'search', labelKey: 'shortcut.search', iconName: 'search', icon: IconSearch },
   { action: 'command-palette', labelKey: 'shortcut.commandPalette', iconName: 'command', icon: IconCommand },
   { action: 'undo', labelKey: 'menu.undo', iconName: 'arrow-back-up', icon: IconArrowBackUp, hint: 'mod+z' },
@@ -219,7 +222,7 @@ export function defaultMenuLayout(): MenuBarLayout {
         id: 'mailbox',
         builtin: true,
         labelKey: 'menu.mailbox',
-        items: [action('sync'), sep('mailbox', 0), action('add-mailbox'), action('open-mailboxes')],
+        items: [action('sync'), sep('mailbox', 0), action('add-mailbox'), action('open-mailboxes'), action('open-contacts')],
       },
       {
         id: 'mail',

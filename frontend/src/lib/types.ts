@@ -398,6 +398,9 @@ export interface UIPrefs {
   // showShortcutHints toggles the keyboard shortcut shown beside a context-menu
   // entry that has one. On by default.
   showShortcutHints: boolean
+  // harvestAddresses keeps learning addresses from mail for compose
+  // autocomplete. off leaves only the contacts from a synced address book.
+  harvestAddresses: boolean
   // showAccountEmail shows the account email instead of its name in the sidebar.
   showAccountEmail: boolean
   // alwaysLoadImages disables remote-image blocking globally (off by default).
@@ -1016,4 +1019,95 @@ export interface ProfileDraft {
   startSignatures: ProfileStart
   startViews: ProfileStart
   startLayout: ProfileStart
+}
+
+// AddressBook is one configured CardDAV address book (#168).
+export interface AddressBook {
+  id: number
+  // the mail account it was discovered from, 0 for one added by hand.
+  accountId: number
+  name: string
+  url: string
+  collectionPath: string
+  username: string
+  // the server refuses writes, so the editor is read-only for its contacts.
+  readOnly: boolean
+  // rfc3339, empty when it has never synced.
+  lastSync: string
+  // the last sync failure in the server's words, empty once one succeeds.
+  lastError: string
+  contactCount: number
+  // false when the keyring has no password for it, so it cannot sync.
+  hasPassword: boolean
+}
+
+// DiscoveredBook is one address book a server offered, before it is added.
+export interface DiscoveredBook {
+  name: string
+  url: string
+  collectionPath: string
+  // already configured here, so the ui offers it greyed rather than twice.
+  exists: boolean
+}
+
+// ContactValue is one address or phone number with its vCard label.
+export interface ContactValue {
+  value: string
+  label: string
+}
+
+// Contact is one address book entry.
+export interface Contact {
+  id: number
+  bookId: number
+  bookName: string
+  uid: string
+  fullName: string
+  organization: string
+  title: string
+  note: string
+  emails: ContactValue[]
+  phones: ContactValue[]
+  readOnly: boolean
+  updated: string
+  // vCard properties Pelton has no field for. They are kept on every save;
+  // the editor lists them so it is clear the card holds more than the form.
+  extra: string[]
+}
+
+// ContactConflict is the answer to a save or delete the server refused because
+// the contact changed elsewhere. Both versions come back and the user picks.
+export interface ContactConflict {
+  conflict: boolean
+  server: Contact
+  mine: Contact
+  // the stored contact when there was no conflict.
+  saved: Contact
+}
+
+// ContactDraft is the editor's shape. id 0 creates, and then bookId says which
+// address book it goes in.
+export interface ContactDraft {
+  id: number
+  bookId: number
+  fullName: string
+  organization: string
+  title: string
+  note: string
+  emails: ContactValue[]
+  phones: ContactValue[]
+  // set only by "keep mine" on the conflict dialog: write over whatever the
+  // server now holds.
+  force: boolean
+}
+
+// AddressBookDraft is the add/edit address book form.
+export interface AddressBookDraft {
+  id: number
+  accountId: number
+  name: string
+  url: string
+  collectionPath: string
+  username: string
+  password: string
 }

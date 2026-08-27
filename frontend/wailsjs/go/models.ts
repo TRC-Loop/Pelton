@@ -124,12 +124,45 @@ export namespace desktop {
 	        this.clientSecret = source["clientSecret"];
 	    }
 	}
+	export class AddressBookDTO {
+	    id: number;
+	    accountId: number;
+	    name: string;
+	    url: string;
+	    collectionPath: string;
+	    username: string;
+	    readOnly: boolean;
+	    lastSync: string;
+	    lastError: string;
+	    contactCount: number;
+	    hasPassword: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new AddressBookDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.accountId = source["accountId"];
+	        this.name = source["name"];
+	        this.url = source["url"];
+	        this.collectionPath = source["collectionPath"];
+	        this.username = source["username"];
+	        this.readOnly = source["readOnly"];
+	        this.lastSync = source["lastSync"];
+	        this.lastError = source["lastError"];
+	        this.contactCount = source["contactCount"];
+	        this.hasPassword = source["hasPassword"];
+	    }
+	}
 	export class AddressBookEntryDTO {
 	    email: string;
 	    name: string;
 	    useCount: number;
 	    lastUsed: string;
 	    createdAt: string;
+	    contact: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new AddressBookEntryDTO(source);
@@ -142,6 +175,31 @@ export namespace desktop {
 	        this.useCount = source["useCount"];
 	        this.lastUsed = source["lastUsed"];
 	        this.createdAt = source["createdAt"];
+	        this.contact = source["contact"];
+	    }
+	}
+	export class AddressBookRequest {
+	    id: number;
+	    accountId: number;
+	    name: string;
+	    url: string;
+	    collectionPath: string;
+	    username: string;
+	    password: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new AddressBookRequest(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.accountId = source["accountId"];
+	        this.name = source["name"];
+	        this.url = source["url"];
+	        this.collectionPath = source["collectionPath"];
+	        this.username = source["username"];
+	        this.password = source["password"];
 	    }
 	}
 	export class AddressDTO {
@@ -438,6 +496,156 @@ export namespace desktop {
 	        this.name = source["name"];
 	    }
 	}
+	export class ContactValueDTO {
+	    value: string;
+	    label: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new ContactValueDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.value = source["value"];
+	        this.label = source["label"];
+	    }
+	}
+	export class ContactDTO {
+	    id: number;
+	    bookId: number;
+	    bookName: string;
+	    uid: string;
+	    fullName: string;
+	    organization: string;
+	    title: string;
+	    note: string;
+	    emails: ContactValueDTO[];
+	    phones: ContactValueDTO[];
+	    readOnly: boolean;
+	    updated: string;
+	    extra: string[];
+	
+	    static createFrom(source: any = {}) {
+	        return new ContactDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.bookId = source["bookId"];
+	        this.bookName = source["bookName"];
+	        this.uid = source["uid"];
+	        this.fullName = source["fullName"];
+	        this.organization = source["organization"];
+	        this.title = source["title"];
+	        this.note = source["note"];
+	        this.emails = this.convertValues(source["emails"], ContactValueDTO);
+	        this.phones = this.convertValues(source["phones"], ContactValueDTO);
+	        this.readOnly = source["readOnly"];
+	        this.updated = source["updated"];
+	        this.extra = source["extra"];
+	    }
+	
+	    convertValues(a: any, classs: any, asMap: boolean = false): any {
+	        if (!a) {
+	            return a;
+	        }
+	        if (a.slice && a.map) {
+	            return (a as any[]).map(elem => this.convertValues(elem, classs));
+	        } else if ("object" === typeof a) {
+	            if (asMap) {
+	                for (const key of Object.keys(a)) {
+	                    a[key] = new classs(a[key]);
+	                }
+	                return a;
+	            }
+	            return new classs(a);
+	        }
+	        return a;
+	    }
+	}
+	export class ContactConflictDTO {
+	    conflict: boolean;
+	    server: ContactDTO;
+	    mine: ContactDTO;
+	    saved: ContactDTO;
+	
+	    static createFrom(source: any = {}) {
+	        return new ContactConflictDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.conflict = source["conflict"];
+	        this.server = this.convertValues(source["server"], ContactDTO);
+	        this.mine = this.convertValues(source["mine"], ContactDTO);
+	        this.saved = this.convertValues(source["saved"], ContactDTO);
+	    }
+	
+	    convertValues(a: any, classs: any, asMap: boolean = false): any {
+	        if (!a) {
+	            return a;
+	        }
+	        if (a.slice && a.map) {
+	            return (a as any[]).map(elem => this.convertValues(elem, classs));
+	        } else if ("object" === typeof a) {
+	            if (asMap) {
+	                for (const key of Object.keys(a)) {
+	                    a[key] = new classs(a[key]);
+	                }
+	                return a;
+	            }
+	            return new classs(a);
+	        }
+	        return a;
+	    }
+	}
+	export class ContactRequest {
+	    id: number;
+	    bookId: number;
+	    fullName: string;
+	    organization: string;
+	    title: string;
+	    note: string;
+	    emails: ContactValueDTO[];
+	    phones: ContactValueDTO[];
+	    force: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new ContactRequest(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.bookId = source["bookId"];
+	        this.fullName = source["fullName"];
+	        this.organization = source["organization"];
+	        this.title = source["title"];
+	        this.note = source["note"];
+	        this.emails = this.convertValues(source["emails"], ContactValueDTO);
+	        this.phones = this.convertValues(source["phones"], ContactValueDTO);
+	        this.force = source["force"];
+	    }
+	
+	    convertValues(a: any, classs: any, asMap: boolean = false): any {
+	        if (!a) {
+	            return a;
+	        }
+	        if (a.slice && a.map) {
+	            return (a as any[]).map(elem => this.convertValues(elem, classs));
+	        } else if ("object" === typeof a) {
+	            if (asMap) {
+	                for (const key of Object.keys(a)) {
+	                    a[key] = new classs(a[key]);
+	                }
+	                return a;
+	            }
+	            return new classs(a);
+	        }
+	        return a;
+	    }
+	}
 	export class DefaultMailStatusDTO {
 	    known: boolean;
 	    isDefault: boolean;
@@ -525,6 +733,24 @@ export namespace desktop {
 	        this.attachmentsBytes = source["attachmentsBytes"];
 	        this.dataDirBytes = source["dataDirBytes"];
 	        this.uptimeSeconds = source["uptimeSeconds"];
+	    }
+	}
+	export class DiscoveredBookDTO {
+	    name: string;
+	    url: string;
+	    collectionPath: string;
+	    exists: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new DiscoveredBookDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.url = source["url"];
+	        this.collectionPath = source["collectionPath"];
+	        this.exists = source["exists"];
 	    }
 	}
 	export class DiscoveredDTO {

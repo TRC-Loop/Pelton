@@ -18,6 +18,7 @@ type menuStrings struct {
 	openWindow       string
 	addMailbox       string
 	manageMailboxes  string
+	contacts         string
 	mailMenu         string
 	undo             string
 	markRead         string
@@ -54,6 +55,7 @@ var menuLocales = map[string]menuStrings{
 		openWindow:       "Open Pelton",
 		addMailbox:       "Add Mailbox…",
 		manageMailboxes:  "Manage Mailboxes…",
+		contacts:         "Contacts…",
 		mailMenu:         "Mail",
 		undo:             "Undo",
 		markRead:         "Mark as Read",
@@ -83,6 +85,7 @@ var menuLocales = map[string]menuStrings{
 		openWindow:       "Pelton öffnen",
 		addMailbox:       "Postfach hinzufügen…",
 		manageMailboxes:  "Postfächer verwalten…",
+		contacts:         "Kontakte…",
 		mailMenu:         "Nachricht",
 		undo:             "Rückgängig",
 		markRead:         "Als gelesen markieren",
@@ -112,6 +115,7 @@ var menuLocales = map[string]menuStrings{
 		openWindow:       "Ouvrir Pelton",
 		addMailbox:       "Ajouter une boîte mail…",
 		manageMailboxes:  "Gérer les boîtes mail…",
+		contacts:         "Contacts…",
 		mailMenu:         "Message",
 		undo:             "Annuler",
 		markRead:         "Marquer comme lu",
@@ -141,6 +145,7 @@ var menuLocales = map[string]menuStrings{
 		openWindow:       "Pelton openen",
 		addMailbox:       "Mailbox toevoegen…",
 		manageMailboxes:  "Mailboxen beheren…",
+		contacts:         "Contactpersonen…",
 		mailMenu:         "Bericht",
 		undo:             "Ongedaan maken",
 		markRead:         "Als gelezen markeren",
@@ -170,6 +175,7 @@ var menuLocales = map[string]menuStrings{
 		openWindow:       "Abrir Pelton",
 		addMailbox:       "Añadir buzón…",
 		manageMailboxes:  "Administrar buzones…",
+		contacts:         "Contactos…",
 		mailMenu:         "Mensaje",
 		undo:             "Deshacer",
 		markRead:         "Marcar como leído",
@@ -199,6 +205,7 @@ var menuLocales = map[string]menuStrings{
 		openWindow:       "Otwórz Pelton",
 		addMailbox:       "Dodaj skrzynkę…",
 		manageMailboxes:  "Zarządzaj skrzynkami…",
+		contacts:         "Kontakty…",
 		mailMenu:         "Wiadomość",
 		undo:             "Cofnij",
 		markRead:         "Oznacz jako przeczytane",

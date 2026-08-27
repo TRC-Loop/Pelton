@@ -44,7 +44,12 @@ const (
 	// fetch anything (the reading pane's csp limits font-src to data:). Off puts
 	// every message in the reader font.
 	settingSenderFonts    = "sender_fonts"
-	settingAvatarSource   = "avatar_source"
+	// settingHarvestAddresses keeps learning addresses from mail for compose
+	// autocomplete. On by default, since it is what autocomplete was before
+	// there were contacts. Off leaves only the synced address books, which is
+	// what someone who maintains a real one asked for (#168).
+	settingHarvestAddresses = "harvest_addresses"
+	settingAvatarSource     = "avatar_source"
 	settingAvatarStyle    = "avatar_style"
 	settingMultiSelect    = "multi_select_enabled"
 	settingSelectedCount  = "show_selected_count"
@@ -209,6 +214,9 @@ type UIPrefsDTO struct {
 	// ShowShortcutHints shows inline keyboard shortcut chips in the ui. Off by
 	// default to keep the interface clean.
 	ShowShortcutHints bool `json:"showShortcutHints"`
+	// HarvestAddresses keeps learning addresses from the mail that passes
+	// through, for compose autocomplete. Off leaves only synced contacts.
+	HarvestAddresses bool `json:"harvestAddresses"`
 	// ShowAccountEmail shows the account email instead of its display name in the
 	// sidebar account header.
 	ShowAccountEmail bool `json:"showAccountEmail"`
@@ -404,6 +412,7 @@ func (a *App) GetUIPrefs() (UIPrefsDTO, error) {
 		SendDelaySeconds:    a.intSetting(settingSendDelay, 0),
 		FlagHighlight:       a.stringSetting(settingFlagHighlight, defaultFlagHighlight),
 		ShowShortcutHints:   a.boolSetting(settingShortcutHints, true),
+		HarvestAddresses:    a.harvestAddresses(),
 		ShowAccountEmail:    a.boolSetting(settingAccountEmail, false),
 		AlwaysLoadImages:    a.boolSetting(settingRemoteAlways, false),
 		BlockTrackingPixels: a.blockTrackers(),

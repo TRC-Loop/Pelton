@@ -12,6 +12,8 @@ export function AddOAuthAccount(arg1:desktop.AddAccountRequest):Promise<desktop.
 
 export function AddPasswordAccount(arg1:desktop.AddAccountRequest):Promise<desktop.AccountDTO>;
 
+export function AddAddressBook(arg1:desktop.AddressBookRequest):Promise<desktop.AddressBookDTO>;
+
 export function AddVIPSender(arg1:string):Promise<void>;
 
 export function AgentActions():Promise<Array<desktop.AgentActionDTO>>;
@@ -70,6 +72,8 @@ export function DeleteAccount(arg1:number):Promise<void>;
 
 export function DeleteAddress(arg1:string):Promise<void>;
 
+export function DeleteContact(arg1:number,arg2:boolean):Promise<desktop.ContactConflictDTO>;
+
 export function DeleteDraft(arg1:number):Promise<void>;
 
 export function DeleteFolder(arg1:number):Promise<void>;
@@ -97,6 +101,8 @@ export function DevToolsEnabled():Promise<boolean>;
 export function DiscardAgentProposal(arg1:number):Promise<void>;
 
 export function DiscardFailedSend(arg1:number):Promise<boolean>;
+
+export function DiscoverAddressBooks(arg1:desktop.AddressBookRequest):Promise<Array<desktop.DiscoveredBookDTO>>;
 
 export function DiscoverConfig(arg1:string):Promise<desktop.DiscoveredDTO>;
 
@@ -178,6 +184,10 @@ export function ListAccounts():Promise<Array<desktop.AccountDTO>>;
 
 export function ListAddresses():Promise<Array<desktop.AddressBookEntryDTO>>;
 
+export function ListAddressBooks():Promise<Array<desktop.AddressBookDTO>>;
+
+export function ListContacts(arg1:number):Promise<Array<desktop.ContactDTO>>;
+
 export function ListDrafts():Promise<Array<desktop.DraftDTO>>;
 
 export function ListFolders(arg1:number):Promise<Array<desktop.FolderDTO>>;
@@ -238,6 +248,8 @@ export function RebuildMenu():Promise<void>;
 
 export function RegenerateMCPToken():Promise<string>;
 
+export function RemoveAddressBook(arg1:number):Promise<void>;
+
 export function RemoveImageAllow(arg1:string,arg2:string):Promise<void>;
 
 export function RemoveOffline(arg1:number):Promise<void>;
@@ -267,6 +279,8 @@ export function SaveAllAttachments(arg1:number):Promise<string>;
 export function SaveAttachment(arg1:number,arg2:number):Promise<string>;
 
 export function SaveCustomTheme(arg1:desktop.SaveThemeRequest):Promise<desktop.ThemeInfoDTO>;
+
+export function SaveContact(arg1:desktop.ContactRequest):Promise<desktop.ContactConflictDTO>;
 
 export function SaveDraft(arg1:number,arg2:desktop.ComposeRequest):Promise<number>;
 
@@ -350,6 +364,8 @@ export function SwitchProfile(arg1:number):Promise<void>;
 
 export function SyncAccountNow(arg1:number):Promise<void>;
 
+export function SyncContacts():Promise<void>;
+
 export function SystemColorScheme():Promise<string>;
 
 export function TestConnection(arg1:desktop.TestConnectionRequest):Promise<void>;
@@ -379,5 +395,7 @@ export function UnsnoozeMessage(arg1:number):Promise<void>;
 export function Unsubscribe(arg1:number):Promise<void>;
 
 export function UpdateAccount(arg1:desktop.UpdateAccountRequest):Promise<desktop.AccountDTO>;
+
+export function UpdateAddressBook(arg1:desktop.AddressBookRequest):Promise<desktop.AddressBookDTO>;
 
 export function UpdateProfile(arg1:desktop.ProfileRequest):Promise<desktop.ProfileDTO>;

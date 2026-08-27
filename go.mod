@@ -11,10 +11,13 @@ require (
 	github.com/emersion/go-message v0.18.2
 	github.com/emersion/go-sasl v0.0.0-20241020182733-b788ff22d5a6
 	github.com/emersion/go-smtp v0.24.0
+	github.com/emersion/go-vcard v0.1.0
+	github.com/emersion/go-webdav v0.7.0
 	github.com/energye/systray v1.0.3
 	github.com/gen2brain/beeep v0.11.2
 	github.com/godbus/dbus/v5 v5.2.2
 	github.com/gogs/chardet v0.0.0-20211120154057-b7413eaefb8f
+	github.com/google/uuid v1.6.0
 	github.com/microcosm-cc/bluemonday v1.0.27
 	github.com/modelcontextprotocol/go-sdk v1.7.0
 	github.com/smallstep/pkcs7 v0.2.3
@@ -62,7 +65,6 @@ require (
 	github.com/go-ole/go-ole v1.3.0 // indirect
 	github.com/golang/snappy v1.0.0 // indirect
 	github.com/google/jsonschema-go v0.4.3 // indirect
-	github.com/google/uuid v1.6.0 // indirect
 	github.com/gorilla/css v1.0.1 // indirect
 	github.com/gorilla/websocket v1.5.3 // indirect
 	github.com/jackmordaunt/icns/v3 v3.0.1 // indirect
