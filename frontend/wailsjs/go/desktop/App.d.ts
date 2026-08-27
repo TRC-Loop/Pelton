@@ -8,11 +8,11 @@ export function AccountsNeedingPassword():Promise<Array<desktop.AccountDTO>>;
 
 export function ActiveProfile():Promise<desktop.ProfileDTO>;
 
+export function AddAddressBook(arg1:desktop.AddressBookRequest):Promise<desktop.AddressBookDTO>;
+
 export function AddOAuthAccount(arg1:desktop.AddAccountRequest):Promise<desktop.AccountDTO>;
 
 export function AddPasswordAccount(arg1:desktop.AddAccountRequest):Promise<desktop.AccountDTO>;
-
-export function AddAddressBook(arg1:desktop.AddressBookRequest):Promise<desktop.AddressBookDTO>;
 
 export function AddVIPSender(arg1:string):Promise<void>;
 
@@ -182,9 +182,9 @@ export function Licenses():Promise<string>;
 
 export function ListAccounts():Promise<Array<desktop.AccountDTO>>;
 
-export function ListAddresses():Promise<Array<desktop.AddressBookEntryDTO>>;
-
 export function ListAddressBooks():Promise<Array<desktop.AddressBookDTO>>;
+
+export function ListAddresses():Promise<Array<desktop.AddressBookEntryDTO>>;
 
 export function ListContacts(arg1:number):Promise<Array<desktop.ContactDTO>>;
 
@@ -278,9 +278,9 @@ export function SaveAllAttachments(arg1:number):Promise<string>;
 
 export function SaveAttachment(arg1:number,arg2:number):Promise<string>;
 
-export function SaveCustomTheme(arg1:desktop.SaveThemeRequest):Promise<desktop.ThemeInfoDTO>;
-
 export function SaveContact(arg1:desktop.ContactRequest):Promise<desktop.ContactConflictDTO>;
+
+export function SaveCustomTheme(arg1:desktop.SaveThemeRequest):Promise<desktop.ThemeInfoDTO>;
 
 export function SaveDraft(arg1:number,arg2:desktop.ComposeRequest):Promise<number>;
 

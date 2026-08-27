@@ -558,6 +558,9 @@
     gap: var(--space-1);
     height: var(--control-height);
     padding: 0 var(--space-3);
+    /* a label is one line whatever the locale: German runs half again as long
+       as English and was wrapping inside the fixed height. */
+    white-space: nowrap;
     border-radius: var(--radius-control);
     border: var(--hairline) solid var(--border-default);
     background: var(--surface-raised);

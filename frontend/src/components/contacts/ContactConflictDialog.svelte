@@ -130,6 +130,7 @@
     margin-top: auto;
     height: var(--control-height);
     padding: 0 var(--space-3);
+    white-space: nowrap;
     border-radius: var(--radius-control);
     border: var(--hairline) solid var(--border-default);
     background: var(--surface-raised);

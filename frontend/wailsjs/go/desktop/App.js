@@ -14,16 +14,16 @@ export function ActiveProfile() {
   return window['go']['desktop']['App']['ActiveProfile']();
 }
 
+export function AddAddressBook(arg1) {
+  return window['go']['desktop']['App']['AddAddressBook'](arg1);
+}
+
 export function AddOAuthAccount(arg1) {
   return window['go']['desktop']['App']['AddOAuthAccount'](arg1);
 }
 
 export function AddPasswordAccount(arg1) {
   return window['go']['desktop']['App']['AddPasswordAccount'](arg1);
-}
-
-export function AddAddressBook(arg1) {
-  return window['go']['desktop']['App']['AddAddressBook'](arg1);
 }
 
 export function AddVIPSender(arg1) {
@@ -362,12 +362,12 @@ export function ListAccounts() {
   return window['go']['desktop']['App']['ListAccounts']();
 }
 
-export function ListAddresses() {
-  return window['go']['desktop']['App']['ListAddresses']();
-}
-
 export function ListAddressBooks() {
   return window['go']['desktop']['App']['ListAddressBooks']();
+}
+
+export function ListAddresses() {
+  return window['go']['desktop']['App']['ListAddresses']();
 }
 
 export function ListContacts(arg1) {
@@ -554,12 +554,12 @@ export function SaveAttachment(arg1, arg2) {
   return window['go']['desktop']['App']['SaveAttachment'](arg1, arg2);
 }
 
-export function SaveCustomTheme(arg1) {
-  return window['go']['desktop']['App']['SaveCustomTheme'](arg1);
-}
-
 export function SaveContact(arg1) {
   return window['go']['desktop']['App']['SaveContact'](arg1);
+}
+
+export function SaveCustomTheme(arg1) {
+  return window['go']['desktop']['App']['SaveCustomTheme'](arg1);
 }
 
 export function SaveDraft(arg1, arg2) {
@@ -786,12 +786,12 @@ export function Unsubscribe(arg1) {
   return window['go']['desktop']['App']['Unsubscribe'](arg1);
 }
 
-export function UpdateAddressBook(arg1) {
-  return window['go']['desktop']['App']['UpdateAddressBook'](arg1);
-}
-
 export function UpdateAccount(arg1) {
   return window['go']['desktop']['App']['UpdateAccount'](arg1);
+}
+
+export function UpdateAddressBook(arg1) {
+  return window['go']['desktop']['App']['UpdateAddressBook'](arg1);
 }
 
 export function UpdateProfile(arg1) {
