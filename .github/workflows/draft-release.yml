@@ -156,7 +156,20 @@ jobs:
             const existing = releases.find((r) => r.tag_name === CURRENT_TAG) || null;
 
             if (existing) {
-              await github.rest.repos.updateRelease({ owner, repo, release_id: existing.id, body });
+              // tag_name and name are resent even though only the body changed.
+              // Updating a draft without them drops the draft's tag, leaving it
+              // as "untagged-<hash>", and then `gh release upload <tag>` cannot
+              // find it: that is how the 2026.4 linux assets failed to upload
+              // with "release not found" while macos and windows, which ran
+              // before the changelog step, succeeded.
+              await github.rest.repos.updateRelease({
+                owner,
+                repo,
+                release_id: existing.id,
+                tag_name: CURRENT_TAG,
+                name: existing.name || CURRENT_TAG,
+                body,
+              });
             } else {
               await github.rest.repos.createRelease({
                 owner, repo, tag_name: CURRENT_TAG, name: CURRENT_TAG, body, draft: true,
