@@ -88,14 +88,19 @@ import (
 // the old path and so keep the wrong icon. Delivery is asynchronous once handed over, so
 // a rejected authorization or a failed post is not reported back here; a
 // notification is not worth failing a sync over.
-func deliverNotification(title, body string) error {
+//
+// No click callback is wired up, so the message id on the notification goes
+// unused here; that would need a UNUserNotificationCenter delegate on the
+// bundle, which is its own piece of work.
+func (a *App) deliverNotification(n notification) error {
 	if !bool(C.peltonCanNotify()) {
-		return beeep.Notify(title, body, "")
+		beeep.AppName = notifyAppName
+		return beeep.Notify(n.title, n.body, "")
 	}
 
-	cTitle := C.CString(title)
+	cTitle := C.CString(n.title)
 	defer C.free(unsafe.Pointer(cTitle))
-	cBody := C.CString(body)
+	cBody := C.CString(n.body)
 	defer C.free(unsafe.Pointer(cBody))
 
 	C.peltonNotify(cTitle, cBody)

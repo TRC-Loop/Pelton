@@ -1,6 +1,7 @@
 package desktop
 
 import (
+	"strconv"
 	"strings"
 
 	"github.com/TRC-Loop/Pelton/internal/storage"
@@ -8,11 +9,54 @@ import (
 
 // Native OS notifications for new mail (#126). Delivery is per platform:
 // UserNotifications on macOS so the alert carries the app's own icon (#143),
-// and beeep elsewhere for a Windows toast or a Linux dbus notification. Neither
-// has a per-notification click callback, so a click does not open a specific
-// message; exact click-to-open would need more platform-specific code and is
-// tracked separately. Notifications only fire for INBOX so sent/archived mail
-// moved by a sync never notifies.
+// go-toast on Windows so the toast carries Pelton's name, icon and a click that
+// opens the message (#170), and beeep on Linux for a dbus notification.
+// Notifications only fire for INBOX so sent/archived mail moved by a sync never
+// notifies.
+
+// notifyAppName is the application name notifications are posted under. On
+// Linux it is the dbus app_name; on Windows it is the AppUserModelID, which is
+// also what the toast prints under itself. beeep defaults it to the literal
+// string "DefaultAppName", which is what Pelton's notifications used to be
+// labelled with everywhere (#170).
+const notifyAppName = "Pelton"
+
+// notification is one OS notification waiting to be delivered. The message id
+// travels with it so a platform that can report a click back (Windows) knows
+// which message the click was about.
+type notification struct {
+	title     string
+	body      string
+	messageID int64
+}
+
+// notifyArgPrefix marks a notification's activation argument as a message id.
+// The OS hands the string back verbatim on a click, so a prefix keeps a second
+// kind of notification, if there ever is one, from being read as a message.
+const notifyArgPrefix = "message:"
+
+// notifyArgs encodes which message a notification is about into the string the
+// OS hands back when it is clicked; notifyMessageID reads it back. The two
+// halves live together because nothing else checks they agree: get them out of
+// step and every click quietly opens nothing.
+func notifyArgs(messageID int64) string {
+	return notifyArgPrefix + strconv.FormatInt(messageID, 10)
+}
+
+// notifyMessageID reads a message id back out of an activation argument. ok is
+// false for anything else, including an empty string, which is what a click on
+// a toast from an older version arrives as.
+func notifyMessageID(args string) (int64, bool) {
+	rest, found := strings.CutPrefix(args, notifyArgPrefix)
+	if !found {
+		return 0, false
+	}
+	id, err := strconv.ParseInt(rest, 10, 64)
+	if err != nil || id <= 0 {
+		return 0, false
+	}
+	return id, true
+}
 
 // notifyStrings holds the localizable text of a new-mail notification. Like the
 // native menu (see menu_i18n.go), notifications are built in the Go process, so
@@ -81,7 +125,7 @@ func (a *App) notifyNewMail(folder storage.Folder, ids []int64) {
 		if vip {
 			title = s.vipNewMail
 		}
-		a.sendNotification(title, notifyBody(m, s))
+		a.sendNotification(notification{title: title, body: notifyBody(m, s), messageID: m.ID})
 	}
 }
 
@@ -104,9 +148,34 @@ func notifyBody(m *storage.Message, s notifyStrings) string {
 
 // sendNotification raises one native OS notification, logging (not failing) on
 // error so a notification backend that is missing or busy never disrupts sync.
-// The delivery itself is per platform: see notify_darwin.go and notify_other.go.
-func (a *App) sendNotification(title, body string) {
-	if err := deliverNotification(title, body); err != nil {
+// The delivery itself is per platform: see notify_darwin.go, notify_windows.go
+// and notify_other.go.
+func (a *App) sendNotification(n notification) {
+	if err := a.deliverNotification(n); err != nil {
 		a.log.Warn("notify", "err", err)
 	}
+}
+
+// openFromNotification brings the window up and opens the message a clicked
+// notification was about. Only Windows can report a click back today; the other
+// two backends have no per-notification callback at all.
+//
+// The message is looked up rather than trusted: by the time a toast is clicked
+// it may have been deleted, moved, or left behind by a profile switch. Any of
+// those just show the window, which is what the click asked for first.
+func (a *App) openFromNotification(messageID int64) {
+	a.showWindow()
+	if a.store == nil {
+		return
+	}
+	m, err := a.store.GetMessage(a.ctx, messageID)
+	if err != nil {
+		a.log.Warn("open the message a notification was about", "id", messageID, "err", err)
+		return
+	}
+	a.emit(EventOpenMessage, OpenMessageEvent{
+		MessageID: m.ID,
+		AccountID: m.AccountID,
+		FolderID:  m.FolderID,
+	})
 }

@@ -22,6 +22,7 @@ export const EventNames = {
   profileChanged: 'profile:changed',
   importProgress: 'import:progress',
   agentProposals: 'agent:proposals',
+  openMessage: 'message:open',
 } as const
 
 // payloads, mirroring the go event structs.
@@ -134,6 +135,15 @@ export interface MailtoDraft {
   body: string
 }
 
+// OpenMessageEvent asks the ui to show one specific message, which today only
+// happens when a new-mail notification is clicked. The folder travels with it
+// so the list can move to where the message lives first.
+export interface OpenMessageEvent {
+  messageId: number
+  accountId: number
+  folderId: number
+}
+
 // Unsubscribe removes an event listener.
 export type Unsubscribe = () => void
 
@@ -220,4 +230,10 @@ export function onProfileChanged(cb: () => void): Unsubscribe {
 // or discarded, so the approval queue matches what is stored.
 export function onAgentProposals(cb: () => void): Unsubscribe {
   return EventsOn(EventNames.agentProposals, () => cb())
+}
+
+// onOpenMessage fires when something outside the ui asks for one message to be
+// shown. Today that is a clicked new-mail notification on Windows.
+export function onOpenMessage(cb: (e: OpenMessageEvent) => void): Unsubscribe {
+  return EventsOn(EventNames.openMessage, (e: OpenMessageEvent) => cb(e))
 }

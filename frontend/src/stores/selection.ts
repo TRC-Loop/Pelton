@@ -135,3 +135,23 @@ export function selectFolder(folder: Folder): void {
 export function openMessage(id: number): void {
   openMessageId.set(id)
 }
+
+// revealMessage moves the list to where a message lives and then opens it. It
+// is for requests that arrive from outside the ui, where the list is very
+// likely showing something else: a clicked new-mail notification is the only
+// one today. A folder that is not in the sidebar (removed since, or belonging
+// to an account this profile does not see) leaves the list where it is and just
+// opens the message, which is still what was asked for.
+export function revealMessage(
+  messageId: number,
+  accountId: number,
+  folderId: number,
+  data: SidebarData | null,
+): void {
+  const folder = data?.foldersByAccount[accountId]?.find((f) => f.id === folderId)
+  if (folder) {
+    // selectFolder clears the open message, so it has to happen first.
+    selectFolder(folder)
+  }
+  openMessage(messageId)
+}

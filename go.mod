@@ -3,6 +3,7 @@ module github.com/TRC-Loop/Pelton
 go 1.25.0
 
 require (
+	git.sr.ht/~jackmordaunt/go-toast v1.1.2
 	github.com/JohannesKaufmann/html-to-markdown/v2 v2.5.2
 	github.com/ProtonMail/go-crypto v1.4.1
 	github.com/VirusTotal/vt-go v1.1.0
@@ -33,7 +34,6 @@ require (
 )
 
 require (
-	git.sr.ht/~jackmordaunt/go-toast v1.1.2 // indirect
 	git.sr.ht/~jackmordaunt/go-toast/v2 v2.0.3 // indirect
 	github.com/JohannesKaufmann/dom v0.3.1 // indirect
 	github.com/RoaringBitmap/roaring/v2 v2.14.5 // indirect

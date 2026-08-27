@@ -67,7 +67,7 @@
   import { liabilityAccepted } from './lib/liability'
   import { setDemoActive } from './lib/demo'
   import { recordArchived } from './stores/undoarchive'
-  import { onMailNew, onMailRepaired, onSyncState, onSyncProgress, onOutboxChanged, onMenu, onViewsChanged, onProfileChanged, onMailtoCompose, onAgentProposals, type Unsubscribe, type MailtoDraft } from './lib/events'
+  import { onMailNew, onMailRepaired, onSyncState, onSyncProgress, onOutboxChanged, onMenu, onViewsChanged, onProfileChanged, onMailtoCompose, onAgentProposals, onOpenMessage, type Unsubscribe, type MailtoDraft } from './lib/events'
   import { loadViews, editingView, closeViewEditor, openViewEditor, views as savedViews } from './stores/views'
   import { selectSavedView } from './stores/selection'
   import { isMac } from './lib/i18n'
@@ -103,7 +103,7 @@
   import { previewTarget } from './stores/preview'
   import { openMove, openMoveMany } from './stores/move'
   import { selectedIds, clearSelection } from './stores/listselect'
-  import { selectFolder, selectView } from './stores/selection'
+  import { selectFolder, selectView, revealMessage } from './stores/selection'
   import { setTheme, setThemeId } from './stores/prefs'
   import { openCreateFolder, openRenameFolder, openDeleteFolder, openEmptyTrash } from './stores/folderdialog'
   import { setFolderPinned, listThemes } from './lib/api'
@@ -385,6 +385,11 @@
     unsubscribers.push(onMenu(handleMenu))
     // a mailto: link opened while the app is already running.
     unsubscribers.push(onMailtoCompose((draft) => openMailtoDraft(draft)))
+    // a clicked new-mail notification. the window is already back up by the
+    // time this arrives; all that is left is to go to the message.
+    unsubscribers.push(
+      onOpenMessage((e) => revealMessage(e.messageId, e.accountId, e.folderId, get(sidebar).data ?? null)),
+    )
 
     // a mailto: link that launched the app: the backend stashed it, so pick it
     // up now that the sidebar (and any accounts) have loaded. onboarding, if
