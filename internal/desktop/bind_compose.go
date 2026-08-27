@@ -101,7 +101,8 @@ func (a *App) SendMessage(req ComposeRequest) (int64, error) {
 
 	// harvest every recipient into the address book so autocomplete learns from
 	// who the user writes to. best effort: a failure here must not fail the send.
-	for _, group := range [][]AddressDTO{req.To, req.Cc, req.Bcc} {
+	// Turned off, nothing is remembered and autocomplete offers only contacts.
+	for _, group := range harvestGroups(a.harvestAddresses(), req) {
 		for _, addr := range group {
 			if err := a.store.RecordAddress(a.ctx, addr.Email, addr.Name); err != nil {
 				a.log.Error("record recipient address", "email", addr.Email, "err", err)
@@ -109,6 +110,15 @@ func (a *App) SendMessage(req ComposeRequest) (int64, error) {
 		}
 	}
 	return id, nil
+}
+
+// harvestGroups is the recipient lists to learn from, or none when learning
+// from mail is off.
+func harvestGroups(harvest bool, req ComposeRequest) [][]AddressDTO {
+	if !harvest {
+		return nil
+	}
+	return [][]AddressDTO{req.To, req.Cc, req.Bcc}
 }
 
 // CancelSend pulls a still-queued message back out of the outbox, returning

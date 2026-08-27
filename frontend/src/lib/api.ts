@@ -37,6 +37,12 @@ import type {
   Signature,
   AccountSignatures,
   AddressBookEntry,
+  AddressBook,
+  AddressBookDraft,
+  DiscoveredBook,
+  Contact,
+  ContactConflict,
+  ContactDraft,
   AttachmentContent,
   ThemeInfo,
   ThemeApply,
@@ -1072,6 +1078,7 @@ export const SettingKeys = {
   sendDelay: 'send_delay_seconds',
   flagHighlight: 'flag_highlight',
   shortcutHints: 'show_shortcut_hints',
+  harvestAddresses: 'harvest_addresses',
   accountEmail: 'show_account_email',
   onboarded: 'onboarding_complete',
   alwaysLoadImages: 'remote_images_always',
@@ -1492,4 +1499,55 @@ export function allAccounts(): Promise<Account[]> {
     return Promise.resolve(demoAccounts())
   }
   return App.AllAccounts().then((list) => (list ?? []) as unknown as Account[])
+}
+
+// listAddressBooks returns every configured CardDAV address book (#168).
+export function listAddressBooks(): Promise<AddressBook[]> {
+  return App.ListAddressBooks().then((list) => (list ?? []) as unknown as AddressBook[])
+}
+
+// discoverAddressBooks asks a server which address books a login can see. With
+// an accountId and no url it starts from that mailbox's domain.
+export function discoverAddressBooks(draft: AddressBookDraft): Promise<DiscoveredBook[]> {
+  return App.DiscoverAddressBooks(new desktop.AddressBookRequest(draft)).then(
+    (list) => (list ?? []) as unknown as DiscoveredBook[],
+  )
+}
+
+// addAddressBook stores an address book and syncs it once.
+export function addAddressBook(draft: AddressBookDraft): Promise<AddressBook> {
+  return App.AddAddressBook(new desktop.AddressBookRequest(draft)) as unknown as Promise<AddressBook>
+}
+
+// updateAddressBook saves a book's name, location and login. An empty password
+// leaves the stored one alone.
+export function updateAddressBook(draft: AddressBookDraft): Promise<AddressBook> {
+  return App.UpdateAddressBook(new desktop.AddressBookRequest(draft)) as unknown as Promise<AddressBook>
+}
+
+// removeAddressBook forgets a book here. Nothing is deleted on the server.
+export function removeAddressBook(id: number): Promise<void> {
+  return App.RemoveAddressBook(id)
+}
+
+// listContacts returns the contacts in a book, or in all of them for bookId 0.
+export function listContacts(bookId: number): Promise<Contact[]> {
+  return App.ListContacts(bookId).then((list) => (list ?? []) as unknown as Contact[])
+}
+
+// syncContacts refreshes every address book now.
+export function syncContacts(): Promise<void> {
+  return App.SyncContacts()
+}
+
+// saveContact writes a contact to its server. A refused write comes back with
+// conflict true and both versions, having changed nothing.
+export function saveContact(draft: ContactDraft): Promise<ContactConflict> {
+  return App.SaveContact(new desktop.ContactRequest(draft)) as unknown as Promise<ContactConflict>
+}
+
+// deleteContact removes a contact here and on the server. force writes through
+// a conflict the user has already been shown.
+export function deleteContact(id: number, force: boolean): Promise<ContactConflict> {
+  return App.DeleteContact(id, force) as unknown as Promise<ContactConflict>
 }

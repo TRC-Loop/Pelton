@@ -86,6 +86,7 @@ func (a *App) buildMenu() *menu.Menu {
 		mailboxMenu.AddSeparator()
 		mailboxMenu.AddText(s.addMailbox, keys.CmdOrCtrl("m"), a.menuAction("add-mailbox"))
 		mailboxMenu.AddText(s.manageMailboxes, nil, a.menuAction("open-mailboxes"))
+		mailboxMenu.AddText(s.contacts, nil, a.menuAction("open-contacts"))
 
 		// mail menu: actions on the open message. Undo stays enabled (it undoes
 		// the last send/delete/archive, which needs no open message), but the

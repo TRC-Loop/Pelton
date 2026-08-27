@@ -14,6 +14,10 @@ export function ActiveProfile() {
   return window['go']['desktop']['App']['ActiveProfile']();
 }
 
+export function AddAddressBook(arg1) {
+  return window['go']['desktop']['App']['AddAddressBook'](arg1);
+}
+
 export function AddOAuthAccount(arg1) {
   return window['go']['desktop']['App']['AddOAuthAccount'](arg1);
 }
@@ -138,6 +142,10 @@ export function DeleteAddress(arg1) {
   return window['go']['desktop']['App']['DeleteAddress'](arg1);
 }
 
+export function DeleteContact(arg1, arg2) {
+  return window['go']['desktop']['App']['DeleteContact'](arg1, arg2);
+}
+
 export function DeleteDraft(arg1) {
   return window['go']['desktop']['App']['DeleteDraft'](arg1);
 }
@@ -192,6 +200,10 @@ export function DiscardAgentProposal(arg1) {
 
 export function DiscardFailedSend(arg1) {
   return window['go']['desktop']['App']['DiscardFailedSend'](arg1);
+}
+
+export function DiscoverAddressBooks(arg1) {
+  return window['go']['desktop']['App']['DiscoverAddressBooks'](arg1);
 }
 
 export function DiscoverConfig(arg1) {
@@ -350,8 +362,16 @@ export function ListAccounts() {
   return window['go']['desktop']['App']['ListAccounts']();
 }
 
+export function ListAddressBooks() {
+  return window['go']['desktop']['App']['ListAddressBooks']();
+}
+
 export function ListAddresses() {
   return window['go']['desktop']['App']['ListAddresses']();
+}
+
+export function ListContacts(arg1) {
+  return window['go']['desktop']['App']['ListContacts'](arg1);
 }
 
 export function ListDrafts() {
@@ -474,6 +494,10 @@ export function RegenerateMCPToken() {
   return window['go']['desktop']['App']['RegenerateMCPToken']();
 }
 
+export function RemoveAddressBook(arg1) {
+  return window['go']['desktop']['App']['RemoveAddressBook'](arg1);
+}
+
 export function RemoveImageAllow(arg1, arg2) {
   return window['go']['desktop']['App']['RemoveImageAllow'](arg1, arg2);
 }
@@ -528,6 +552,10 @@ export function SaveAllAttachments(arg1) {
 
 export function SaveAttachment(arg1, arg2) {
   return window['go']['desktop']['App']['SaveAttachment'](arg1, arg2);
+}
+
+export function SaveContact(arg1) {
+  return window['go']['desktop']['App']['SaveContact'](arg1);
 }
 
 export function SaveCustomTheme(arg1) {
@@ -698,6 +726,10 @@ export function SyncAccountNow(arg1) {
   return window['go']['desktop']['App']['SyncAccountNow'](arg1);
 }
 
+export function SyncContacts() {
+  return window['go']['desktop']['App']['SyncContacts']();
+}
+
 export function SystemColorScheme() {
   return window['go']['desktop']['App']['SystemColorScheme']();
 }
@@ -756,6 +788,10 @@ export function Unsubscribe(arg1) {
 
 export function UpdateAccount(arg1) {
   return window['go']['desktop']['App']['UpdateAccount'](arg1);
+}
+
+export function UpdateAddressBook(arg1) {
+  return window['go']['desktop']['App']['UpdateAddressBook'](arg1);
 }
 
 export function UpdateProfile(arg1) {

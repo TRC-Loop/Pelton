@@ -147,6 +147,9 @@
   import type { EditorMode, MessageSummary, ThemePref, ThemeInfo, Folder, Account } from './lib/types'
 
   let settingsOpen = false
+  // the contacts screen (#168), opened over the mail view and code-split the
+  // same way settings is.
+  let contactsOpen = false
   // the settings category to open on; set by menu actions that deep-link into a
   // specific section (e.g. Manage Mailboxes), null opens the default section.
   let settingsCategory: string | null = null
@@ -450,6 +453,17 @@
     openCompose(accountId, editorMode)
   }
 
+  // startComposeTo opens a new message addressed to one contact, which is what
+  // clicking an address on the contacts screen does (#168).
+  function startComposeTo(email: string): void {
+    const accountId = composeAccountId()
+    if (accountId === null) {
+      toastError(get(t)('app.toast.addMailboxFirst'))
+      return
+    }
+    openComposeWith(accountId, editorMode, { to: email, cc: '', bcc: '', subject: '', body: '' })
+  }
+
   // a mailto: link waiting for a mailbox to exist. onboarding-first: if the link
   // arrives before any account is set up, it is held here and opened once
   // onboarding finishes, rather than being dropped.
@@ -682,7 +696,14 @@
   }
 
   // MenuAction covers the actions only menus emit, on top of the shortcuts.
-  type MenuAction = ShortcutAction | 'about' | 'undo' | 'toggle-low-power' | 'open-mailboxes' | 'hide-window'
+  type MenuAction =
+    | ShortcutAction
+    | 'about'
+    | 'undo'
+    | 'toggle-low-power'
+    | 'open-mailboxes'
+    | 'open-contacts'
+    | 'hide-window'
 
   // dispatch maps an action (from a shortcut or a menu item) to its handler.
   function dispatchAction(action: MenuAction): void {
@@ -700,6 +721,9 @@
       case 'open-mailboxes':
         settingsCategory = 'mailboxes'
         settingsOpen = true
+        break
+      case 'open-contacts':
+        contactsOpen = true
         break
       case 'sync':
         void runSync()
@@ -1369,6 +1393,16 @@
 
 <!-- settings and the wizard are code-split: their js/css load only when opened,
      so they cost nothing at startup. compose stays eager (used constantly). -->
+{#if contactsOpen}
+  {#await import('./components/contacts/ContactsScreen.svelte') then m}
+    <svelte:component
+      this={m.default}
+      on:close={() => (contactsOpen = false)}
+      on:compose={(e) => { contactsOpen = false; startComposeTo(e.detail) }}
+    />
+  {/await}
+{/if}
+
 {#if settingsOpen}
   {#await import('./components/settings/SettingsPanel.svelte') then m}
     <svelte:component
