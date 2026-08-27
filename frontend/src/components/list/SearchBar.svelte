@@ -199,6 +199,10 @@
     clearTimeout(timer)
     text = ''
     chips = []
+    // the popover's own pickers, or reopening it offers the dates that were
+    // just cleared as though they were still applied.
+    afterDate = ''
+    beforeDate = ''
     dispatch('search', '')
     dispatch('filter', { ...emptyFilter })
   }
@@ -352,10 +356,19 @@
     flex: 1;
     min-width: 0;
     display: flex;
-    flex-wrap: wrap;
+    /* one row, always. A before: and an after: chip together are wider than
+       the field, and wrapping made the whole search bar grow a second line and
+       shove the list down. Chips scroll sideways instead. */
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
     align-items: center;
     gap: var(--space-1);
     padding: 3px 0;
+  }
+
+  .field::-webkit-scrollbar {
+    display: none;
   }
 
   .chip {
