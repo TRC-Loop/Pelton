@@ -66,7 +66,19 @@ const (
 	// so the frontend reloads its preferences, sidebar, list and views rather
 	// than trying to patch them.
 	EventProfileChanged = "profile:changed"
+	// EventOpenMessage fires when something outside the ui asks for a specific
+	// message to be shown, which today means a clicked new-mail notification.
+	// It carries the folder as well as the message so the list can move to
+	// where the message actually lives rather than opening it out of context.
+	EventOpenMessage = "message:open"
 )
+
+// OpenMessageEvent is the payload for EventOpenMessage.
+type OpenMessageEvent struct {
+	MessageID int64 `json:"messageId"`
+	AccountID int64 `json:"accountId"`
+	FolderID  int64 `json:"folderId"`
+}
 
 // DownloadProgressEvent is the payload for EventDownloadProgress. Running is
 // false on the final event (done, cancelled, or failed); Error is set on failure.
