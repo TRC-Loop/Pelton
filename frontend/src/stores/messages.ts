@@ -323,9 +323,19 @@ function searchPage(
 // query and the structured chip constraints.
 export async function runSearch(query: string, filter: SearchFilter = emptyFilter): Promise<void> {
   currentSearch = { query, filter }
+  // the same generation guard every other loader here uses. Without it a search
+  // that resolves after the list has moved on writes its results over whatever
+  // is showing now: clearing the search bar fires both a query change and a
+  // filter change, so the old filtered search and the fresh folder load are in
+  // flight together, and the search landing second put the list back into a
+  // result set nobody had asked for.
+  const generation = ++loadGeneration
   messageList.update((s) => loading(s))
   try {
     const { messages, total } = await searchPage(query, filter, 0)
+    if (generation !== loadGeneration) {
+      return
+    }
     // search runs over the local index, so backfilling older mail from the
     // server is not part of it: hasOlder stays false and the list shows no
     // "load older" affordance on a result set.
@@ -342,6 +352,9 @@ export async function runSearch(query: string, filter: SearchFilter = emptyFilte
       }),
     )
   } catch (err) {
+    if (generation !== loadGeneration) {
+      return
+    }
     messageList.set(failed(errorMessage(err)))
   }
 }

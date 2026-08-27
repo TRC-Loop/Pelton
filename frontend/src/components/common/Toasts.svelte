@@ -55,7 +55,11 @@
     display: flex;
     flex-direction: column;
     gap: var(--space-2);
-    z-index: 200;
+    /* above the whole modal band. Modals layer from 300 upwards (300 + depth *
+       4, see Modal.svelte), so a toast at 200 sat behind the blurred backdrop
+       of any open dialog - and a dialog is exactly where an error toast is
+       most likely to be raised, which made the error invisible. */
+    z-index: 600;
     padding: var(--space-5);
     pointer-events: none;
   }

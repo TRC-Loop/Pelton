@@ -85,7 +85,14 @@
     if (!target || busy) {
       return
     }
-    if (when.getTime() <= Date.now()) {
+    // the picker only offers minute granularity, so a time picked inside the
+    // current minute comes back with :00 seconds and reads as a few seconds
+    // ago. Comparing against the start of the current minute is what makes
+    // "in three minutes" behave like three minutes rather than being rejected
+    // for being in the past.
+    const thisMinute = new Date()
+    thisMinute.setSeconds(0, 0)
+    if (when.getTime() <= thisMinute.getTime()) {
       toastError($t('detail.snooze.pickFutureTime'))
       return
     }

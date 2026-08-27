@@ -188,8 +188,28 @@
     const vh = window.innerHeight / scale
     const maxLeft = vw - panelW - margin
     const maxTop = vh - panelH - margin
-    panelLeft = Math.min(Math.max(triggerLeft, margin), Math.max(margin, maxLeft))
-    panelTop = Math.min(Math.max(triggerBottom + 4, margin), Math.max(margin, maxTop))
+    const wantLeft = Math.min(Math.max(triggerLeft, margin), Math.max(margin, maxLeft))
+    const wantTop = Math.min(Math.max(triggerBottom + 4, margin), Math.max(margin, maxTop))
+    panelLeft = wantLeft
+    panelTop = wantTop
+
+    // `position: fixed` is only relative to the viewport while no ancestor has
+    // a transform. Modal and the snooze dialog both centre with
+    // translate(-50%, -50%), which makes the dialog the containing block, so
+    // the coordinates above get re-anchored to its top-left corner and the
+    // panel lands half a dialog away - off screen entirely in the snooze
+    // dialog (#170 follow-up). Rather than forbid transforms on every dialog
+    // that might ever hold a picker, measure where the panel actually ended up
+    // and shift it by the difference. The correction is zero when there is no
+    // transformed ancestor, so the common case is unchanged.
+    await tick()
+    const placed = panelEl.getBoundingClientRect()
+    const offLeft = placed.left / scale - wantLeft
+    const offTop = placed.top / scale - wantTop
+    if (Math.abs(offLeft) > 0.5 || Math.abs(offTop) > 0.5) {
+      panelLeft = wantLeft - offLeft
+      panelTop = wantTop - offTop
+    }
   }
 
   // weekday header letters, monday-first; the reference week (2023-01-02 was
