@@ -55,26 +55,32 @@
     display: flex;
     flex-direction: column;
     gap: var(--space-2);
-    z-index: 200;
+    /* above the whole modal band. Modals layer from 300 upwards (300 + depth *
+       4, see Modal.svelte), so a toast at 200 sat behind the blurred backdrop
+       of any open dialog - and a dialog is exactly where an error toast is
+       most likely to be raised, which made the error invisible. */
+    z-index: 600;
     padding: var(--space-5);
     pointer-events: none;
   }
 
   /* anchoring. the stack only occupies its corner; toasts capture pointer events
-     themselves so the rest of the app stays clickable. */
+     themselves so the rest of the app stays clickable. the top anchors start
+     below the macOS traffic lights, which are drawn over the webview and would
+     otherwise land on a top-left toast; zero on every other platform. */
   .stack.top-left {
-    top: 0;
+    top: var(--titlebar-lights);
     left: 0;
     align-items: flex-start;
   }
   .stack.top-center {
-    top: 0;
+    top: var(--titlebar-lights);
     left: 50%;
     transform: translateX(-50%);
     align-items: center;
   }
   .stack.top-right {
-    top: 0;
+    top: var(--titlebar-lights);
     right: 0;
     align-items: flex-end;
   }
@@ -140,7 +146,7 @@
     color: var(--accent);
     font-size: var(--fz-label);
     font-weight: var(--fw-medium);
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
 
   .action:hover {
@@ -152,7 +158,7 @@
     border: none;
     background: transparent;
     color: var(--text-tertiary);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     padding: var(--space-1);
     border-radius: var(--radius-control);
     flex-shrink: 0;

@@ -27,7 +27,7 @@
   import AttachmentPicker from './AttachmentPicker.svelte'
   import DateTimePicker from '../common/DateTimePicker.svelte'
   import { currentUIScale } from '../../theme/theme'
-  import { updateCompose, closeCompose, setComposeFullscreenDefault, type ComposeSession } from '../../stores/compose'
+  import { updateCompose, closeCompose, closeRequest, setComposeFullscreenDefault, type ComposeSession } from '../../stores/compose'
   import { signatures, signatureById, getAccountSignatures } from '../../stores/signatures'
   import type { Signature } from '../../lib/types'
   import { sidebar } from '../../stores/accounts'
@@ -37,6 +37,9 @@
   import { prefs } from '../../stores/prefs'
   import { bodyFontStack } from '../../lib/fonts'
   import { buildRequest, hasRecipients } from '../../lib/mailcompose'
+  import ProtectionPicker from './ProtectionPicker.svelte'
+  import { composeProtectionStatus } from '../../lib/api'
+  import type { ProtectionStatus } from '../../lib/types'
   import { atTime, addDays, nextWeekday } from '../../lib/datepresets'
   import { errorMessage, toastError, toastSuccess } from '../../stores/toast'
   import type CodeMirrorEditor from './CodeMirrorEditor.svelte'
@@ -52,6 +55,17 @@
   export let session: ComposeSession
 
   let sending = false
+  // what signing and encryption are possible for this account and the current
+  // recipients. It is refreshed as the recipient list changes, because a
+  // control that offers encryption to somebody with no key is a control that
+  // fails at send time.
+  let protectionStatus: ProtectionStatus | null = null
+  // the recipient list the status was fetched for, so an unchanged list does
+  // not refetch on every keystroke elsewhere in the form.
+  let statusFor = ''
+  // suggestedApplied keeps the account default from overriding a choice the
+  // user made: it is a starting point, once, not a correction.
+  let suggestedApplied = false
   let preview = false
   let confirmClose = false
 
@@ -338,6 +352,46 @@
   // hasContent decides whether closing needs a save/discard prompt: any
   // recipient, subject or body text counts, but a session that was only ever
   // opened and never touched should close silently.
+  // recipientList is every address currently typed in, which is what the
+  // status is about.
+  $: recipientList = [session.to, session.cc, session.bcc]
+    .join(',')
+    .split(/[,;]/)
+    .map((part) => {
+      const match = part.match(/<([^>]+)>/)
+      return (match ? match[1] : part).trim().toLowerCase()
+    })
+    .filter((email) => email.includes('@'))
+
+  $: void refreshProtection(session.accountId, recipientList.join(','))
+
+  // refreshProtection asks the backend what is possible. A failure leaves the
+  // controls as they were rather than pretending nothing can be protected.
+  async function refreshProtection(accountId: number, key: string): Promise<void> {
+    if (key === statusFor && protectionStatus !== null) {
+      return
+    }
+    statusFor = key
+    try {
+      const status = await composeProtectionStatus(accountId, recipientList)
+      protectionStatus = status as unknown as ProtectionStatus
+      if (!suggestedApplied) {
+        suggestedApplied = true
+        if (status.suggested !== 'none') {
+          updateCompose(session.id, { protection: status.suggested })
+        }
+      }
+      // the recipient list changed and encryption is no longer possible: drop
+      // it rather than leaving a control on that would fail the send.
+      if (!protectionStatus.canEncrypt && (session.protection === 'encrypt' || session.protection === 'signencrypt')) {
+        updateCompose(session.id, { protection: session.protection === 'signencrypt' ? 'sign' : 'none' })
+      }
+    } catch {
+      // leave whatever was last known; the send still refuses on its own if
+      // the keys are not there.
+    }
+  }
+
   function hasContent(): boolean {
     return (
       session.to.trim().length > 0 ||
@@ -346,6 +400,13 @@
       session.subject.trim().length > 0 ||
       session.body.trim().length > 0
     )
+  }
+
+  // an outside close (the close-window action) lands here rather than removing
+  // the session, so an unsaved draft still gets its prompt.
+  $: if ($closeRequest === session.id) {
+    closeRequest.set(null)
+    requestClose()
   }
 
   function requestClose(): void {
@@ -379,7 +440,7 @@
   }
 </script>
 
-<div class="compose" class:fullscreen={session.fullscreen} class:minimized={session.minimized} role="dialog" aria-label={$t('compose.dialog.ariaLabel')}>
+<div class="compose" class:fullscreen={session.fullscreen} class:minimized={session.minimized} data-compose-id={session.id} role="dialog" aria-label={$t('compose.dialog.ariaLabel')}>
   <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
   <header class="head" on:dblclick={toggleMinimize}>
     <span class="title">{session.subject || $t('compose.title.untitled')}</span>
@@ -504,6 +565,11 @@
           <IconChevronDown size={14} stroke={1.8} />
         </button>
       </div>
+      <ProtectionPicker
+        protection={session.protection}
+        status={protectionStatus}
+        on:change={(e) => updateCompose(session.id, { protection: e.detail })}
+      />
       <button type="button" class="save" on:click={save}>
         <IconDeviceFloppy size={15} stroke={1.6} />
         {$t('action.saveDraft')}
@@ -573,6 +639,9 @@
   .compose.fullscreen {
     position: fixed;
     inset: 24px;
+    /* clears the macOS traffic lights, which the 24px inset alone runs into;
+       zero on every other platform. */
+    top: calc(24px + var(--titlebar-lights));
     width: auto;
     height: auto;
     max-height: none;
@@ -623,7 +692,7 @@
     border: none;
     background: transparent;
     color: var(--text-tertiary);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     border-radius: var(--radius-control);
   }
 
@@ -743,7 +812,7 @@
     color: var(--text-secondary);
     font-size: var(--fz-label);
     padding: var(--space-1) var(--space-2);
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
 
   .send,
@@ -756,7 +825,7 @@
     border-radius: var(--radius-control);
     background: var(--surface-raised);
     color: var(--text-primary);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     font-size: var(--fz-label);
   }
 
@@ -790,7 +859,7 @@
     border-radius: 0 var(--radius-control) var(--radius-control) 0;
     background: var(--surface-raised);
     color: var(--text-secondary);
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
 
   .send-caret:hover:not(:disabled) {
@@ -844,7 +913,7 @@
     border-radius: var(--radius-control);
     background: transparent;
     color: var(--text-primary);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     text-align: left;
     font-size: var(--fz-label);
   }
@@ -927,7 +996,7 @@
     border-radius: var(--radius-control);
     background: var(--surface-raised);
     color: var(--text-primary);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     font-size: var(--fz-label);
   }
 

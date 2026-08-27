@@ -4,12 +4,22 @@ export namespace desktop {
 	    id: number;
 	    email: string;
 	    displayName: string;
+	    localLabel: string;
+	    useLocalLabel: boolean;
 	    username: string;
 	    imapHost: string;
 	    imapPort: number;
 	    smtpHost: string;
 	    smtpPort: number;
 	    local: boolean;
+	    imapTls: string;
+	    smtpTls: string;
+	    exportOnArchive: boolean;
+	    exportDir: string;
+	    exportSubfolders: string;
+	    exportNameTemplate: string;
+	    pgpDefault: string;
+	    passwordPromptDismissed: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new AccountDTO(source);
@@ -20,12 +30,22 @@ export namespace desktop {
 	        this.id = source["id"];
 	        this.email = source["email"];
 	        this.displayName = source["displayName"];
+	        this.localLabel = source["localLabel"];
+	        this.useLocalLabel = source["useLocalLabel"];
 	        this.username = source["username"];
 	        this.imapHost = source["imapHost"];
 	        this.imapPort = source["imapPort"];
 	        this.smtpHost = source["smtpHost"];
 	        this.smtpPort = source["smtpPort"];
 	        this.local = source["local"];
+	        this.imapTls = source["imapTls"];
+	        this.smtpTls = source["smtpTls"];
+	        this.exportOnArchive = source["exportOnArchive"];
+	        this.exportDir = source["exportDir"];
+	        this.exportSubfolders = source["exportSubfolders"];
+	        this.exportNameTemplate = source["exportNameTemplate"];
+	        this.pgpDefault = source["pgpDefault"];
+	        this.passwordPromptDismissed = source["passwordPromptDismissed"];
 	    }
 	}
 	export class AccountSignaturesDTO {
@@ -42,14 +62,40 @@ export namespace desktop {
 	        this.footerId = source["footerId"];
 	    }
 	}
+	export class AccountSyncStateDTO {
+	    accountId: number;
+	    email: string;
+	    lastOk: string;
+	    failedAt: string;
+	    reason: string;
+	    detail: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new AccountSyncStateDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.accountId = source["accountId"];
+	        this.email = source["email"];
+	        this.lastOk = source["lastOk"];
+	        this.failedAt = source["failedAt"];
+	        this.reason = source["reason"];
+	        this.detail = source["detail"];
+	    }
+	}
 	export class AddAccountRequest {
 	    email: string;
 	    displayName: string;
+	    localLabel: string;
+	    useLocalLabel: boolean;
 	    username: string;
 	    imapHost: string;
 	    imapPort: number;
 	    smtpHost: string;
 	    smtpPort: number;
+	    imapTls: string;
+	    smtpTls: string;
 	    password: string;
 	    provider: string;
 	    clientId: string;
@@ -63,15 +109,51 @@ export namespace desktop {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.email = source["email"];
 	        this.displayName = source["displayName"];
+	        this.localLabel = source["localLabel"];
+	        this.useLocalLabel = source["useLocalLabel"];
 	        this.username = source["username"];
 	        this.imapHost = source["imapHost"];
 	        this.imapPort = source["imapPort"];
 	        this.smtpHost = source["smtpHost"];
 	        this.smtpPort = source["smtpPort"];
+	        this.imapTls = source["imapTls"];
+	        this.smtpTls = source["smtpTls"];
 	        this.password = source["password"];
 	        this.provider = source["provider"];
 	        this.clientId = source["clientId"];
 	        this.clientSecret = source["clientSecret"];
+	    }
+	}
+	export class AddressBookDTO {
+	    id: number;
+	    accountId: number;
+	    name: string;
+	    url: string;
+	    collectionPath: string;
+	    username: string;
+	    readOnly: boolean;
+	    lastSync: string;
+	    lastError: string;
+	    contactCount: number;
+	    hasPassword: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new AddressBookDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.accountId = source["accountId"];
+	        this.name = source["name"];
+	        this.url = source["url"];
+	        this.collectionPath = source["collectionPath"];
+	        this.username = source["username"];
+	        this.readOnly = source["readOnly"];
+	        this.lastSync = source["lastSync"];
+	        this.lastError = source["lastError"];
+	        this.contactCount = source["contactCount"];
+	        this.hasPassword = source["hasPassword"];
 	    }
 	}
 	export class AddressBookEntryDTO {
@@ -80,6 +162,7 @@ export namespace desktop {
 	    useCount: number;
 	    lastUsed: string;
 	    createdAt: string;
+	    contact: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new AddressBookEntryDTO(source);
@@ -92,6 +175,31 @@ export namespace desktop {
 	        this.useCount = source["useCount"];
 	        this.lastUsed = source["lastUsed"];
 	        this.createdAt = source["createdAt"];
+	        this.contact = source["contact"];
+	    }
+	}
+	export class AddressBookRequest {
+	    id: number;
+	    accountId: number;
+	    name: string;
+	    url: string;
+	    collectionPath: string;
+	    username: string;
+	    password: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new AddressBookRequest(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.accountId = source["accountId"];
+	        this.name = source["name"];
+	        this.url = source["url"];
+	        this.collectionPath = source["collectionPath"];
+	        this.username = source["username"];
+	        this.password = source["password"];
 	    }
 	}
 	export class AddressDTO {
@@ -108,9 +216,57 @@ export namespace desktop {
 	        this.email = source["email"];
 	    }
 	}
+	export class AgentActionDTO {
+	    id: number;
+	    tool: string;
+	    summary: string;
+	    error: string;
+	    when: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new AgentActionDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.tool = source["tool"];
+	        this.summary = source["summary"];
+	        this.error = source["error"];
+	        this.when = source["when"];
+	    }
+	}
+	export class AgentProposalDTO {
+	    id: number;
+	    accountId: number;
+	    to: string;
+	    cc: string;
+	    bcc: string;
+	    subject: string;
+	    body: string;
+	    when: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new AgentProposalDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.accountId = source["accountId"];
+	        this.to = source["to"];
+	        this.cc = source["cc"];
+	        this.bcc = source["bcc"];
+	        this.subject = source["subject"];
+	        this.body = source["body"];
+	        this.when = source["when"];
+	    }
+	}
 	export class ArchiveUndoDTO {
 	    messageId: string;
 	    originalFolderId: number;
+	    exportPath: string;
+	    exportError: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new ArchiveUndoDTO(source);
@@ -120,6 +276,8 @@ export namespace desktop {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.messageId = source["messageId"];
 	        this.originalFolderId = source["originalFolderId"];
+	        this.exportPath = source["exportPath"];
+	        this.exportError = source["exportError"];
 	    }
 	}
 	export class AttachmentContentDTO {
@@ -161,6 +319,62 @@ export namespace desktop {
 	        this.sizeBytes = source["sizeBytes"];
 	        this.inline = source["inline"];
 	    }
+	}
+	export class VerdictDTO {
+	    status: string;
+	    malicious: number;
+	    suspicious: number;
+	    total: number;
+	    permalink: string;
+	    error: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new VerdictDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.status = source["status"];
+	        this.malicious = source["malicious"];
+	        this.suspicious = source["suspicious"];
+	        this.total = source["total"];
+	        this.permalink = source["permalink"];
+	        this.error = source["error"];
+	    }
+	}
+	export class AttachmentVerdictDTO {
+	    attachmentId: number;
+	    filename: string;
+	    verdict: VerdictDTO;
+	
+	    static createFrom(source: any = {}) {
+	        return new AttachmentVerdictDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.attachmentId = source["attachmentId"];
+	        this.filename = source["filename"];
+	        this.verdict = this.convertValues(source["verdict"], VerdictDTO);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
 	}
 	export class BackupInfoDTO {
 	    path: string;
@@ -226,6 +440,7 @@ export namespace desktop {
 	    references: string[];
 	    attachments: ComposeAttachment[];
 	    sendAt: string;
+	    protection: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new ComposeRequest(source);
@@ -244,6 +459,7 @@ export namespace desktop {
 	        this.references = source["references"];
 	        this.attachments = this.convertValues(source["attachments"], ComposeAttachment);
 	        this.sendAt = source["sendAt"];
+	        this.protection = source["protection"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
@@ -263,6 +479,172 @@ export namespace desktop {
 		    }
 		    return a;
 		}
+	}
+	export class CreateFolderRequest {
+	    accountId: number;
+	    parentId: number;
+	    name: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new CreateFolderRequest(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.accountId = source["accountId"];
+	        this.parentId = source["parentId"];
+	        this.name = source["name"];
+	    }
+	}
+	export class ContactValueDTO {
+	    value: string;
+	    label: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new ContactValueDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.value = source["value"];
+	        this.label = source["label"];
+	    }
+	}
+	export class ContactDTO {
+	    id: number;
+	    bookId: number;
+	    bookName: string;
+	    uid: string;
+	    fullName: string;
+	    organization: string;
+	    title: string;
+	    note: string;
+	    emails: ContactValueDTO[];
+	    phones: ContactValueDTO[];
+	    readOnly: boolean;
+	    updated: string;
+	    extra: string[];
+	
+	    static createFrom(source: any = {}) {
+	        return new ContactDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.bookId = source["bookId"];
+	        this.bookName = source["bookName"];
+	        this.uid = source["uid"];
+	        this.fullName = source["fullName"];
+	        this.organization = source["organization"];
+	        this.title = source["title"];
+	        this.note = source["note"];
+	        this.emails = this.convertValues(source["emails"], ContactValueDTO);
+	        this.phones = this.convertValues(source["phones"], ContactValueDTO);
+	        this.readOnly = source["readOnly"];
+	        this.updated = source["updated"];
+	        this.extra = source["extra"];
+	    }
+	
+	    convertValues(a: any, classs: any, asMap: boolean = false): any {
+	        if (!a) {
+	            return a;
+	        }
+	        if (a.slice && a.map) {
+	            return (a as any[]).map(elem => this.convertValues(elem, classs));
+	        } else if ("object" === typeof a) {
+	            if (asMap) {
+	                for (const key of Object.keys(a)) {
+	                    a[key] = new classs(a[key]);
+	                }
+	                return a;
+	            }
+	            return new classs(a);
+	        }
+	        return a;
+	    }
+	}
+	export class ContactConflictDTO {
+	    conflict: boolean;
+	    server: ContactDTO;
+	    mine: ContactDTO;
+	    saved: ContactDTO;
+	
+	    static createFrom(source: any = {}) {
+	        return new ContactConflictDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.conflict = source["conflict"];
+	        this.server = this.convertValues(source["server"], ContactDTO);
+	        this.mine = this.convertValues(source["mine"], ContactDTO);
+	        this.saved = this.convertValues(source["saved"], ContactDTO);
+	    }
+	
+	    convertValues(a: any, classs: any, asMap: boolean = false): any {
+	        if (!a) {
+	            return a;
+	        }
+	        if (a.slice && a.map) {
+	            return (a as any[]).map(elem => this.convertValues(elem, classs));
+	        } else if ("object" === typeof a) {
+	            if (asMap) {
+	                for (const key of Object.keys(a)) {
+	                    a[key] = new classs(a[key]);
+	                }
+	                return a;
+	            }
+	            return new classs(a);
+	        }
+	        return a;
+	    }
+	}
+	export class ContactRequest {
+	    id: number;
+	    bookId: number;
+	    fullName: string;
+	    organization: string;
+	    title: string;
+	    note: string;
+	    emails: ContactValueDTO[];
+	    phones: ContactValueDTO[];
+	    force: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new ContactRequest(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.bookId = source["bookId"];
+	        this.fullName = source["fullName"];
+	        this.organization = source["organization"];
+	        this.title = source["title"];
+	        this.note = source["note"];
+	        this.emails = this.convertValues(source["emails"], ContactValueDTO);
+	        this.phones = this.convertValues(source["phones"], ContactValueDTO);
+	        this.force = source["force"];
+	    }
+	
+	    convertValues(a: any, classs: any, asMap: boolean = false): any {
+	        if (!a) {
+	            return a;
+	        }
+	        if (a.slice && a.map) {
+	            return (a as any[]).map(elem => this.convertValues(elem, classs));
+	        } else if ("object" === typeof a) {
+	            if (asMap) {
+	                for (const key of Object.keys(a)) {
+	                    a[key] = new classs(a[key]);
+	                }
+	                return a;
+	            }
+	            return new classs(a);
+	        }
+	        return a;
+	    }
 	}
 	export class DefaultMailStatusDTO {
 	    known: boolean;
@@ -278,42 +660,34 @@ export namespace desktop {
 	        this.isDefault = source["isDefault"];
 	    }
 	}
-	export class DiscoveredDTO {
-	    imapHost: string;
-	    imapPort: number;
-	    smtpHost: string;
-	    smtpPort: number;
-	    oauth: boolean;
-	    source: string;
+	export class DevLogLineDTO {
+	    seq: number;
+	    text: string;
 	
 	    static createFrom(source: any = {}) {
-	        return new DiscoveredDTO(source);
+	        return new DevLogLineDTO(source);
 	    }
 	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.imapHost = source["imapHost"];
-	        this.imapPort = source["imapPort"];
-	        this.smtpHost = source["smtpHost"];
-	        this.smtpPort = source["smtpPort"];
-	        this.oauth = source["oauth"];
-	        this.source = source["source"];
+	        this.seq = source["seq"];
+	        this.text = source["text"];
 	    }
 	}
-	export class DraftDTO {
-	    id: number;
-	    savedAt: string;
-	    request: ComposeRequest;
+	export class DevActivityDTO {
+	    lines: DevLogLineDTO[];
+	    next: number;
+	    level: string;
 	
 	    static createFrom(source: any = {}) {
-	        return new DraftDTO(source);
+	        return new DevActivityDTO(source);
 	    }
 	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.id = source["id"];
-	        this.savedAt = source["savedAt"];
-	        this.request = this.convertValues(source["request"], ComposeRequest);
+	        this.lines = this.convertValues(source["lines"], DevLogLineDTO);
+	        this.next = source["next"];
+	        this.level = source["level"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
@@ -334,6 +708,131 @@ export namespace desktop {
 		    return a;
 		}
 	}
+	
+	export class DevProcessDTO {
+	    goroutines: number;
+	    heapBytes: number;
+	    heapSysBytes: number;
+	    gcRuns: number;
+	    databaseBytes: number;
+	    attachmentsBytes: number;
+	    dataDirBytes: number;
+	    uptimeSeconds: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new DevProcessDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.goroutines = source["goroutines"];
+	        this.heapBytes = source["heapBytes"];
+	        this.heapSysBytes = source["heapSysBytes"];
+	        this.gcRuns = source["gcRuns"];
+	        this.databaseBytes = source["databaseBytes"];
+	        this.attachmentsBytes = source["attachmentsBytes"];
+	        this.dataDirBytes = source["dataDirBytes"];
+	        this.uptimeSeconds = source["uptimeSeconds"];
+	    }
+	}
+	export class DiscoveredBookDTO {
+	    name: string;
+	    url: string;
+	    collectionPath: string;
+	    exists: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new DiscoveredBookDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.url = source["url"];
+	        this.collectionPath = source["collectionPath"];
+	        this.exists = source["exists"];
+	    }
+	}
+	export class DiscoveredDTO {
+	    imapHost: string;
+	    imapPort: number;
+	    smtpHost: string;
+	    smtpPort: number;
+	    imapTls: string;
+	    smtpTls: string;
+	    oauth: boolean;
+	    source: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new DiscoveredDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.imapHost = source["imapHost"];
+	        this.imapPort = source["imapPort"];
+	        this.smtpHost = source["smtpHost"];
+	        this.smtpPort = source["smtpPort"];
+	        this.imapTls = source["imapTls"];
+	        this.smtpTls = source["smtpTls"];
+	        this.oauth = source["oauth"];
+	        this.source = source["source"];
+	    }
+	}
+	export class DraftDTO {
+	    id: number;
+	    savedAt: string;
+	    request: ComposeRequest;
+	    locked: boolean;
+	    accountId: number;
+	    protection: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new DraftDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.savedAt = source["savedAt"];
+	        this.request = this.convertValues(source["request"], ComposeRequest);
+	        this.locked = source["locked"];
+	        this.accountId = source["accountId"];
+	        this.protection = source["protection"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class FetchOlderResult {
+	    fetched: number;
+	    hasOlder: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new FetchOlderResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.fetched = source["fetched"];
+	        this.hasOlder = source["hasOlder"];
+	    }
+	}
 	export class FolderDTO {
 	    id: number;
 	    accountId: number;
@@ -345,6 +844,9 @@ export namespace desktop {
 	    unreadCount: number;
 	    totalCount: number;
 	    attributes: string[];
+	    pinned: boolean;
+	    roleOverride: string;
+	    syncExcluded: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new FolderDTO(source);
@@ -362,6 +864,9 @@ export namespace desktop {
 	        this.unreadCount = source["unreadCount"];
 	        this.totalCount = source["totalCount"];
 	        this.attributes = source["attributes"];
+	        this.pinned = source["pinned"];
+	        this.roleOverride = source["roleOverride"];
+	        this.syncExcluded = source["syncExcluded"];
 	    }
 	}
 	export class ImageAllowEntryDTO {
@@ -383,6 +888,38 @@ export namespace desktop {
 	        this.exampleSubject = source["exampleSubject"];
 	        this.exampleFrom = source["exampleFrom"];
 	    }
+	}
+	export class LinkVerdictDTO {
+	    url: string;
+	    verdict: VerdictDTO;
+	
+	    static createFrom(source: any = {}) {
+	        return new LinkVerdictDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.url = source["url"];
+	        this.verdict = this.convertValues(source["verdict"], VerdictDTO);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
 	}
 	export class ListMessagesRequest {
 	    kind: string;
@@ -406,6 +943,28 @@ export namespace desktop {
 	        this.offset = source["offset"];
 	    }
 	}
+	export class LogStatusDTO {
+	    dir: string;
+	    writing: boolean;
+	    forced: boolean;
+	    sizeBytes: number;
+	    crashName: string;
+	    crashTime: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new LogStatusDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.dir = source["dir"];
+	        this.writing = source["writing"];
+	        this.forced = source["forced"];
+	        this.sizeBytes = source["sizeBytes"];
+	        this.crashName = source["crashName"];
+	        this.crashTime = source["crashTime"];
+	    }
+	}
 	export class MCPConfigDTO {
 	    enabled: boolean;
 	    port: number;
@@ -424,6 +983,22 @@ export namespace desktop {
 	        this.token = source["token"];
 	        this.url = source["url"];
 	        this.running = source["running"];
+	    }
+	}
+	export class MCPPermissionDTO {
+	    tool: string;
+	    group: string;
+	    allowed: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new MCPPermissionDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.tool = source["tool"];
+	        this.group = source["group"];
+	        this.allowed = source["allowed"];
 	    }
 	}
 	export class MailtoDraft {
@@ -462,6 +1037,92 @@ export namespace desktop {
 	        this.done = source["done"];
 	    }
 	}
+	export class PhishingSignalDTO {
+	    kind: string;
+	    detail?: string;
+	    target?: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new PhishingSignalDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.kind = source["kind"];
+	        this.detail = source["detail"];
+	        this.target = source["target"];
+	    }
+	}
+	export class PhishingDTO {
+	    level: string;
+	    signals?: PhishingSignalDTO[];
+	    links?: string[];
+	
+	    static createFrom(source: any = {}) {
+	        return new PhishingDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.level = source["level"];
+	        this.signals = this.convertValues(source["signals"], PhishingSignalDTO);
+	        this.links = source["links"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class TrackingPixelDTO {
+	    host: string;
+	    url: string;
+	    reasons: string[];
+	
+	    static createFrom(source: any = {}) {
+	        return new TrackingPixelDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.host = source["host"];
+	        this.url = source["url"];
+	        this.reasons = source["reasons"];
+	    }
+	}
+	export class SMIMEDTO {
+	    status: string;
+	    signer: string;
+	    email: string;
+	    issuer: string;
+	    detail: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new SMIMEDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.status = source["status"];
+	        this.signer = source["signer"];
+	        this.email = source["email"];
+	        this.issuer = source["issuer"];
+	        this.detail = source["detail"];
+	    }
+	}
 	export class MessageDetailDTO {
 	    id: number;
 	    accountId: number;
@@ -482,16 +1143,22 @@ export namespace desktop {
 	    offline: boolean;
 	    snoozeUntil: string;
 	    senderVip: boolean;
+	    smime: SMIMEDTO;
 	    toAddresses: string;
 	    ccAddresses: string;
 	    bodyPlain: string;
 	    bodyHtmlSafe: string;
+	    bodyQuote: string;
 	    isHtml: boolean;
 	    hasRemoteContent: boolean;
 	    remoteAllowed: boolean;
 	    remoteHosts: string[];
+	    trackingPixels: TrackingPixelDTO[];
 	    attachments: AttachmentDTO[];
+	    phishing: PhishingDTO;
+	    pgpState: string;
 	    unsubscribe?: UnsubscribeDTO;
+	    charsetGuess: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new MessageDetailDTO(source);
@@ -518,16 +1185,22 @@ export namespace desktop {
 	        this.offline = source["offline"];
 	        this.snoozeUntil = source["snoozeUntil"];
 	        this.senderVip = source["senderVip"];
+	        this.smime = this.convertValues(source["smime"], SMIMEDTO);
 	        this.toAddresses = source["toAddresses"];
 	        this.ccAddresses = source["ccAddresses"];
 	        this.bodyPlain = source["bodyPlain"];
 	        this.bodyHtmlSafe = source["bodyHtmlSafe"];
+	        this.bodyQuote = source["bodyQuote"];
 	        this.isHtml = source["isHtml"];
 	        this.hasRemoteContent = source["hasRemoteContent"];
 	        this.remoteAllowed = source["remoteAllowed"];
 	        this.remoteHosts = source["remoteHosts"];
+	        this.trackingPixels = this.convertValues(source["trackingPixels"], TrackingPixelDTO);
 	        this.attachments = this.convertValues(source["attachments"], AttachmentDTO);
+	        this.phishing = this.convertValues(source["phishing"], PhishingDTO);
+	        this.pgpState = source["pgpState"];
 	        this.unsubscribe = this.convertValues(source["unsubscribe"], UnsubscribeDTO);
+	        this.charsetGuess = source["charsetGuess"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
@@ -547,6 +1220,22 @@ export namespace desktop {
 		    }
 		    return a;
 		}
+	}
+	export class MessageIDsDTO {
+	    ids: number[];
+	    capped: boolean;
+	    matching: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new MessageIDsDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.ids = source["ids"];
+	        this.capped = source["capped"];
+	        this.matching = source["matching"];
+	    }
 	}
 	export class MessageSummaryDTO {
 	    id: number;
@@ -568,6 +1257,7 @@ export namespace desktop {
 	    offline: boolean;
 	    snoozeUntil: string;
 	    senderVip: boolean;
+	    smime: SMIMEDTO;
 	
 	    static createFrom(source: any = {}) {
 	        return new MessageSummaryDTO(source);
@@ -594,11 +1284,31 @@ export namespace desktop {
 	        this.offline = source["offline"];
 	        this.snoozeUntil = source["snoozeUntil"];
 	        this.senderVip = source["senderVip"];
+	        this.smime = this.convertValues(source["smime"], SMIMEDTO);
 	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
 	}
 	export class MessageListDTO {
 	    messages: MessageSummaryDTO[];
 	    total: number;
+	    hasOlder: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new MessageListDTO(source);
@@ -608,6 +1318,39 @@ export namespace desktop {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.messages = this.convertValues(source["messages"], MessageSummaryDTO);
 	        this.total = source["total"];
+	        this.hasOlder = source["hasOlder"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class MessageScanDTO {
+	    links: LinkVerdictDTO[];
+	    attachments: AttachmentVerdictDTO[];
+	
+	    static createFrom(source: any = {}) {
+	        return new MessageScanDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.links = this.convertValues(source["links"], LinkVerdictDTO);
+	        this.attachments = this.convertValues(source["attachments"], AttachmentVerdictDTO);
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
@@ -655,6 +1398,58 @@ export namespace desktop {
 	        this.createdAt = source["createdAt"];
 	    }
 	}
+	export class PGPKeyDTO {
+	    fingerprint: string;
+	    name: string;
+	    email: string;
+	    emails: string[];
+	    created: string;
+	    expires: string;
+	    expired: boolean;
+	    hasPrivate: boolean;
+	    locked: boolean;
+	    unlocked: boolean;
+	    remembered: boolean;
+	    algorithm: string;
+	    bits: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new PGPKeyDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.fingerprint = source["fingerprint"];
+	        this.name = source["name"];
+	        this.email = source["email"];
+	        this.emails = source["emails"];
+	        this.created = source["created"];
+	        this.expires = source["expires"];
+	        this.expired = source["expired"];
+	        this.hasPrivate = source["hasPrivate"];
+	        this.locked = source["locked"];
+	        this.unlocked = source["unlocked"];
+	        this.remembered = source["remembered"];
+	        this.algorithm = source["algorithm"];
+	        this.bits = source["bits"];
+	    }
+	}
+	export class PasswordCheckDTO {
+	    ok: boolean;
+	    rejected: boolean;
+	    error: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new PasswordCheckDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.ok = source["ok"];
+	        this.rejected = source["rejected"];
+	        this.error = source["error"];
+	    }
+	}
 	export class PendingMailtoDTO {
 	    present: boolean;
 	    draft: MailtoDraft;
@@ -667,6 +1462,118 @@ export namespace desktop {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.present = source["present"];
 	        this.draft = this.convertValues(source["draft"], MailtoDraft);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	
+	
+	export class ProfileDTO {
+	    id: number;
+	    name: string;
+	    icon: string;
+	    main: boolean;
+	    active: boolean;
+	    shareSettings: boolean;
+	    shareSignatures: boolean;
+	    shareViews: boolean;
+	    shareLayout: boolean;
+	    accountIds: number[];
+	
+	    static createFrom(source: any = {}) {
+	        return new ProfileDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.name = source["name"];
+	        this.icon = source["icon"];
+	        this.main = source["main"];
+	        this.active = source["active"];
+	        this.shareSettings = source["shareSettings"];
+	        this.shareSignatures = source["shareSignatures"];
+	        this.shareViews = source["shareViews"];
+	        this.shareLayout = source["shareLayout"];
+	        this.accountIds = source["accountIds"];
+	    }
+	}
+	export class ProfileRequest {
+	    id: number;
+	    name: string;
+	    icon: string;
+	    accountIds: number[];
+	    startSettings: string;
+	    startSignatures: string;
+	    startViews: string;
+	    startLayout: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new ProfileRequest(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.name = source["name"];
+	        this.icon = source["icon"];
+	        this.accountIds = source["accountIds"];
+	        this.startSettings = source["startSettings"];
+	        this.startSignatures = source["startSignatures"];
+	        this.startViews = source["startViews"];
+	        this.startLayout = source["startLayout"];
+	    }
+	}
+	export class RecipientKeyDTO {
+	    email: string;
+	    hasKey: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new RecipientKeyDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.email = source["email"];
+	        this.hasKey = source["hasKey"];
+	    }
+	}
+	export class ProtectionStatusDTO {
+	    canSign: boolean;
+	    signerLocked: boolean;
+	    canEncrypt: boolean;
+	    recipients: RecipientKeyDTO[];
+	    default: string;
+	    suggested: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new ProtectionStatusDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.canSign = source["canSign"];
+	        this.signerLocked = source["signerLocked"];
+	        this.canEncrypt = source["canEncrypt"];
+	        this.recipients = this.convertValues(source["recipients"], RecipientKeyDTO);
+	        this.default = source["default"];
+	        this.suggested = source["suggested"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
@@ -711,6 +1618,26 @@ export namespace desktop {
 	        this.hasPassword = source["hasPassword"];
 	    }
 	}
+	
+	
+	export class SMIMERevocationDTO {
+	    status: string;
+	    detail: string;
+	    revokedAt: string;
+	    checked: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new SMIMERevocationDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.status = source["status"];
+	        this.detail = source["detail"];
+	        this.revokedAt = source["revokedAt"];
+	        this.checked = source["checked"];
+	    }
+	}
 	export class SaveThemeRequest {
 	    id: string;
 	    name: string;
@@ -740,6 +1667,7 @@ export namespace desktop {
 	    afterUnix: number;
 	    beforeUnix: number;
 	    limit: number;
+	    offset: number;
 	    from: string;
 	    to: string;
 	    subject: string;
@@ -755,11 +1683,44 @@ export namespace desktop {
 	        this.afterUnix = source["afterUnix"];
 	        this.beforeUnix = source["beforeUnix"];
 	        this.limit = source["limit"];
+	        this.offset = source["offset"];
 	        this.from = source["from"];
 	        this.to = source["to"];
 	        this.subject = source["subject"];
 	        this.hasAttachment = source["hasAttachment"];
 	    }
+	}
+	export class SearchResultDTO {
+	    messages: MessageSummaryDTO[];
+	    total: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new SearchResultDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.messages = this.convertValues(source["messages"], MessageSummaryDTO);
+	        this.total = source["total"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
 	}
 	export class SettingResult {
 	    value: string;
@@ -800,6 +1761,7 @@ export namespace desktop {
 	    username: string;
 	    imapHost: string;
 	    imapPort: number;
+	    imapTls: string;
 	    password: string;
 	
 	    static createFrom(source: any = {}) {
@@ -812,6 +1774,7 @@ export namespace desktop {
 	        this.username = source["username"];
 	        this.imapHost = source["imapHost"];
 	        this.imapPort = source["imapPort"];
+	        this.imapTls = source["imapTls"];
 	        this.password = source["password"];
 	    }
 	}
@@ -1014,6 +1977,7 @@ export namespace desktop {
 		    return a;
 		}
 	}
+	
 	export class UIPrefsDTO {
 	    theme: string;
 	    accent: string;
@@ -1031,10 +1995,13 @@ export namespace desktop {
 	    showShortcutHints: boolean;
 	    showAccountEmail: boolean;
 	    alwaysLoadImages: boolean;
+	    blockTrackingPixels: boolean;
 	    avatarSource: string;
 	    avatarStyle: string;
 	    multiSelectEnabled: boolean;
 	    showSelectedCount: boolean;
+	    selectAllScope: string;
+	    selectAllUnified: boolean;
 	    sidebarIndentGuides: boolean;
 	    rowTemplate: string;
 	    rowShowAvatar: boolean;
@@ -1046,6 +2013,9 @@ export namespace desktop {
 	    showFlaggedCount: boolean;
 	    flagColorSync: boolean;
 	    showOfflineIndicator: boolean;
+	    showUnsyncedFolder: boolean;
+	    paletteProfiles: boolean;
+	    restoreTabs: boolean;
 	    swipeEnabled: boolean;
 	    swipeLeftAction: string;
 	    swipeRightAction: string;
@@ -1068,13 +2038,25 @@ export namespace desktop {
 	    menuBarIcons: boolean;
 	    timeFormat: string;
 	    reduceMotion: boolean;
+	    handCursor: boolean;
+	    dockBadge: boolean;
 	    themeDarkStart: string;
 	    themeDarkEnd: string;
 	    bodyFont: string;
 	    uiFont: string;
 	    monoFont: string;
+	    senderFonts: boolean;
 	    notifyNewMail: boolean;
 	    verboseSync: boolean;
+	    syncProgressBar: boolean;
+	    closeAction: string;
+	    syncMessageLimit: number;
+	    syncAutoBackfill: boolean;
+	    startupSelection: string;
+	    logToFile: boolean;
+	    logLevel: string;
+	    logMessageMetadata: boolean;
+	    crashLogs: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new UIPrefsDTO(source);
@@ -1098,10 +2080,13 @@ export namespace desktop {
 	        this.showShortcutHints = source["showShortcutHints"];
 	        this.showAccountEmail = source["showAccountEmail"];
 	        this.alwaysLoadImages = source["alwaysLoadImages"];
+	        this.blockTrackingPixels = source["blockTrackingPixels"];
 	        this.avatarSource = source["avatarSource"];
 	        this.avatarStyle = source["avatarStyle"];
 	        this.multiSelectEnabled = source["multiSelectEnabled"];
 	        this.showSelectedCount = source["showSelectedCount"];
+	        this.selectAllScope = source["selectAllScope"];
+	        this.selectAllUnified = source["selectAllUnified"];
 	        this.sidebarIndentGuides = source["sidebarIndentGuides"];
 	        this.rowTemplate = source["rowTemplate"];
 	        this.rowShowAvatar = source["rowShowAvatar"];
@@ -1113,6 +2098,9 @@ export namespace desktop {
 	        this.showFlaggedCount = source["showFlaggedCount"];
 	        this.flagColorSync = source["flagColorSync"];
 	        this.showOfflineIndicator = source["showOfflineIndicator"];
+	        this.showUnsyncedFolder = source["showUnsyncedFolder"];
+	        this.paletteProfiles = source["paletteProfiles"];
+	        this.restoreTabs = source["restoreTabs"];
 	        this.swipeEnabled = source["swipeEnabled"];
 	        this.swipeLeftAction = source["swipeLeftAction"];
 	        this.swipeRightAction = source["swipeRightAction"];
@@ -1135,13 +2123,25 @@ export namespace desktop {
 	        this.menuBarIcons = source["menuBarIcons"];
 	        this.timeFormat = source["timeFormat"];
 	        this.reduceMotion = source["reduceMotion"];
+	        this.handCursor = source["handCursor"];
+	        this.dockBadge = source["dockBadge"];
 	        this.themeDarkStart = source["themeDarkStart"];
 	        this.themeDarkEnd = source["themeDarkEnd"];
 	        this.bodyFont = source["bodyFont"];
 	        this.uiFont = source["uiFont"];
 	        this.monoFont = source["monoFont"];
+	        this.senderFonts = source["senderFonts"];
 	        this.notifyNewMail = source["notifyNewMail"];
 	        this.verboseSync = source["verboseSync"];
+	        this.syncProgressBar = source["syncProgressBar"];
+	        this.closeAction = source["closeAction"];
+	        this.syncMessageLimit = source["syncMessageLimit"];
+	        this.syncAutoBackfill = source["syncAutoBackfill"];
+	        this.startupSelection = source["startupSelection"];
+	        this.logToFile = source["logToFile"];
+	        this.logLevel = source["logLevel"];
+	        this.logMessageMetadata = source["logMessageMetadata"];
+	        this.crashLogs = source["crashLogs"];
 	    }
 	}
 	export class UnifiedViewDTO {
@@ -1166,27 +2166,45 @@ export namespace desktop {
 	export class UpdateAccountRequest {
 	    id: number;
 	    displayName: string;
+	    localLabel: string;
+	    useLocalLabel: boolean;
 	    username: string;
 	    imapHost: string;
 	    imapPort: number;
 	    smtpHost: string;
 	    smtpPort: number;
 	    password: string;
-
+	    imapTls: string;
+	    smtpTls: string;
+	    exportOnArchive: boolean;
+	    exportDir: string;
+	    exportSubfolders: string;
+	    exportNameTemplate: string;
+	    pgpDefault: string;
+	
 	    static createFrom(source: any = {}) {
 	        return new UpdateAccountRequest(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.id = source["id"];
 	        this.displayName = source["displayName"];
+	        this.localLabel = source["localLabel"];
+	        this.useLocalLabel = source["useLocalLabel"];
 	        this.username = source["username"];
 	        this.imapHost = source["imapHost"];
 	        this.imapPort = source["imapPort"];
 	        this.smtpHost = source["smtpHost"];
 	        this.smtpPort = source["smtpPort"];
 	        this.password = source["password"];
+	        this.imapTls = source["imapTls"];
+	        this.smtpTls = source["smtpTls"];
+	        this.exportOnArchive = source["exportOnArchive"];
+	        this.exportDir = source["exportDir"];
+	        this.exportSubfolders = source["exportSubfolders"];
+	        this.exportNameTemplate = source["exportNameTemplate"];
+	        this.pgpDefault = source["pgpDefault"];
 	    }
 	}
 	export class UpdateCheckResult {
@@ -1249,6 +2267,7 @@ export namespace desktop {
 	        this.count = source["count"];
 	    }
 	}
+	
 	export class ViewDTO {
 	    id: number;
 	    name: string;
@@ -1258,8 +2277,8 @@ export namespace desktop {
 	    queryFrom: string[];
 	    queryTo: string[];
 	    querySubject: string;
-	    useRegex: boolean;
 	    withinDays: number;
+	    useRegex: boolean;
 	    unreadOnly: boolean;
 	    flaggedOnly: boolean;
 	    hasAttachment: boolean;
@@ -1282,8 +2301,8 @@ export namespace desktop {
 	        this.queryFrom = source["queryFrom"];
 	        this.queryTo = source["queryTo"];
 	        this.querySubject = source["querySubject"];
-	        this.useRegex = source["useRegex"];
 	        this.withinDays = source["withinDays"];
+	        this.useRegex = source["useRegex"];
 	        this.unreadOnly = source["unreadOnly"];
 	        this.flaggedOnly = source["flaggedOnly"];
 	        this.hasAttachment = source["hasAttachment"];
@@ -1291,6 +2310,24 @@ export namespace desktop {
 	        this.position = source["position"];
 	        this.unreadCount = source["unreadCount"];
 	        this.totalCount = source["totalCount"];
+	    }
+	}
+	export class VirusTotalConfigDTO {
+	    enabled: boolean;
+	    hasApiKey: boolean;
+	    autoScanLinks: boolean;
+	    autoScanAttachments: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new VirusTotalConfigDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.enabled = source["enabled"];
+	        this.hasApiKey = source["hasApiKey"];
+	        this.autoScanLinks = source["autoScanLinks"];
+	        this.autoScanAttachments = source["autoScanAttachments"];
 	    }
 	}
 

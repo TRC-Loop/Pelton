@@ -24,13 +24,13 @@ var syncMu sync.Mutex
 // per-account idle loops. Credentials come from the keyring (added by the
 // wizard) with an environment fallback for the legacy cli account.
 func (a *App) startBackgroundServices() {
-	go a.runOutboxWorker()
-	go a.runInitialSyncAndIdle()
-	go a.runSnoozePoller()
-	go a.harvestAddressBook()
-	go a.runAutoSyncLoop()
+	goSafe("sending queued mail", a.runOutboxWorker)
+	goSafe("the first sync", a.runInitialSyncAndIdle)
+	goSafe("waking snoozed mail", a.runSnoozePoller)
+	goSafe("collecting addresses", a.harvestAddressBook)
+	goSafe("the periodic sync", a.runAutoSyncLoop)
 	a.startMCPIfEnabled()
-	go a.refreshViewCounts()
+	goSafe("counting unread mail", a.refreshViewCounts)
 }
 
 // runAutoSyncLoop periodically runs a full sync pass across every account, on
@@ -119,8 +119,12 @@ func (a *App) runInitialSyncAndIdle() {
 		if err := a.syncAccount(account); err != nil && !errors.Is(err, errNoCredentials) {
 			a.log.Error("initial sync", "account", account.Email, "err", err)
 		}
-		go a.idleLoop(account)
+		goSafe("waiting for new mail", func() { a.idleLoop(account) })
 	}
+	// contacts ride along with the mail sync (#168). It is one cheap request
+	// per address book when nothing changed, and it runs after the mail so a
+	// slow contacts server never delays the inbox.
+	a.syncContactsInBackground()
 }
 
 // TriggerSync syncs all accounts on demand (the ui refresh action). It returns a
@@ -154,6 +158,14 @@ func (a *App) TriggerSync() error {
 		}
 		synced++
 	}
+	// the marks are what carries a partial failure now, so they are pushed
+	// whatever this returns: an account that failed while the others got
+	// through used to leave the ui saying the sync was clean.
+	a.emitAccountSyncStates()
+	// the address books refresh with the mail rather than on a timer of their
+	// own, off the calling goroutine so a contacts server that is down cannot
+	// make the refresh button hang (#168).
+	a.syncContactsInBackground()
 	// the Local Folders account is not counted: an install holding only
 	// imported mail has nothing to sync, which is not a credentials problem.
 	if synced == 0 && syncable > 0 {
@@ -167,14 +179,24 @@ func (a *App) TriggerSync() error {
 	return nil
 }
 
-// syncAccount connects with the account's resolved credentials, syncs every
-// folder emitting progress and new-mail events, then logs out.
+// syncAccount syncs one account and records how it went, so a failure survives
+// the run it happened in. Every caller goes through here rather than
+// syncAccountOnce, since an unrecorded failure is the bug (#322).
 func (a *App) syncAccount(account storage.Account) error {
 	// Local Folders has no server behind it: imported mail is never uploaded,
-	// reconciled or expunged.
+	// reconciled or expunged. It has no sync state either, since it is not
+	// failing to do something it never does.
 	if account.Local {
 		return nil
 	}
+	err := a.syncAccountOnce(account)
+	a.noteSyncOutcome(account.ID, err)
+	return err
+}
+
+// syncAccountOnce connects with the account's resolved credentials, syncs every
+// folder emitting progress and new-mail events, then logs out.
+func (a *App) syncAccountOnce(account storage.Account) error {
 	cfg, err := a.resolveIMAP(account)
 	if err != nil {
 		return err
@@ -192,8 +214,10 @@ func (a *App) syncAccount(account storage.Account) error {
 	}
 	defer client.Close()
 	if err := client.Login(); err != nil {
+		a.noteLoginResult(account.ID, err)
 		return err
 	}
+	a.noteLoginResult(account.ID, nil)
 	defer client.Logout()
 
 	// an account can reach here with no folder rows at all: restored from a
@@ -210,18 +234,28 @@ func (a *App) syncAccount(account storage.Account) error {
 // emitting a progress event per folder and a new-mail event when one gained
 // messages.
 func (a *App) syncFolders(client *pimap.Client, accountID int64) error {
-	folders, err := a.store.ListFolders(a.ctx, accountID)
+	all, err := a.store.ListFolders(a.ctx, accountID)
 	if err != nil {
 		return err
 	}
-	engine := psync.NewEngine(client, a.store, a.log)
-	engine.ColorSync = a.boolSetting(settingFlagColorSync, false)
+	// folders the user unchecked are skipped here rather than inside the engine,
+	// so they never reach a SELECT and never cost a round trip. They are also
+	// left out of the progress total, since counting folders that are not being
+	// synced makes the bar lie (#173).
+	folders := make([]storage.Folder, 0, len(all))
+	for _, f := range all {
+		if !f.SyncExcluded {
+			folders = append(folders, f)
+		}
+	}
+	engine := a.newSyncEngine(client, accountID)
+	email := a.accountEmail(accountID)
+	a.syncTally.begin(len(folders))
 
 	newTotal := 0
 	for i, f := range folders {
-		a.emit(EventSyncProgress, SyncProgressEvent{
-			AccountID: accountID, Folder: f.Name, Done: i, Total: len(folders),
-		})
+		a.syncTally.enterFolder(i, f.Name)
+		a.emitSyncProgress(accountID, email, client.Addr(), a.syncTally.counts())
 		res, err := engine.SyncFolder(a.ctx, f)
 		if err != nil {
 			a.log.Error("sync folder", "folder", f.Name, "err", err)
@@ -230,20 +264,25 @@ func (a *App) syncFolders(client *pimap.Client, accountID int64) error {
 		if res.New > 0 {
 			newTotal += res.New
 			a.emit(EventMailNew, MailNewEvent{AccountID: accountID, FolderID: f.ID, Count: res.New})
-			go a.notifyNewMail(f, res.NewIDs)
+			goSafe("announcing new mail", func() { a.notifyNewMail(f, res.NewIDs) })
 		}
+		a.afterRepairs(f, res.RepairedIDs)
 	}
-	a.emit(EventSyncProgress, SyncProgressEvent{
-		AccountID: accountID, Done: len(folders), Total: len(folders),
-	})
+	// an empty folder name is how the ui knows the run is over and clears its
+	// line; the counts ride along so a finished bar reads full rather than
+	// snapping back to nothing.
+	final := a.syncTally.counts()
+	final.Folder = ""
+	final.FoldersDone = len(folders)
+	a.emitSyncProgress(accountID, email, client.Addr(), final)
 
 	// index the freshly synced mail so it becomes searchable. run it off the sync
 	// path so the search backfill never holds up the next sync.
 	if newTotal > 0 {
-		go a.indexNewMessages()
-		go a.refreshViewCounts()
+		goSafe("indexing new mail", func() { _ = a.indexNewMessages() })
+		goSafe("counting unread mail", a.refreshViewCounts)
 		if !a.lowPowerMode() {
-			go a.harvestAddressBook()
+			goSafe("collecting addresses", a.harvestAddressBook)
 		}
 	}
 	return nil
@@ -269,20 +308,25 @@ func (a *App) findInboxFolder(accountID int64) (*storage.Folder, error) {
 // folder on the account. Used by the idle push handler so a single INBOX
 // update does not pay for a full-account resync.
 func (a *App) syncOneFolder(client *pimap.Client, folder storage.Folder) error {
-	engine := psync.NewEngine(client, a.store, a.log)
-	engine.ColorSync = a.boolSetting(settingFlagColorSync, false)
+	// the idle push path reaches this directly, so it has to honour the
+	// exclusion too. An excluded INBOX is unusual but it is the user's call.
+	if folder.SyncExcluded {
+		return nil
+	}
+	engine := a.newSyncEngine(client, folder.AccountID)
 
 	res, err := engine.SyncFolder(a.ctx, folder)
 	if err != nil {
 		return err
 	}
+	a.afterRepairs(folder, res.RepairedIDs)
 	if res.New > 0 {
 		a.emit(EventMailNew, MailNewEvent{AccountID: folder.AccountID, FolderID: folder.ID, Count: res.New})
-		go a.notifyNewMail(folder, res.NewIDs)
-		go a.indexNewMessages()
-		go a.refreshViewCounts()
+		goSafe("announcing new mail", func() { a.notifyNewMail(folder, res.NewIDs) })
+		goSafe("indexing new mail", func() { _ = a.indexNewMessages() })
+		goSafe("counting unread mail", a.refreshViewCounts)
 		if !a.lowPowerMode() {
-			go a.harvestAddressBook()
+			goSafe("collecting addresses", a.harvestAddressBook)
 		}
 	}
 	return nil
@@ -294,14 +338,15 @@ func (a *App) idleLoop(account storage.Account) {
 	if account.Local {
 		return
 	}
-	for a.ctx.Err() == nil {
-		if err := a.idleSession(account); err != nil && a.ctx.Err() == nil {
+	ctx := a.sessionCtx()
+	for ctx.Err() == nil {
+		if err := a.idleSession(ctx, account); err != nil && ctx.Err() == nil {
 			if errors.Is(err, errNoCredentials) {
 				return
 			}
 			a.log.Error("idle session", "account", account.Email, "err", err)
 			select {
-			case <-a.ctx.Done():
+			case <-ctx.Done():
 				return
 			case <-time.After(15 * time.Second):
 			}
@@ -311,7 +356,7 @@ func (a *App) idleLoop(account storage.Account) {
 
 // idleSession opens one connection for an account, idles, and re-syncs on each
 // server update until the connection drops or the context is cancelled.
-func (a *App) idleSession(account storage.Account) error {
+func (a *App) idleSession(ctx context.Context, account storage.Account) error {
 	cfg, err := a.resolveIMAP(account)
 	if err != nil {
 		return err
@@ -323,12 +368,14 @@ func (a *App) idleSession(account storage.Account) error {
 	}
 	defer client.Close()
 	if err := client.Login(); err != nil {
+		a.noteLoginResult(account.ID, err)
 		return err
 	}
+	a.noteLoginResult(account.ID, nil)
 	defer client.Logout()
 
 	if !client.SupportsIdle() {
-		<-a.ctx.Done()
+		<-ctx.Done()
 		return nil
 	}
 
@@ -350,8 +397,8 @@ func (a *App) idleSession(account storage.Account) error {
 	// folders are covered by the periodic full sync (runAutoSyncLoop). syncMu is
 	// held only for the brief resync so manual and background syncs are not
 	// blocked while idling.
-	for a.ctx.Err() == nil {
-		gotUpdate, err := client.IdleUntil(a.ctx)
+	for ctx.Err() == nil {
+		gotUpdate, err := client.IdleUntil(ctx)
 		if err != nil {
 			return err
 		}
@@ -366,4 +413,176 @@ func (a *App) idleSession(account storage.Account) error {
 		}
 	}
 	return nil
+}
+
+// newSyncEngine builds a sync engine for one account with the settings every
+// caller needs, including where deleted mail goes. Roles are resolved here
+// because the sync package does not know about them.
+func (a *App) newSyncEngine(client *pimap.Client, accountID int64) *psync.Engine {
+	engine := psync.NewEngine(client, a.store, a.log)
+	engine.ColorSync = a.boolSetting(settingFlagColorSync, false)
+	engine.InitialLimit = a.syncMessageLimit()
+	// a message the user pressed send on goes out during a sync, not after it.
+	engine.YieldTo = a.outboxPending
+	// and the list fills as mail arrives rather than staying empty until the
+	// whole folder is down.
+	engine.OnStored = a.announceStored
+	// the counts behind the progress bar. The account and server are captured
+	// here because the engine does not know them and the line names them.
+	email := a.accountEmail(accountID)
+	// the trash-folder tests build an engine with no client, and a progress line
+	// is not worth a panic over.
+	server := ""
+	if client != nil {
+		server = client.Addr()
+	}
+	engine.OnProgress = func(p psync.FolderProgress) {
+		a.emitSyncProgress(accountID, email, server, a.syncTally.record(p))
+	}
+	if trash, ok := a.findTrashFolder(accountID); ok {
+		engine.TrashPath = trash.IMAPPath
+		engine.TrashFolderID = trash.ID
+	}
+	return engine
+}
+
+// streamInterval is the shortest gap between two "mail arrived" events during a
+// sync. Each one costs the ui a list reload, and a fast server can store a
+// batch every few milliseconds; twice a second looks live without the list
+// spending the sync redrawing itself.
+const streamInterval = 500 * time.Millisecond
+
+// streamGate rate-limits those events. It is a value on App rather than a
+// package variable so two accounts syncing at once do not silence each other
+// unfairly, and it is safe for the concurrent syncs that produce them.
+type streamGate struct {
+	mu   sync.Mutex
+	last time.Time
+}
+
+func (g *streamGate) ready() bool {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	now := time.Now()
+	if now.Sub(g.last) < streamInterval {
+		return false
+	}
+	g.last = now
+	return true
+}
+
+// emitSyncProgress sends one progress event. It is the only place the event is
+// built, so the folder line and the message counts can never disagree.
+func (a *App) emitSyncProgress(accountID int64, email, server string, c syncCounts) {
+	a.emit(EventSyncProgress, SyncProgressEvent{
+		AccountID: accountID, AccountEmail: email, Server: server,
+		Folder: c.Folder, Done: c.Done, Total: c.Total,
+		FolderDone: c.FolderDone, FolderTotal: c.FolderTotal,
+		FoldersDone: c.FoldersDone, FoldersTotal: c.FoldersTotal,
+	})
+}
+
+// the coarse kinds of sync failure. The ui has a sentence for each; the raw
+// error travels alongside as detail for whoever wants the server's own words.
+const (
+	syncFailAuth        = "auth"
+	syncFailNetwork     = "network"
+	syncFailCredentials = "credentials"
+	syncFailOther       = "other"
+)
+
+// noteSyncOutcome records how an account's sync went. This is what makes a
+// failure outlive the run it happened in: before it, one broken account among
+// several left nothing behind but a log line, and logging is off by default
+// (#322).
+func (a *App) noteSyncOutcome(accountID int64, err error) {
+	if err == nil {
+		if e := a.store.RecordSyncOK(a.ctx, accountID); e != nil {
+			a.log.Error("record sync ok", "account", accountID, "err", e)
+		}
+		return
+	}
+	if e := a.store.RecordSyncFailure(a.ctx, accountID, syncFailureReason(err), err.Error()); e != nil {
+		a.log.Error("record sync failure", "account", accountID, "err", e)
+	}
+}
+
+// syncFailureReason classifies a sync error into the kinds the ui can explain.
+func syncFailureReason(err error) string {
+	switch {
+	case errors.Is(err, errNoCredentials):
+		return syncFailCredentials
+	case errors.Is(err, pimap.ErrAuthFailed):
+		return syncFailAuth
+	case isNetworkError(err):
+		return syncFailNetwork
+	default:
+		return syncFailOther
+	}
+}
+
+// accountEmail is the address to name in a progress line, empty when the
+// account cannot be read. A progress line is not worth failing a sync over.
+func (a *App) accountEmail(accountID int64) string {
+	account, err := a.store.GetAccount(a.ctx, accountID)
+	if err != nil {
+		return ""
+	}
+	return account.Email
+}
+
+// outboxPending reports whether anything is waiting to be sent. Sync asks it
+// between messages and stands aside while it is true.
+func (a *App) outboxPending() bool {
+	if a.queue == nil {
+		return false
+	}
+	return a.queue.Pending(a.ctx)
+}
+
+// announceStored tells the ui about mail stored so far in a folder that is
+// still syncing. The list reloads on it, which is cheap now that the read is
+// indexed, so a first sync looks like mail arriving instead of a frozen window.
+// Notifications are not sent from here: those still go out once per folder, so
+// a first sync of fourteen thousand messages does not become fourteen thousand
+// notifications.
+func (a *App) announceStored(folder storage.Folder, ids []int64) {
+	if !a.streamTick.ready() {
+		return
+	}
+	a.emit(EventMailNew, MailNewEvent{
+		AccountID: folder.AccountID, FolderID: folder.ID, Count: len(ids),
+	})
+}
+
+// findTrashFolder returns the account's trash-role folder. Without one, a
+// delete has nowhere to go and falls back to a permanent expunge, so the caller
+// has to know whether there is one.
+func (a *App) findTrashFolder(accountID int64) (storage.Folder, bool) {
+	folders, err := a.store.ListFolders(a.ctx, accountID)
+	if err != nil {
+		a.log.Error("find trash folder", "account", accountID, "err", err)
+		return storage.Folder{}, false
+	}
+	for _, f := range folders {
+		if folderRole(f) == roleTrash {
+			return f, true
+		}
+	}
+	return storage.Folder{}, false
+}
+
+// afterRepairs deals with messages whose text was fetched again because what
+// was cached could not be decoded. The list reloads so the reader sees the
+// fixed subject without reopening the folder, and the search index is
+// rewritten for those messages, which the incremental pass would never revisit.
+func (a *App) afterRepairs(folder storage.Folder, ids []int64) {
+	if len(ids) == 0 {
+		return
+	}
+	a.log.Info("repaired cached mail with broken text", "folder", folder.Name, "count", len(ids))
+	a.emit(EventMailRepaired, MailRepairedEvent{
+		AccountID: folder.AccountID, FolderID: folder.ID, Count: len(ids),
+	})
+	goSafe("reindexing repaired mail", func() { a.reindexMessages(ids) })
 }

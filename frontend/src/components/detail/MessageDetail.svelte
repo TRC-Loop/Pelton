@@ -6,14 +6,28 @@
   import DetailHeader from './DetailHeader.svelte'
   import ActionToolbar from './ActionToolbar.svelte'
   import MailBody from './MailBody.svelte'
+  import ProtectedNotice from './ProtectedNotice.svelte'
+  import PhishingNotice from './PhishingNotice.svelte'
   import AttachmentList from './AttachmentList.svelte'
   import InfoModal from './InfoModal.svelte'
   import SourceModal from './SourceModal.svelte'
   import Spinner from '../common/Spinner.svelte'
   import ErrorState from '../common/ErrorState.svelte'
+  import TabBar from './TabBar.svelte'
+  import { visibleMessageId, hasTabs, activeTabId, tabs, markTabStale, labelTab, closeTab } from '../../stores/tabs'
   import { openMessageId } from '../../stores/selection'
   import { messageDetail, loadMessage, clearMessage } from '../../stores/message'
-  import { setFlagged, deleteMessage, archiveMessage } from '../../lib/api'
+  import { setFlagged, deleteMessage, archiveMessage, scanMessage } from '../../lib/api'
+  import { reportArchiveExport } from '../../lib/messageactions'
+  import {
+    virusTotal,
+    scanning,
+    scanEnabled,
+    resetVerdicts,
+    putLinkVerdict,
+    putAttachmentVerdict,
+    currentVerdictMessage,
+  } from '../../stores/virustotal'
   import { removeFromList, patchInList } from '../../stores/messages'
   import { recordDeleted } from '../../stores/undodelete'
   import { recordArchived } from '../../stores/undoarchive'
@@ -22,6 +36,7 @@
   import { prefs } from '../../stores/prefs'
   import { t } from '../../lib/i18n'
   import { get } from 'svelte/store'
+  import { tick } from 'svelte'
   import type { MessageDetail, EditorMode } from '../../lib/types'
 
   // default editor mode for replies and forwards, from settings.
@@ -30,14 +45,89 @@
   let infoOpen = false
   let sourceOpen = false
 
+  // the pane follows whichever message is visible: the active tab's, or the one
+  // picked in the list when no tab is active.
   let loadedId = -1
-  $: if ($openMessageId !== null && $openMessageId !== loadedId) {
-    loadedId = $openMessageId
-    void loadMessage($openMessageId)
+  $: if ($visibleMessageId !== null && $visibleMessageId !== loadedId) {
+    loadedId = $visibleMessageId
+    void loadMessage($visibleMessageId)
   }
-  $: if ($openMessageId === null && loadedId !== -1) {
+  $: if ($visibleMessageId === null && loadedId !== -1) {
     loadedId = -1
     clearMessage()
+  }
+
+  // a tab holds an id, so the subject only arrives once the message loads. A
+  // load that fails for a tab means the message is gone: the tab is marked
+  // rather than closed, so nothing you parked disappears on its own.
+  $: if ($activeTabId !== null && $messageDetail.status === 'ready' && $messageDetail.data) {
+    labelTab($activeTabId, $messageDetail.data.subject)
+  }
+  $: if ($activeTabId !== null && $messageDetail.status === 'error') {
+    markTabStale($activeTabId)
+  }
+
+  // a tab whose message is gone says so plainly rather than showing the raw
+  // load error, and stays open until it is closed.
+  $: activeTabStale = $tabs.some((tab) => tab.id === $activeTabId && tab.stale)
+
+  // the scroll container is reused across messages, so it keeps the offset of
+  // whatever was open before. after a long message a shorter one renders above
+  // the viewport and the pane looks blank until you scroll back up.
+  let scrollEl: HTMLDivElement | undefined
+  let scrolledId = -1
+  $: if ($messageDetail.data && $messageDetail.data.id !== scrolledId) {
+    scrolledId = $messageDetail.data.id
+    void resetScroll()
+  }
+
+  // the container only exists once a message has rendered, and the body iframe
+  // sizes itself after that, so this waits a tick rather than reading scrollEl
+  // straight out of the reactive block.
+  async function resetScroll(): Promise<void> {
+    await tick()
+    if (scrollEl) {
+      scrollEl.scrollTop = 0
+    }
+  }
+
+  $: canScan = scanEnabled($virusTotal)
+
+  // a message opening clears the previous one's verdicts, then auto-scans
+  // whichever targets the user turned on. autoScannedId keeps that to one pass
+  // per message, since the reactive block also re-runs on unrelated changes.
+  let autoScannedId = -1
+  $: if ($messageDetail.data && currentVerdictMessage() !== $messageDetail.data.id) {
+    resetVerdicts($messageDetail.data.id)
+  }
+  $: if (canScan && $messageDetail.data && $messageDetail.data.id !== autoScannedId) {
+    autoScannedId = $messageDetail.data.id
+    if ($virusTotal.autoScanLinks || $virusTotal.autoScanAttachments) {
+      void runScan($messageDetail.data.id, $virusTotal.autoScanLinks, $virusTotal.autoScanAttachments)
+    }
+  }
+
+  // runScan scans a message's links, attachments or both, and files each result
+  // against the message it belongs to so a slow scan cannot land on whatever
+  // message the user moved on to.
+  async function runScan(messageId: number, links: boolean, attachments: boolean): Promise<void> {
+    if (get(scanning)) {
+      return
+    }
+    scanning.set(true)
+    try {
+      const result = await scanMessage(messageId, links, attachments)
+      for (const link of result.links) {
+        putLinkVerdict(messageId, link.url, link.verdict)
+      }
+      for (const att of result.attachments) {
+        putAttachmentVerdict(messageId, att.attachmentId, att.verdict)
+      }
+    } catch (err) {
+      toastError(errorMessage(err))
+    } finally {
+      scanning.set(false)
+    }
   }
 
   async function toggleFlag(detail: MessageDetail): Promise<void> {
@@ -56,9 +146,19 @@
       await deleteMessage(detail.id)
       recordDeleted(detail)
       removeFromList(detail.id)
-      openMessageId.set(null)
+      dismiss(detail.id)
     } catch (err) {
       toastError(errorMessage(err))
+    }
+  }
+
+  // dismiss clears a message out of the pane after acting on it. A tab holding
+  // it closes, since acting on a message is done with it; the untabbed pane
+  // only empties if it was showing that message and not something else.
+  function dismiss(id: number): void {
+    closeTab(id)
+    if (get(openMessageId) === id) {
+      openMessageId.set(null)
     }
   }
 
@@ -67,11 +167,12 @@
   async function archive(detail: MessageDetail): Promise<void> {
     try {
       const undo = await archiveMessage(detail.id)
+      reportArchiveExport(undo)
       if (undo.messageId) {
         recordArchived(detail, undo.messageId, undo.originalFolderId)
       }
       removeFromList(detail.id)
-      openMessageId.set(null)
+      dismiss(detail.id)
     } catch (err) {
       toastError(errorMessage(err))
     }
@@ -142,7 +243,10 @@ ${bodyHtml}
 </script>
 
 <section class="detail">
-  {#if $openMessageId === null}
+  {#if $hasTabs}
+    <TabBar />
+  {/if}
+  {#if $visibleMessageId === null}
     {#if $prefs.emptyStateFullscreen && $prefs.emptyStateImage}
       <div
         class="placeholder placeholder-full"
@@ -155,15 +259,25 @@ ${bodyHtml}
         <img class="placeholder-logo" src={$prefs.emptyStateImage || peltonLogo} alt="Pelton" draggable="false" />
       </div>
     {/if}
+  {:else if activeTabStale}
+    <div class="placeholder gone">
+      <p>{$t('tabs.goneBody')}</p>
+      <button type="button" class="gone-close" on:click={() => $activeTabId !== null && closeTab($activeTabId)}>
+        {$t('tabs.close')}
+      </button>
+    </div>
   {:else if $messageDetail.status === 'loading' && !$messageDetail.data}
     <Spinner label={$t('detail.loadingMessage')} />
   {:else if $messageDetail.status === 'error'}
-    <ErrorState message={$messageDetail.error} onRetry={() => $openMessageId && loadMessage($openMessageId)} />
+    <ErrorState message={$messageDetail.error} onRetry={() => $visibleMessageId && loadMessage($visibleMessageId)} />
   {:else if $messageDetail.data}
     {@const detail = $messageDetail.data}
     <div class="toolbar-bar">
       <ActionToolbar
         flagged={detail.flagged}
+        {canScan}
+        scanning={$scanning}
+        on:scan={() => runScan(detail.id, true, true)}
         on:reply={() => openReply(detail, replyMode, false)}
         on:replyAll={() => openReply(detail, replyMode, true)}
         on:forward={() => openForward(detail, replyMode)}
@@ -184,10 +298,23 @@ ${bodyHtml}
       <SourceModal messageId={detail.id} on:close={() => (sourceOpen = false)} />
     {/if}
 
-    <div class="scroll selectable">
+    <div class="scroll selectable" bind:this={scrollEl}>
       <DetailHeader {detail} />
       <div class="body-wrap">
-        <MailBody {detail} />
+        {#if detail.phishing.level !== 'none'}
+          <PhishingNotice report={detail.phishing} messageId={detail.id} />
+        {/if}
+        {#if detail.pgpState !== '' && detail.pgpState !== 'open'}
+          <!-- the body here is still the armor, so showing it would put
+               ciphertext in front of the reader. -->
+          <ProtectedNotice
+            state={detail.pgpState}
+            messageId={detail.id}
+            on:opened={() => void loadMessage(detail.id)}
+          />
+        {:else}
+          <MailBody {detail} />
+        {/if}
       </div>
       <AttachmentList messageId={detail.id} attachments={detail.attachments} />
     </div>
@@ -195,6 +322,30 @@ ${bodyHtml}
 </section>
 
 <style>
+  /* a tab whose message is gone: a sentence and a way out, not an error dump. */
+  .gone {
+    flex-direction: column;
+    gap: var(--space-3);
+    color: var(--text-tertiary);
+    font-size: var(--fz-meta);
+    text-align: center;
+    padding: var(--space-5);
+  }
+
+  .gone-close {
+    padding: var(--space-2) var(--space-4);
+    border: var(--hairline) solid var(--border-default);
+    border-radius: var(--radius-control);
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: var(--fz-label);
+    cursor: var(--cursor-action);
+  }
+  .gone-close:hover {
+    background: var(--surface-hover);
+    color: var(--text-primary);
+  }
+
   .detail {
     display: flex;
     flex-direction: column;

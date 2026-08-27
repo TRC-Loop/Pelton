@@ -1,16 +1,26 @@
 // move.ts drives the "Move to folder" dialog. a message's context menu calls
-// openMove with the message; the dialog lists that account's folders and moves
-// the message on the server (reusing the archive/undo machinery).
+// openMove with the message, and a multi-selection calls openMoveMany with all
+// of them; the dialog lists the account's folders and moves the batch on the
+// server (reusing the archive/undo machinery), so one folder choice covers the
+// whole selection rather than asking once per message.
 
 import { writable } from 'svelte/store'
 import type { MessageSummary } from '../lib/types'
 
-export const moveTarget = writable<MessageSummary | null>(null)
+// the messages waiting for a destination, empty when the dialog is closed.
+export const moveTargets = writable<MessageSummary[]>([])
 
 export function openMove(message: MessageSummary): void {
-  moveTarget.set(message)
+  moveTargets.set([message])
+}
+
+export function openMoveMany(messages: MessageSummary[]): void {
+  if (messages.length === 0) {
+    return
+  }
+  moveTargets.set([...messages])
 }
 
 export function closeMove(): void {
-  moveTarget.set(null)
+  moveTargets.set([])
 }

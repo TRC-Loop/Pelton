@@ -49,30 +49,37 @@ func (a *App) ListFolders(accountID int64) ([]FolderDTO, error) {
 	return out, nil
 }
 
+// unifiedView is one entry in the built-in cross-account group. The label is a
+// short English fallback so the message-list pane reads "Inbox", "Sent" and so
+// on; the frontend localizes by key.
+type unifiedView struct {
+	key   string
+	label string
+}
+
+// unifiedViewOrder is the thunderbird-style unified group in its built-in
+// order: one entry per folder role, merged across every account. The user can
+// rearrange it (#187), which is stored as a list of keys, so this stays the
+// canonical set and the fallback order.
+var unifiedViewOrder = []unifiedView{
+	{viewInbox, "Inbox"},
+	{viewFlagged, "Flagged"},
+	{viewDrafts, "Drafts"},
+	{viewSent, "Sent"},
+	{viewArchive, "Archive"},
+	{viewJunk, "Junk"},
+	{viewTrash, "Bin"},
+}
+
 // ListUnifiedViews returns the cross account views shown at the top of the
-// sidebar with aggregate counts. Unified Inbox is the default startup view; the
-// others appear with their counts.
+// sidebar with aggregate counts, in the order the user arranged them. Unified
+// Inbox is the default startup view; the others appear with their counts.
 func (a *App) ListUnifiedViews() ([]UnifiedViewDTO, error) {
 	if err := a.ready(); err != nil {
 		return nil, err
 	}
 
-	// short labels so the message-list pane reads "Inbox", "Sent", etc. these are
-	// the thunderbird-style unified group: one entry per folder role, merged
-	// across every account.
-	views := []struct {
-		key   string
-		label string
-	}{
-		{viewInbox, "Inbox"},
-		{viewFlagged, "Flagged"},
-		{viewDrafts, "Drafts"},
-		{viewSent, "Sent"},
-		{viewArchive, "Archive"},
-		{viewJunk, "Junk"},
-		{viewTrash, "Bin"},
-	}
-
+	views := a.sortedUnifiedViews()
 	out := make([]UnifiedViewDTO, 0, len(views))
 	for _, v := range views {
 		q, err := a.viewQuery(a.ctx, v.key)

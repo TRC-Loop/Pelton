@@ -6,6 +6,7 @@ import (
 	"github.com/emersion/go-imap/v2"
 
 	pimap "github.com/TRC-Loop/Pelton/internal/imap"
+	"github.com/TRC-Loop/Pelton/internal/mailexport"
 	"github.com/TRC-Loop/Pelton/internal/storage"
 )
 
@@ -13,9 +14,15 @@ import (
 // stable rfc Message-ID (the moved copy has a new UID) and the folder it came
 // from. MessageID is empty when the message had no Message-ID header, in which
 // case undo is not possible.
+// ExportPath is the .eml copy written by the account's export-on-archive
+// option, empty when the option is off. ExportError explains why no copy was
+// written when one was expected; the archive itself still succeeded, so the ui
+// reports it rather than treating the whole action as failed.
 type ArchiveUndoDTO struct {
 	MessageID        string `json:"messageId"`
 	OriginalFolderID int64  `json:"originalFolderId"`
+	ExportPath       string `json:"exportPath"`
+	ExportError      string `json:"exportError"`
 }
 
 // ArchiveMessage moves a message to its account's Archive folder on the server.
@@ -92,6 +99,23 @@ func (a *App) moveMessageTo(m *storage.Message, dest storage.Folder) (ArchiveUnd
 	if _, err := client.Select(source.IMAPPath); err != nil {
 		return ArchiveUndoDTO{}, fmt.Errorf("move: select %q: %w", source.IMAPPath, err)
 	}
+
+	// the raw source has to be fetched before the move: afterwards the message
+	// lives under a new uid in another mailbox. it rides the connection the move
+	// already opened, and a failure here never blocks the archive.
+	var (
+		raw         []byte
+		exportError string
+	)
+	if exportWanted(*account, dest) {
+		raw, err = client.FetchRawMessage(imap.UID(m.UID))
+		if err != nil {
+			raw = nil
+			exportError = err.Error()
+			a.log.Error("archive export: fetch source", "id", m.ID, "err", err)
+		}
+	}
+
 	if err := client.Move(imap.UID(m.UID), dest.IMAPPath); err != nil {
 		return ArchiveUndoDTO{}, err
 	}
@@ -103,7 +127,52 @@ func (a *App) moveMessageTo(m *storage.Message, dest storage.Folder) (ArchiveUnd
 		a.log.Error("move: remove attachment files", "id", m.ID, "err", err)
 	}
 	a.emit(EventMailNew, MailNewEvent{AccountID: m.AccountID, FolderID: dest.ID, Count: 1})
-	return ArchiveUndoDTO{MessageID: m.MessageID, OriginalFolderID: source.ID}, nil
+
+	var path string
+	if len(raw) > 0 {
+		path, err = exportOptions(*account).Write(exportMeta(m), raw)
+		if err != nil {
+			exportError = err.Error()
+			a.log.Error("archive export: write file", "id", m.ID, "err", err)
+		}
+	}
+	return ArchiveUndoDTO{
+		MessageID:        m.MessageID,
+		OriginalFolderID: source.ID,
+		ExportPath:       path,
+		ExportError:      exportError,
+	}, nil
+}
+
+// exportWanted reports whether this move should also leave a local .eml copy:
+// the account asked for it, a directory is set, and the destination really is
+// the archive rather than any other folder the user moved mail to.
+func exportWanted(account storage.Account, dest storage.Folder) bool {
+	return account.ExportOnArchive && account.ExportDir != "" && folderRole(dest) == roleArchive
+}
+
+// exportOptions maps an account's stored export settings onto the exporter.
+func exportOptions(account storage.Account) mailexport.Options {
+	return mailexport.Options{
+		Dir:        account.ExportDir,
+		Subfolders: account.ExportSubfolders,
+		Template:   account.ExportNameTemplate,
+	}
+}
+
+// exportMeta is what the file name is built from. The display name is preferred
+// over the bare address for {from}, matching what the message list shows.
+func exportMeta(m *storage.Message) mailexport.Meta {
+	from := m.FromName
+	if from == "" {
+		from = m.FromAddress
+	}
+	return mailexport.Meta{
+		Date:      m.Date,
+		Subject:   m.Subject,
+		From:      from,
+		MessageID: m.MessageID,
+	}
 }
 
 // UnarchiveMessage moves an archived message back to originalFolderID, locating

@@ -10,11 +10,18 @@
 package mailview
 
 import (
+	"bytes"
+	"fmt"
+	stdhtml "html"
+	"io"
 	"regexp"
 	"strings"
 	"unicode/utf8"
 
+	"github.com/emersion/go-message"
+	"github.com/emersion/go-message/mail"
 	"github.com/microcosm-cc/bluemonday"
+	htmltok "golang.org/x/net/html"
 )
 
 // PGPStatus is the detected protection state of a received message. It is a best
@@ -43,19 +50,24 @@ var remoteURLPattern = regexp.MustCompile(`(?i)(src|background|href)\s*=\s*["']?
 // content id, with or without surrounding quotes.
 var cidRefPattern = regexp.MustCompile(`(?i)cid:([^"'>\s)]+)`)
 
-// blockRemotePolicy and allowRemotePolicy are built once. They share the ugc
-// base; the only difference is which url schemes images and links may use. With
-// remote blocked, only data: and cid: image sources survive, so http(s) images
-// (and tracking pixels) are dropped entirely.
-var (
-	blockRemotePolicy = buildPolicy(false)
-	allowRemotePolicy = buildPolicy(true)
-)
+// the policies are built once, one per combination of the two choices that
+// change them. They share the ugc base. allowRemote decides which url schemes
+// images and links may use: with remote blocked, only data: and cid: image
+// sources survive, so http(s) images (and tracking pixels) are dropped
+// entirely. allowFonts decides whether the sender's own typefaces survive.
+var policies = map[[2]bool]*bluemonday.Policy{
+	{false, false}: buildPolicy(false, false),
+	{false, true}:  buildPolicy(false, true),
+	{true, false}:  buildPolicy(true, false),
+	{true, true}:   buildPolicy(true, true),
+}
 
 // buildPolicy returns a sanitizer policy. allowRemote decides whether remote
 // http(s) resources are permitted; when false only inline data: and cid: image
-// sources are kept.
-func buildPolicy(allowRemote bool) *bluemonday.Policy {
+// sources are kept. allowFonts keeps the font families the message asks for,
+// so designed mail reads the way it was written instead of everything arriving
+// in the reader's own font.
+func buildPolicy(allowRemote, allowFonts bool) *bluemonday.Policy {
 	p := bluemonday.UGCPolicy()
 
 	// allow images with sizing/alt but constrain their source scheme below.
@@ -74,16 +86,35 @@ func buildPolicy(allowRemote bool) *bluemonday.Policy {
 		"font-weight", "font-style", "text-decoration", "font-size", "line-height",
 		"margin", "padding", "border", "border-color").Globally()
 
+	// font-family is the sender's own typeface. It cannot pull anything down:
+	// the reading pane's csp limits font-src to data:, so a named family either
+	// resolves from a font already on this machine or falls back to the reader's
+	// own. Off, the message renders entirely in the reader font.
+	if allowFonts {
+		p.AllowStyles("font-family").Globally()
+	}
+
 	// the legacy bgcolor attribute is the other common way mail sets a section
 	// background (on the body and table cells); preserve it for the same
 	// readability reason, alongside <font color> so its paired text color stays
 	// with the background instead of falling back to our dark default.
 	p.AllowAttrs("bgcolor").OnElements("body", "table", "thead", "tbody", "tfoot", "tr", "td", "th")
 	p.AllowElements("font")
-	p.AllowAttrs("color", "face", "size").OnElements("font")
+	if allowFonts {
+		p.AllowAttrs("color", "face", "size").OnElements("font")
+	} else {
+		// face is the legacy spelling of font-family, so it goes with it.
+		p.AllowAttrs("color", "size").OnElements("font")
+	}
 
 	// tables are heavily used by html mail.
 	p.AllowTables()
+
+	// urls have to be parsed before any scheme rule applies at all.
+	// Relative urls go with it: mail has no base to be relative to, so a
+	// relative src was never going to resolve to anything.
+	p.RequireParseableURLs(true)
+	p.AllowRelativeURLs(false)
 
 	if allowRemote {
 		p.AllowURLSchemes("http", "https", "mailto", "data", "cid")
@@ -100,13 +131,26 @@ func buildPolicy(allowRemote bool) *bluemonday.Policy {
 }
 
 // Sanitize cleans untrusted mail html for display. When allowRemote is false
-// (the default for first view) remote resources are removed. The result is safe
-// to inject into a sandboxed renderer.
-func Sanitize(html string, allowRemote bool) string {
+// (the default for first view) remote images are removed. The result is safe to
+// inject into a sandboxed renderer.
+//
+// The removal is done here rather than by the policy's url scheme list, which
+// cannot do it: UGCPolicy and AllowImages both call AllowStandardURLs, that
+// allows http and https, and AllowURLSchemes only ever adds to the list. The
+// blocked policy was therefore keeping every remote src it was documented to
+// strip, leaving the reading iframe's img-src csp as the only thing stopping
+// them loading. Withdrawing the schemes with a deny policy does work, but it
+// applies to links as well, and it would take every href in a message with it
+// until the reader loaded images. A link is not a leak: it goes nowhere until
+// it is clicked.
+// allowFonts keeps the message's own font families; with it off everything
+// renders in the reader's font.
+func Sanitize(html string, allowRemote, allowFonts bool) string {
+	p := policies[[2]bool{allowRemote, allowFonts}]
 	if allowRemote {
-		return allowRemotePolicy.Sanitize(html)
+		return p.Sanitize(html)
 	}
-	return blockRemotePolicy.Sanitize(html)
+	return p.Sanitize(stripRemoteImages(html))
 }
 
 // HasRemoteContent reports whether the raw html references any remote http(s)
@@ -142,6 +186,70 @@ func RemoteHosts(html string) []string {
 		out = append(out, host)
 		if len(out) >= 8 {
 			break
+		}
+	}
+	return out
+}
+
+// maxLinks caps how many distinct links Links returns, so a message built out
+// of thousands of anchors cannot turn one scan into thousands of lookups.
+const maxLinks = 100
+
+// anchorHrefPattern captures the href of an anchor, quoted or bare.
+var anchorHrefPattern = regexp.MustCompile(`(?i)<a\b[^>]*?\bhref\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))`)
+
+// bareURLPattern finds http(s) urls in plain text, where nothing has marked
+// them up as links. It matches what the ui's own linkifier treats as a link, so
+// a scanned url is the same string the reader sees underlined.
+var bareURLPattern = regexp.MustCompile(`(?i)https?://[^\s<>"')\]]+`)
+
+// plainTrailing is sentence punctuation that follows a bare url rather than
+// belonging to it. Anchor hrefs are never trimmed this way: there the target is
+// stated exactly, and a url that genuinely ends in a bracket would otherwise be
+// scanned as a different address than the one the link points at.
+const plainTrailing = ".,;:!?"
+
+// Links returns the unique http(s) urls a message points at: anchor targets in
+// the html part, and bare urls in the plain text part. Image sources and other
+// embedded resources are deliberately excluded, since those are remote content
+// (which the sanitizer already handles) rather than something the reader can
+// click. Order is the order of first appearance, and the result is capped at
+// maxLinks.
+//
+// Each url is exactly the string the reader can click, so a verdict can be
+// matched back to the link it belongs to: an anchor's href verbatim, and for
+// plain text the same span the ui's own linkifier underlines.
+func Links(html, plain string) []string {
+	seen := make(map[string]bool)
+	out := make([]string, 0, 8)
+
+	add := func(raw string, trimTrailing bool) bool {
+		url := strings.TrimSpace(stdhtml.UnescapeString(raw))
+		if trimTrailing {
+			url = strings.TrimRight(url, plainTrailing)
+		}
+		lower := strings.ToLower(url)
+		if !strings.HasPrefix(lower, "http://") && !strings.HasPrefix(lower, "https://") {
+			return true
+		}
+		if seen[url] {
+			return true
+		}
+		seen[url] = true
+		out = append(out, url)
+		return len(out) < maxLinks
+	}
+
+	for _, m := range anchorHrefPattern.FindAllStringSubmatch(html, -1) {
+		// exactly one of the three alternatives matched.
+		href := m[1] + m[2] + m[3]
+		if !add(href, false) {
+			return out
+		}
+	}
+	for _, m := range bareURLPattern.FindAllString(plain, -1) {
+		if !add(m, true) {
+			return out
 		}
 	}
 	return out
@@ -194,12 +302,112 @@ func DetectPGP(plain, html string) PGPStatus {
 	}
 }
 
+// Entity is the readable content of a MIME entity: its text and html bodies.
+type Entity struct {
+	Text string
+	HTML string
+}
+
+// ParseEntity reads a standalone MIME entity into its text and html parts.
+//
+// It exists for decrypted mail. The plaintext inside an encrypted message is a
+// MIME entity in its own right, with its own headers, parts and transfer
+// encodings, and showing it raw would put MIME source in front of the reader.
+// The bodies are returned rather than stored, since caching decrypted content
+// would undo the encryption.
+func ParseEntity(raw []byte) (Entity, error) {
+	reader, err := mail.CreateReader(bytes.NewReader(raw))
+	if err != nil && !message.IsUnknownCharset(err) {
+		return Entity{}, fmt.Errorf("mailview: read entity: %w", err)
+	}
+
+	var out Entity
+	for {
+		part, err := reader.NextPart()
+		if err == io.EOF {
+			break
+		}
+		if err != nil && !message.IsUnknownCharset(err) {
+			// keep whatever was already recovered: a truncated multipart is
+			// better shown in part than discarded.
+			break
+		}
+		header, ok := part.Header.(*mail.InlineHeader)
+		if !ok {
+			continue
+		}
+		body, err := io.ReadAll(part.Body)
+		if err != nil {
+			break
+		}
+		contentType, _, _ := header.ContentType()
+		if strings.EqualFold(contentType, "text/html") {
+			if out.HTML == "" {
+				out.HTML = string(body)
+			}
+			continue
+		}
+		if out.Text == "" {
+			out.Text = string(body)
+		}
+	}
+	if out.Text == "" && out.HTML == "" {
+		return Entity{}, fmt.Errorf("mailview: entity has no readable body")
+	}
+	return out, nil
+}
+
+// skipTextIn are elements whose text content is markup rather than prose, so it
+// never belongs in a snippet or the search index.
+var skipTextIn = map[string]bool{"script": true, "style": true, "head": true, "title": true}
+
+// PlainText renders html as readable text: element boundaries become
+// whitespace, entities are decoded, and script/style content is dropped. It
+// exists so html-only mail is still searchable and previewable. Callers get
+// prose, not layout: runs of whitespace collapse to a single space.
+func PlainText(markup string) string {
+	if markup == "" {
+		return ""
+	}
+	z := htmltok.NewTokenizer(strings.NewReader(markup))
+	var b strings.Builder
+	// depth of nested elements whose text we are discarding.
+	skip := 0
+	for {
+		switch z.Next() {
+		case htmltok.ErrorToken:
+			// io.EOF or malformed markup: keep whatever was recovered.
+			return strings.Join(strings.Fields(b.String()), " ")
+		case htmltok.TextToken:
+			if skip == 0 {
+				b.Write(z.Text())
+			}
+		case htmltok.StartTagToken:
+			name, _ := z.TagName()
+			if skipTextIn[string(name)] {
+				skip++
+			}
+			// a tag is a word boundary: without this, adjacent blocks glue into
+			// one unsearchable token.
+			b.WriteByte(' ')
+		case htmltok.EndTagToken:
+			name, _ := z.TagName()
+			if skipTextIn[string(name)] && skip > 0 {
+				skip--
+			}
+			b.WriteByte(' ')
+		case htmltok.SelfClosingTagToken:
+			b.WriteByte(' ')
+		}
+	}
+}
+
 // Snippet returns a short plain text preview for the message list. It prefers
-// the plain body and falls back to stripping tags from the html body.
+// the plain body and falls back to the text of the html body.
 func Snippet(plain, html string) string {
 	text := strings.TrimSpace(plain)
 	if text == "" && html != "" {
-		text = strings.TrimSpace(bluemonday.StrictPolicy().Sanitize(html))
+		text = PlainText(html)
 	}
 	text = strings.Join(strings.Fields(text), " ")
 	if len(text) > snippetLen {

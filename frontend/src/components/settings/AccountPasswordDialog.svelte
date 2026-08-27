@@ -8,161 +8,165 @@
   //
   // Cancelling is a real answer. It skips that account for this sync rather
   // than blocking the others, and the same prompt comes back next time.
-  import { fade, scale } from 'svelte/transition'
-  import { IconX, IconLock } from '@tabler/icons-svelte'
-  import { setAccountPassword } from '../../lib/api'
-  import { errorMessage, toastError } from '../../stores/toast'
+  // "Don't ask again" is the stronger form: the prompt stops interrupting for
+  // that account entirely and a warning marker next to the mailbox takes over
+  // saying it cannot sync (#290).
+  import { IconLock } from '@tabler/icons-svelte'
+  import Modal from '../common/Modal.svelte'
+  import { checkAccountPassword, setAccountPassword } from '../../lib/api'
+  import { errorMessage, toastError, toastInfo } from '../../stores/toast'
   import { t } from '../../lib/i18n'
+  import type { PasswordPromptResult } from '../../stores/passwordprompt'
+  import { accountLabel } from '../../lib/format'
   import type { Account } from '../../lib/types'
 
   /** The account being asked about, or null when the prompt is closed. */
   export let account: Account | null = null
-  /** Called with true once a password was stored, false when cancelled. */
-  export let onDone: (saved: boolean) => void = () => {}
+  /** Called with how the prompt ended. */
+  export let onDone: (result: PasswordPromptResult) => void = () => {}
 
   let password = ''
   let busy = false
   let seededFor: unknown = null
+  // set once the server has refused what is typed. It turns the error line on
+  // and offers to store it anyway, for the case where the server is wrong and
+  // you know better.
+  let refused = false
+
+  // the address, not the display name. Several mailboxes named "Work" and
+  // "Private" all look the same in this prompt, and the address is the part
+  // that says which login is being asked for, so it is the part that must
+  // never be the one dropped. The name comes along when there is one and it
+  // adds something.
+  $: who = account ? namedAccount(account) : ''
+
+  function namedAccount(account: Account): string {
+    const label = accountLabel(account)
+    return label === account.email ? account.email : `${label} (${account.email})`
+  }
 
   $: if (account !== seededFor) {
     seededFor = account
     password = ''
     busy = false
+    refused = false
   }
 
+  // typing again is the answer to a refusal, so the error clears with the first
+  // keystroke rather than sitting under a password it no longer describes.
+  function onInput(): void {
+    refused = false
+  }
+
+  // submit tries the password against the server before storing it. Waiting for
+  // the next sync to find out it is still wrong is the whole bug: a mailbox that
+  // was marked stays marked and nothing says why.
   async function submit(): Promise<void> {
     if (!account || busy || password === '') {
       return
     }
     busy = true
     try {
-      await setAccountPassword(account.id, password)
-      password = ''
-      onDone(true)
+      const result = await checkAccountPassword(account.id, password)
+      if (result.rejected) {
+        refused = true
+        return
+      }
+      // anything else that went wrong is the server being unreachable, which
+      // says nothing about the password. Store it and say it is unchecked; the
+      // marker clears on the first sync that gets through.
+      await store()
+      if (!result.ok) {
+        toastInfo($t('mailboxes.passwordPrompt.unverified'))
+      }
     } catch (err) {
       toastError(errorMessage(err))
-      password = ''
     } finally {
       busy = false
     }
   }
 
-  function cancel(): void {
-    password = ''
-    onDone(false)
-  }
-
-  function onKeydown(event: KeyboardEvent): void {
-    if (event.key === 'Escape') {
-      cancel()
+  // saveAnyway skips the check. The server refused it, but a server can be
+  // wrong about its own users, so this is not a dead end.
+  async function saveAnyway(): Promise<void> {
+    if (!account || busy || password === '') {
+      return
+    }
+    busy = true
+    try {
+      await store()
+    } catch (err) {
+      toastError(errorMessage(err))
+    } finally {
+      busy = false
     }
   }
+
+  async function store(): Promise<void> {
+    if (!account) {
+      return
+    }
+    await setAccountPassword(account.id, password)
+    password = ''
+    refused = false
+    onDone('saved')
+  }
+
+  function cancel(): void {
+    password = ''
+    refused = false
+    onDone('skipped')
+  }
+
+  function dismiss(): void {
+    password = ''
+    refused = false
+    onDone('dismissed')
+  }
+
 </script>
 
-<svelte:window on:keydown={account ? onKeydown : undefined} />
-
 {#if account}
-  <div class="backdrop" transition:fade={{ duration: 120 }}></div>
-  <div
-    class="dialog"
-    role="dialog"
-    aria-modal="true"
-    aria-label={$t('mailboxes.passwordPrompt.title')}
-    transition:scale={{ duration: 150, start: 0.94 }}
-  >
-    <header>
-      <h2>
-        <span class="glyph"><IconLock size={16} stroke={1.8} /></span>
-        {$t('mailboxes.passwordPrompt.title')}
-      </h2>
-      <button type="button" class="close" aria-label={$t('mailboxes.cancel')} on:click={cancel}>
-        <IconX size={16} stroke={1.8} />
-      </button>
-    </header>
+  <Modal title={$t('mailboxes.passwordPrompt.title')} size="small" on:close={cancel}>
+    <span slot="icon"><IconLock size={16} stroke={1.8} /></span>
 
     <p class="lead">
-      {$t('mailboxes.passwordPrompt.body').replace('{email}', account.displayName || account.email)}
+      {$t('mailboxes.passwordPrompt.body').replace('{email}', who)}
     </p>
+    <p class="lead">{$t('mailboxes.passwordPrompt.dismissHint')}</p>
 
     <form on:submit|preventDefault={submit}>
       <label class="field">
         <span>{$t('wizard.field.password')}</span>
         <!-- svelte-ignore a11y-autofocus -->
-        <input type="password" bind:value={password} autofocus autocomplete="off" spellcheck="false" />
+        <input type="password" bind:value={password} on:input={onInput} autofocus autocomplete="off" spellcheck="false" />
       </label>
 
-      <div class="actions">
-        <button type="button" class="cancel" on:click={cancel}>
-          {$t('mailboxes.passwordPrompt.skip')}
-        </button>
-        <button type="submit" class="go" disabled={busy || password === ''}>
-          {busy ? $t('mailboxes.saving') : $t('mailboxes.save')}
-        </button>
-      </div>
+      {#if refused}
+        <p class="refused" role="alert">{$t('mailboxes.passwordPrompt.refused')}</p>
+      {/if}
     </form>
-  </div>
+
+    <svelte:fragment slot="footer">
+      <button type="button" class="dismiss" on:click={dismiss}>
+        {$t('mailboxes.passwordPrompt.dismiss')}
+      </button>
+      <button type="button" class="cancel" on:click={cancel}>
+        {$t('mailboxes.passwordPrompt.skip')}
+      </button>
+      {#if refused}
+        <button type="button" class="cancel" disabled={busy} on:click={saveAnyway}>
+          {$t('mailboxes.passwordPrompt.saveAnyway')}
+        </button>
+      {/if}
+      <button type="button" class="go" disabled={busy || password === ''} on:click={submit}>
+        {busy ? $t('mailboxes.passwordPrompt.checking') : $t('mailboxes.save')}
+      </button>
+    </svelte:fragment>
+  </Modal>
 {/if}
 
 <style>
-  .backdrop {
-    position: fixed;
-    inset: 0;
-    z-index: 330;
-    background: var(--scrim, rgba(0, 0, 0, 0.4));
-    backdrop-filter: blur(2px);
-  }
-
-  .dialog {
-    position: fixed;
-    z-index: 331;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: min(420px, calc(100vw - 2 * var(--space-5)));
-    padding: var(--space-4);
-    border: var(--hairline) solid var(--border-default);
-    border-radius: var(--radius-card);
-    background: var(--surface-overlay);
-    box-shadow: var(--shadow-overlay);
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-3);
-  }
-
-  header {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: var(--space-3);
-  }
-
-  h2 {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    margin: 0;
-    font-size: var(--fz-title);
-    font-weight: var(--fw-semibold);
-    color: var(--text-primary);
-  }
-
-  .glyph {
-    display: inline-flex;
-    color: var(--text-tertiary);
-  }
-
-  .close {
-    border: none;
-    background: transparent;
-    color: var(--text-tertiary);
-    cursor: pointer;
-    padding: var(--space-1);
-    border-radius: var(--radius-control);
-  }
-  .close:hover {
-    background: var(--surface-hover);
-    color: var(--text-primary);
-  }
 
   .lead {
     margin: 0;
@@ -187,6 +191,12 @@
     color: var(--text-secondary);
   }
 
+  .refused {
+    margin: 0;
+    font-size: var(--fz-meta);
+    color: var(--danger);
+  }
+
   .field input {
     padding: var(--space-2) var(--space-3);
     font-family: var(--font-ui);
@@ -201,10 +211,20 @@
     border-color: var(--accent);
   }
 
-  .actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: var(--space-2);
+  /* the quiet option, kept away from the two that answer the question now. */
+  .dismiss {
+    margin-right: auto;
+    padding: var(--space-2) 0;
+    font-size: var(--fz-label);
+    color: var(--text-tertiary);
+    background: transparent;
+    border: none;
+    cursor: var(--cursor-action);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .dismiss:hover {
+    color: var(--text-primary);
   }
 
   .cancel {

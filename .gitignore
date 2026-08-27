@@ -2,6 +2,12 @@ build/bin
 node_modules
 frontend/dist
 
+# wails' marker for whether the frontend deps need reinstalling. It is a local
+# build cache keyed on package.json, rewritten by every build, so tracking it
+# meant a dependency bump left the tree dirty until someone built. Wails writes
+# it (and installs) when it is missing, so a fresh clone is unaffected.
+frontend/package.json.md5
+
 # compiled binaries at repo root
 /Pelton
 /Pelton.exe
@@ -28,8 +34,9 @@ frontend/dist
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
 
-# Dependency directories (remove the comment below to include it)
-# vendor/
+# Dependency directories. The flathub source tarball is built by running
+# `go mod vendor`, so this can appear locally; it must never be committed.
+vendor/
 
 # Go workspace file
 go.work

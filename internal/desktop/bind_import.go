@@ -301,6 +301,8 @@ func (a *App) runImport(sources []mailimport.Source) {
 			Skipped:    p.Skipped,
 			BytesDone:  p.BytesDone,
 			BytesTotal: p.BytesTotal,
+			FileIndex:  p.FileIndex,
+			FileTotal:  p.FileTotal,
 		})
 	}
 

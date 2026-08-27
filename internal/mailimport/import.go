@@ -56,6 +56,11 @@ type Progress struct {
 	// holds without reading all of it.
 	BytesDone  int64
 	BytesTotal int64
+	// FileIndex is which source is being read, counting from 1, out of
+	// FileTotal. Bytes alone say how far along the import is; these say where
+	// it is, which is what makes a long import feel like it is moving.
+	FileIndex int
+	FileTotal int
 }
 
 // Result summarises a finished import.
@@ -102,11 +107,12 @@ func (im *Importer) Import(ctx context.Context, sources []Source) (Result, error
 
 	total := totalBytes(sources)
 	var done int64
-	for _, source := range sources {
+	for i, source := range sources {
 		if err := ctx.Err(); err != nil {
 			return result, err
 		}
-		if err := im.importFile(ctx, account.ID, source, &result, progressBase{done: done, total: total}); err != nil {
+		base := progressBase{done: done, total: total, index: i + 1, count: len(sources)}
+		if err := im.importFile(ctx, account.ID, source, &result, base); err != nil {
 			return result, err
 		}
 		done += fileSize(source.Path)
@@ -119,6 +125,9 @@ func (im *Importer) Import(ctx context.Context, sources []Source) (Result, error
 type progressBase struct {
 	done  int64
 	total int64
+	// index is the 1-based position of the file being read, out of count.
+	index int
+	count int
 }
 
 func (im *Importer) importFile(ctx context.Context, accountID int64, source Source, result *Result, base progressBase) error {
@@ -175,6 +184,8 @@ func (im *Importer) importFile(ctx context.Context, accountID int64, source Sour
 				Skipped:    result.Skipped,
 				BytesDone:  base.done + messages.consumed(),
 				BytesTotal: base.total,
+				FileIndex:  base.index,
+				FileTotal:  base.count,
 			})
 		}
 	}
@@ -213,6 +224,7 @@ func (im *Importer) storeMessage(ctx context.Context, accountID int64, folder st
 		SizeBytes:           parsed.Size,
 		ListUnsubscribe:     parsed.ListUnsubscribe,
 		ListUnsubscribePost: parsed.ListUnsubscribePost,
+		CharsetGuess:        parsed.CharsetGuess,
 	}
 
 	attachments := make([]storage.IncomingAttachment, 0, len(parsed.Attachments))

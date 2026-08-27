@@ -81,23 +81,19 @@ a:hover {
   border-radius: var(--radius-control);
 }
 
-/* thin, theme-aware scrollbars. */
-::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
-}
+/* scrollbars are the platform's own, not painted here: macOS fades its overlay
+   bars out when idle, Windows and Linux draw theirs. a 10px bar of our own
+   design, always visible, is a web page's scrollbar rather than a desktop
+   app's. light and dark come from color-scheme on the theme, already set.
 
-::-webkit-scrollbar-thumb {
-  background: var(--border-strong);
-  border-radius: 999px;
-  border: 3px solid transparent;
-  background-clip: padding-box;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--text-tertiary);
-  background-clip: padding-box;
-  border: 3px solid transparent;
+   the one thing asked of them is a narrower width. macOS falls back to the wide
+   legacy scrollbar whenever a mouse is connected, whatever the "show scroll
+   bars" setting says, and that is wide enough to crowd the message list.
+   scrollbar-width leaves the system's own colors and behaviour alone, unlike
+   scrollbar-color, which would opt the scroller out of native rendering
+   entirely. it does not inherit, hence the universal selector. */
+* {
+  scrollbar-width: thin;
 }
 
 /* allow real text selection inside rendered mail bodies and editors. */

@@ -29,6 +29,11 @@ type Discovered struct {
 	IMAPPort int    `json:"imapPort"`
 	SMTPHost string `json:"smtpHost"`
 	SMTPPort int    `json:"smtpPort"`
+	// IMAPTLS and SMTPTLS are the connection security the source specified:
+	// "ssl" or "starttls". Autoconfig documents state this outright, so it is
+	// carried through rather than guessed back out of the port.
+	IMAPTLS string `json:"imapTls"`
+	SMTPTLS string `json:"smtpTls"`
 	// OAuth is true when the provider's autoconfig says to authenticate with
 	// OAuth2 (gmail, outlook). Otherwise password auth is expected.
 	OAuth bool `json:"oauth"`
@@ -67,6 +72,8 @@ func Discover(ctx context.Context, client *http.Client, email string) (Discovere
 		IMAPPort: 993,
 		SMTPHost: "smtp." + domain,
 		SMTPPort: 465,
+		IMAPTLS:  "ssl",
+		SMTPTLS:  "ssl",
 		Source:   "guess",
 	}, nil
 }
@@ -80,6 +87,10 @@ type mxProvider struct {
 	imapPort int
 	smtpHost string
 	smtpPort int
+	// imapTLS and smtpTLS are stated rather than inferred from the ports, so a
+	// provider on a non-conventional port can be added here correctly.
+	imapTLS string
+	smtpTLS string
 }
 
 // knownMXProviders are mail hosts that serve many custom domains behind a shared
@@ -87,9 +98,9 @@ type mxProvider struct {
 // a reliable signal.
 var knownMXProviders = []mxProvider{
 	// Namecheap Private Email.
-	{suffix: "privateemail.com", imapHost: "mail.privateemail.com", imapPort: 993, smtpHost: "mail.privateemail.com", smtpPort: 465},
+	{suffix: "privateemail.com", imapHost: "mail.privateemail.com", imapPort: 993, smtpHost: "mail.privateemail.com", smtpPort: 465, imapTLS: "ssl", smtpTLS: "ssl"},
 	// Purelymail.
-	{suffix: "purelymail.com", imapHost: "imap.purelymail.com", imapPort: 993, smtpHost: "smtp.purelymail.com", smtpPort: 465},
+	{suffix: "purelymail.com", imapHost: "imap.purelymail.com", imapPort: 993, smtpHost: "smtp.purelymail.com", smtpPort: 465, imapTLS: "ssl", smtpTLS: "ssl"},
 }
 
 // discoverByMX looks up the domain's MX records and, if one matches a known
@@ -112,6 +123,8 @@ func discoverByMX(ctx context.Context, domain string) (Discovered, bool) {
 					IMAPPort: p.imapPort,
 					SMTPHost: p.smtpHost,
 					SMTPPort: p.smtpPort,
+					IMAPTLS:  p.imapTLS,
+					SMTPTLS:  p.smtpTLS,
 					Source:   "mx",
 				}, true
 			}
@@ -186,6 +199,7 @@ func parse(body []byte, src string) (Discovered, error) {
 		if strings.EqualFold(s.Type, "imap") {
 			out.IMAPHost = s.Hostname
 			out.IMAPPort = s.Port
+			out.IMAPTLS = socketTLS(s.SocketType)
 			out.OAuth = strings.EqualFold(s.Authentication, "OAuth2")
 			break
 		}
@@ -194,10 +208,26 @@ func parse(body []byte, src string) (Discovered, error) {
 		if strings.EqualFold(s.Type, "smtp") {
 			out.SMTPHost = s.Hostname
 			out.SMTPPort = s.Port
+			out.SMTPTLS = socketTLS(s.SocketType)
 			break
 		}
 	}
 	return out, nil
+}
+
+// socketTLS maps an autoconfig socketType onto the security values the rest of
+// the app uses. SSL and TLS both mean implicit TLS in these documents. Anything
+// else, including the plain and unencrypted values, returns empty: the caller
+// then leaves the choice alone rather than being told to connect in clear.
+func socketTLS(socketType string) string {
+	switch strings.ToUpper(socketType) {
+	case "SSL", "TLS":
+		return "ssl"
+	case "STARTTLS":
+		return "starttls"
+	default:
+		return ""
+	}
 }
 
 // domainOf returns the part after @ in an email address, lowercased.

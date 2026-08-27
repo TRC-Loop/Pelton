@@ -21,6 +21,38 @@ export const lastSynced = writable<number | null>(null)
 // fed by sync:progress events and cleared when a sync ends.
 export const syncFolder = writable<string>('')
 
+// syncServer holds the imap host and port that mailbox is coming from, and
+// syncAccount the address it belongs to, shown beside the mailbox in the
+// verbose status line so two accounts syncing at once are telling apart. Both
+// are empty when idle or between folders.
+export const syncServer = writable<string>('')
+export const syncAccount = writable<string>('')
+
+// SyncCounts is how far the running sync has got, in message bodies. total is
+// what the reconcile plans have asked for so far and grows as mailboxes open;
+// 0 means nothing is known yet and the bar is indeterminate.
+export interface SyncCounts {
+  done: number
+  total: number
+  folderDone: number
+  folderTotal: number
+  foldersDone: number
+  foldersTotal: number
+}
+
+export const emptySyncCounts: SyncCounts = {
+  done: 0,
+  total: 0,
+  folderDone: 0,
+  folderTotal: 0,
+  foldersDone: 0,
+  foldersTotal: 0,
+}
+
+// syncCounts drives the progress bar, and is reset when a run ends so a
+// finished bar does not linger into the next one.
+export const syncCounts = writable<SyncCounts>(emptySyncCounts)
+
 // loadOutbox refetches the queue. it swallows errors into an empty list since the
 // outbox view is secondary; a transient failure should not break the app. when
 // the refetch reveals freshly-sent messages it shows a brief confirmation and

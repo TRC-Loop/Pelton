@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -104,6 +105,24 @@ UPDATE outbox SET state = ?, attempts = ?, last_error = ?, next_attempt_at = ? W
 	return requireOneRow(res, ErrOutboxNotFound)
 }
 
+// UpdateOutboxStateIf is UpdateOutboxState guarded on the row still being in
+// wantState, returning whether it was updated. It backs retrying a failed send:
+// the worker must not have picked the row up again between the click and the
+// write, which would otherwise reset the attempt count of a live send.
+func (d *DB) UpdateOutboxStateIf(ctx context.Context, id int64, wantState, state string, attempts int, lastErr string, nextAttempt time.Time) (bool, error) {
+	const query = `
+UPDATE outbox SET state = ?, attempts = ?, last_error = ?, next_attempt_at = ? WHERE id = ? AND state = ?`
+	res, err := d.sql.ExecContext(ctx, query, state, attempts, lastErr, formatTime(nextAttempt), id, wantState)
+	if err != nil {
+		return false, fmt.Errorf("storage: update outbox %d if %s: %w", id, wantState, err)
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return false, fmt.Errorf("storage: rows affected: %w", err)
+	}
+	return n > 0, nil
+}
+
 // RequeueOutboxState flips every row in fromState back to toState, used on
 // startup to recover messages left mid-send by a previous crashed run.
 func (d *DB) RequeueOutboxState(ctx context.Context, fromState, toState string) (int, error) {
@@ -196,4 +215,26 @@ func scanOutbox(row rowScanner) (*OutboxRow, error) {
 	r.NextAttemptAt = nextAt
 	r.CreatedAt = createdAt
 	return &r, nil
+}
+
+// CountOutboxInStates returns how many rows are in any of the given states.
+// Background sync uses it to stand aside while something is waiting to be sent:
+// a message the user pressed send on should not queue behind a mailbox that is
+// downloading fourteen thousand messages (#310).
+func (d *DB) CountOutboxInStates(ctx context.Context, states ...string) (int, error) {
+	if len(states) == 0 {
+		return 0, nil
+	}
+	marks := make([]string, len(states))
+	args := make([]any, len(states))
+	for i, state := range states {
+		marks[i] = "?"
+		args[i] = state
+	}
+	var n int
+	query := `SELECT COUNT(*) FROM outbox WHERE state IN (` + strings.Join(marks, ", ") + `)`
+	if err := d.sql.QueryRowContext(ctx, query, args...).Scan(&n); err != nil {
+		return 0, fmt.Errorf("storage: count outbox rows: %w", err)
+	}
+	return n, nil
 }

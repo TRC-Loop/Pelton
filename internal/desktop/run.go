@@ -10,6 +10,7 @@ import (
 	"embed"
 	"os"
 
+	"github.com/TRC-Loop/Pelton/internal/logging"
 	"github.com/TRC-Loop/Pelton/internal/storage"
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
@@ -37,7 +38,13 @@ type Config struct {
 
 // Run constructs and runs the wails application. It returns wails.Run's error.
 func Run(cfg Config) error {
+	// the outermost panic handler. A panic that gets this far has already
+	// taken the ui with it; this leaves a file behind saying what happened
+	// instead of the window simply disappearing.
+	defer logging.Guard("running the app")
+
 	app := newApp(cfg.Version, cfg.Channel)
+	app.debug = debugForced(os.Args[1:])
 	app.licenseManifest = cfg.LicenseManifest
 	app.programLicense = cfg.ProgramLicense
 	app.trayIcon = cfg.TrayIcon
@@ -68,23 +75,26 @@ func Run(cfg Config) error {
 
 	return wails.Run(&options.App{
 		Title:     title,
-		Width:     1280,
-		Height:    820,
-		MinWidth:  900,
-		MinHeight: 600,
+		// the window opens at the default and startup resizes it to whatever was
+		// remembered, once the store is open. see geometry.go.
+		Width:     defaultWindowWidth,
+		Height:    defaultWindowHeight,
+		MinWidth:  minWindowWidth,
+		MinHeight: minWindowHeight,
 		AssetServer: &assetserver.Options{
 			Assets: cfg.Assets,
 		},
 		// neutral dark surface so the native window chrome matches the ui before
 		// the frontend paints. the real colors come from the css token theme.
 		BackgroundColour: &options.RGBA{R: 17, G: 18, B: 20, A: 1},
-		// keep the app running when the window is closed, like macos Mail: closing
-		// hides the window and background sync continues; the dock icon reopens it,
-		// and Quit (Cmd+Q) in the menu actually exits.
-		HideWindowOnClose: true,
-		OnStartup:         app.startup,
-		OnDomReady:        app.domReady,
-		OnShutdown:        app.shutdown,
+		// what the close button does is a user setting, so beforeClose decides
+		// per close whether to hide the window or exit. HideWindowOnClose is
+		// deliberately left off: it is a static option and would take that
+		// decision away before beforeClose ever runs.
+		OnBeforeClose: app.beforeClose,
+		OnStartup:     app.startup,
+		OnDomReady:    app.domReady,
+		OnShutdown:    app.shutdown,
 		Menu:              app.initialMenu(),
 		// keep a single instance: a second launch (e.g. another mailto click)
 		// hands its argv to the running app and exits, so mailto links reuse the
@@ -99,6 +109,15 @@ func Run(cfg Config) error {
 			},
 		},
 		Mac: &mac.Options{
+			// draw the ui all the way to the top of the window instead of under an
+			// opaque native title bar, which never matches the theme. the frontend
+			// keeps the top strip clear of the traffic lights and makes it draggable
+			// (see the mac-titlebar handling in App.svelte).
+			//
+			// hidden, not hidden-inset: the inset variant asks for an NSToolbar,
+			// and the toolbar makes the title bar taller, which drops the traffic
+			// lights below the middle of the 30px menu bar row they share.
+			TitleBar: mac.TitleBarHidden(),
 			About: &mac.AboutInfo{
 				Title:   title,
 				Message: aboutMessage(cfg.Channel, cfg.Version),

@@ -135,7 +135,7 @@
     color: var(--text-secondary);
     font-size: var(--fz-meta);
     border-radius: var(--radius-control);
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
 
   .clear:hover {
@@ -171,7 +171,7 @@
     background: transparent;
     color: var(--text-secondary);
     border-radius: var(--radius-control);
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
 
   .cell:hover {

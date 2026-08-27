@@ -16,6 +16,10 @@ import {
 } from './demo'
 import type {
   Account,
+  SMIMERevocation,
+  MCPPermission,
+  AgentAction,
+  AgentProposal,
   Folder,
   UnifiedView,
   MessageList,
@@ -29,9 +33,16 @@ import type {
   Discovered,
   AddAccountRequest,
   TestConnectionRequest,
+  TLSMode,
   Signature,
   AccountSignatures,
   AddressBookEntry,
+  AddressBook,
+  AddressBookDraft,
+  DiscoveredBook,
+  Contact,
+  ContactConflict,
+  ContactDraft,
   AttachmentContent,
   ThemeInfo,
   ThemeApply,
@@ -42,8 +53,21 @@ import type {
   UserLocaleApply,
   ProxyConfig,
   MCPConfig,
+  VirusTotalConfig,
+  Verdict,
+  MessageScan,
   View,
+  Selection,
+  FetchOlderResult,
+  PGPKey,
+  LogStatus,
   ThunderbirdProfile,
+  DevActivity,
+  DevProcessStats,
+  Profile,
+  ProfileDraft,
+  PasswordCheck,
+  AccountSyncState,
 } from './types'
 
 // isDemoMode reports whether the app launched in the cosmetic --potatoes-are-nice
@@ -99,14 +123,41 @@ export function listAccounts(): Promise<Account[]> {
 export function updateAccount(req: {
   id: number
   displayName: string
+  localLabel: string
+  useLocalLabel: boolean
   username: string
   imapHost: string
   imapPort: number
   smtpHost: string
   smtpPort: number
   password: string
+  imapTls: TLSMode
+  smtpTls: TLSMode
+  exportOnArchive: boolean
+  exportDir: string
+  exportSubfolders: string
+  exportNameTemplate: string
+  pgpDefault: string
 }): Promise<Account> {
   return App.UpdateAccount(new desktop.UpdateAccountRequest(req))
+}
+
+// chooseArchiveExportFolder opens a directory picker for the export-on-archive
+// location, returning '' when the user cancelled.
+export function chooseArchiveExportFolder(): Promise<string> {
+  return App.ChooseArchiveExportFolder()
+}
+
+// previewArchiveExportName renders a file name template against a fixed sample
+// message, so the settings screen can show what a pattern produces.
+export function previewArchiveExportName(template: string, subfolders: string): Promise<string> {
+  return App.PreviewArchiveExportName(template, subfolders)
+}
+
+// checkAccountPassword tries a password against the account's imap server
+// without storing it, so the prompt can say straight away whether it works.
+export function checkAccountPassword(accountId: number, password: string): Promise<PasswordCheck> {
+  return App.CheckAccountPassword(accountId, password) as unknown as Promise<PasswordCheck>
 }
 
 // setAccountPassword stores a login password for an account, replacing any
@@ -116,9 +167,22 @@ export function setAccountPassword(accountId: number, password: string): Promise
 }
 
 // accountsNeedingPassword lists accounts with no stored password, which is the
-// state an account imported from another mail client arrives in.
+// state an account imported from another mail client arrives in. Accounts whose
+// prompt was dismissed are still listed, so the ui can mark them.
 export function accountsNeedingPassword(): Promise<Account[]> {
+  if (isDemoActive()) {
+    return Promise.resolve([])
+  }
   return App.AccountsNeedingPassword().then((list) => (list ?? []) as unknown as Account[])
+}
+
+// dismissPasswordPrompt stops the missing-password prompt from interrupting for
+// one account. The mailbox is marked in the sidebar and in Settings instead.
+export function dismissPasswordPrompt(accountId: number): Promise<void> {
+  if (isDemoActive()) {
+    return Promise.resolve()
+  }
+  return App.DismissPasswordPrompt(accountId)
 }
 
 // deleteAccount removes an account, its cached mail and its keyring secret.
@@ -132,6 +196,33 @@ export function listFolders(accountId: number): Promise<Folder[]> {
     return Promise.resolve(demoFolders(accountId))
   }
   return App.ListFolders(accountId)
+}
+
+// createFolder creates a mailbox on the server and returns the new folder.
+// parentId 0 creates it at the root of the account. name is one level: nesting
+// comes from parentId, not from embedding the server's delimiter in the name.
+export function createFolder(accountId: number, parentId: number, name: string): Promise<Folder> {
+  return App.CreateFolder(new desktop.CreateFolderRequest({ accountId, parentId, name }))
+}
+
+// renameFolder renames a mailbox in place, keeping its cached mail. Special
+// mailboxes (INBOX, Sent, Drafts, Trash, Junk, Archive) are refused by the
+// backend.
+export function renameFolder(id: number, name: string): Promise<void> {
+  return App.RenameFolder(id, name)
+}
+
+// deleteFolder deletes a mailbox, its subfolders and their mail, on the server
+// as well as locally. Destructive and not undoable: confirm before calling.
+export function deleteFolder(id: number): Promise<void> {
+  return App.DeleteFolder(id)
+}
+
+// emptyTrash permanently deletes every message in a trash folder and resolves
+// with how many it removed. The backend refuses any folder that is not the
+// account's trash. Destructive and not undoable: confirm before calling.
+export function emptyTrash(folderId: number): Promise<number> {
+  return App.EmptyTrash(folderId)
 }
 
 // listUnifiedViews returns the cross-account views with aggregate counts.
@@ -184,6 +275,26 @@ export function listSavedViewMessages(
   )
 }
 
+// fetchOlderMessages pulls the next batch of older mail from the server for a
+// selection, for when the local cache runs out before the mailbox does. It is a
+// network round trip, unlike the list* functions above which only read the
+// cache. In demo mode there is no server, so it reports nothing fetched.
+export function fetchOlderMessages(sel: Selection): Promise<FetchOlderResult> {
+  if (isDemoActive()) {
+    return Promise.resolve({ fetched: 0, hasOlder: false })
+  }
+  return App.FetchOlderMessages(
+    new desktop.ListMessagesRequest({
+      kind: sel.kind,
+      folderId: sel.kind === 'folder' ? sel.folderId : 0,
+      view: sel.kind === 'view' ? sel.view : '',
+      viewId: sel.kind === 'savedView' ? sel.viewId : 0,
+      limit: 0,
+      offset: 0,
+    }),
+  )
+}
+
 // listViews returns every saved View with its eager-run counts.
 export function listViews(): Promise<View[]> {
   if (isDemoActive()) {
@@ -207,6 +318,68 @@ export function reorderViews(orderedIds: number[]): Promise<void> {
   return App.ReorderViews(orderedIds)
 }
 
+// reorderFolders persists a new order for one group of sibling folders. Every
+// id must share an account and a parent; the backend rejects a mixed group.
+export function reorderFolders(orderedIds: number[]): Promise<void> {
+  return App.ReorderFolders(orderedIds)
+}
+
+// reorderAccounts persists a new order for the sidebar's account sections.
+export function reorderAccounts(orderedIds: number[]): Promise<void> {
+  return App.ReorderAccounts(orderedIds)
+}
+
+// reorderUnifiedViews persists a new order for the unified views block, by key.
+export function reorderUnifiedViews(keys: string[]): Promise<void> {
+  return App.ReorderUnifiedViews(keys)
+}
+
+// listPinnedFolders returns the pinned folders across every account in the
+// order of the sidebar's Pinned group.
+export function listPinnedFolders(): Promise<Folder[]> {
+  if (isDemoActive()) {
+    return Promise.resolve([])
+  }
+  return App.ListPinnedFolders()
+}
+
+// setFolderPinned mirrors a folder into the Pinned group, or removes it from
+// there. The folder stays in its own account's tree either way.
+export function setFolderPinned(folderId: number, pinned: boolean): Promise<void> {
+  return App.SetFolderPinned(folderId, pinned)
+}
+
+// setFolderSyncExcluded turns syncing for one folder off or on. Excluding does
+// not delete cached mail, it only stops the folder being updated (#173).
+export function setFolderSyncExcluded(folderId: number, excluded: boolean): Promise<void> {
+  return App.SetFolderSyncExcluded(folderId, excluded)
+}
+
+// startAccountSync runs a newly added account's first sync and parks it on
+// idle. Adding an account no longer does this on its own, so the wizard can
+// show the folder list before anything is fetched.
+export function startAccountSync(accountId: number): Promise<void> {
+  return App.StartAccountSync(accountId)
+}
+
+// assignableFolderRoles are the roles a user may give a folder by hand. Inbox is
+// absent on purpose: every account has exactly one, named by the protocol, and a
+// second would break the unified inbox.
+export const assignableFolderRoles = ['normal', 'sent', 'drafts', 'trash', 'junk', 'archive'] as const
+
+// setFolderRole assigns a folder's role by hand, overriding what the server
+// reported and what its name suggests. Pass an empty role to go back to
+// automatic detection. Nothing is sent to the server: the role is local
+// classification, so this never renames or moves the mailbox.
+export function setFolderRole(folderId: number, role: string): Promise<void> {
+  return App.SetFolderRole(folderId, role)
+}
+
+// reorderPinnedFolders persists a new order for the Pinned group.
+export function reorderPinnedFolders(orderedIds: number[]): Promise<void> {
+  return App.ReorderPinnedFolders(orderedIds)
+}
+
 // getMessage returns the full message with sanitized body and attachments.
 export function getMessage(id: number): Promise<MessageDetail> {
   if (isDemoActive()) {
@@ -227,8 +400,10 @@ export function getMessageSource(id: number): Promise<string> {
 }
 
 // getMessageHtml re-renders a body with the chosen remote-image policy.
-export function getMessageHtml(id: number, allowRemote: boolean): Promise<string> {
-  return App.GetMessageHTML(id, allowRemote)
+// includeTrackers additionally loads the images detection flagged as tracking
+// pixels, which the setting otherwise keeps blocked even here.
+export function getMessageHtml(id: number, allowRemote: boolean, includeTrackers = false): Promise<string> {
+  return App.GetMessageHTML(id, allowRemote, includeTrackers)
 }
 
 // setSeen / setFlagged toggle a flag and queue the change for sync.
@@ -256,6 +431,90 @@ export function undoDelete(id: number): Promise<void> {
 export interface ArchiveUndo {
   messageId: string
   originalFolderId: number
+  // the .eml copy the account's export-on-archive option wrote, '' when the
+  // option is off. exportError explains why no copy was written when one was
+  // expected: the archive itself still succeeded.
+  exportPath: string
+  exportError: string
+}
+
+// composeProtectionStatus reports what signing and encryption are possible for
+// a message from this account to these recipients, so the compose controls
+// never offer something that would fail at send time.
+export function composeProtectionStatus(
+  accountId: number,
+  recipients: string[],
+): Promise<desktop.ProtectionStatusDTO> {
+  return App.ComposeProtectionStatus(accountId, recipients)
+}
+
+// signerFingerprint is the key an account signs with, so the compose window can
+// point the passphrase prompt at the right one. '' when there is none.
+export function signerFingerprint(accountId: number): Promise<string> {
+  return App.SignerFingerprint(accountId)
+}
+
+// --- mcp write actions (#127) ---
+
+// mcpPermissions returns every write tool an agent could use and whether it is
+// allowed. All off until switched on.
+export function mcpPermissions(): Promise<MCPPermission[]> {
+  return App.MCPPermissions().then((p) => p ?? [])
+}
+
+// setMCPPermission turns one write tool on or off and restarts the server.
+export function setMCPPermission(tool: string, allowed: boolean): Promise<void> {
+  return App.SetMCPPermission(tool, allowed)
+}
+
+// agentActions returns the log of writes agents have made.
+export function agentActions(): Promise<AgentAction[]> {
+  return App.AgentActions().then((a) => a ?? [])
+}
+
+// clearAgentActions empties that log.
+export function clearAgentActions(): Promise<void> {
+  return App.ClearAgentActions()
+}
+
+// agentProposals returns messages an agent wants sent, awaiting approval.
+export function agentProposals(): Promise<AgentProposal[]> {
+  return App.AgentProposals().then((p) => p ?? [])
+}
+
+// approveAgentProposal sends a proposed message through the ordinary send path.
+export function approveAgentProposal(id: number): Promise<void> {
+  return App.ApproveAgentProposal(id)
+}
+
+// discardAgentProposal throws a proposed message away unsent.
+export function discardAgentProposal(id: number): Promise<void> {
+  return App.DiscardAgentProposal(id)
+}
+
+// --- s/mime revocation (#226) ---
+
+// checkSMIMERevocation asks the signing certificate's authority whether it has
+// been withdrawn. Returns a '' status when the setting is off or the message
+// carries nothing to check, so the caller can call it unconditionally.
+export function checkSMIMERevocation(messageId: number): Promise<SMIMERevocation> {
+  return App.CheckSMIMERevocation(messageId)
+}
+
+// smimeRevocationEnabled reports whether revocation checking is on.
+export function smimeRevocationEnabled(): Promise<boolean> {
+  return App.SMIMERevocationEnabled()
+}
+
+// setSMIMERevocation turns revocation checking on or off. Turning it off also
+// empties the cache of past answers.
+export function setSMIMERevocation(on: boolean): Promise<void> {
+  return App.SetSMIMERevocation(on)
+}
+
+// unsealDraft opens a draft of an encrypted message with a passphrase.
+export function unsealDraft(id: number, passphrase: string): Promise<desktop.DraftDTO> {
+  return App.UnsealDraft(id, passphrase)
 }
 
 // archiveMessage moves a message to its account's Archive folder on the server,
@@ -282,6 +541,9 @@ export interface SearchRequest {
   afterUnix: number
   beforeUnix: number
   limit: number
+  // offset skips that many ranked hits, so the list can page through a result
+  // set instead of stopping at the first page.
+  offset: number
   // field-scoped constraints from typed search chips (from:/to:/subject:).
   from: string
   to: string
@@ -289,10 +551,57 @@ export interface SearchRequest {
   hasAttachment: boolean
 }
 
-// search runs a ranked, typo-tolerant search and returns matching summaries in
-// relevance order.
-export function search(req: SearchRequest): Promise<MessageSummary[]> {
+// SearchResult is one page of ranked results. total counts index matches and is
+// an upper bound on what is shown, since the attachment filter and any message
+// deleted since it was indexed are applied per page after ranking.
+export interface SearchResult {
+  messages: MessageSummary[]
+  total: number
+}
+
+// search runs a ranked, typo-tolerant search and returns a page of matching
+// summaries in relevance order.
+export function search(req: SearchRequest): Promise<SearchResult> {
   return App.Search(new desktop.SearchRequestDTO(req))
+}
+
+// MessageIDs is every id a list matches. capped means the backend stopped at
+// its limit, so the selection is the newest ids rather than all of them.
+export interface MessageIDs {
+  ids: number[]
+  capped: boolean
+  matching: number
+}
+
+// messageIds returns every message id in a list, ignoring paging, for select
+// all. The list in the ui only holds the pages that were scrolled to, so
+// selecting a whole mailbox has to come from the query.
+export function messageIds(sel: Selection): Promise<MessageIDs> {
+  if (isDemoActive()) {
+    return Promise.resolve({ ids: [], capped: false, matching: 0 })
+  }
+  if (sel.kind === 'view') {
+    return App.MessageIDs(
+      new desktop.ListMessagesRequest({ kind: 'view', folderId: 0, view: sel.view, limit: 0, offset: 0 }),
+    )
+  }
+  if (sel.kind === 'savedView') {
+    return App.MessageIDs(
+      new desktop.ListMessagesRequest({ kind: 'savedView', folderId: 0, view: '', viewId: sel.viewId, limit: 0, offset: 0 }),
+    )
+  }
+  return App.MessageIDs(
+    new desktop.ListMessagesRequest({ kind: 'folder', folderId: sel.folderId, view: '', limit: 0, offset: 0 }),
+  )
+}
+
+// searchMessageIds is messageIds for a result set: every match of the current
+// search, ids only.
+export function searchMessageIds(req: SearchRequest): Promise<MessageIDs> {
+  if (isDemoActive()) {
+    return Promise.resolve({ ids: [], capped: false, matching: 0 })
+  }
+  return App.SearchMessageIDs(new desktop.SearchRequestDTO(req))
 }
 
 // saveAttachment prompts for a path and writes the file, returning the path or
@@ -333,6 +642,21 @@ export function triggerSync(): Promise<void> {
   return App.TriggerSync()
 }
 
+// accountSyncStates returns how each account's last sync went. Accounts that
+// have never synced are absent rather than reported as failing.
+export function accountSyncStates(): Promise<AccountSyncState[]> {
+  if (isDemoActive()) {
+    return Promise.resolve([])
+  }
+  return App.AccountSyncStates().then((list) => (list ?? []) as unknown as AccountSyncState[])
+}
+
+// syncAccountNow syncs one account, for the retry on a failed mailbox. It
+// rejects with what went wrong this time.
+export function syncAccountNow(accountId: number): Promise<void> {
+  return App.SyncAccountNow(accountId)
+}
+
 // appVersion returns the build version string (injected via ldflags), shown in
 // the about section.
 export function appVersion(): Promise<string> {
@@ -365,6 +689,18 @@ export function cancelSend(id: number): Promise<boolean> {
 // brief sent confirmation.
 export function clearSentOutbox(): Promise<void> {
   return App.ClearSentOutbox()
+}
+
+// retrySend puts a failed message back in the send queue with a fresh attempt
+// budget. Resolves false when it was no longer failed.
+export function retrySend(id: number): Promise<boolean> {
+  return App.RetrySend(id)
+}
+
+// discardFailedSend removes a failed message from the outbox. The message is
+// gone afterwards, so the caller confirms first.
+export function discardFailedSend(id: number): Promise<boolean> {
+  return App.DiscardFailedSend(id)
 }
 
 // trustSenderImages permanently allows remote content from a message's sender.
@@ -672,6 +1008,24 @@ export function setWindowTitle(title: string): void {
   void App.SetWindowTitle(title)
 }
 
+// closeWindow does what the window's close button does, following the close
+// action setting: hide and keep syncing, or quit.
+export function closeWindow(): void {
+  void App.CloseWindow()
+}
+
+// titleBarDoubleClick runs the system's title-bar double-click action (zoom,
+// minimise or nothing). Needed because the app draws its own title bar on
+// macOS, so the window server never sees the click.
+export function titleBarDoubleClick(): void {
+  void App.TitleBarDoubleClick()
+}
+
+// setDockBadge puts the unread count on the dock icon. No-op off macOS.
+export function setDockBadge(unread: number): void {
+  void App.SetDockBadge(unread)
+}
+
 // setWindowTheme matches the native window chrome (the Windows caption bar) to
 // the resolved ui theme. No-op on macOS/Linux.
 export function setWindowTheme(dark: boolean): void {
@@ -713,6 +1067,9 @@ export const SettingKeys = {
   showDateTime: 'show_datetime',
   showPgp: 'show_pgp',
   showAuth: 'show_auth',
+  // lets search see inside encrypted mail, at the cost of writing the decrypted
+  // text into the on-disk index. off by default; toggling rebuilds the index.
+  indexDecrypted: 'search_index_decrypted',
   editorMode: 'editor_mode',
   toastPosition: 'toast_position',
   paneLocked: 'pane_locked',
@@ -721,12 +1078,15 @@ export const SettingKeys = {
   sendDelay: 'send_delay_seconds',
   flagHighlight: 'flag_highlight',
   shortcutHints: 'show_shortcut_hints',
+  harvestAddresses: 'harvest_addresses',
   accountEmail: 'show_account_email',
   onboarded: 'onboarding_complete',
   alwaysLoadImages: 'remote_images_always',
   avatarSource: 'avatar_source',
   avatarStyle: 'avatar_style',
   multiSelectEnabled: 'multi_select_enabled',
+  selectAllScope: 'select_all_scope',
+  selectAllUnified: 'select_all_unified',
   showSelectedCount: 'show_selected_count',
   sidebarIndentGuides: 'sidebar_indent_guides',
   rowTemplate: 'row_template',
@@ -739,6 +1099,10 @@ export const SettingKeys = {
   viewsPlacement: 'views_placement',
   flagColorSync: 'flag_color_sync',
   showOfflineIndicator: 'show_offline_indicator',
+  showUnsyncedFolder: 'show_unsynced_folder',
+  restoreTabs: 'restore_reading_tabs',
+  paletteProfiles: 'palette_profiles',
+  openTabs: 'open_reading_tabs',
   swipeEnabled: 'swipe_enabled',
   swipeLeftAction: 'swipe_left_action',
   swipeRightAction: 'swipe_right_action',
@@ -760,23 +1124,98 @@ export const SettingKeys = {
   menuBarNativeMinimal: 'menu_bar_native_minimal',
   menuBarIcons: 'menu_bar_icons',
   menuBarLayout: 'menu_bar_layout',
+  paletteUsage: 'palette_usage',
+  paletteQuickSelect: 'palette_quick_select',
   menuBarNewItems: 'menu_bar_new_items',
   timeFormat: 'time_format',
   reduceMotion: 'reduce_motion',
+  handCursor: 'hand_cursor',
+  dockBadge: 'dock_badge',
   themeDarkStart: 'theme_dark_start',
   themeDarkEnd: 'theme_dark_end',
   bodyFont: 'body_font',
+  senderFonts: 'sender_fonts',
   uiFont: 'ui_font',
   monoFont: 'mono_font',
   notifyNewMail: 'notify_new_mail',
   verboseSync: 'verbose_sync',
+  syncProgressBar: 'sync_progress_bar',
+  closeAction: 'close_button_action',
+  syncMessageLimit: 'sync_message_limit',
+  syncAutoBackfill: 'sync_auto_backfill',
+  startupSelection: 'startup_selection',
+  lastSelection: 'last_selection',
   liabilityAccepted: 'liability_accepted',
+  logToFile: 'log_to_file',
+  logLevel: 'log_level',
+  logMessageMetadata: 'log_message_metadata',
+  crashLogs: 'crash_logs',
+  blockTrackingPixels: 'block_tracking_pixels',
 } as const
 
 // listSystemFonts returns the installed font family names for the body font
 // dropdown (cached backend-side after the first scan).
 export function listSystemFonts(): Promise<string[]> {
   return App.ListSystemFonts().then((f) => f ?? [])
+}
+
+// --- pgp keys (#192) ---
+
+// listPGPKeys returns every imported key, private keys first.
+export function listPGPKeys(): Promise<PGPKey[]> {
+  return App.ListPGPKeys() as unknown as Promise<PGPKey[]>
+}
+
+// importPGPKey opens a file picker and imports the keys the file holds.
+// Resolves with an empty list when the dialog was cancelled.
+export function importPGPKey(): Promise<PGPKey[]> {
+  return App.ImportPGPKey().then((keys) => (keys ?? []) as unknown as PGPKey[])
+}
+
+// deletePGPKey removes a key from both rings and forgets its passphrase.
+export function deletePGPKey(fingerprint: string): Promise<void> {
+  return App.DeletePGPKey(fingerprint)
+}
+
+// exportPGPKey writes a key to a file the user picks, returning the path or ''
+// if cancelled. includePrivate writes the private half, which is the only
+// backup path for it: keys are deliberately excluded from the backup archive.
+export function exportPGPKey(fingerprint: string, includePrivate: boolean): Promise<string> {
+  return App.ExportPGPKey(fingerprint, includePrivate)
+}
+
+// unlockPGPKey verifies a passphrase and holds it for the session. remember
+// also stores it in the os keyring so it survives a restart.
+export function unlockPGPKey(
+  fingerprint: string,
+  passphrase: string,
+  remember: boolean,
+): Promise<void> {
+  return App.UnlockPGPKey(fingerprint, passphrase, remember)
+}
+
+// unlockMessage tries a passphrase against one protected message and, if it
+// opens, holds the passphrase for the rest of the session. It does not offer to
+// store it in the keyring: that needs a specific key to file it under, which
+// the Encryption pane has and a message does not.
+export function unlockMessage(messageId: number, passphrase: string): Promise<void> {
+  return App.UnlockMessage(messageId, passphrase)
+}
+
+// forgetPGPPassphrase drops a passphrase from the session and the keyring.
+export function forgetPGPPassphrase(fingerprint: string): Promise<void> {
+  return App.ForgetPGPPassphrase(fingerprint)
+}
+
+// getAccountPGPKey returns the fingerprint an account signs with, or ''.
+export function getAccountPGPKey(accountId: number): Promise<string> {
+  return App.GetAccountPGPKey(accountId)
+}
+
+// setAccountPGPKey pins the signing key for an account; '' clears it and falls
+// back to matching the account address against the keys' user ids.
+export function setAccountPGPKey(accountId: number, fingerprint: string): Promise<void> {
+  return App.SetAccountPGPKey(accountId, fingerprint)
 }
 
 // --- custom themes ---
@@ -904,4 +1343,211 @@ export function setMCPPort(port: number): Promise<void> {
 // returns it for display.
 export function regenerateMCPToken(): Promise<string> {
   return App.RegenerateMCPToken()
+}
+
+// getVirusTotalConfig returns the VirusTotal integration's settings: whether it
+// is on, whether a key is stored, and the two auto-scan toggles.
+export function getVirusTotalConfig(): Promise<VirusTotalConfig> {
+  return App.GetVirusTotalConfig() as Promise<VirusTotalConfig>
+}
+
+// setVirusTotalEnabled turns the integration on or off. Turning it off also
+// discards every cached verdict and resets both auto-scan toggles.
+export function setVirusTotalEnabled(enabled: boolean): Promise<void> {
+  return App.SetVirusTotalEnabled(enabled)
+}
+
+// setVirusTotalApiKey stores the api key in the os keyring, or clears it (and
+// the cached verdicts it produced) when given an empty string.
+export function setVirusTotalApiKey(apiKey: string): Promise<void> {
+  return App.SetVirusTotalAPIKey(apiKey)
+}
+
+// setVirusTotalAutoScanLinks turns automatic link scanning on or off.
+export function setVirusTotalAutoScanLinks(enabled: boolean): Promise<void> {
+  return App.SetVirusTotalAutoScanLinks(enabled)
+}
+
+// setVirusTotalAutoScanAttachments turns automatic attachment scanning on or off.
+export function setVirusTotalAutoScanAttachments(enabled: boolean): Promise<void> {
+  return App.SetVirusTotalAutoScanAttachments(enabled)
+}
+
+// scanUrl looks one link up on VirusTotal, answering from the local cache when
+// it can. This is the on-demand path behind the link context menu.
+export function scanUrl(url: string): Promise<Verdict> {
+  return App.ScanURL(url) as Promise<Verdict>
+}
+
+// scanAttachment looks one attachment up by the sha-256 of its bytes. The file
+// itself is never uploaded, so an unrecognised file stays 'unknown'.
+export function scanAttachment(messageId: number, attachmentId: number): Promise<Verdict> {
+  return App.ScanAttachment(messageId, attachmentId) as Promise<Verdict>
+}
+
+// scanMessage scans a whole message's links, attachments, or both. Results come
+// back per target, so one failed lookup does not lose the others.
+export function scanMessage(messageId: number, links: boolean, attachments: boolean): Promise<MessageScan> {
+  return App.ScanMessage(messageId, links, attachments) as Promise<MessageScan>
+}
+
+// --- logs and crash reports (#211) ---
+
+// getLogStatus reports where the log folder is, whether anything is being
+// written to it, and whether the last run left a crash report behind.
+export function getLogStatus(): Promise<LogStatus> {
+  return App.GetLogStatus() as Promise<LogStatus>
+}
+
+// openLogFolder shows the log folder in the system file manager, creating it
+// first so the button works before anything has been logged.
+export function openLogFolder(): Promise<void> {
+  return App.OpenLogFolder()
+}
+
+// deleteLogs removes every log and crash file.
+export function deleteLogs(): Promise<void> {
+  return App.DeleteLogs()
+}
+
+// openCrashReport opens the pending crash file and marks it seen.
+export function openCrashReport(): Promise<void> {
+  return App.OpenCrashReport()
+}
+
+// dismissCrashReport marks the pending crash seen without opening it. The file
+// stays on disk.
+export function dismissCrashReport(): Promise<void> {
+  return App.DismissCrashReport()
+}
+
+// getDiagnostics returns the build and platform summary the about section
+// copies to the clipboard. It never contains mail or addresses.
+export function getDiagnostics(): Promise<string> {
+  return App.GetDiagnostics()
+}
+
+// devToolsEnabled reports whether the developer overlays are available (#188).
+// They are, only when the app was started with PELTON_DEV or PELTON_DEVTOOLS;
+// no setting can turn them on.
+export function devToolsEnabled(): Promise<boolean> {
+  if (isDemoActive()) {
+    return Promise.resolve(false)
+  }
+  return App.DevToolsEnabled()
+}
+
+// devActivity returns the buffered log lines newer than seq, along with the
+// sequence to ask for next. Pass 0 for everything still buffered.
+export function devActivity(after: number): Promise<DevActivity> {
+  return App.DevActivity(after).then((page) => ({
+    lines: page.lines ?? [],
+    next: page.next,
+    level: page.level,
+  }))
+}
+
+// clearDevActivity empties the activity buffer.
+export function clearDevActivity(): Promise<void> {
+  return App.ClearDevActivity()
+}
+
+// devProcessStats samples the Go runtime and the app's on-disk footprint.
+export function devProcessStats(): Promise<DevProcessStats> {
+  return App.DevProcessStats()
+}
+
+// listProfiles returns every profile on the install, main first (#270).
+export function listProfiles(): Promise<Profile[]> {
+  if (isDemoActive()) {
+    return Promise.resolve([])
+  }
+  return App.ListProfiles().then((list) => (list ?? []) as unknown as Profile[])
+}
+
+// activeProfile returns the profile the app is in.
+export function activeProfile(): Promise<Profile> {
+  return App.ActiveProfile() as unknown as Promise<Profile>
+}
+
+// createProfile adds a profile. Areas set to 'copy' are duplicated from main
+// now; areas set to 'share' stay linked to it.
+export function createProfile(draft: ProfileDraft): Promise<Profile> {
+  return App.CreateProfile(new desktop.ProfileRequest(draft)) as unknown as Promise<Profile>
+}
+
+// updateProfile saves a profile's name, icon, sharing and visible accounts.
+export function updateProfile(draft: ProfileDraft): Promise<Profile> {
+  return App.UpdateProfile(new desktop.ProfileRequest(draft)) as unknown as Promise<Profile>
+}
+
+// deleteProfile removes a profile and what it owned. Its accounts and their
+// mail belong to the install and stay.
+export function deleteProfile(id: number): Promise<void> {
+  return App.DeleteProfile(id)
+}
+
+// switchProfile moves the app to another profile, in place.
+export function switchProfile(id: number): Promise<void> {
+  return App.SwitchProfile(id)
+}
+
+// allAccounts lists every account on the install, including ones the current
+// profile does not show. Only the profile editor wants this.
+export function allAccounts(): Promise<Account[]> {
+  if (isDemoActive()) {
+    return Promise.resolve(demoAccounts())
+  }
+  return App.AllAccounts().then((list) => (list ?? []) as unknown as Account[])
+}
+
+// listAddressBooks returns every configured CardDAV address book (#168).
+export function listAddressBooks(): Promise<AddressBook[]> {
+  return App.ListAddressBooks().then((list) => (list ?? []) as unknown as AddressBook[])
+}
+
+// discoverAddressBooks asks a server which address books a login can see. With
+// an accountId and no url it starts from that mailbox's domain.
+export function discoverAddressBooks(draft: AddressBookDraft): Promise<DiscoveredBook[]> {
+  return App.DiscoverAddressBooks(new desktop.AddressBookRequest(draft)).then(
+    (list) => (list ?? []) as unknown as DiscoveredBook[],
+  )
+}
+
+// addAddressBook stores an address book and syncs it once.
+export function addAddressBook(draft: AddressBookDraft): Promise<AddressBook> {
+  return App.AddAddressBook(new desktop.AddressBookRequest(draft)) as unknown as Promise<AddressBook>
+}
+
+// updateAddressBook saves a book's name, location and login. An empty password
+// leaves the stored one alone.
+export function updateAddressBook(draft: AddressBookDraft): Promise<AddressBook> {
+  return App.UpdateAddressBook(new desktop.AddressBookRequest(draft)) as unknown as Promise<AddressBook>
+}
+
+// removeAddressBook forgets a book here. Nothing is deleted on the server.
+export function removeAddressBook(id: number): Promise<void> {
+  return App.RemoveAddressBook(id)
+}
+
+// listContacts returns the contacts in a book, or in all of them for bookId 0.
+export function listContacts(bookId: number): Promise<Contact[]> {
+  return App.ListContacts(bookId).then((list) => (list ?? []) as unknown as Contact[])
+}
+
+// syncContacts refreshes every address book now.
+export function syncContacts(): Promise<void> {
+  return App.SyncContacts()
+}
+
+// saveContact writes a contact to its server. A refused write comes back with
+// conflict true and both versions, having changed nothing.
+export function saveContact(draft: ContactDraft): Promise<ContactConflict> {
+  return App.SaveContact(new desktop.ContactRequest(draft)) as unknown as Promise<ContactConflict>
+}
+
+// deleteContact removes a contact here and on the server. force writes through
+// a conflict the user has already been shown.
+export function deleteContact(id: number, force: boolean): Promise<ContactConflict> {
+  return App.DeleteContact(id, force) as unknown as Promise<ContactConflict>
 }

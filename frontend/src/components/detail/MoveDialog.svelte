@@ -1,13 +1,15 @@
 <script lang="ts">
-  // the "Move to folder" dialog. it lists the message's account folders and moves
-  // it on the server, reusing the same undo machinery as archive (cmd+z moves it
-  // back). the current folder is excluded; a search box filters long trees.
+  // the "Move to folder" dialog. it lists the account's folders and moves the
+  // target there, reusing the same undo machinery as archive (cmd+z moves it
+  // back). the target is one message from a row menu and the whole selection
+  // from a bulk one, so a folder is picked once for the batch. the folder the
+  // messages are already in is excluded; a search box filters long trees.
   import { fade, scale } from 'svelte/transition'
   import { IconX, IconFolder, IconSearch } from '@tabler/icons-svelte'
-  import { moveTarget, closeMove } from '../../stores/move'
+  import { moveTargets, closeMove } from '../../stores/move'
   import { listFolders, moveMessage } from '../../lib/api'
   import { removeFromList } from '../../stores/messages'
-  import { recordArchived } from '../../stores/undoarchive'
+  import { recordArchivedBatch, type ArchivedMessage } from '../../stores/undoarchive'
   import { openMessageId } from '../../stores/selection'
   import { errorMessage, toastError, toastInfo } from '../../stores/toast'
   import { t } from '../../lib/i18n'
@@ -18,12 +20,17 @@
   let loadedFor = -1
   let busy = false
 
+  // every target comes from the same list, so the first one names the account
+  // and the folder to leave out.
+  $: first = $moveTargets[0] ?? null
+  $: count = $moveTargets.length
+
   // load the account's folders when the target changes.
-  $: if ($moveTarget && $moveTarget.accountId !== loadedFor) {
-    loadedFor = $moveTarget.accountId
-    void load($moveTarget.accountId)
+  $: if (first && first.accountId !== loadedFor) {
+    loadedFor = first.accountId
+    void load(first.accountId)
   }
-  $: if (!$moveTarget) {
+  $: if (!first) {
     loadedFor = -1
     query = ''
   }
@@ -39,32 +46,47 @@
   // candidate folders: everything except the message's current folder, filtered
   // by the search box.
   $: candidates = folders
-    .filter((f) => !$moveTarget || f.id !== $moveTarget.folderId)
+    .filter((f) => !first || f.id !== first.folderId)
     .filter((f) => (query.trim() ? f.name.toLowerCase().includes(query.toLowerCase()) : true))
 
   async function move(folder: Folder): Promise<void> {
-    const target = $moveTarget
-    if (!target || busy) {
+    const targets = $moveTargets
+    if (targets.length === 0 || busy) {
       return
     }
     busy = true
-    // optimistic: drop it from the list right away.
-    removeFromList(target.id)
-    if ($openMessageId === target.id) {
-      openMessageId.set(null)
+    // optimistic: the rows leave the list right away.
+    for (const target of targets) {
+      removeFromList(target.id)
+      if ($openMessageId === target.id) {
+        openMessageId.set(null)
+      }
     }
     closeMove()
-    try {
-      const undo = await moveMessage(target.id, folder.id)
-      if (undo.messageId) {
-        recordArchived(target, undo.messageId, undo.originalFolderId)
+    // the whole batch is one undo step, so one press moves all of them back.
+    const undone: ArchivedMessage[] = []
+    let failure = ''
+    for (const target of targets) {
+      try {
+        const undo = await moveMessage(target.id, folder.id)
+        if (undo.messageId) {
+          undone.push({ summary: target, messageId: undo.messageId, originalFolderId: undo.originalFolderId })
+        }
+      } catch (err) {
+        failure = errorMessage(err)
       }
-      toastInfo($t('detail.moveDialog.moved').replace('{folder}', folder.name))
-    } catch (err) {
-      toastError(errorMessage(err))
-    } finally {
-      busy = false
     }
+    recordArchivedBatch(undone)
+    busy = false
+    if (failure !== '') {
+      toastError(failure)
+      return
+    }
+    toastInfo(
+      targets.length === 1
+        ? $t('detail.moveDialog.moved').replace('{folder}', folder.name)
+        : $t('detail.moveDialog.movedCount').replace('{n}', String(targets.length)).replace('{folder}', folder.name),
+    )
   }
 
   function onKeydown(event: KeyboardEvent): void {
@@ -74,14 +96,18 @@
   }
 </script>
 
-<svelte:window on:keydown={$moveTarget ? onKeydown : undefined} />
+<svelte:window on:keydown={first ? onKeydown : undefined} />
 
-{#if $moveTarget}
+{#if first}
   <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
   <div class="backdrop" transition:fade={{ duration: 120 }} on:click={closeMove}></div>
   <div class="dialog" role="dialog" aria-modal="true" aria-label={$t('detail.moveDialog.dialogLabel')} transition:scale={{ duration: 150, start: 0.94 }}>
     <header>
-      <h2>{$t('detail.moveDialog.title')}</h2>
+      <h2>
+        {count > 1
+          ? $t('detail.moveDialog.titleCount').replace('{n}', String(count))
+          : $t('detail.moveDialog.title')}
+      </h2>
       <button type="button" class="close" aria-label={$t('detail.attachments.close')} on:click={closeMove}>
         <IconX size={16} stroke={1.8} />
       </button>
@@ -150,7 +176,7 @@
     border: none;
     background: transparent;
     color: var(--text-tertiary);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     padding: var(--space-1);
     border-radius: var(--radius-control);
   }
@@ -195,7 +221,7 @@
     border: none;
     background: transparent;
     color: var(--text-primary);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     text-align: left;
     border-radius: var(--radius-control);
     font-size: var(--fz-label);

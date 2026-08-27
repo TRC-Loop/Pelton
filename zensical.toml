@@ -31,6 +31,10 @@ nav = [
     { "Create a theme" = "themes/create.md" },
   ] },
   { "Shortcuts" = "shortcuts.md" },
+  { "Command palette" = "command-palette.md" },
+  { "Scanning links and attachments" = "virustotal.md" },
+  { "Encryption keys" = "encryption.md" },
+  { "Logs and crash reports" = "logs.md" },
   { "FAQ" = "faq.md" },
 ]
 

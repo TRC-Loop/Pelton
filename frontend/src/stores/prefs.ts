@@ -5,9 +5,9 @@
 // source of truth.
 
 import { writable } from 'svelte/store'
-import type { UIPrefs, ThemePref, DensityPref, EditorMode, ViewsPlacement } from '../lib/types'
+import type { UIPrefs, ThemePref, DensityPref, EditorMode, ViewsPlacement, CloseAction, LogLevel, SelectAllScope } from '../lib/types'
 import { getUIPrefs, setSetting, SettingKeys, systemColorScheme, setWindowTheme, getThemeApply } from '../lib/api'
-import { applyTheme, applyDensity, applyAccent, applyScale, applyReduceMotion, setThemeSchedule, applyUIFont, applyMonoFont, applyCorners, watchSystemTheme, setSystemSchemeOverride, resolveTheme } from '../theme/theme'
+import { applyTheme, applyDensity, applyAccent, applyScale, applyReduceMotion, applyHandCursor, setThemeSchedule, applyUIFont, applyMonoFont, applyCorners, watchSystemTheme, setSystemSchemeOverride, resolveTheme } from '../theme/theme'
 import { applyUserTheme } from '../theme/usertheme'
 import { uiFontStack, monoFontStack } from '../lib/fonts'
 import { setLocale } from '../lib/i18n'
@@ -28,13 +28,17 @@ const defaults: UIPrefs = {
   listWidth: 380,
   sendDelaySeconds: 0,
   flagHighlight: 'flag',
-  showShortcutHints: false,
+  showShortcutHints: true,
+  harvestAddresses: true,
   showAccountEmail: false,
   alwaysLoadImages: false,
+  blockTrackingPixels: false,
   avatarSource: 'bimi_gravatar',
   avatarStyle: 'initials',
   multiSelectEnabled: true,
   showSelectedCount: true,
+  selectAllScope: 'offer',
+  selectAllUnified: false,
   sidebarIndentGuides: false,
   rowTemplate: 'relaxed',
   rowShowAvatar: true,
@@ -46,6 +50,9 @@ const defaults: UIPrefs = {
   viewsPlacement: 'hidden',
   flagColorSync: false,
   showOfflineIndicator: true,
+  showUnsyncedFolder: true,
+  restoreTabs: false,
+  paletteProfiles: false,
   swipeEnabled: true,
   swipeLeftAction: 'delete',
   swipeRightAction: 'unread',
@@ -68,13 +75,25 @@ const defaults: UIPrefs = {
   menuBarIcons: false,
   timeFormat: 'auto',
   reduceMotion: false,
+  handCursor: false,
+  dockBadge: true,
   themeDarkStart: '19:00',
   themeDarkEnd: '07:00',
   bodyFont: 'default',
+  senderFonts: true,
   uiFont: 'default',
   monoFont: 'default',
   notifyNewMail: false,
   verboseSync: false,
+  syncProgressBar: true,
+  closeAction: 'background',
+  syncMessageLimit: 50,
+  syncAutoBackfill: true,
+  startupSelection: 'view:inbox',
+  logToFile: false,
+  logLevel: 'info',
+  logMessageMetadata: false,
+  crashLogs: false,
 }
 
 export const prefs = writable<UIPrefs>(defaults)
@@ -94,6 +113,7 @@ function applyAll(p: UIPrefs): void {
   applyAccent(p.accent)
   applyScale(p.uiScale)
   applyReduceMotion(p.reduceMotion)
+  applyHandCursor(p.handCursor)
   applyUIFont(uiFontStack(p.uiFont))
   applyMonoFont(monoFontStack(p.monoFont))
   applyCorners(p.cornerStyle)
@@ -249,6 +269,24 @@ export function setShowOfflineIndicator(value: boolean): void {
   void setSetting(SettingKeys.showOfflineIndicator, String(value))
 }
 
+// setShowUnsyncedFolder toggles the marker on folders excluded from sync.
+export function setShowUnsyncedFolder(value: boolean): void {
+  prefs.update((p) => ({ ...p, showUnsyncedFolder: value }))
+  void setSetting(SettingKeys.showUnsyncedFolder, String(value))
+}
+
+// setRestoreTabs toggles bringing the reading-pane tabs back at launch.
+export function setRestoreTabs(value: boolean): void {
+  prefs.update((p) => ({ ...p, restoreTabs: value }))
+  void setSetting(SettingKeys.restoreTabs, String(value))
+}
+
+// setPaletteProfiles toggles listing profiles directly in the command palette.
+export function setPaletteProfiles(value: boolean): void {
+  prefs.update((p) => ({ ...p, paletteProfiles: value }))
+  void setSetting(SettingKeys.paletteProfiles, String(value))
+}
+
 // setSwipeEnabled toggles trackpad swipe gestures on message rows.
 export function setSwipeEnabled(value: boolean): void {
   prefs.update((p) => ({ ...p, swipeEnabled: value }))
@@ -359,6 +397,14 @@ export function setBodyFont(value: string): void {
   void setSetting(SettingKeys.bodyFont, value)
 }
 
+// setSenderFonts decides whether a message may use the fonts it asks for. Off,
+// everything renders in the reader font above. Takes effect on the next message
+// opened, since the sanitizing happens backend-side.
+export function setSenderFonts(value: boolean): void {
+  prefs.update((p) => ({ ...p, senderFonts: value }))
+  void setSetting(SettingKeys.senderFonts, String(value))
+}
+
 // setThemeDarkTimes updates the schedule mode's dark window and reapplies the
 // theme immediately when that mode is active.
 export function setThemeDarkTimes(start: string, end: string): void {
@@ -406,6 +452,21 @@ export function setReduceMotion(value: boolean): void {
   void setSetting(SettingKeys.reduceMotion, String(value))
 }
 
+// setHandCursor switches clickable chrome between the native arrow and the
+// browser hand.
+export function setHandCursor(value: boolean): void {
+  prefs.update((p) => ({ ...p, handCursor: value }))
+  applyHandCursor(value)
+  void setSetting(SettingKeys.handCursor, String(value))
+}
+
+// setDockBadgeEnabled toggles the unread count on the dock icon. The backend
+// re-applies or clears the badge itself when this setting lands.
+export function setDockBadgeEnabled(value: boolean): void {
+  prefs.update((p) => ({ ...p, dockBadge: value }))
+  void setSetting(SettingKeys.dockBadge, String(value))
+}
+
 // setUIFont / setMonoFont override the interface and monospace font tokens,
 // applying live like the other appearance settings.
 export function setUIFont(value: string): void {
@@ -425,6 +486,36 @@ export function setMonoFont(value: string): void {
 export function setVerboseSync(value: boolean): void {
   prefs.update((p) => ({ ...p, verboseSync: value }))
   void setSetting(SettingKeys.verboseSync, String(value))
+}
+
+// setSyncProgressBar toggles the progress bar in the status line. It covers
+// backfills as well as syncs, since scrolling into older mail is the other
+// place you sit and wait.
+export function setSyncProgressBar(value: boolean): void {
+  prefs.update((p) => ({ ...p, syncProgressBar: value }))
+  void setSetting(SettingKeys.syncProgressBar, String(value))
+}
+
+// setCloseAction picks what the window's close button does. The backend reads
+// the setting on each close, so the change takes effect without a restart.
+export function setCloseAction(value: CloseAction): void {
+  prefs.update((p) => ({ ...p, closeAction: value }))
+  void setSetting(SettingKeys.closeAction, value)
+}
+
+// setSyncMessageLimit caps how many of a folder's newest messages a first sync
+// fetches. It only applies to folders that have not synced yet, so lowering it
+// never discards mail that is already cached.
+export function setSyncMessageLimit(value: number): void {
+  prefs.update((p) => ({ ...p, syncMessageLimit: value }))
+  void setSetting(SettingKeys.syncMessageLimit, String(value))
+}
+
+// setSyncAutoBackfill toggles fetching the next batch of older mail
+// automatically on reaching the end of the list, as opposed to on a button.
+export function setSyncAutoBackfill(value: boolean): void {
+  prefs.update((p) => ({ ...p, syncAutoBackfill: value }))
+  void setSetting(SettingKeys.syncAutoBackfill, String(value))
 }
 
 // toggle keys map a boolean preference to its setting key so setToggle stays
@@ -466,6 +557,13 @@ export function setShortcutHints(value: boolean): void {
   void setSetting(SettingKeys.shortcutHints, String(value))
 }
 
+// setHarvestAddresses toggles learning addresses from mail for autocomplete.
+// Off, only contacts from a synced address book are offered.
+export function setHarvestAddresses(value: boolean): void {
+  prefs.update((p) => ({ ...p, harvestAddresses: value }))
+  void setSetting(SettingKeys.harvestAddresses, String(value))
+}
+
 // setShowAccountEmail toggles showing the account email instead of its name.
 export function setShowAccountEmail(value: boolean): void {
   prefs.update((p) => ({ ...p, showAccountEmail: value }))
@@ -477,6 +575,15 @@ export function setShowAccountEmail(value: boolean): void {
 export function setAlwaysLoadImages(value: boolean): void {
   prefs.update((p) => ({ ...p, alwaysLoadImages: value }))
   void setSetting(SettingKeys.alwaysLoadImages, String(value))
+}
+
+// setBlockTrackingPixels keeps images that look like tracking pixels blocked
+// even once the rest of a message's remote content is loaded. Off by default,
+// because the detection is a heuristic that will sometimes be wrong; each load
+// button offers to load them anyway when it is.
+export function setBlockTrackingPixels(value: boolean): void {
+  prefs.update((p) => ({ ...p, blockTrackingPixels: value }))
+  void setSetting(SettingKeys.blockTrackingPixels, String(value))
 }
 
 // setAvatarSource selects the sender-photo fallback chain (bimi_gravatar,
@@ -503,6 +610,54 @@ export function setMultiSelectEnabled(value: boolean): void {
 export function setShowSelectedCount(value: boolean): void {
   prefs.update((p) => ({ ...p, showSelectedCount: value }))
   void setSetting(SettingKeys.showSelectedCount, String(value))
+}
+
+// setSelectAllScope picks how far select-all reaches.
+export function setSelectAllScope(value: SelectAllScope): void {
+  prefs.update((p) => ({ ...p, selectAllScope: value }))
+  void setSetting(SettingKeys.selectAllScope, value)
+}
+
+// setSelectAllUnified offers select-all in the unified views as well.
+export function setSelectAllUnified(value: boolean): void {
+  prefs.update((p) => ({ ...p, selectAllUnified: value }))
+  void setSetting(SettingKeys.selectAllUnified, String(value))
+}
+
+// setStartupSelection picks what the sidebar opens on at launch: 'view:<key>',
+// 'folder:<id>', or 'last' to restore the previous session. Read once at
+// startup, so the change takes effect on the next launch.
+export function setStartupSelection(value: string): void {
+  prefs.update((p) => ({ ...p, startupSelection: value }))
+  void setSetting(SettingKeys.startupSelection, value)
+}
+
+// setLogToFile turns the rotating log file on or off. Off stops writing but
+// leaves what is already on disk; deleting it is a separate, explicit action.
+export function setLogToFile(value: boolean): void {
+  prefs.update((p) => ({ ...p, logToFile: value }))
+  void setSetting(SettingKeys.logToFile, String(value))
+}
+
+// setLogLevel picks how much detail the log records.
+export function setLogLevel(value: LogLevel): void {
+  prefs.update((p) => ({ ...p, logLevel: value }))
+  void setSetting(SettingKeys.logLevel, value)
+}
+
+// setLogMessageMetadata allows subjects and senders into the log for debugging
+// sync. Its own opt-in, since it is the one logging switch that writes anything
+// about the user's mail.
+export function setLogMessageMetadata(value: boolean): void {
+  prefs.update((p) => ({ ...p, logMessageMetadata: value }))
+  void setSetting(SettingKeys.logMessageMetadata, String(value))
+}
+
+// setCrashLogs toggles leaving a file with the stack behind when Pelton
+// crashes.
+export function setCrashLogs(value: boolean): void {
+  prefs.update((p) => ({ ...p, crashLogs: value }))
+  void setSetting(SettingKeys.crashLogs, String(value))
 }
 
 // setSidebarIndentGuides toggles the nested-folder guide lines.

@@ -31,12 +31,16 @@ func colorFromFlags(flags []imap.Flag) int {
 }
 
 // FolderSyncState is the per-folder state that makes the next sync cheaper:
-// the UIDVALIDITY we last saw and the highest uid we have processed. The set of
-// pending local operations is derived from the message rows themselves, not
-// stored here, so there is a single source of truth.
+// the UIDVALIDITY we last saw, the highest uid we have processed and the sync
+// window's floor. The set of pending local operations is derived from the
+// message rows themselves, not stored here, so there is a single source of
+// truth.
 type FolderSyncState struct {
 	StoredUIDValidity uint32
 	LastSeenUID       uint32
+	// SyncFloorUID is the lowest uid the cache covers; 0 means the folder is
+	// cached in full. See window.go.
+	SyncFloorUID uint32
 }
 
 // loadFolderSyncState reads the stored sync state for a folder.
@@ -45,9 +49,14 @@ func loadFolderSyncState(ctx context.Context, store *storage.DB, folder storage.
 	if err != nil {
 		return FolderSyncState{}, err
 	}
+	floor, err := store.FolderSyncFloorUID(ctx, folder.ID)
+	if err != nil {
+		return FolderSyncState{}, err
+	}
 	return FolderSyncState{
 		StoredUIDValidity: folder.UIDValidity,
 		LastSeenUID:       lastSeen,
+		SyncFloorUID:      floor,
 	}, nil
 }
 

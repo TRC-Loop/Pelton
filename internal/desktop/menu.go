@@ -40,12 +40,18 @@ func (a *App) buildMenu() *menu.Menu {
 	appMenu.AddText(s.about, nil, a.menuAction("about"))
 	appMenu.AddSeparator()
 	appMenu.AddText(s.preferences, keys.CmdOrCtrl(","), a.menuAction("preferences"))
+	// profiles (#270). No accelerator: switching ships unbound so the user picks
+	// their own key under Settings, Shortcuts.
+	appMenu.AddText(s.switchProfile, nil, a.menuAction("switch-profile"))
 	appMenu.AddSeparator()
 	appMenu.AddText(s.hide, keys.CmdOrCtrl("h"), func(_ *menu.CallbackData) {
-		wailsruntime.WindowHide(a.ctx)
+		// Hide, not WindowHide: see the note in beforeClose. Ordering the window
+		// out on macOS strands it, since wails has no reopen handler, so the
+		// dock icon cannot bring it back.
+		wailsruntime.Hide(a.ctx)
 	})
 	appMenu.AddText(s.quit, keys.CmdOrCtrl("q"), func(_ *menu.CallbackData) {
-		wailsruntime.Quit(a.ctx)
+		a.quitApp()
 	})
 
 	// with the in-app menu bar enabled and the native menu reduced, the
@@ -57,12 +63,22 @@ func (a *App) buildMenu() *menu.Menu {
 		// the reduced menu carries no message items; drop stale pointers so
 		// SetMailActionsEnabled does not update items of a discarded menu.
 		a.mailMenuItems = nil
+		// the view menu survives here, carrying only the fullscreen toggle, for
+		// the same reason the edit menu below does: the accelerator exists only
+		// while its item does. the in-app bar cannot pick it up either, since
+		// its combo grammar has no way to say ctrl on macOS.
+		a.addFullscreenItem(root.AddSubmenu(s.viewMenu), s)
 	} else {
 		// file menu: composing new mail and exporting the open message.
 		fileMenu := root.AddSubmenu(s.fileMenu)
 		fileMenu.AddText(s.compose, keys.CmdOrCtrl("n"), a.menuAction("compose"))
 		fileMenu.AddSeparator()
 		fileMenu.AddText(s.exportPDF, keys.CmdOrCtrl("p"), a.menuAction("export-pdf"))
+		fileMenu.AddSeparator()
+		// dispatched to the frontend rather than hiding the window here: what
+		// Cmd+W closes depends on what is on screen, and only the frontend
+		// knows that.
+		fileMenu.AddText(s.closeWindow, keys.CmdOrCtrl("w"), a.menuAction("close-window"))
 
 		// mailbox menu: mailbox-level operations - syncing and managing accounts.
 		mailboxMenu := root.AddSubmenu(s.mailboxMenu)
@@ -70,6 +86,7 @@ func (a *App) buildMenu() *menu.Menu {
 		mailboxMenu.AddSeparator()
 		mailboxMenu.AddText(s.addMailbox, keys.CmdOrCtrl("m"), a.menuAction("add-mailbox"))
 		mailboxMenu.AddText(s.manageMailboxes, nil, a.menuAction("open-mailboxes"))
+		mailboxMenu.AddText(s.contacts, nil, a.menuAction("open-contacts"))
 
 		// mail menu: actions on the open message. Undo stays enabled (it undoes
 		// the last send/delete/archive, which needs no open message), but the
@@ -95,15 +112,14 @@ func (a *App) buildMenu() *menu.Menu {
 		// view menu: a reliable fullscreen toggle (the native green button can
 		// be inconsistent in some setups) plus the low-power mode toggle.
 		viewMenu := root.AddSubmenu(s.viewMenu)
-		viewMenu.AddText(s.toggleFullscreen, keys.Combo("f", keys.CmdOrCtrlKey, keys.ControlKey), func(_ *menu.CallbackData) {
-			if wailsruntime.WindowIsFullscreen(a.ctx) {
-				wailsruntime.WindowUnfullscreen(a.ctx)
-			} else {
-				wailsruntime.WindowFullscreen(a.ctx)
-			}
-		})
+		a.addFullscreenItem(viewMenu, s)
 		viewMenu.AddSeparator()
 		viewMenu.AddText(s.lowPowerMode, nil, a.menuAction("toggle-low-power"))
+		// reading-pane tabs. No accelerators: they ship unbound so the user
+		// picks their own under Settings, Shortcuts.
+		viewMenu.AddSeparator()
+		viewMenu.AddText(s.openInTab, nil, a.menuAction("open-in-tab"))
+		viewMenu.AddText(s.closeTab, nil, a.menuAction("close-tab"))
 	}
 
 	// the standard edit menu gives copy/paste/select-all their native bindings,
@@ -115,13 +131,25 @@ func (a *App) buildMenu() *menu.Menu {
 	return root
 }
 
+// addFullscreenItem adds the fullscreen toggle and its accelerator to a menu.
+// Shared so the reduced menu keeps the binding without duplicating the toggle.
+func (a *App) addFullscreenItem(m *menu.Menu, s menuStrings) {
+	m.AddText(s.toggleFullscreen, keys.Combo("f", keys.CmdOrCtrlKey, keys.ControlKey), func(_ *menu.CallbackData) {
+		if wailsruntime.WindowIsFullscreen(a.ctx) {
+			wailsruntime.WindowUnfullscreen(a.ctx)
+		} else {
+			wailsruntime.WindowFullscreen(a.ctx)
+		}
+	})
+}
+
 // RebuildMenu rebuilds and applies the native menubar in the current language
 // and menu-bar settings. SetSetting triggers it when a language or menu-bar
 // setting is written, so the native menu updates immediately instead of at the
 // next launch. Only macOS has a native menu to rebuild; Windows/Linux use the
 // in-app bar, which re-renders itself.
 func (a *App) RebuildMenu() {
-	if a.ctx == nil || goruntime.GOOS != "darwin" {
+	if a.ctx == nil || !a.runtimeReady.Load() || goruntime.GOOS != "darwin" {
 		return
 	}
 	wailsruntime.MenuSetApplicationMenu(a.ctx, a.buildMenu())

@@ -25,8 +25,12 @@ type DiscoveredDTO struct {
 	IMAPPort int    `json:"imapPort"`
 	SMTPHost string `json:"smtpHost"`
 	SMTPPort int    `json:"smtpPort"`
-	OAuth    bool   `json:"oauth"`
-	Source   string `json:"source"`
+	// IMAPTLS and SMTPTLS are the security the source stated ("ssl" or
+	// "starttls"), empty when it said nothing usable.
+	IMAPTLS string `json:"imapTls"`
+	SMTPTLS string `json:"smtpTls"`
+	OAuth   bool   `json:"oauth"`
+	Source  string `json:"source"`
 }
 
 // DiscoverConfig resolves likely imap/smtp settings for an email address using
@@ -42,6 +46,8 @@ func (a *App) DiscoverConfig(email string) (DiscoveredDTO, error) {
 		IMAPPort: d.IMAPPort,
 		SMTPHost: d.SMTPHost,
 		SMTPPort: d.SMTPPort,
+		IMAPTLS:  d.IMAPTLS,
+		SMTPTLS:  d.SMTPTLS,
 		OAuth:    d.OAuth,
 		Source:   d.Source,
 	}, nil
@@ -62,6 +68,10 @@ type TestConnectionRequest struct {
 	Username string `json:"username"`
 	IMAPHost string `json:"imapHost"`
 	IMAPPort int    `json:"imapPort"`
+	// IMAPTLS pins the connection security: "ssl", "starttls", or empty to
+	// derive it from the port. Sent so the test uses the same transport the
+	// account will, instead of testing a different one.
+	IMAPTLS  string `json:"imapTls"`
 	Password string `json:"password"`
 }
 
@@ -77,6 +87,7 @@ func (a *App) TestConnection(req TestConnectionRequest) error {
 		Port:     req.IMAPPort,
 		Username: username,
 		Password: req.Password,
+		TLS:      imapTLSMode(req.IMAPTLS),
 		Dial:     a.proxyDial(),
 	})
 	if err != nil {
@@ -92,15 +103,24 @@ func (a *App) TestConnection(req TestConnectionRequest) error {
 // AddAccountRequest is the metadata the wizard collected. For password auth
 // Password is set; for oauth Provider and ClientID are set and the flow runs.
 type AddAccountRequest struct {
-	Email       string `json:"email"`
-	DisplayName string `json:"displayName"`
+	Email string `json:"email"`
+	// DisplayName is the From name recipients see. LocalLabel is what this app
+	// calls the mailbox instead when UseLocalLabel is set, and goes nowhere near
+	// an outgoing message.
+	DisplayName   string `json:"displayName"`
+	LocalLabel    string `json:"localLabel"`
+	UseLocalLabel bool   `json:"useLocalLabel"`
 	// Username is the login name when it differs from the email; empty logs in
 	// with Email.
-	Username    string `json:"username"`
-	IMAPHost    string `json:"imapHost"`
-	IMAPPort    int    `json:"imapPort"`
-	SMTPHost    string `json:"smtpHost"`
-	SMTPPort    int    `json:"smtpPort"`
+	Username string `json:"username"`
+	IMAPHost string `json:"imapHost"`
+	IMAPPort int    `json:"imapPort"`
+	SMTPHost string `json:"smtpHost"`
+	SMTPPort int    `json:"smtpPort"`
+	// IMAPTLS and SMTPTLS pin the connection security: "ssl", "starttls", or
+	// empty to derive it from the port.
+	IMAPTLS string `json:"imapTls"`
+	SMTPTLS string `json:"smtpTls"`
 	// auth
 	Password string `json:"password"`
 	Provider string `json:"provider"`
@@ -160,14 +180,21 @@ func (a *App) AddOAuthAccount(req AddAccountRequest) (AccountDTO, error) {
 // the secret, discover folders, sync, and start idling. On any failure after the
 // row is created it rolls the account back so a half-created account is not left.
 func (a *App) createAccount(req AddAccountRequest, secret credentials.Secret) (AccountDTO, error) {
+	if !validTLSMode(req.IMAPTLS) || !validTLSMode(req.SMTPTLS) {
+		return AccountDTO{}, errUnknownTLSMode
+	}
 	account := &storage.Account{
-		Email:       req.Email,
-		DisplayName: req.DisplayName,
-		Username:    req.Username,
-		IMAPHost:    req.IMAPHost,
-		IMAPPort:    req.IMAPPort,
-		SMTPHost:    req.SMTPHost,
-		SMTPPort:    req.SMTPPort,
+		Email:         req.Email,
+		DisplayName:   req.DisplayName,
+		LocalLabel:    req.LocalLabel,
+		UseLocalLabel: req.UseLocalLabel,
+		Username:      req.Username,
+		IMAPHost:      req.IMAPHost,
+		IMAPPort:      req.IMAPPort,
+		SMTPHost:      req.SMTPHost,
+		SMTPPort:      req.SMTPPort,
+		IMAPTLS:       req.IMAPTLS,
+		SMTPTLS:       req.SMTPTLS,
 	}
 	id, err := a.store.CreateAccount(a.ctx, account)
 	if err != nil {
@@ -185,15 +212,33 @@ func (a *App) createAccount(req AddAccountRequest, secret credentials.Secret) (A
 		a.log.Error("discover folders", "account", account.Email, "err", err)
 	}
 
-	// initial sync and idle in the background so the wizard returns promptly.
-	go func() {
+	// no sync yet. The wizard shows the discovered folders next so a huge
+	// archive can be unchecked before anything is fetched, and calls
+	// StartAccountSync once that choice is made (#173). Starting here would
+	// download the folders the user is about to say they do not want.
+	return toAccountDTO(*account), nil
+}
+
+// StartAccountSync runs the first sync of an account and parks it on idle, in
+// the background. The wizard calls it after the folder choice, which is why
+// adding an account no longer starts syncing on its own. Calling it for an
+// account that is already syncing is harmless: syncAccount serializes on the
+// same lock every other sync uses.
+func (a *App) StartAccountSync(accountID int64) error {
+	if err := a.ready(); err != nil {
+		return err
+	}
+	account, err := a.store.GetAccount(a.ctx, accountID)
+	if err != nil {
+		return err
+	}
+	goSafe("syncing a new mailbox", func() {
 		if err := a.syncAccount(*account); err != nil {
 			a.log.Error("initial sync after add", "account", account.Email, "err", err)
 		}
-		go a.idleLoop(*account)
-	}()
-
-	return toAccountDTO(*account), nil
+		goSafe("waiting for new mail", func() { a.idleLoop(*account) })
+	})
+	return nil
 }
 
 // discoverFolders lists the server's mailboxes and creates the storage folder

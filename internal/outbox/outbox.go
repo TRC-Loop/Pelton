@@ -137,6 +137,26 @@ func (q *Queue) Cancel(ctx context.Context, id int64) (bool, error) {
 	return q.db.DeleteOutboxIfState(ctx, id, StateQueued)
 }
 
+// Retry puts a failed message back in the queue, due immediately and with its
+// attempt count and last error cleared, and reports whether it was requeued. A
+// message that is no longer failed is left alone.
+//
+// Nothing else brings a failed message back: once the attempts run out the
+// worker is done with it, so a send that failed for a reason the user has since
+// fixed would otherwise have to be written again from scratch.
+func (q *Queue) Retry(ctx context.Context, id int64) (bool, error) {
+	return q.db.UpdateOutboxStateIf(ctx, id, StateFailed, StateQueued, 0, "", time.Now().UTC())
+}
+
+// Discard removes a failed message and reports whether it was removed. Only a
+// failed message can be discarded: anything still queued or sending is either
+// going to be sent or can be cancelled, and neither should be droppable by
+// accident. The message is gone afterwards, so the caller is expected to have
+// confirmed it.
+func (q *Queue) Discard(ctx context.Context, id int64) (bool, error) {
+	return q.db.DeleteOutboxIfState(ctx, id, StateFailed)
+}
+
 // List returns every queued, sending, sent and failed message for inspection.
 func (q *Queue) List(ctx context.Context) ([]Message, error) {
 	rows, err := q.db.ListOutbox(ctx)
@@ -177,4 +197,17 @@ func toMessage(r storage.OutboxRow) Message {
 		NextAttemptAt: r.NextAttemptAt,
 		CreatedAt:     r.CreatedAt,
 	}
+}
+
+// Pending reports whether anything is waiting to be sent or is mid-send. Sync
+// asks before each message it downloads, so a send never waits behind a large
+// mailbox.
+func (q *Queue) Pending(ctx context.Context) bool {
+	n, err := q.db.CountOutboxInStates(ctx, StateQueued, StateSending)
+	if err != nil {
+		// unreadable is not a reason to stall a sync; the send worker has its
+		// own view of the queue and will report the failure.
+		return false
+	}
+	return n > 0
 }

@@ -58,6 +58,51 @@ type Message struct {
 	// ListUnsubscribePost marks RFC 8058 one-click support.
 	ListUnsubscribe     string
 	ListUnsubscribePost bool
+	// SMIME describes the message's s/mime signature as verified when it was
+	// synced. The zero value means no signature, which is most mail.
+	SMIME SMIMESignature
+	// ReplyTo is the Reply-To header ('' when the message has none), and Auth
+	// is what the receiving server reported about spf, dkim and dmarc. Both are
+	// read at fetch time, since the raw headers are not kept afterwards. An
+	// empty Auth means the server said nothing, or the message predates the
+	// columns; neither is a failure.
+	ReplyTo string
+	Auth    MessageAuth
+	// CharsetGuess names what the text was read as when the message declared no
+	// charset or one nothing knows, and is 'detected' when the guess was made
+	// where the name does not travel back. Empty for mail that was right about
+	// itself, which is nearly all of it.
+	CharsetGuess string
+}
+
+// MessageAuth is the stored Authentication-Results verdict for one message.
+// The domains are what the passing method vouched for, which is what alignment
+// against the visible From is judged on.
+type MessageAuth struct {
+	SPF        string
+	DKIM       string
+	DMARC      string
+	SPFDomain  string
+	DKIMDomain string
+}
+
+// SMIMESignature is a stored verification verdict. Status is '' for unsigned
+// mail, otherwise valid, untrusted or invalid; Detail explains anything that is
+// not valid, in a sentence fit to show the reader.
+type SMIMESignature struct {
+	Status string
+	Signer string
+	Email  string
+	Issuer string
+	Detail string
+	// Certs is the signing certificate and its issuer in DER, length-prefixed
+	// so the pair survives one column. The raw message is not kept, so this is
+	// what a revocation check works from. It is written on insert and read back
+	// only by that check, never by a list, since a list has no use for a few
+	// kilobytes of certificate per row. Fingerprint is sha-256 of the signing
+	// certificate and keys the revocation cache.
+	Certs       []byte
+	Fingerprint string
 }
 
 // IncomingAttachment is attachment metadata together with its content, handed
@@ -117,18 +162,35 @@ func (d *DB) InsertMessageWithAttachments(ctx context.Context, m *Message, atts 
 	return id, nil
 }
 
+// orEmptyBlob keeps a nil slice from binding as NULL, which a NOT NULL column
+// refuses. Unsigned mail carries no certificates and must still insert.
+func orEmptyBlob(b []byte) []byte {
+	if b == nil {
+		return []byte{}
+	}
+	return b
+}
+
 func insertMessage(ctx context.Context, ex execer, m *Message) (int64, error) {
 	const query = `
 INSERT INTO messages (
     account_id, folder_id, uid, message_id, subject, from_address, from_name,
     to_addresses, cc_addresses, date, flags, body_plain, body_html,
-    has_attachments, size_bytes, list_unsubscribe, list_unsubscribe_post
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    has_attachments, size_bytes, list_unsubscribe, list_unsubscribe_post,
+    smime_status, smime_signer, smime_email, smime_issuer, smime_detail,
+    smime_certs, smime_fingerprint,
+    reply_to, auth_spf, auth_dkim, auth_dmarc, auth_spf_domain, auth_dkim_domain,
+    charset_guess
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 	res, err := ex.ExecContext(ctx, query,
 		m.AccountID, m.FolderID, m.UID, m.MessageID, m.Subject, m.FromAddress,
 		m.FromName, m.ToAddresses, m.CcAddresses, formatTime(m.Date), uint8(m.Flags),
 		m.BodyPlain, m.BodyHTML, boolToInt(m.HasAttachments), m.SizeBytes,
-		m.ListUnsubscribe, boolToInt(m.ListUnsubscribePost))
+		m.ListUnsubscribe, boolToInt(m.ListUnsubscribePost),
+		m.SMIME.Status, m.SMIME.Signer, m.SMIME.Email, m.SMIME.Issuer, m.SMIME.Detail,
+		orEmptyBlob(m.SMIME.Certs), m.SMIME.Fingerprint,
+		m.ReplyTo, m.Auth.SPF, m.Auth.DKIM, m.Auth.DMARC, m.Auth.SPFDomain, m.Auth.DKIMDomain,
+		m.CharsetGuess)
 	if err != nil {
 		return 0, fmt.Errorf("storage: insert message uid %d: %w", m.UID, err)
 	}
@@ -227,7 +289,10 @@ const selectMessageColumns = `
 SELECT id, account_id, folder_id, uid, message_id, subject, from_address,
        from_name, to_addresses, cc_addresses, date, flags, body_plain,
        body_html, has_attachments, size_bytes, flag_color, snooze_until,
-       snooze_hidden, offline, list_unsubscribe, list_unsubscribe_post`
+       snooze_hidden, offline, list_unsubscribe, list_unsubscribe_post,
+       smime_status, smime_signer, smime_email, smime_issuer, smime_detail,
+       smime_fingerprint, reply_to, auth_spf, auth_dkim, auth_dmarc, auth_spf_domain,
+       auth_dkim_domain, charset_guess`
 
 const selectMessageByID = selectMessageColumns + `
 FROM messages WHERE id = ?`
@@ -246,7 +311,10 @@ func scanMessage(row rowScanner) (*Message, error) {
 		&m.Subject, &m.FromAddress, &m.FromName, &m.ToAddresses, &m.CcAddresses,
 		&date, &flags, &m.BodyPlain, &m.BodyHTML, &hasAtt, &m.SizeBytes,
 		&m.FlagColor, &m.SnoozeUntil, &snoozeHidden, &offline,
-		&m.ListUnsubscribe, &unsubPost); err != nil {
+		&m.ListUnsubscribe, &unsubPost,
+		&m.SMIME.Status, &m.SMIME.Signer, &m.SMIME.Email, &m.SMIME.Issuer,
+		&m.SMIME.Detail, &m.SMIME.Fingerprint, &m.ReplyTo, &m.Auth.SPF, &m.Auth.DKIM, &m.Auth.DMARC,
+		&m.Auth.SPFDomain, &m.Auth.DKIMDomain, &m.CharsetGuess); err != nil {
 		return nil, err
 	}
 	t, err := parseTime(date)

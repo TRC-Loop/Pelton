@@ -15,13 +15,49 @@ Pelton is a free, open source, privacy-focused email client for macOS, Windows a
 - macOS: `~/Library/Application Support/Pelton`
 - Linux: `~/.config/Pelton`
 - Windows: `%AppData%\Pelton`
-- Contents: `pelton.db` (settings + mail cache), search index, `themes/<id>/` (installed themes)
+- Contents: `pelton.db` (settings + mail cache), search index, `themes/<id>/` (installed themes), `logs/` (only if logging is enabled)
 - Credentials: OS keyring only (Keychain / Credential Manager / Secret Service)
 - Backup: Settings > Import/Export, JSON export, credentials optionally included encrypted (AES-256-GCM, scrypt)
 
 ## Network behavior
 
-Only: user's IMAP/SMTP servers; GitHub releases API if update check enabled (default off); BIMI/Gravatar avatar lookups unless avatar source set to generated; remote mail images only after user approval (default blocked). No telemetry.
+Only: user's IMAP/SMTP servers; GitHub releases API if update check enabled (default off); BIMI/Gravatar avatar lookups unless avatar source set to generated; remote mail images only after user approval (default blocked); VirusTotal lookups if the user enables the integration and supplies an API key (default off). No telemetry.
+
+## Tracking pixel detection
+
+Off by default, Settings > Privacy and network > "Keep tracking pixels blocked"; the private preset in onboarding turns it on. Entirely local: signals are read while parsing the body and a bundled domain list ships in-repo. Nothing is fetched or looked up. Signals per remote image: declared width/height of 1 or 0, inline style that hides it, host on the bundled list, an email address in the url (each sufficient alone), plus a long opaque id in the url and being the only image from its host (each weak, two needed). When on, flagged images stay blocked even after remote content is loaded, the blocked-content banner says how many and expands to show each host and the reasons, and every load button has a menu to load them anyway. Detection is heuristic and produces false positives; the ui says "look like".
+
+## VirusTotal integration
+
+Off by default, Settings > External. Requires the user's own API key, stored in the OS keyring. Read-only v3 API: `GET /urls/{base64url_nopad(url)}` and `GET /files/{sha256}`. Never submits or uploads; attachments are looked up by hash only, so an unknown file stays unknown. Auto-scan of links and of attachments are separate toggles, both off by default; on-demand scanning is via right-click on a link or attachment, or the shield button in the message toolbar for a whole message. Verdicts cached locally 7 days, max 25 targets per scan; disabling the integration or clearing the key deletes the cache.
+
+## Sync progress
+
+Status bar shows a progress bar while a sync or a backfill runs, counting message bodies. The total comes from the reconcile plan (what will be fetched), not from the mailbox size, and grows as folders open; before the first folder is reconciled the bar is indeterminate. Settings > Power > "Sync progress bar", on by default. With Settings > Power > "Verbose sync" on, the line also names the mailbox, the account and the imap host and port.
+
+## Text encoding
+
+Mail that declares no charset, or one nothing knows, is detected from the bytes (ICU port, github.com/gogs/chardet) and converted, so nothing invalid reaches the database or the search index. Applies to bodies and to rfc 2047 encoded-words in headers. Settings > Display > "Text encoding fallback": `auto` (default, detect) or a fixed encoding name. Messages read this way carry a badge in the reading pane. Mail cached before this existed is marked and refetched from the server during sync, a few per folder per sync.
+
+## Importing from another client
+
+Two separate things, two dialogs, both under Settings > Import / Export. "Move in from Thunderbird" reads the profiles Thunderbird keeps on this machine (or one picked by hand) and shows each as a card: name, how many accounts, the addresses, how many local mailboxes and their total size. Picking one lists its accounts and its local mail with checkboxes, so what comes across is a choice. Accounts and mail are separate imports. No password is ever read: Thunderbird keeps its own, and each mailbox asks for one on its first sync. A POP3 account, or one already configured, is listed with the reason rather than hidden. "Import mail files" loads .eml and .mbox from anywhere. Everything imported lands in Local Folders, which sync never touches. Progress reports the mailbox being read and its position in the run, plus bytes; an mbox does not say how many messages it holds until it has been read through.
+
+## Select all
+
+A checkbox above the message list, and Cmd/Ctrl+A while the list has focus. The list only holds the pages that were scrolled to, so how far it reaches is a setting: Settings > List > "Select all selects", one of "the loaded messages, then offer the rest" (default), "everything in the current list", "only the loaded messages". The default selects what is loaded and offers the rest in a banner over the list. Widening asks first above 500 messages and is capped at 50,000, which it says when it hits. It follows whatever the list shows: a folder, a saved view or a search result set. The unified views are left out by default, since one of those lists spans every account; Settings > List > "Select all in unified views" turns both the checkbox and the shortcut on there.
+
+## Failed mailbox sync
+
+A sync run used to report success as long as one account got through, so a mailbox that had stopped syncing was invisible. Each account's last outcome is stored (account_sync_state), so it survives a restart. An account whose last sync failed gets a cloud-off mark next to it in the sidebar, and the status bar says which mailbox failed instead of "Synced". Both open the same dialog: what went wrong (refused password, unreachable server, no password stored, or something else), the server's own words, when the mailbox last synced through, and a button to try that one account again. A mailbox with no password stored keeps its existing warning triangle instead, since that is a different question.
+
+## Message fonts
+
+On by default, Settings > Display > "Let emails use their own fonts". A message's own font families are kept, so designed mail reads the way it was written. No network is involved: the reading pane's CSP limits font-src to `data:`, so a named family resolves from a font already installed or falls back to the reader font. Off, the sanitizer strips `font-family` and `<font face>` and every message renders in Settings > Display > reader font. Font sizes and line heights are kept either way.
+
+## Logs and crash reports
+
+Off by default, Settings > Privacy and network. Nightly builds default them on. Nothing is uploaded: no crash reporter, no endpoint. Logs are files in `<data dir>/logs`, rotating at 2 MB with 3 kept copies (~8 MB cap). Levels: debug, info, warn, error. Secrets (passwords, app passwords, OAuth tokens) are removed by exact-value match wherever they appear, including inside server error strings. Mail content is never logged; subjects and senders only with the separate "Include message subjects and senders" opt-in. Crash reports hold the stack, version, OS and current activity, and are offered on the next launch. `PELTON_DEBUG` env var and `--debug` flag force logging on at debug level over the setting. Settings > About has "Open log folder" and "Copy diagnostics" (version, platform and settings only, no mail or addresses).
 
 ## Mail providers
 
@@ -29,7 +65,7 @@ App passwords required by most large providers. iCloud: appleid.apple.com > App-
 
 ## Default shortcuts
 
-mod = Cmd on macOS, Ctrl elsewhere. mod+N compose, mod+F search, mod+R sync, mod+M add mailbox, mod+, settings, mod+P export PDF, mod+Z undo send/delete/archive, Ctrl+Cmd+F fullscreen. Message-level actions (reply, reply-all, forward, read/unread, flag, snooze, archive, delete, offline download) are unbound by default; user binds them in Settings > Shortcuts.
+mod = Cmd on macOS, Ctrl elsewhere. mod+N compose, mod+F search, mod+R sync, mod+M add mailbox, mod+, settings, mod+P export PDF, mod+Z undo send/delete/archive, Ctrl+Cmd+F fullscreen. Backspace deletes the selection, or the open message when nothing is selected, and Delete does the same until the binding is changed. The other message-level actions (reply, reply-all, forward, read/unread, flag, snooze, archive, offline download) are unbound by default; user binds them in Settings > Shortcuts. A bound action shows its key beside the matching right-click entry and in the toolbar tooltip, unless Settings > Shortcuts > "Show keyboard shortcut hints in the app" is off.
 
 ## Theme format (.peltontheme)
 

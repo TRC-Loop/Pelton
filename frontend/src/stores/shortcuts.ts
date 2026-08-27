@@ -7,6 +7,8 @@
 import { writable, get } from 'svelte/store'
 import { getSetting, setSetting } from '../lib/api'
 import { shortcuts as defaults, type ShortcutAction } from '../lib/shortcuts'
+import { shortcutLabel } from '../lib/i18n'
+import { prefs } from './prefs'
 
 const KEY = 'keyboard_shortcuts'
 
@@ -86,4 +88,16 @@ export function conflictsFor(action: ShortcutAction, combo: string): ShortcutAct
     }
   }
   return null
+}
+
+// menuHint renders an action's current shortcut for a context-menu row, or an
+// empty string when the action is unbound or hints are turned off. Menus pass
+// it straight into MenuItem.hint, so an unbound action simply has no hint
+// rather than an empty box (#329).
+export function menuHint(action: ShortcutAction): string {
+  if (!get(prefs).showShortcutHints) {
+    return ''
+  }
+  const combo = get(bindings)[action]
+  return combo ? shortcutLabel(combo) : ''
 }

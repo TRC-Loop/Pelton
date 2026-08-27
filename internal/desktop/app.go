@@ -12,8 +12,11 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"sync/atomic"
+	"time"
 
 	"github.com/TRC-Loop/Pelton/internal/configsync"
+	"github.com/TRC-Loop/Pelton/internal/logging"
 	"github.com/TRC-Loop/Pelton/internal/mcpserver"
 	"github.com/TRC-Loop/Pelton/internal/outbox"
 	"github.com/TRC-Loop/Pelton/internal/proxy"
@@ -27,6 +30,14 @@ import (
 type App struct {
 	ctx context.Context
 	log *slog.Logger
+	// logWriter is where log lines go. It always writes to stderr and, when
+	// the setting is on, also to a rotating file in the data directory. See
+	// logging.go.
+	logWriter *logging.Writer
+	// debug is set by --debug or PELTON_DEBUG and forces file logging on at
+	// debug level, over the setting. It is the way out of "the app will not
+	// start, so I cannot turn on logging in settings".
+	debug bool
 
 	store *storage.DB
 	// dataDir is the app data directory the store opened in; themes and the
@@ -39,9 +50,40 @@ type App struct {
 	// though a nil check keeps it from crashing.
 	storeReady chan struct{}
 	index      *search.Index
+	// syncTally holds the message counts behind the sync progress bar for the
+	// run in flight.
+	syncTally syncTally
+	// streamTick rate-limits the "mail arrived" events a running sync emits, so
+	// a fast first sync fills the list without asking the ui to redraw it
+	// hundreds of times a minute.
+	streamTick streamGate
 	// searchMu serializes index backfills so a startup pass and a post-sync pass
 	// do not advance the watermark concurrently.
 	searchMu sync.Mutex
+	// rejectedLogins holds the accounts whose credentials the server refused,
+	// which is not something the keyring can tell us: the password is stored,
+	// it is simply wrong. It is in memory on purpose, since the only way to
+	// learn it is to try, and a restart tries again. See bind_account_manage.go.
+	rejectedLogins   map[int64]struct{}
+	rejectedLoginsMu sync.Mutex
+	// startedAt is when the process came up, for the process overlay's uptime.
+	startedAt time.Time
+	// runtimeReady is set once wails has handed us its context in startup.
+	// Until then there is no ui to emit events at or menu to rebuild.
+	runtimeReady atomic.Bool
+	// the active profile's background work (idle loops, sync) runs under this
+	// context, so switching profiles stops it. See bind_profiles.go.
+	session     context.Context
+	sessionStop context.CancelFunc
+	sessionMu   sync.Mutex
+	// dirSizes caches measured directory sizes for the process overlay, which
+	// polls while it is open and must not walk the attachment tree every tick.
+	// See bind_devtools.go.
+	dirSizes   map[string]measuredDir
+	dirSizesMu sync.Mutex
+	// contacts caches the address book the phishing checks compare senders
+	// against, so reading down a folder does not requery it per message.
+	contacts correspondentCache
 	queue    *outbox.Queue
 	version  string
 	// channel is the build channel: "" for a normal build, storage.ChannelNightly
@@ -60,6 +102,11 @@ type App struct {
 	// resetting every item back to disabled.
 	mailMenuItems      []*menu.MenuItem
 	mailActionsEnabled bool
+
+	// quitRequested marks a quit the user asked for directly (the Quit menu
+	// item, the tray's Quit) so beforeClose does not mistake it for a window
+	// close and hide the window instead of exiting.
+	quitRequested atomic.Bool
 
 	// dlMu guards dlCancel, the cancel function of the running bulk offline
 	// download (nil when none is running). CancelDownload calls it to stop the
@@ -89,6 +136,12 @@ type App struct {
 	// mailto holds a mailto: draft the app was launched with (or received from a
 	// second launch) until the frontend consumes it. See mailto.go.
 	mailto mailtoState
+
+	// badgeMu guards unreadBadge, the last unread count the frontend reported
+	// for the dock icon. Kept so toggling the setting can re-apply it without
+	// waiting for the next sidebar refresh.
+	badgeMu     sync.Mutex
+	unreadBadge int
 }
 
 // IsDemoMode reports whether the app was launched in the cosmetic demo mode. The
@@ -110,10 +163,13 @@ func (a *App) IsDevMode() bool {
 // initialization happens in startup once wails has handed us a context we can
 // emit runtime events on.
 func newApp(version, channel string) *App {
+	w := logging.NewWriter()
 	return &App{
-		log:        slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelInfo})),
+		logWriter:  w,
+		log:        w.Logger(),
 		version:    version,
 		channel:    channel,
+		startedAt:  time.Now(),
 		storeReady: make(chan struct{}),
 	}
 }
@@ -124,6 +180,18 @@ func newApp(version, channel string) *App {
 // the bound methods returning errors.
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
+	// from here the wails runtime is usable: emitting events and rebuilding the
+	// native menu both need the context wails itself handed us. Tests construct
+	// an App with an ordinary context and never reach this, so those calls stay
+	// no-ops there rather than taking the process down.
+	a.runtimeReady.Store(true)
+
+	// --debug has to work before the store is up, since "the app will not
+	// start" is one of the reasons to reach for it. With no store there are no
+	// settings to read, so this pass only ever turns logging on, never off.
+	if a.debug {
+		a.applyLogSettings()
+	}
 
 	store, dataDir, err := openStore(ctx, a.channel)
 	if err != nil {
@@ -136,9 +204,15 @@ func (a *App) startup(ctx context.Context) {
 	}
 	a.store = store
 	a.dataDir = dataDir
+	a.applyLogSettings()
+	a.applyCharsetFallback()
 	a.queue = outbox.NewQueue(store)
 	a.loadProxy()
 	close(a.storeReady)
+
+	// as early as the store allows, so the window settles at its remembered size
+	// before the frontend has painted anything into it.
+	a.restoreGeometry()
 
 	// the Windows tray icon (no-op elsewhere). started after the store is up
 	// so its menu labels can follow the language setting.
@@ -171,15 +245,20 @@ func (a *App) startup(ctx context.Context) {
 		a.log.Error("open search index", "err", err)
 	} else {
 		a.index = idx
-		go a.backfillSearch()
+		goSafe("catching the search index up", a.backfillSearch)
 	}
+
+	// one pass over the cache for mail stored before charset detection existed.
+	// backgrounded: it reads every message body once, which is not something to
+	// hold a window open for.
+	goSafe("checking cached mail for broken text", a.markMangledMail)
 
 	a.startBackgroundServices()
 
 	// off by default; only runs at all if the user turned on a check
 	// frequency in settings. backgrounded so a slow/unreachable network never
 	// delays startup.
-	go a.maybeAutoCheckForUpdates(ctx)
+	goSafe("checking for updates", func() { a.maybeAutoCheckForUpdates(ctx) })
 
 	// if a bulk offline download was still running when the app last closed,
 	// pick it back up; planDownload skips anything already cached so this is
@@ -200,6 +279,8 @@ func (a *App) domReady(ctx context.Context) {
 // shutdown is the wails OnShutdown hook. It closes the store so the sqlite wal
 // is checkpointed cleanly.
 func (a *App) shutdown(ctx context.Context) {
+	// before the store closes, and before anything else can fail on the way out.
+	a.saveGeometry()
 	a.stopTray()
 	a.stopMCP()
 	if a.index != nil {
@@ -212,6 +293,8 @@ func (a *App) shutdown(ctx context.Context) {
 			a.log.Error("close store", "err", err)
 		}
 	}
+	// last, so anything the closes above logged still reaches the file.
+	a.logWriter.Disable()
 }
 
 // openStore opens the database and applies migrations, returning the

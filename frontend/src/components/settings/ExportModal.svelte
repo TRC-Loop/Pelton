@@ -3,8 +3,8 @@
   // writing a Pelton backup file. Styled after ImageAllowlistModal so all
   // settings dialogs share the same overlay/card look.
   import { createEventDispatcher } from 'svelte'
-  import { fade, scale } from 'svelte/transition'
-  import { IconX, IconDownload } from '@tabler/icons-svelte'
+  import Modal from '../common/Modal.svelte'
+  import { IconDownload } from '@tabler/icons-svelte'
   import { exportData } from '../../lib/api'
   import { toastError, toastSuccess, errorMessage } from '../../stores/toast'
   import { get } from 'svelte/store'
@@ -62,33 +62,14 @@
     }
   }
 
-  function onKeydown(event: KeyboardEvent): void {
-    if (event.key === 'Escape') {
-      dispatch('close')
-    }
-  }
 </script>
 
-<svelte:window on:keydown={onKeydown} />
-
-<!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
-<div class="backdrop" transition:fade={{ duration: 120 }} on:click={() => dispatch('close')}></div>
-<div
-  class="dialog"
-  role="dialog"
-  aria-modal="true"
-  aria-label={$t('importExport.exportTitle')}
-  transition:scale={{ duration: 150, start: 0.94 }}
+<Modal
+  title={$t('importExport.exportTitle')}
+  hint={$t('importExport.exportHint')}
+  size="small"
+  on:close={() => dispatch('close')}
 >
-  <header>
-    <h2>{$t('importExport.exportTitle')}</h2>
-    <button type="button" class="close" aria-label={$t('detail.attachments.close')} on:click={() => dispatch('close')}>
-      <IconX size={16} stroke={1.8} />
-    </button>
-  </header>
-
-  <p class="hint">{$t('importExport.exportHint')}</p>
-
   <div class="options">
     <label class="check">
       <input type="checkbox" bind:checked={includeSettings} />
@@ -139,9 +120,9 @@
     </label>
   </div>
 
-  <div class="actions">
+  <svelte:fragment slot="footer">
     <button type="button" class="action-btn" on:click={() => dispatch('close')}>
-      {$t('detail.attachments.close')}
+      {$t('modal.close')}
     </button>
     <button
       type="button"
@@ -152,65 +133,10 @@
       <IconDownload size={14} stroke={1.8} />
       {$t('importExport.exportButton')}
     </button>
-  </div>
-</div>
+  </svelte:fragment>
+</Modal>
 
 <style>
-  .backdrop {
-    position: fixed;
-    inset: 0;
-    z-index: 300;
-    background: var(--scrim, rgba(0, 0, 0, 0.4));
-    backdrop-filter: blur(2px);
-  }
-
-  .dialog {
-    position: fixed;
-    z-index: 301;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: min(420px, calc(100vw - 2 * var(--space-5)));
-    padding: var(--space-4);
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-3);
-    border: var(--hairline) solid var(--border-default);
-    border-radius: var(--radius-card);
-    background: var(--surface-overlay);
-    box-shadow: var(--shadow-overlay);
-  }
-
-  header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
-  h2 {
-    margin: 0;
-    font-size: var(--fz-heading);
-    font-weight: var(--fw-semibold);
-    color: var(--text-primary);
-  }
-  .close {
-    border: none;
-    background: transparent;
-    color: var(--text-tertiary);
-    cursor: pointer;
-    padding: var(--space-1);
-    border-radius: var(--radius-control);
-  }
-  .close:hover {
-    background: var(--surface-hover);
-    color: var(--text-primary);
-  }
-
-  .hint {
-    margin: 0;
-    font-size: var(--fz-label);
-    color: var(--text-tertiary);
-    line-height: 1.5;
-  }
 
   .options {
     display: flex;
@@ -224,7 +150,7 @@
     gap: var(--space-2);
     font-size: var(--fz-label);
     color: var(--text-primary);
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
   .check input {
     accent-color: var(--accent);
@@ -268,13 +194,6 @@
     color: var(--danger, var(--warning));
   }
 
-  .actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: var(--space-2);
-    margin-top: var(--space-1);
-  }
-
   .action-btn {
     display: inline-flex;
     align-items: center;
@@ -285,7 +204,7 @@
     background: var(--surface-raised);
     color: var(--text-primary);
     font-size: var(--fz-label);
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
   .action-btn:hover {
     background: var(--surface-hover);

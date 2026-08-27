@@ -2,10 +2,7 @@
 
 package desktop
 
-import (
-	"github.com/energye/systray"
-	wailsruntime "github.com/wailsapp/wails/v2/pkg/runtime"
-)
+import "github.com/energye/systray"
 
 // The Windows notification-area icon (#84). With HideWindowOnClose, closing
 // the window leaves Pelton syncing in the background with no visible way to
@@ -18,7 +15,7 @@ import (
 // inside its message loop, so it runs in a goroutine for the app's lifetime;
 // stopTray ends it at shutdown.
 func (a *App) startTray() {
-	go systray.Run(a.trayReady, nil)
+	goSafe("the notification area icon", func() { systray.Run(a.trayReady, nil) })
 }
 
 // stopTray removes the tray icon. Safe to call even if the tray never came up.
@@ -50,11 +47,7 @@ func (a *App) trayReady() {
 	syncNow.Click(func() {
 		a.emit(EventMenu, "sync")
 	})
-	quit.Click(func() {
-		if a.ctx != nil {
-			wailsruntime.Quit(a.ctx)
-		}
-	})
+	quit.Click(a.quitApp)
 
 	// left click reopens the window; the menu only shows on right click.
 	systray.SetOnClick(func(systray.IMenu) {

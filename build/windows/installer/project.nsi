@@ -45,6 +45,18 @@ Unicode true
 ####
 !include /NONFATAL "channel.nsh"
 ####
+## The AppUserModelID Pelton posts notifications under. Windows reads the name
+## and icon of a toast from this key, so the app registers it at startup (see
+## internal/desktop/notify_windows.go) rather than leaving it to the installer,
+## which would strand portable builds and every copy installed before that
+## change. The uninstaller removes it. Must match notifyAppName on the Go side.
+####
+!ifdef PELTON_NIGHTLY
+    !define PELTON_AUMID "Pelton Nightly"
+!else
+    !define PELTON_AUMID "Pelton"
+!endif
+####
 ## Include the wails tools
 ####
 !include "wails_tools.nsh"
@@ -245,6 +257,12 @@ Section "uninstall"
 
     !insertmacro wails.unassociateFiles
     !insertmacro wails.unassociateCustomProtocols
+
+    ; the notification registration Pelton writes at startup. Always HKCU, so
+    ; this only clears it for the account running the uninstaller; an all-users
+    ; install leaves the other accounts' keys behind, which are three inert
+    ; strings pointing at an executable that is gone.
+    DeleteRegKey HKCU "Software\Classes\AppUserModelId\${PELTON_AUMID}"
 
     !insertmacro wails.deleteUninstaller
 SectionEnd

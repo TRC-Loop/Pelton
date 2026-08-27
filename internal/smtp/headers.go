@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"fmt"
 	"mime"
+	"net/mail"
 	"strings"
 	"time"
 )
@@ -47,19 +48,27 @@ func writeHeader(b *strings.Builder, key, value string) {
 	b.WriteString(crlf)
 }
 
-// encodeWord RFC2047-encodes a header value (a subject or display name) when it
+// encodeWord RFC2047-encodes a header value (a subject) when it
 // contains non-ASCII, leaving plain ASCII untouched.
 func encodeWord(s string) string {
 	return mime.QEncoding.Encode("utf-8", s)
 }
 
-// formatAddress renders one address with an optional RFC2047-encoded display
-// name, for example: =?utf-8?q?Ann=C3=A9?= <ann@example.com>.
+// formatAddress renders one address with its display name.
+//
+// The name goes through net/mail rather than being pasted in, because RFC 5322
+// gives several characters a meaning inside an address list and a name carrying
+// one has to be quoted. A comma is the dangerous one: "Kock, Arne" pasted in
+// bare reads as two addresses, which a strict server rejects outright ("multiple
+// addresses in From header MUST have a Sender header") and a lax one delivers
+// with the sender mangled. Parentheses are a comment and would silently drop
+// what is inside them. Address.String also handles the non-ascii case, encoding
+// the name as an rfc 2047 word.
 func formatAddress(a Address) string {
 	if a.Name == "" {
 		return a.Email
 	}
-	return encodeWord(a.Name) + " <" + a.Email + ">"
+	return (&mail.Address{Name: a.Name, Address: a.Email}).String()
 }
 
 // formatAddressList renders a comma-separated address header value.

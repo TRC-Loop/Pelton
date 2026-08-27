@@ -110,20 +110,21 @@ Pelton is a modern, Free and Open-Source Software (FOSS) email client written in
 
 ## <img src="https://api.iconify.design/tabler/photo.svg?color=white" width="26" style="vertical-align: -4px;"> Gallery
 
+<img src="docs/assets/screenshots/screenshot-inbox-dark.png" alt="The unified inbox in dark mode, with a message open in the reading pane" width="100%">
+
 <table>
-  <tr>
-    <td><img src="https://github.com/user-attachments/assets/02ea4fa1-9ea1-418a-99a7-6a48eca4e360" width="100%" alt="Pelton screenshot 1"></td>
-    <td><img src="https://github.com/user-attachments/assets/848d8103-bb4b-4922-8da5-1b254fa5a524" width="100%" alt="Pelton screenshot 2"></td>
-  </tr>
-  <tr>
-    <td><img src="https://github.com/user-attachments/assets/653067d7-ae16-4fa0-98eb-9d7e7dd1c412" width="100%" alt="Pelton screenshot 3"></td>
-    <td><img src="https://github.com/user-attachments/assets/a31342b4-74a8-45b1-9591-381cc8da4ee6" width="100%" alt="Pelton screenshot 4"></td>
-  </tr>
-  <tr>
-    <td><img src="https://github.com/user-attachments/assets/ae530434-d06a-4d52-83a9-2f16664beb59" width="100%" alt="Pelton screenshot 5"></td>
-    <td><img src="https://github.com/user-attachments/assets/7c5dd0c0-7915-4cc7-a4d8-3cb32c3d3d80" width="100%" alt="Pelton screenshot 6"></td>
-  </tr>
+<tr>
+<td width="50%"><img src="docs/assets/screenshots/screenshot-inbox-light.png" alt="The same unified inbox in light mode, showing per-account mailboxes and saved views"></td>
+<td width="50%"><img src="docs/assets/screenshots/screenshot-message-actions.png" alt="The message context menu with reply, colour tags, snooze and move actions"></td>
+</tr>
+<tr>
+<td colspan="2" align="center"><em>Light mode with saved views &middot; the message context menu</em></td>
+</tr>
 </table>
+
+<img src="docs/assets/screenshots/screenshot-compose.png" alt="The compose window in markdown mode with the send later menu open" width="100%">
+
+<p align="center"><em>Composing in plain text, markdown or rich text, with send later</em></p>
 
 ## <img src="https://api.iconify.design/tabler/download.svg?color=white" width="26" style="vertical-align: -4px;"> Installation
 

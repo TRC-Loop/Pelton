@@ -2,13 +2,98 @@
 // message list is showing, which message is open, and the current search query.
 // this is pure ui state so in-memory stores are correct here.
 
-import { writable } from 'svelte/store'
+import { get, writable } from 'svelte/store'
 import type { Selection, Folder, ViewKey } from '../lib/types'
+import type { SidebarData } from './accounts'
+import { setSetting, getSetting, SettingKeys } from '../lib/api'
+import { t } from '../lib/i18n'
 
 // the default startup selection is the unified inbox, per the design.
 export const defaultSelection: Selection = { kind: 'view', view: 'inbox', label: 'Unified Inbox' }
 
 export const selection = writable<Selection>(defaultSelection)
+
+// the "remember what I had open" value of the startup setting. anything else is
+// a fixed target, stored as "view:<key>" or "folder:<id>".
+const startupLast = 'last'
+
+// storedSelection renders a selection into the "view:<key>" / "folder:<id>" form
+// the startup and last-selection settings share. Saved Views are not offered as
+// a startup target, so they store as nothing and leave the last value alone.
+function storedSelection(sel: Selection): string {
+  if (sel.kind === 'view') {
+    return `view:${sel.view}`
+  }
+  if (sel.kind === 'folder') {
+    return `folder:${sel.folderId}`
+  }
+  return ''
+}
+
+// unifiedViewLabel localizes a unified view key the same way the sidebar rows
+// do, so a restored selection reads identically to a clicked one.
+function unifiedViewLabel(key: string): string {
+  const translate = get(t)
+  const lookup = key === 'inbox' ? 'sidebar.unifiedInbox' : `sidebar.view.${key}`
+  const translated = translate(lookup)
+  return translated === lookup ? key : translated
+}
+
+// resolveSelection turns a stored "view:<key>" / "folder:<id>" value into a
+// selection, checking it against what actually exists. A folder that has since
+// been deleted, or a key from a future version, returns null so the caller can
+// fall back to the unified inbox.
+export function resolveSelection(stored: string, data: SidebarData): Selection | null {
+  const split = stored.indexOf(':')
+  if (split < 0) {
+    return null
+  }
+  const kind = stored.slice(0, split)
+  const rest = stored.slice(split + 1)
+  if (kind === 'view') {
+    if (!data.views.some((v) => v.key === rest)) {
+      return null
+    }
+    return { kind: 'view', view: rest as ViewKey, label: unifiedViewLabel(rest) }
+  }
+  if (kind === 'folder') {
+    const id = Number(rest)
+    for (const folders of Object.values(data.foldersByAccount)) {
+      const folder = folders.find((f) => f.id === id)
+      if (folder) {
+        return { kind: 'folder', folderId: folder.id, accountId: folder.accountId, label: folder.name }
+      }
+    }
+  }
+  return null
+}
+
+// applyStartupSelection sets the selection the user configured for launch: a
+// fixed unified view or folder, or whatever was open when the app last closed.
+// Anything that cannot be resolved falls back to the unified inbox rather than
+// leaving the list empty. Call once, after the sidebar data has loaded.
+export async function applyStartupSelection(pref: string, data: SidebarData): Promise<void> {
+  let target = pref
+  if (pref === startupLast) {
+    try {
+      const { value, found } = await getSetting(SettingKeys.lastSelection)
+      target = found ? value : ''
+    } catch {
+      target = ''
+    }
+  }
+  const resolved = target ? resolveSelection(target, data) : null
+  selection.set(resolved ?? { ...defaultSelection, label: unifiedViewLabel('inbox') })
+}
+
+// rememberSelection persists the current selection so the "last used" startup
+// option can restore it. Fire and forget: a failed write only costs the restore.
+function rememberSelection(sel: Selection): void {
+  const value = storedSelection(sel)
+  if (value) {
+    void setSetting(SettingKeys.lastSelection, value)
+  }
+}
 
 // the currently open message id, or null when the detail pane is empty.
 export const openMessageId = writable<number | null>(null)
@@ -18,7 +103,9 @@ export const searchQuery = writable<string>('')
 
 // selectView switches the list to a unified view and clears the open message.
 export function selectView(view: ViewKey, label: string): void {
-  selection.set({ kind: 'view', view, label })
+  const sel: Selection = { kind: 'view', view, label }
+  selection.set(sel)
+  rememberSelection(sel)
   openMessageId.set(null)
   searchQuery.set('')
 }
@@ -32,12 +119,14 @@ export function selectSavedView(viewId: number, label: string): void {
 
 // selectFolder switches the list to a single account folder.
 export function selectFolder(folder: Folder): void {
-  selection.set({
+  const sel: Selection = {
     kind: 'folder',
     folderId: folder.id,
     accountId: folder.accountId,
     label: folder.name,
-  })
+  }
+  selection.set(sel)
+  rememberSelection(sel)
   openMessageId.set(null)
   searchQuery.set('')
 }
@@ -45,4 +134,24 @@ export function selectFolder(folder: Folder): void {
 // openMessage sets the open message for the detail pane.
 export function openMessage(id: number): void {
   openMessageId.set(id)
+}
+
+// revealMessage moves the list to where a message lives and then opens it. It
+// is for requests that arrive from outside the ui, where the list is very
+// likely showing something else: a clicked new-mail notification is the only
+// one today. A folder that is not in the sidebar (removed since, or belonging
+// to an account this profile does not see) leaves the list where it is and just
+// opens the message, which is still what was asked for.
+export function revealMessage(
+  messageId: number,
+  accountId: number,
+  folderId: number,
+  data: SidebarData | null,
+): void {
+  const folder = data?.foldersByAccount[accountId]?.find((f) => f.id === folderId)
+  if (folder) {
+    // selectFolder clears the open message, so it has to happen first.
+    selectFolder(folder)
+  }
+  openMessage(messageId)
 }

@@ -206,7 +206,7 @@ func (a *App) DownloadRange(startDateRFC3339 string, includeAttachments bool) er
 	// and completion are reported entirely through events. the job gets its own
 	// cancellable context so CancelDownload can stop it without shutting the app.
 	ctx := a.beginDownload()
-	go a.runRangeDownload(ctx, since, includeAttachments)
+	goSafe("downloading mail for offline use", func() { a.runRangeDownload(ctx, since, includeAttachments) })
 	return nil
 }
 
@@ -267,7 +267,7 @@ func (a *App) ResumePendingDownload() {
 		return
 	}
 	ctx := a.beginDownload()
-	go a.runRangeDownload(ctx, since, includeAttachments)
+	goSafe("downloading mail for offline use", func() { a.runRangeDownload(ctx, since, includeAttachments) })
 }
 
 // runRangeDownload performs the plan-and-fetch passes off the calling goroutine.
@@ -371,6 +371,11 @@ func (a *App) planAccount(ctx context.Context, account storage.Account, since ti
 	for _, folder := range folders {
 		if err := ctx.Err(); err != nil {
 			return nil, err
+		}
+		// an unchecked folder is not synced, so downloading it for offline use
+		// would fetch mail the user asked not to keep up to date (#173).
+		if folder.SyncExcluded {
+			continue
 		}
 		if _, err := client.Select(folder.IMAPPath); err != nil {
 			a.log.Error("plan select", "folder", folder.IMAPPath, "err", err)

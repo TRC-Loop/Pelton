@@ -159,11 +159,12 @@ func (a *App) applyMCPState() error {
 		return nil
 	}
 
-	srv := mcpserver.New(&mcpMailbox{app: a}, a.log)
+	srv := mcpserver.NewWithWriter(&mcpMailbox{app: a}, &mcpWriter{app: a}, a.log)
 	cfg := mcpserver.Config{
-		Addr:    fmt.Sprintf("127.0.0.1:%d", a.mcpPort()),
-		Token:   a.mcpToken(),
-		Version: a.version,
+		Addr:        fmt.Sprintf("127.0.0.1:%d", a.mcpPort()),
+		Token:       a.mcpToken(),
+		Version:     a.version,
+		Permissions: a.mcpPermissions(),
 	}
 	if err := srv.Start(cfg); err != nil {
 		return err
@@ -199,7 +200,9 @@ func (m *mcpMailbox) ListAccounts(ctx context.Context) ([]mcpserver.Account, err
 	}
 	out := make([]mcpserver.Account, 0, len(accts))
 	for _, a := range accts {
-		out = append(out, mcpserver.Account{ID: a.ID, Email: a.Email, DisplayName: a.DisplayName})
+		// an agent runs on this machine, so it gets the name the user calls the
+		// mailbox rather than the one recipients see.
+		out = append(out, mcpserver.Account{ID: a.ID, Email: a.Email, DisplayName: a.Label()})
 	}
 	return out, nil
 }
@@ -277,8 +280,8 @@ func (m *mcpMailbox) Search(ctx context.Context, params mcpserver.SearchParams) 
 	if err != nil {
 		return nil, err
 	}
-	out := make([]mcpserver.MessageSummary, 0, len(hits))
-	for _, h := range hits {
+	out := make([]mcpserver.MessageSummary, 0, len(hits.Hits))
+	for _, h := range hits.Hits {
 		msg, err := m.app.store.GetMessage(ctx, h.ID)
 		if err != nil {
 			continue

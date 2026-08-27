@@ -13,6 +13,7 @@
 
   let exportOpen = false
   let clientImportOpen = false
+  let fileImportOpen = false
 
   // import state: the inspected file and which of its categories to apply.
   let file: BackupInfo | null = null
@@ -110,14 +111,27 @@
     </button>
   </div>
 
+  <!-- moving in from Thunderbird and loading mail files are two jobs, so they
+       are two entries and two dialogs (#308). -->
   <div class="block">
     <div class="block-head">
       <IconMailbox size={16} stroke={1.7} />
-      <h4>{$t('import.title')}</h4>
+      <h4>{$t('import.tb.title')}</h4>
     </div>
-    <p class="hint">{$t('import.sectionHint')}</p>
+    <p class="hint">{$t('import.tb.sectionHint')}</p>
     <button type="button" class="action-btn" on:click={() => (clientImportOpen = true)}>
-      {$t('import.open')}
+      {$t('import.tb.open')}
+    </button>
+  </div>
+
+  <div class="block">
+    <div class="block-head">
+      <IconFileImport size={16} stroke={1.7} />
+      <h4>{$t('import.files.title')}</h4>
+    </div>
+    <p class="hint">{$t('import.files.sectionHint')}</p>
+    <button type="button" class="action-btn" on:click={() => (fileImportOpen = true)}>
+      {$t('import.files.open')}
     </button>
   </div>
 
@@ -218,8 +232,14 @@
 {/if}
 
 {#if clientImportOpen}
-  {#await import('./ImportClientModal.svelte') then m}
+  {#await import('./ImportThunderbirdModal.svelte') then m}
     <svelte:component this={m.default} on:close={() => (clientImportOpen = false)} />
+  {/await}
+{/if}
+
+{#if fileImportOpen}
+  {#await import('./ImportFilesModal.svelte') then m}
+    <svelte:component this={m.default} on:close={() => (fileImportOpen = false)} />
   {/await}
 {/if}
 
@@ -299,7 +319,7 @@
     gap: var(--space-2);
     font-size: var(--fz-label);
     color: var(--text-primary);
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
   .check.disabled {
     color: var(--text-tertiary);
@@ -320,7 +340,7 @@
     background: var(--surface-raised);
     color: var(--text-primary);
     font-size: var(--fz-label);
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
   .action-btn:hover {
     background: var(--surface-hover);

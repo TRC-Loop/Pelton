@@ -125,6 +125,7 @@ export const t = derived([locale, catalogs, userCatalog], ([$locale, $catalogs, 
 // isMac drives the modifier symbol and is used by shortcut matching.
 export const isMac = /mac/i.test(navigator.userAgent)
 
+
 // modSymbol is the display glyph for the primary modifier on this platform.
 export const modSymbol = isMac ? '⌘' : 'Ctrl'
 
@@ -138,6 +139,9 @@ export function shortcutLabel(combo: string): string {
       if (part === 'shift') return isMac ? '⇧' : 'Shift'
       if (part === 'alt') return isMac ? '⌥' : 'Alt'
       if (part === 'space') return 'Space'
+      // the two delete keys have glyphs on macOS and names everywhere else.
+      if (part === 'backspace') return isMac ? '⌫' : 'Backspace'
+      if (part === 'delete') return isMac ? '⌦' : 'Delete'
       return part.length === 1 ? part.toUpperCase() : part
     })
     .join(isMac ? '' : '+')

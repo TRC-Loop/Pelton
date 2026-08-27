@@ -85,25 +85,45 @@
     if (!target || busy) {
       return
     }
-    if (when.getTime() <= Date.now()) {
+    // the picker only offers minute granularity, so a time picked inside the
+    // current minute comes back with :00 seconds and reads as a few seconds
+    // ago. Comparing against the start of the current minute is what makes
+    // "in three minutes" behave like three minutes rather than being rejected
+    // for being in the past.
+    const thisMinute = new Date()
+    thisMinute.setSeconds(0, 0)
+    if (when.getTime() <= thisMinute.getTime()) {
       toastError($t('detail.snooze.pickFutureTime'))
       return
     }
     busy = true
-    try {
-      await snoozeMessage(target.id, when.toISOString(), hideNow)
-      if (hideNow) {
-        removeFromList(target.id)
-      } else {
-        patchInList(target.id, { snoozeUntil: when.toISOString() })
+    // one time for the whole target, which is a single message from a row menu
+    // and the whole selection from a bulk one. A failure on one message is
+    // reported and does not hold back the rest.
+    let failure = ''
+    for (const id of target.ids) {
+      try {
+        await snoozeMessage(id, when.toISOString(), hideNow)
+        if (hideNow) {
+          removeFromList(id)
+        } else {
+          patchInList(id, { snoozeUntil: when.toISOString() })
+        }
+      } catch (err) {
+        failure = errorMessage(err)
       }
-      toastInfo($t('detail.snooze.snoozedUntil').replace('{when}', formatWhen(when)))
-      done()
-    } catch (err) {
-      toastError(errorMessage(err))
-    } finally {
-      busy = false
     }
+    busy = false
+    if (failure !== '') {
+      toastError(failure)
+      return
+    }
+    toastInfo(
+      target.ids.length === 1
+        ? $t('detail.snooze.snoozedUntil').replace('{when}', formatWhen(when))
+        : $t('detail.snooze.snoozedCount').replace('{n}', String(target.ids.length)).replace('{when}', formatWhen(when)),
+    )
+    done()
   }
 
   function confirmCustom(): void {
@@ -135,7 +155,11 @@
     <header>
       <div class="titles">
         <h2>{$t('detail.snooze.title')}</h2>
-        <p class="subject">{$snoozeTarget.subject || $t('detail.noSubject')}</p>
+        <p class="subject">
+          {$snoozeTarget.ids.length > 1
+            ? $t('messageList.bulk.messagesCount').replace('{n}', String($snoozeTarget.ids.length))
+            : $snoozeTarget.subject || $t('detail.noSubject')}
+        </p>
       </div>
       <button type="button" class="close" aria-label={$t('detail.attachments.close')} on:click={done}>
         <IconX size={16} stroke={1.8} />
@@ -225,7 +249,7 @@
     border: none;
     background: transparent;
     color: var(--text-tertiary);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     padding: var(--space-1);
     border-radius: var(--radius-control);
   }
@@ -249,7 +273,7 @@
     border-radius: var(--radius-control);
     background: var(--surface-raised);
     color: var(--text-primary);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     text-align: left;
     transition: border-color 0.1s ease, background 0.1s ease;
   }
@@ -299,7 +323,7 @@
     border-radius: var(--radius-control);
     background: var(--accent);
     color: #fff;
-    cursor: pointer;
+    cursor: var(--cursor-action);
     font-weight: var(--fw-medium);
   }
   .go:disabled {
@@ -313,6 +337,6 @@
     gap: var(--space-2);
     font-size: var(--fz-label);
     color: var(--text-secondary);
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
 </style>

@@ -12,11 +12,34 @@ export const selectedIds = writable<Set<number>>(new Set())
 // the anchor row id for shift-click range selection, or null when there is none.
 let anchorId: number | null = null
 
+// what was selected when the anchor was set. A shift-click adds its range to
+// this rather than to whatever the previous shift-click produced, so moving the
+// shift target shrinks the range as well as growing it, and a range started
+// after a cmd-click keeps what the cmd-clicks had picked.
+let anchored: Set<number> = new Set()
+
+// what the "select the rest too" banner is offering, or null when there is
+// nothing to offer. It lives here rather than with the rest of the select-all
+// logic so that clearing the selection clears it too, whoever does the
+// clearing: an offer left standing over a list nobody selected is a lie.
+export const expandOffer = writable<{ loaded: number; matching: number } | null>(null)
+
 // clearSelection drops every selection and the anchor. called on folder/search
 // changes so a stale selection never lingers across lists.
 export function clearSelection(): void {
   anchorId = null
+  anchored = new Set()
   selectedIds.set(new Set())
+  expandOffer.set(null)
+}
+
+// anchorAt points the next shift-click at a row without selecting it, for a
+// plain click that opened a message. Without it, click a row then shift-click
+// another and there is nothing to measure the range from, so only the second
+// row ends up selected.
+export function anchorAt(id: number): void {
+  anchorId = id
+  anchored = new Set(get(selectedIds))
 }
 
 // toggleSelect flips one id (cmd/ctrl-click) and makes it the new anchor.
@@ -28,18 +51,20 @@ export function toggleSelect(id: number): void {
     next.add(id)
   }
   anchorId = id
+  anchored = new Set(next)
   selectedIds.set(next)
 }
 
 // selectOnly replaces the selection with a single id and sets it as the anchor.
 export function selectOnly(id: number): void {
   anchorId = id
+  anchored = new Set([id])
   selectedIds.set(new Set([id]))
 }
 
 // selectRange selects every id from the anchor through targetId inclusive, using
-// the given ordered id list. when there is no anchor yet it falls back to a
-// single selection.
+// the given ordered id list, on top of what was selected when the anchor was
+// set. when there is no anchor yet it falls back to a single selection.
 export function selectRange(orderedIds: number[], targetId: number): void {
   if (anchorId === null) {
     selectOnly(targetId)
@@ -52,7 +77,19 @@ export function selectRange(orderedIds: number[], targetId: number): void {
     return
   }
   const [lo, hi] = a <= b ? [a, b] : [b, a]
-  selectedIds.set(new Set(orderedIds.slice(lo, hi + 1)))
+  const next = new Set(anchored)
+  for (const id of orderedIds.slice(lo, hi + 1)) {
+    next.add(id)
+  }
+  selectedIds.set(next)
+}
+
+// selectAll replaces the selection with the given ids and drops the anchor,
+// since a range measured from one row of an everything-selection means nothing.
+export function selectAll(ids: number[]): void {
+  anchorId = null
+  anchored = new Set(ids)
+  selectedIds.set(new Set(ids))
 }
 
 // deselect removes one id without touching the anchor, used after a bulk action

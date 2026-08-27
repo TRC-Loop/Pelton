@@ -2,10 +2,20 @@
   // one account's section in the sidebar: a header with the address and the full
   // folder tree below it. the header chevron collapses the whole account. root
   // folders are those without a parent; the rest nest via FolderNode recursion.
-  import { IconChevronRight } from '@tabler/icons-svelte'
+  import { IconChevronRight, IconFolderPlus, IconAlertTriangle, IconCloudOff } from '@tabler/icons-svelte'
   import FolderNode from './FolderNode.svelte'
+  import DragGrip from './DragGrip.svelte'
   import { prefs } from '../../stores/prefs'
   import { collapsedAccounts, toggleAccountCollapsed } from '../../stores/sidebarstate'
+  import { openCreateFolder } from '../../stores/folderdialog'
+  import { folderDragAccount, startFolderDrag, endFolderDrag } from '../../stores/sidebardrag'
+  import { reorder, type ReorderDetail } from '../../lib/reorder'
+  import { refreshSidebar } from '../../stores/accounts'
+  import { missingPassword, askForPassword } from '../../stores/passwordprompt'
+  import { failedSyncs, showSyncFailure } from '../../stores/syncfailures'
+  import { reorderFolders } from '../../lib/api'
+  import { accountLabel } from '../../lib/format'
+  import { toastError, errorMessage } from '../../stores/toast'
   import type { Account, Folder } from '../../lib/types'
   import { t } from '../../lib/i18n'
 
@@ -18,35 +28,100 @@
 
   // roots have no parent. loose equality catches both null and undefined.
   $: roots = folders.filter((f) => f.parentId == null)
-  // the header shows the display name, or the email when the user prefers it (or
-  // when there is no display name to show). Local Folders has no real address,
-  // so it is named rather than addressed.
+  // a folder never moves between accounts, so a drag elsewhere dims this section
+  // to show where the drop can land.
+  $: dimmed = $folderDragAccount !== null && $folderDragAccount !== account.id
+
+  async function onReorder(event: CustomEvent<ReorderDetail>): Promise<void> {
+    try {
+      await reorderFolders(event.detail.ids.map(Number))
+    } catch (err) {
+      toastError(errorMessage(err))
+    }
+    // reload either way, so the rows end up showing what was actually stored.
+    await refreshSidebar()
+  }
+
+  // the header shows what the user calls the mailbox, or the email when they
+  // prefer it. Local Folders has no real address, so it is named rather than
+  // addressed.
   $: label = account.local
     ? $t('sidebar.localFolders')
     : $prefs.showAccountEmail
       ? account.email
-      : account.displayName || account.email
+      : accountLabel(account)
+
+  // an account with nothing in the keyring cannot sync at all. The prompt can be
+  // dismissed (#290), so this marker is what is left saying so.
+  $: needsPassword = $missingPassword.has(account.id)
+
+  // an account whose last sync failed. Not the password triangle: that one says
+  // "give me a password", this one says "the last sync did not work", and only
+  // one of the two is the user's to fix. A missing password already has its own
+  // mark, so this stands down for it rather than showing two (#322).
+  $: syncFailure = needsPassword ? undefined : $failedSyncs.find((s) => s.accountId === account.id)
 </script>
 
-<section class="account">
-  <button
-    type="button"
-    class="account-head"
-    class:open={expanded}
-    title={account.local ? $t('sidebar.localFoldersHint') : account.email}
-    aria-expanded={expanded}
-    on:click={() => toggleAccountCollapsed(account.id)}
-  >
-    <span class="account-caret" aria-hidden="true"><IconChevronRight size={13} stroke={1.9} /></span>
-    <span class="account-name">{label}</span>
-  </button>
+<section class="account" class:dimmed data-reorder-id={account.id}>
+  <div class="account-row">
+    <button
+      type="button"
+      class="account-head"
+      class:open={expanded}
+      title={account.local ? $t('sidebar.localFoldersHint') : account.email}
+      aria-expanded={expanded}
+      on:click={() => toggleAccountCollapsed(account.id)}
+    >
+      <span class="account-caret" aria-hidden="true"><IconChevronRight size={13} stroke={1.9} /></span>
+      <span class="account-name">{label}</span>
+    </button>
+    {#if needsPassword}
+      <button
+        type="button"
+        class="needs-password"
+        title={$t('mailboxes.passwordPrompt.marker')}
+        aria-label={$t('mailboxes.passwordPrompt.marker')}
+        on:click={() => askForPassword(account)}
+      >
+        <IconAlertTriangle size={14} stroke={1.9} />
+      </button>
+    {/if}
+    {#if syncFailure}
+      <button
+        type="button"
+        class="sync-failed"
+        title={$t('syncFailure.marker')}
+        aria-label={$t('syncFailure.marker')}
+        on:click={() => showSyncFailure(syncFailure)}
+      >
+        <IconCloudOff size={14} stroke={1.9} />
+      </button>
+    {/if}
+    <button
+      type="button"
+      class="new-folder"
+      title={$t('folders.newFolder')}
+      aria-label={$t('folders.newFolder')}
+      on:click={() => openCreateFolder(account.id)}
+    >
+      <IconFolderPlus size={14} stroke={1.7} />
+    </button>
+    <DragGrip />
+  </div>
   {#if expanded}
     {#if roots.length === 0}
       <p class="empty-note">{$t('sidebar.account.noFolders')}</p>
     {:else}
-      {#each roots as folder (folder.id)}
-        <FolderNode {folder} {folders} depth={0} />
-      {/each}
+      <div
+        use:reorder
+        on:reorderstart={() => startFolderDrag(account.id)}
+        on:reorderend={endFolderDrag}
+        on:reorder={onReorder}
+      >
+        {#each roots as folder (folder.id)}
+          <FolderNode {folder} {folders} depth={0} />
+        {/each}
+      </div>
     {/if}
   {/if}
 </section>
@@ -56,21 +131,100 @@
     margin-top: var(--space-4);
   }
 
+  /* a folder drag can only land among its own siblings, so every other account
+     fades back while one is in progress. pointer-events stay on: dnd needs to
+     keep tracking the pointer, it just cannot drop here. */
+  .account.dimmed {
+    opacity: 0.4;
+    transition: opacity 0.12s ease;
+  }
+
+  /* the header and its new-folder button share a row; the button only appears
+     on hover so the sidebar stays quiet at rest. */
+  .account-row {
+    display: flex;
+    align-items: center;
+    border-radius: var(--radius-control);
+  }
+
   .account-head {
     display: flex;
     align-items: center;
     gap: var(--space-1);
-    width: 100%;
+    flex: 1;
+    min-width: 0;
     padding: var(--space-2) var(--space-3);
     border: none;
     background: transparent;
-    cursor: pointer;
+    cursor: var(--cursor-action);
     text-align: left;
     border-radius: var(--radius-control);
   }
 
-  .account-head:hover {
+  .account-row:hover {
     background: var(--surface-hover);
+  }
+
+  /* unlike the new-folder button this one is always visible: it reports a state
+     the user has to be able to see without hovering. */
+  .needs-password {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    padding: var(--space-1);
+    border: none;
+    background: transparent;
+    color: var(--warning);
+    border-radius: var(--radius-control);
+    cursor: var(--cursor-action);
+  }
+
+  .needs-password:hover {
+    background: var(--surface-sunken);
+  }
+
+  /* danger rather than the password mark's warning: this one is not a question
+     being asked, it is something that already went wrong. */
+  .sync-failed {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    padding: var(--space-1);
+    border: none;
+    background: transparent;
+    color: var(--danger);
+    border-radius: var(--radius-control);
+    cursor: var(--cursor-action);
+  }
+  .sync-failed:hover {
+    background: var(--surface-sunken);
+  }
+
+  .new-folder {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    padding: var(--space-1);
+    margin-right: var(--space-2);
+    border: none;
+    background: transparent;
+    color: var(--text-tertiary);
+    border-radius: var(--radius-control);
+    cursor: var(--cursor-action);
+    opacity: 0;
+  }
+
+  .account-row:hover .new-folder,
+  .new-folder:focus-visible {
+    opacity: 1;
+  }
+
+  .new-folder:hover {
+    color: var(--text-primary);
+    background: var(--surface-sunken);
   }
 
   .account-caret {

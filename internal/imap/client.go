@@ -5,6 +5,7 @@ package imap
 import (
 	"context"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -13,6 +14,8 @@ import (
 
 	"github.com/emersion/go-imap/v2"
 	"github.com/emersion/go-imap/v2/imapclient"
+
+	"github.com/TRC-Loop/Pelton/internal/charsetguess"
 )
 
 // DialFunc opens a raw tcp connection; the proxy layer supplies one to route
@@ -93,6 +96,17 @@ type Client struct {
 	updates chan MailboxUpdate
 }
 
+// Addr is the server this client is connected to, as host:port. Sync puts it in
+// its log lines so a line in the debug overlay says which account it belongs to
+// when several are syncing at once.
+func (c *Client) Addr() string {
+	port := c.cfg.Port
+	if port == 0 {
+		port = DefaultPort
+	}
+	return net.JoinHostPort(c.cfg.Host, strconv.Itoa(port))
+}
+
 // Connect opens a TLS connection but does not authenticate; call Login next.
 func Connect(cfg Config) (*Client, error) {
 	if cfg.Host == "" {
@@ -110,6 +124,11 @@ func Connect(cfg Config) (*Client, error) {
 	updates := make(chan MailboxUpdate, updateBuffer)
 
 	options := &imapclient.Options{
+		// go-imap's default word decoder knows utf-8 and latin-1 and gives up on
+		// anything else, which leaves a cyrillic or japanese subject sitting in
+		// the message list as its raw =?...?= source. Ours decodes the legacy
+		// tables and guesses at what is left.
+		WordDecoder: charsetguess.WordDecoder(),
 		TLSConfig: &tls.Config{
 			ServerName:         cfg.Host, // needed for hostname verification
 			InsecureSkipVerify: cfg.InsecureSkipVerify,
@@ -190,19 +209,41 @@ func sendUpdate(ch chan MailboxUpdate, u MailboxUpdate) {
 	}
 }
 
+// ErrAuthFailed reports that the server rejected the credentials. It is wrapped
+// into whatever Login returns in that case, so callers can tell a wrong password
+// from a server that is merely unreachable and act on it: the app marks the
+// mailbox and offers to re-enter the password instead of retrying forever.
+var ErrAuthFailed = errors.New("imap: authentication failed")
+
 // Login authenticates with the credentials from Config: XOAUTH2 when an oauth
 // token is present, otherwise a password LOGIN.
 func (c *Client) Login() error {
 	if c.cfg.OAuth2Token != "" {
 		if err := c.raw.Authenticate(newXOAuth2Client(c.cfg.Username, c.cfg.OAuth2Token)); err != nil {
-			return fmt.Errorf("imap: xoauth2 auth as %q: %w", c.cfg.Username, err)
+			return fmt.Errorf("imap: xoauth2 auth as %q: %w", c.cfg.Username, authError(err))
 		}
 		return nil
 	}
 	if err := c.raw.Login(c.cfg.Username, c.cfg.Password).Wait(); err != nil {
-		return fmt.Errorf("imap: login as %q: %w", c.cfg.Username, err)
+		return fmt.Errorf("imap: login as %q: %w", c.cfg.Username, authError(err))
 	}
 	return nil
+}
+
+// authError adds ErrAuthFailed to an error the server returned to LOGIN or
+// AUTHENTICATE.
+//
+// A NO to an authentication command is the protocol's way of saying the
+// credentials were refused (RFC 9051 section 6.2.3), whether or not the server
+// bothers with an AUTHENTICATIONFAILED code, and many do not. Anything that is
+// not a status response at all, a dropped connection or a tls failure, is left
+// alone: the password may well be fine.
+func authError(err error) error {
+	var status *imap.Error
+	if !errors.As(err, &status) || status.Type != imap.StatusResponseTypeNo {
+		return err
+	}
+	return fmt.Errorf("%w: %w", ErrAuthFailed, err)
 }
 
 // SupportsIdle reports whether the server advertises IDLE.

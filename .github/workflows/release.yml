@@ -448,3 +448,79 @@ jobs:
           VERSION: ${{ steps.version.outputs.rpm_version }}
           COPR_USERNAME: ${{ secrets.COPR_USERNAME }}
         run: copr-cli build "$COPR_USERNAME/Pelton" "pelton-$VERSION.src.rpm" --nowait
+
+  # ---------------------------------------------------------------------------
+  # Flathub source tarball: Flathub builds with no network access, so the
+  # manifest (packaging/flatpak/sh.arne.Pelton.yml) cannot fetch dependencies
+  # itself. This job assembles one archive holding the repository sources, Go's
+  # vendor/ and a symlink-free frontend/node_modules, which is everything the
+  # sandbox needs to run `vite build` and `go build` offline.
+  # ---------------------------------------------------------------------------
+  flatpak-source:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: frontend/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Resolve version
+        id: version
+        run: echo "version=${GITHUB_REF_NAME:-0.0.0-dev}" >> "$GITHUB_OUTPUT"
+
+      - name: Assemble vendored tarball
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          stage="pelton-${VERSION#v}"
+          mkdir -p "$stage"
+          git archive HEAD | tar -x -C "$stage"
+
+          # the manifest reads the tag from here, so bumping the flatpak is
+          # only ever the url and its checksum.
+          echo "$VERSION" > "$stage/VERSION"
+
+          # appstream wants the shipped version listed; stamping it here means
+          # the flatpak's release history is right without anyone editing xml
+          # by hand at release time.
+          sed -i \
+            "s|<release version=\"[^\"]*\" date=\"[^\"]*\" />|<release version=\"${VERSION#v}\" date=\"$(date -u +%F)\" />|" \
+            "$stage/build/linux/pelton.metainfo.xml"
+
+          go mod vendor
+          mv vendor "$stage/vendor"
+
+          # pnpm's default store is a symlink farm pointing outside the package
+          # directory, which does not survive being tarred up and unpacked
+          # somewhere else. hoisted gives real directories.
+          (cd "$stage/frontend" && pnpm install --frozen-lockfile --config.node-linker=hoisted)
+
+          tar czf "Pelton-$VERSION-vendored.tar.gz" "$stage"
+
+      - name: Report checksum
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          # the first flathub submission needs this by hand; later bumps are
+          # done by flathub's external data checker.
+          sha256sum "Pelton-$VERSION-vendored.tar.gz" | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload to release
+        if: github.event_name == 'release'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          gh release upload "${{ github.event.release.tag_name }}" \
+            "Pelton-$VERSION-vendored.tar.gz" \
+            --clobber

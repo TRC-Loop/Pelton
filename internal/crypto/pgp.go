@@ -185,6 +185,14 @@ func (p *PGP) recipients(opts Options) ([]*openpgp.Entity, error) {
 	return entities, nil
 }
 
+// Unlock decrypts an entity's private keys in place if they are locked, and
+// reports whether the passphrase fits. Callers outside this package use it to
+// check a passphrase before holding on to it, so a typo surfaces at the prompt
+// rather than at the moment a message is sent.
+func Unlock(ent *openpgp.Entity, passphrase []byte) error {
+	return unlock(ent, passphrase)
+}
+
 // unlock decrypts an entity's private keys in place if they are locked. With no
 // passphrase available for a locked key it returns ErrPassphraseRequired.
 func unlock(ent *openpgp.Entity, passphrase []byte) error {
@@ -198,6 +206,14 @@ func unlock(ent *openpgp.Entity, passphrase []byte) error {
 		return fmt.Errorf("crypto: decrypt private key for %s: %w", primaryEmail(ent), err)
 	}
 	return nil
+}
+
+// KeyLocked reports whether an entity's private material still needs a
+// passphrase. The compose window asks before offering to sign with it, so the
+// user is prompted at the point they chose to protect a message rather than at
+// the point it fails to go out.
+func KeyLocked(ent *openpgp.Entity) bool {
+	return entityLocked(ent)
 }
 
 // entityLocked reports whether the primary key or any subkey is still encrypted.

@@ -17,9 +17,11 @@ export type ShortcutAction =
   | 'preferences'
   | 'sync'
   | 'search'
+  | 'command-palette'
   | 'add-mailbox'
   | 'export-pdf'
   | 'toggle-fullscreen'
+  | 'close-window'
   | 'quit'
   | 'reply'
   | 'reply-all'
@@ -35,12 +37,44 @@ export type ShortcutAction =
   | 'new-view'
   | 'next-view'
   | 'prev-view'
+  // actions the command palette (#134) made first-class. Several need a target
+  // the user has to choose; those open the palette on their own picker step
+  // rather than acting straight away, so they bind to a key like any other.
+  | 'mark-vip'
+  | 'move-to'
+  | 'flag-color'
+  | 'remove-offline'
+  | 'empty-trash'
+  | 'new-folder'
+  | 'rename-folder'
+  | 'delete-folder'
+  | 'toggle-pin-folder'
+  | 'apply-theme'
+  | 'edit-view'
+  // reading-pane tabs (#197). Unbound by default: the feature is invisible
+  // until you use it, and a default key would not be.
+  | 'open-in-tab'
+  | 'close-tab'
+  // profiles (#270). Switching opens the picker; next and previous move along
+  // the list without one.
+  | 'switch-profile'
+  | 'next-profile'
+  | 'prev-profile'
 
 // Shortcut pairs an action with its default combo and the label key for display.
 export interface Shortcut {
   action: ShortcutAction
   combo: string
   labelKey: string
+  /**
+   * A second key that fires the same action while the binding is untouched.
+   * It exists for actions where two platforms disagree about which key is
+   * obvious and neither key does anything else: delete is Backspace on macOS
+   * and Delete elsewhere, and the key you reach for should work whichever
+   * machine you learned it on. Rebinding the action replaces the pair, since
+   * at that point you have said which key you want.
+   */
+  alt?: string
 }
 
 // the default registry, also used to seed the editable bindings and render the
@@ -51,11 +85,16 @@ export const shortcuts: Shortcut[] = [
   { action: 'sync', combo: 'mod+r', labelKey: 'shortcut.sync' },
   { action: 'add-mailbox', combo: 'mod+m', labelKey: 'shortcut.addMailbox' },
   { action: 'search', combo: 'mod+f', labelKey: 'shortcut.search' },
+  { action: 'command-palette', combo: 'mod+k', labelKey: 'shortcut.commandPalette' },
   { action: 'export-pdf', combo: 'mod+p', labelKey: 'shortcut.exportPdf' },
   // on macOS the native menu owns fullscreen (Cmd+Ctrl+F) and quit (Cmd+Q);
   // elsewhere the in-app menu bar relies on these frontend bindings.
   { action: 'toggle-fullscreen', combo: isMac ? '' : 'f11', labelKey: 'shortcut.toggleFullscreen' },
   { action: 'quit', combo: isMac ? '' : 'mod+q', labelKey: 'shortcut.quit' },
+  // bound on every platform, macOS included: the native File menu accelerator
+  // consumes Cmd+W before the webview sees it, so this never double-fires, and
+  // it keeps working in the reduced-native-menu mode where File is dropped.
+  { action: 'close-window', combo: 'mod+w', labelKey: 'shortcut.closeWindow' },
   // message-level actions, unbound by default.
   { action: 'reply', combo: '', labelKey: 'shortcut.reply' },
   { action: 'reply-all', combo: '', labelKey: 'shortcut.replyAll' },
@@ -65,13 +104,33 @@ export const shortcuts: Shortcut[] = [
   { action: 'flag', combo: '', labelKey: 'shortcut.flag' },
   { action: 'snooze', combo: '', labelKey: 'shortcut.snooze' },
   { action: 'download-offline', combo: '', labelKey: 'shortcut.downloadOffline' },
-  { action: 'delete-message', combo: '', labelKey: 'shortcut.deleteMessage' },
+  // bound by default, unlike the rest of the message actions: every mail client
+  // deletes on this key, neither key types anything in a list, and delete means
+  // move to trash with one undo behind it (#329).
+  { action: 'delete-message', combo: 'backspace', alt: 'delete', labelKey: 'shortcut.deleteMessage' },
   { action: 'archive', combo: '', labelKey: 'shortcut.archive' },
   { action: 'unsubscribe', combo: '', labelKey: 'shortcut.unsubscribe' },
   // saved views (preset searches), unbound by default so the user opts in.
   { action: 'new-view', combo: '', labelKey: 'shortcut.newView' },
   { action: 'next-view', combo: '', labelKey: 'shortcut.nextView' },
   { action: 'prev-view', combo: '', labelKey: 'shortcut.prevView' },
+  // palette actions, unbound by default.
+  { action: 'edit-view', combo: '', labelKey: 'palette.action.editView' },
+  { action: 'mark-vip', combo: '', labelKey: 'palette.action.markVip' },
+  { action: 'move-to', combo: '', labelKey: 'messageList.menu.moveTo' },
+  { action: 'flag-color', combo: '', labelKey: 'palette.action.flagColor' },
+  { action: 'remove-offline', combo: '', labelKey: 'messageList.menu.removeOffline' },
+  { action: 'new-folder', combo: '', labelKey: 'palette.action.newFolder' },
+  { action: 'rename-folder', combo: '', labelKey: 'palette.action.renameFolder' },
+  { action: 'delete-folder', combo: '', labelKey: 'palette.action.deleteFolder' },
+  { action: 'toggle-pin-folder', combo: '', labelKey: 'palette.action.pinFolder' },
+  { action: 'empty-trash', combo: '', labelKey: 'folders.emptyTrash' },
+  { action: 'apply-theme', combo: '', labelKey: 'palette.action.applyTheme' },
+  { action: 'open-in-tab', combo: '', labelKey: 'messageList.menu.openInTab' },
+  { action: 'close-tab', combo: '', labelKey: 'tabs.close' },
+  { action: 'switch-profile', combo: '', labelKey: 'profiles.switch' },
+  { action: 'next-profile', combo: '', labelKey: 'profiles.next' },
+  { action: 'prev-profile', combo: '', labelKey: 'profiles.previous' },
 ]
 
 // ParsedCombo is a combo broken into its modifier flags and final key.
@@ -169,6 +228,12 @@ export function matchShortcut(
       continue
     }
     if (comboMatches(event, combo)) {
+      return action as ShortcutAction
+    }
+    // the alternate key, only while the binding is still the default one: a
+    // rebound action answers to what it was rebound to and nothing else.
+    const def = shortcuts.find((s) => s.action === action)
+    if (def?.alt && combo === def.combo && comboMatches(event, def.alt)) {
       return action as ShortcutAction
     }
   }

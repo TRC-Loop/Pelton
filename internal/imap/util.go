@@ -5,9 +5,13 @@ import (
 	"strings"
 
 	"github.com/emersion/go-imap/v2"
+
+	"github.com/TRC-Loop/Pelton/internal/charsetguess"
 )
 
-// formatAddresses renders an address list as `Name <user@host>, ...`.
+// formatAddresses renders an address list as `Name <user@host>, ...`. A display
+// name the server handed over as raw 8-bit bytes is decoded here, since an
+// envelope carries no charset of its own to convert it by.
 func formatAddresses(addrs []imap.Address) string {
 	if len(addrs) == 0 {
 		return ""
@@ -24,7 +28,8 @@ func formatAddresses(addrs []imap.Address) string {
 			parts = append(parts, a.Name)
 		}
 	}
-	return strings.Join(parts, ", ")
+	joined, _ := charsetguess.Text(strings.Join(parts, ", "))
+	return joined
 }
 
 func reverse[T any](s []T) {

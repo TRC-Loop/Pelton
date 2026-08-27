@@ -1,18 +1,41 @@
 <script lang="ts">
   // the per-message technical-info badges shared by the list row and the detail
   // header: mailbox/account badge, pgp status and auth status. each badge is
-  // shown only when its preference toggle is on. the auth badge is always a
-  // neutral "not available" state because the backend does not parse
-  // Authentication-Results yet (documented follow-up); we never invent a result.
-  import { IconMailbox, IconLock, IconShieldCheck, IconShieldQuestion } from '@tabler/icons-svelte'
+  // shown only when its preference toggle is on. the auth badge reports what
+  // the receiving server said about spf, dkim and dmarc; mail whose server said
+  // nothing reads as "not available" and never as a failure.
+  import {
+    IconMailbox,
+    IconLock,
+    IconShieldCheck,
+    IconShieldQuestion,
+    IconShieldCheckFilled,
+    IconShieldExclamation,
+    IconCertificate,
+    IconCertificateOff,
+    IconShieldX,
+    IconLanguage,
+  } from '@tabler/icons-svelte'
   import { prefs } from '../../stores/prefs'
   import { t } from '../../lib/i18n'
-  import type { PGPStatus } from '../../lib/types'
+  import type { PGPStatus, SMIMESignature, SMIMERevocation } from '../../lib/types'
 
   export let accountEmail: string = ''
   export let folderName: string = ''
   export let pgp: string = 'none'
   export let auth: string = 'unavailable'
+  // the s/mime signature verdict; an empty status renders nothing.
+  export let smime: SMIMESignature | undefined = undefined
+  // what the issuing authority says about that certificate now, when the reader
+  // has turned revocation checking on. An empty status means no check was made
+  // and the badge reads exactly as it did before.
+  export let revocation: SMIMERevocation | undefined = undefined
+  // what the text was read as when the message did not say, or said something
+  // no table knows: an encoding name, or 'detected' when one was picked without
+  // being reported back. Empty for mail that was right about itself, and the
+  // list rows never pass it: a guess is worth knowing while reading a message,
+  // not on every row.
+  export let charsetGuess: string = ''
 
   // pgp label and icon per status. "none" renders nothing.
   function pgpLabel(status: string, tFn: (key: string) => string): string {
@@ -21,16 +44,59 @@
     return ''
   }
 
+  // the s/mime badge rides the same preference as pgp: both answer "is this
+  // message cryptographically protected", and splitting them into two toggles
+  // would make the reader think about a distinction they do not care about.
+  // a withdrawn certificate outranks the signature verdict. The bytes are still
+  // intact, but the authority is positively saying the key must not be relied
+  // on, and "Signature verified" would be the one badge that actively misleads.
+  $: revoked = revocation?.status === 'revoked'
+  $: smimeStatus = revoked ? 'revoked' : (smime?.status ?? '')
+  $: showSmime = $prefs.showPgp && smimeStatus !== ''
+  // the signer is what the badge is actually asserting, so it leads the tooltip
+  // and falls back to the address when the certificate carries no name.
+  $: smimeTitle = smime
+    ? [
+        $t(`common.techBadges.smime.${smimeStatus}`),
+        smime.signer || smime.email,
+        revoked ? revocation?.detail : smime.detail,
+        revocationNote,
+      ]
+        .filter((part) => part !== '' && part !== undefined)
+        .join(' · ')
+    : ''
+
+  // the soft-fail line. Being offline says nothing about a certificate, so a
+  // check that could not be made leaves the verdict alone and says so in words
+  // rather than by changing what the badge claims.
+  $: revocationNote =
+    revocation?.status === 'unknown'
+      ? $t('common.techBadges.smime.uncheckedNote')
+      : revocation?.status === 'good'
+        ? $t('common.techBadges.smime.checkedNote')
+        : ''
+
+  $: showCharset = charsetGuess !== ''
+  $: charsetText = charsetGuess === 'detected' ? $t('common.techBadges.charset.guessed') : charsetGuess
+  $: charsetTitle =
+    charsetGuess === 'detected'
+      ? $t('common.techBadges.charset.title')
+      : $t('common.techBadges.charset.titleNamed').replace('{name}', charsetGuess)
+
   $: showBadge = $prefs.showMailboxBadge && (accountEmail !== '' || folderName !== '')
   $: showPgp = $prefs.showPgp && pgp !== 'none'
   $: showAuth = $prefs.showAuth
   $: pgpStatus = pgp as PGPStatus
-  // auth has only the "unavailable" state today; show n/a until the backend
-  // parses Authentication-Results, otherwise echo whatever it reports.
-  $: authText = auth === 'unavailable' ? $t('common.techBadges.authNA') : auth
+  // pass, partial, fail, or unavailable when the server reported nothing, which
+  // is most older cached mail. Anything unrecognised is shown as unavailable
+  // rather than echoed, so a future value cannot leak into the badge raw.
+  $: authKnown = auth === 'pass' || auth === 'partial' || auth === 'fail'
+  $: authText = authKnown ? $t(`common.techBadges.auth.${auth}`) : $t('common.techBadges.authNA')
+  $: authTitle = authKnown ? $t(`common.techBadges.authTitle.${auth}`) : $t('common.techBadges.authTitle')
+  $: AuthIcon = auth === 'pass' ? IconShieldCheckFilled : auth === 'fail' ? IconShieldExclamation : IconShieldQuestion
 </script>
 
-{#if showBadge || showPgp || showAuth}
+{#if showBadge || showPgp || showSmime || showAuth || showCharset}
   <span class="badges">
     {#if showBadge}
       <span class="badge" title={`${accountEmail} · ${folderName}`}>
@@ -50,13 +116,34 @@
       </span>
     {/if}
 
+    {#if showSmime}
+      <span class="badge smime {smimeStatus}" title={smimeTitle} aria-label={smimeTitle}>
+        {#if smimeStatus === 'valid'}
+          <IconCertificate size={12} stroke={1.6} />
+        {:else if smimeStatus === 'invalid' || smimeStatus === 'revoked'}
+          <IconShieldX size={12} stroke={1.6} />
+        {:else}
+          <IconCertificateOff size={12} stroke={1.6} />
+        {/if}
+        <span class="badge-text">{$t(`common.techBadges.smime.${smimeStatus}`)}</span>
+      </span>
+    {/if}
+
+    {#if showCharset}
+      <span class="badge" title={charsetTitle} aria-label={charsetTitle}>
+        <IconLanguage size={12} stroke={1.6} />
+        <span class="badge-text">{charsetText}</span>
+      </span>
+    {/if}
+
     {#if showAuth}
       <span
         class="badge auth"
-        title={$t('common.techBadges.authTitle')}
-        aria-label={$t('common.techBadges.authAriaLabel')}
+        class:auth-fail={auth === 'fail'}
+        title={authTitle}
+        aria-label={authTitle}
       >
-        <IconShieldQuestion size={12} stroke={1.6} />
+        <svelte:component this={AuthIcon} size={12} stroke={1.6} />
         <span class="badge-text">{authText}</span>
       </span>
     {/if}
@@ -91,9 +178,29 @@
     white-space: nowrap;
   }
 
+  /* the s/mime verdict is the one badge that carries a judgement, so it is the
+     one that takes colour. a signature that fails reads as a warning; one that
+     merely cannot be vouched for stays neutral rather than alarming, since
+     unverifiable is not the same as forged. */
+  .smime.valid {
+    color: var(--success);
+    border-color: var(--success);
+  }
+  .smime.revoked,
+  .smime.invalid {
+    color: var(--danger);
+    border-color: var(--danger);
+  }
+
   /* auth is deliberately the dimmest: it carries no real data yet. */
+  /* the muted, italic treatment was for a badge that never said anything. It
+     stays for the unknown case and comes off once there is a real result. */
   .auth {
     opacity: 0.7;
-    font-style: italic;
+  }
+
+  .auth-fail {
+    opacity: 1;
+    color: var(--danger);
   }
 </style>

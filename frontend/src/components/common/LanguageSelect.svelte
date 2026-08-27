@@ -9,6 +9,7 @@
   import { onMount } from 'svelte'
   import { IconCheck } from '@tabler/icons-svelte'
   import { locales, localeNames, detectOSLocale, userLocalePrefix, t } from '../../lib/i18n'
+  import { flagFor } from '../../lib/flags'
   import { listUserLocales } from '../../lib/api'
   import type { UserLocale } from '../../lib/types'
 
@@ -31,14 +32,15 @@
 <div class="lang-grid" role="listbox" aria-label={$t('settings.language')}>
   {#each locales as l (l)}
     <button type="button" class="lang-card" class:active={value === l} on:click={() => onSelect(l)} role="option" aria-selected={value === l}>
-      <span class="lang-row">
-        <span class="lang-name">{localeNames[l]}</span>
-        {#if value === l}
-          <IconCheck size={14} stroke={2} class="lang-check" />
-        {/if}
-      </span>
+      {#if flagFor(l)}
+        <img class="lang-flag" src={flagFor(l)} alt="" draggable="false" />
+      {/if}
+      <span class="lang-name">{localeNames[l]}</span>
       {#if l === recommended}
         <span class="lang-badge">{$t('settings.recommended')}</span>
+      {/if}
+      {#if value === l}
+        <IconCheck size={14} stroke={2} class="lang-check" />
       {/if}
     </button>
   {/each}
@@ -50,14 +52,12 @@
     {#each userLocales as l (l.id)}
       {@const v = userLocalePrefix + l.id}
       <button type="button" class="lang-card" class:active={value === v} on:click={() => onSelect(v)} role="option" aria-selected={value === v}>
-        <span class="lang-row">
-          <span class="lang-name">{l.name}</span>
-          {#if value === v}
-            <IconCheck size={14} stroke={2} class="lang-check" />
-          {/if}
-        </span>
+        <span class="lang-name">{l.name}</span>
         {#if l.author}
           <span class="lang-badge">{l.author}</span>
+        {/if}
+        {#if value === v}
+          <IconCheck size={14} stroke={2} class="lang-check" />
         {/if}
       </button>
     {/each}
@@ -67,32 +67,35 @@
 <style>
   .lang-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    /* wide enough that a flag, a name and the recommended badge sit on one
+       line without the name having to ellipsis. */
+    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
     gap: var(--space-3);
   }
 
   .lang-card {
     position: relative;
     display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: var(--space-1);
-    padding: var(--space-3) var(--space-4);
+    align-items: center;
+    gap: var(--space-2);
+    min-width: 0;
+    padding: var(--space-3);
     border: var(--hairline) solid var(--border-default);
     border-radius: var(--radius-card);
     background: var(--surface-raised);
     color: var(--text-primary);
     font-size: var(--fz-label);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     text-align: left;
   }
 
-  .lang-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--space-2);
-    width: 100%;
+  /* a fixed box so a wide flag and a tall one line up. */
+  .lang-flag {
+    flex-shrink: 0;
+    width: 20px;
+    height: 15px;
+    border-radius: 2px;
+    object-fit: cover;
   }
 
   .lang-card:hover {
@@ -105,6 +108,8 @@
   }
 
   .lang-name {
+    flex: 1;
+    min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -121,9 +126,9 @@
     letter-spacing: 0.03em;
   }
 
-  .lang-card.active :global(.lang-check) {
-    color: var(--accent);
+  .lang-card :global(.lang-check) {
     flex-shrink: 0;
+    color: var(--accent);
   }
 
   .user-heading {

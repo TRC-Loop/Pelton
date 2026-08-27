@@ -4,11 +4,14 @@
   // shown in the body, and only those actually referenced) are hidden. each card
   // shows a file-type icon, the name and size, and downloads via a native save
   // dialog on click.
-  import { IconPaperclip, IconDownload, IconEye, IconDownloadOff } from '@tabler/icons-svelte'
-  import { saveAttachment, saveAllAttachments } from '../../lib/api'
+  import { IconPaperclip, IconDownload, IconEye, IconDownloadOff, IconShieldSearch } from '@tabler/icons-svelte'
+  import { saveAttachment, saveAllAttachments, scanAttachment } from '../../lib/api'
   import { formatBytes } from '../../lib/format'
   import { fileIcon, previewKind } from '../../lib/filetype'
   import { openPreview } from '../../stores/preview'
+  import { openContextMenu } from '../../stores/contextmenu'
+  import { virusTotal, attachmentVerdicts, putAttachmentVerdict, scanEnabled } from '../../stores/virustotal'
+  import VerdictBadge from '../common/VerdictBadge.svelte'
   import { errorMessage, toastError, toastSuccess } from '../../stores/toast'
   import { t } from '../../lib/i18n'
   import type { Attachment } from '../../lib/types'
@@ -18,6 +21,9 @@
 
   let busy = new Set<number>()
   let savingAll = false
+  let scanningIds = new Set<number>()
+
+  $: canScan = scanEnabled($virusTotal)
 
   $: visible = attachments.filter((a) => !a.inline)
   $: attachmentsLabel = `${visible.length} ${visible.length === 1 ? $t('detail.attachments.one') : $t('detail.attachments.many')}`
@@ -54,6 +60,34 @@
     }
   }
 
+  // scan looks the attachment up by the hash of its bytes. the file is never
+  // uploaded, so a file VirusTotal has not seen comes back unknown.
+  async function scan(att: Attachment): Promise<void> {
+    if (scanningIds.has(att.id)) {
+      return
+    }
+    scanningIds = new Set(scanningIds).add(att.id)
+    try {
+      putAttachmentVerdict(messageId, att.id, await scanAttachment(messageId, att.id))
+    } catch (err) {
+      toastError(errorMessage(err))
+    } finally {
+      const next = new Set(scanningIds)
+      next.delete(att.id)
+      scanningIds = next
+    }
+  }
+
+  function onContext(event: MouseEvent, att: Attachment): void {
+    if (!canScan) {
+      return
+    }
+    event.preventDefault()
+    openContextMenu(event.clientX, event.clientY, [
+      { label: $t('virustotal.scanAttachment'), icon: IconShieldSearch, action: () => void scan(att) },
+    ])
+  }
+
   async function saveAll(): Promise<void> {
     if (savingAll) {
       return
@@ -86,7 +120,7 @@
     </div>
     <div class="cards">
       {#each visible as att (att.id)}
-        <div class="card" class:busy={busy.has(att.id)}>
+        <div class="card" class:busy={busy.has(att.id) || scanningIds.has(att.id)} on:contextmenu={(e) => onContext(e, att)} role="presentation">
           <button
             type="button"
             class="card-main"
@@ -98,7 +132,12 @@
             </span>
             <span class="meta">
               <span class="name">{att.filename}</span>
-              <span class="size">{formatBytes(att.sizeBytes)}</span>
+              <span class="size">
+                {formatBytes(att.sizeBytes)}
+                {#if $attachmentVerdicts.has(att.id)}
+                  <VerdictBadge verdict={$attachmentVerdicts.get(att.id)!} size={12} />
+                {/if}
+              </span>
             </span>
             {#if canPreview(att)}
               <span class="dl" aria-hidden="true"><IconEye size={15} stroke={1.7} /></span>
@@ -149,7 +188,7 @@
     border-radius: var(--radius-control);
     background: var(--surface-raised);
     color: var(--text-secondary);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     font-size: var(--fz-meta);
   }
   .save-all:hover {
@@ -190,7 +229,7 @@
     border: none;
     background: transparent;
     text-align: left;
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
   .card-main:hover {
     background: var(--surface-hover);
@@ -206,7 +245,7 @@
     border-left: var(--hairline) solid var(--border-subtle);
     background: transparent;
     color: var(--text-tertiary);
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
   .dl-btn:hover {
     background: var(--surface-hover);
@@ -241,6 +280,9 @@
   }
 
   .size {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
     font-size: var(--fz-meta);
     color: var(--text-tertiary);
   }

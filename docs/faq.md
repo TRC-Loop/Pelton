@@ -12,8 +12,24 @@ No. There is no telemetry and nothing to opt out of. The complete list of networ
 - the GitHub releases API, only if you enable update checks (off by default)
 - BIMI and Gravatar lookups for sender avatars, unless you switch the avatar source to generated placeholders
 - remote images inside mails, only after you allow them (blocked by default)
+- VirusTotal, only if you enable the integration and supply your own API key (off by default, see [Scanning links and attachments](virustotal.md))
 
 Nothing else, ever. Themes with remote CSS references are flagged at import for exactly this reason.
+
+## A mail shows as gibberish, and it looks fine in another client
+
+Some mail does not say which encoding its text uses, and some names one no
+table knows. Pelton works it out from the text itself, the same way other
+clients do, and marks the message with a small badge in the reading pane so you
+know it was a guess.
+
+If your mail keeps coming from one system that gets this wrong in the same way,
+you can pick a fixed encoding under **Settings, Display, Text encoding
+fallback** instead of leaving it on detection.
+
+Mail that was already in your cache before this existed was stored broken and
+cannot be repaired locally, so Pelton fetches those messages from your server
+again, a few per sync.
 
 ## How do I back up my accounts and settings?
 

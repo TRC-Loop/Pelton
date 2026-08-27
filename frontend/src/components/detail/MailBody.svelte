@@ -8,18 +8,24 @@
   // images are blocked by the backend by default; a per-message affordance
   // asks the backend to re-render with remote content allowed.
   import { onDestroy } from 'svelte'
+  import { get } from 'svelte/store'
   import { BrowserOpenURL } from '../../../wailsjs/runtime/runtime'
-  import { IconPhoto, IconUserCheck, IconWorldCheck, IconMailCheck } from '@tabler/icons-svelte'
+  import { IconPhoto, IconUserCheck, IconWorldCheck, IconMailCheck, IconShieldSearch, IconChevronDown, IconEyeOff } from '@tabler/icons-svelte'
   import { prefs } from '../../stores/prefs'
-  import { getMessageHtml, trustSenderImages, allowDomainImages, allowRemoteForMessage } from '../../lib/api'
+  import { getMessageHtml, trustSenderImages, allowDomainImages, allowRemoteForMessage, scanUrl } from '../../lib/api'
   import { setBodyHtml } from '../../stores/message'
+  import { openContextMenu } from '../../stores/contextmenu'
+  import { virusTotal, linkVerdicts, putLinkVerdict, scanEnabled } from '../../stores/virustotal'
+  import VerdictBadge from '../common/VerdictBadge.svelte'
   import { errorMessage, toastError, toastSuccess } from '../../stores/toast'
   import { displayName, linkifySegments } from '../../lib/format'
   import { bodyFontStack } from '../../lib/fonts'
   import { t } from '../../lib/i18n'
-  import type { MessageDetail } from '../../lib/types'
+  import type { MessageDetail, Verdict } from '../../lib/types'
 
   export let detail: MessageDetail
+
+  $: canScan = scanEnabled($virusTotal)
 
   // remoteLoaded starts true when the backend already rendered remote content
   // because the sender/domain is trusted (or the global override is on).
@@ -77,10 +83,16 @@
   // click handler that runs natively inside the iframe's own document, using
   // postMessage to hand the url back to the parent, has no such dependency on
   // cross-frame event delivery.
-  function buildSrcdoc(html: string, allowRemote: boolean, fontSize: number, bodyFont: string, nonce: string): string {
-    // the reader font preference only sets the fallback; mail that declares
-    // its own fonts keeps them since this is just the base font-family.
+  function buildSrcdoc(html: string, allowRemote: boolean, fontSize: number, bodyFont: string, nonce: string, offerScan: boolean): string {
+    // the reader font preference sets the base font-family, so it applies to
+    // mail that declares none. Mail that declares its own overrides it, unless
+    // the sender-fonts setting is off, in which case the sanitizer has already
+    // taken those declarations out and this is what everything renders in.
     const font = bodyFontStack(bodyFont) ?? readVar('--font-ui')
+    // the .pelton-vt colors are the light-theme semantic token values written
+    // out literally, for the same reason the page colors above are: this
+    // document always renders on a fixed white background, so a badge that
+    // followed the dark theme would be a dark-mode green on white.
     const css = `
   html,body{margin:0;background:#ffffff;color:#1a1a1a;font-family:${font};font-size:${fontSize}px;line-height:1.5;}
   body{padding:4px 2px;word-wrap:break-word;overflow-wrap:break-word;}
@@ -88,7 +100,13 @@
   img{max-width:100%;height:auto;}
   blockquote{margin:0 0 0 8px;padding-left:10px;border-left:2px solid #94a3b8;color:#55606c;}
   table{max-width:100%;}
-  pre{white-space:pre-wrap;}`
+  pre{white-space:pre-wrap;}
+  .pelton-vt{display:inline-block;margin-left:3px;font-family:${readVar('--font-mono') || 'monospace'};font-weight:700;font-size:0.85em;cursor:default;}
+  .pelton-vt-clean{color:#1a7f4b;}
+  .pelton-vt-flagged{color:#c0392b;}
+  .pelton-vt-unknown{color:#6b7280;}
+  .pelton-vt-error{color:#9a6700;}
+  .pelton-phish{display:inline-block;margin-left:3px;font-weight:700;font-size:0.85em;color:#c0392b;cursor:default;}`
     const imgSrc = allowRemote ? 'data: https: http:' : 'data:'
     const csp = `default-src 'none'; img-src ${imgSrc}; style-src 'unsafe-inline'; font-src data:; script-src 'nonce-${nonce}'`
     const cspMeta = `<meta http-equiv="Content-Security-Policy" content="${csp}">`
@@ -98,11 +116,20 @@
     // sandboxed iframe (which has no allow-top-navigation and would silently
     // do nothing). runs inside the iframe's own document so it's a normal,
     // same-document click listener - no cross-frame event delivery involved.
+    //
+    // the contextmenu half is only wired up when a scan can actually be
+    // offered: with the integration off there is nothing to put in a menu, and
+    // suppressing the default one to show nothing would just look broken.
+    const contextHandler = offerScan
+      ? 'document.addEventListener("contextmenu",function(e){var a=e.target&&e.target.closest("a");if(!a)return;var href=(a.getAttribute("href")||"").trim();if(!/^https?:/i.test(href))return;e.preventDefault();window.parent.postMessage({peltonContextLink:href,x:e.clientX,y:e.clientY},"*")});'
+      : ''
     const script =
       '<scr' +
       'ipt nonce="' +
       nonce +
-      '">document.addEventListener("click",function(e){var a=e.target&&e.target.closest("a");if(!a)return;var href=(a.getAttribute("href")||"").trim();if(!href)return;e.preventDefault();if(/^(https?:|mailto:)/i.test(href)){window.parent.postMessage({peltonOpenUrl:href},"*")}});</scr' +
+      '">document.addEventListener("click",function(e){var a=e.target&&e.target.closest("a");if(!a)return;var href=(a.getAttribute("href")||"").trim();if(!href)return;e.preventDefault();if(/^(https?:|mailto:)/i.test(href)){window.parent.postMessage({peltonOpenUrl:href},"*")}});' +
+      contextHandler +
+      '</scr' +
       'ipt>'
     // data-pelton-ready marks the body as belonging to our own srcdoc, not
     // the iframe's initial blank placeholder document: a fresh iframe already
@@ -118,7 +145,7 @@
     return crypto.randomUUID().replace(/-/g, '')
   }
 
-  $: srcdoc = buildSrcdoc(detail.bodyHtmlSafe, remoteLoaded, $prefs.messageFontSize, $prefs.bodyFont, makeNonce())
+  $: srcdoc = buildSrcdoc(detail.bodyHtmlSafe, remoteLoaded, $prefs.messageFontSize, $prefs.bodyFont, makeNonce(), canScan)
 
   // plain-text bodies render in a <pre>, not the sandboxed iframe, so bare
   // urls need their own linkification: nothing upstream turns them into real
@@ -185,6 +212,9 @@
     measure()
     resizeObserver = new ResizeObserver(() => measure())
     resizeObserver.observe(body)
+    // a fresh srcdoc replaces the document, so any badges from the previous
+    // render are gone and have to be put back.
+    decorateLinks(get(linkVerdicts), suspectLinks)
   }
 
   // onFrameLoad fires when the iframe's srcdoc finishes loading. It is the
@@ -229,10 +259,119 @@
     if (event.source !== frame?.contentWindow) {
       return
     }
-    const href = (event.data as { peltonOpenUrl?: unknown } | null)?.peltonOpenUrl
+    const data = event.data as { peltonOpenUrl?: unknown; peltonContextLink?: unknown; x?: unknown; y?: unknown } | null
+    const href = data?.peltonOpenUrl
     if (typeof href === 'string' && /^(https?:|mailto:)/i.test(href)) {
       BrowserOpenURL(href)
+      return
     }
+    const link = data?.peltonContextLink
+    if (typeof link === 'string' && typeof data?.x === 'number' && typeof data?.y === 'number') {
+      openLinkMenu(link, data.x, data.y)
+    }
+  }
+
+  // openLinkMenu shows the scan action for a link the user right-clicked inside
+  // the iframe. the coordinates arrive in the iframe's own space, which the
+  // interface zoom scales relative to the parent, so they are converted using
+  // the measured ratio between the element's rendered and internal widths
+  // rather than by reasoning about the zoom factor.
+  function openLinkMenu(url: string, frameX: number, frameY: number): void {
+    if (!canScan || !frame) {
+      return
+    }
+    const rect = frame.getBoundingClientRect()
+    const inner = frame.contentDocument?.documentElement.clientWidth ?? 0
+    const scale = inner > 0 ? rect.width / inner : 1
+    openContextMenu(rect.left + frameX * scale, rect.top + frameY * scale, [
+      { label: $t('virustotal.scanLink'), icon: IconShieldSearch, action: () => void scanLink(url) },
+    ])
+  }
+
+  // the plain-text body is rendered by svelte rather than in the iframe, so its
+  // links get the same menu directly.
+  function onPlainContext(event: MouseEvent, url: string): void {
+    if (!canScan || url === '') {
+      return
+    }
+    event.preventDefault()
+    openContextMenu(event.clientX, event.clientY, [
+      { label: $t('virustotal.scanLink'), icon: IconShieldSearch, action: () => void scanLink(url) },
+    ])
+  }
+
+  async function scanLink(url: string): Promise<void> {
+    try {
+      putLinkVerdict(detail.id, url, await scanUrl(url))
+    } catch (err) {
+      toastError(errorMessage(err))
+    }
+  }
+
+  // glyph and class for a verdict badge rendered inside the iframe, where the
+  // svelte badge component cannot reach.
+  function verdictGlyph(v: Verdict): { text: string; cls: string; label: string } {
+    if (v.error !== '') {
+      const label = v.error === 'rate_limited' ? $t('virustotal.error.rateLimited') : v.error === 'unauthorized' ? $t('virustotal.error.unauthorized') : v.error
+      return { text: '!', cls: 'pelton-vt-error', label }
+    }
+    if (v.status === 'clean') {
+      return { text: '✓', cls: 'pelton-vt-clean', label: `0/${v.total} ${$t('virustotal.verdict.enginesFlagged')}` }
+    }
+    if (v.status === 'flagged') {
+      return {
+        text: '✗',
+        cls: 'pelton-vt-flagged',
+        label: `${v.malicious + v.suspicious}/${v.total} ${$t('virustotal.verdict.enginesFlagged')}`,
+      }
+    }
+    return { text: '?', cls: 'pelton-vt-unknown', label: $t('virustotal.verdict.unknown') }
+  }
+
+  // suspectLinks are the urls the phishing checks flagged in this message: a
+  // link whose text names another site, a punycode host, a shortener, or a
+  // sign-in page somewhere unrelated to the sender (#206). Marking them where
+  // they sit is the only place the warning is any use, since the banner cannot
+  // point at a link halfway down a newsletter.
+  $: suspectLinks = new Set(detail.phishing?.links ?? [])
+
+  // decorateLinks pins a badge to every anchor whose target has a verdict.
+  // Badges are added to the iframe's own document, which the parent can reach
+  // because the sandbox allows same-origin; they are our own nodes, never
+  // anything the sender supplied, and are rebuilt from scratch on every pass so
+  // a re-scan cannot leave a stale marker behind.
+  function decorateLinks(verdicts: Map<string, Verdict>, suspects: Set<string>): void {
+    const doc = frame?.contentDocument
+    if (!readyBody() || !doc) {
+      return
+    }
+    for (const stale of Array.from(doc.querySelectorAll('.pelton-vt, .pelton-phish'))) {
+      stale.remove()
+    }
+    for (const anchor of Array.from(doc.querySelectorAll('a[href]'))) {
+      const href = (anchor.getAttribute('href') ?? '').trim()
+      if (suspects.has(href)) {
+        const mark = doc.createElement('span')
+        mark.className = 'pelton-phish'
+        mark.textContent = '⚠'
+        mark.title = $t('phishing.linkMarker')
+        anchor.after(mark)
+      }
+      const verdict = verdicts.get(href)
+      if (!verdict) {
+        continue
+      }
+      const { text, cls, label } = verdictGlyph(verdict)
+      const badge = doc.createElement('span')
+      badge.className = `pelton-vt ${cls}`
+      badge.textContent = text
+      badge.title = label
+      anchor.after(badge)
+    }
+  }
+
+  $: if (frame && detail.isHtml) {
+    decorateLinks($linkVerdicts, suspectLinks)
   }
 
   window.addEventListener('message', onWindowMessage)
@@ -243,33 +382,59 @@
     window.removeEventListener('message', onWindowMessage)
   })
 
-  async function loadRemote(): Promise<void> {
+  // tracking pixels (#205). they are only reported when the setting is on, so
+  // an empty list means either a clean message or detection turned off.
+  $: trackers = detail.trackingPixels ?? []
+  // pixelsBlocked flips once remote content has been loaded with the pixels
+  // held back, so the reader is told what was withheld instead of it happening
+  // quietly. Detection is a heuristic: the wording says "look like" and the
+  // menu on each button loads them anyway.
+  let pixelsBlocked = false
+  // which load button has its "load them too" menu open, by index.
+  let pixelMenu: number | null = null
+  // whether the per-pixel breakdown under the banner is expanded.
+  let pixelDetails = false
+
+  // trackerHosts is the deduplicated list of who the pixels would report to.
+  $: trackerHosts = [...new Set(trackers.map((p) => p.host))]
+
+  // reasonText turns the backend's signal names into the sentence shown under
+  // a pixel. An unknown signal falls back to its raw name rather than vanishing.
+  function reasonText(reason: string, tFn: (key: string) => string): string {
+    const key = `detail.mailBody.pixelReason.${reason}`
+    const text = tFn(key)
+    return text === key ? reason : text
+  }
+
+  async function loadRemote(includeTrackers = false): Promise<void> {
     try {
-      const html = await getMessageHtml(detail.id, true)
+      const html = await getMessageHtml(detail.id, true, includeTrackers)
       setBodyHtml(html)
       remoteLoaded = true
+      pixelsBlocked = !includeTrackers && trackers.length > 0
+      pixelMenu = null
     } catch (err) {
       toastError(errorMessage(err))
     }
   }
 
   // trust the sender permanently, then show this message's remote content now.
-  async function trustSender(): Promise<void> {
+  async function trustSender(includeTrackers = false): Promise<void> {
     try {
       await trustSenderImages(detail.id)
       toastSuccess($t('detail.mailBody.imagesTrusted').replace('{who}', senderLabel))
-      await loadRemote()
+      await loadRemote(includeTrackers)
     } catch (err) {
       toastError(errorMessage(err))
     }
   }
 
   // trust the whole sender domain permanently, then show remote content now.
-  async function trustDomain(): Promise<void> {
+  async function trustDomain(includeTrackers = false): Promise<void> {
     try {
       await allowDomainImages(detail.id)
       toastSuccess($t('detail.mailBody.imagesTrusted').replace('{who}', senderDomain ?? ''))
-      await loadRemote()
+      await loadRemote(includeTrackers)
     } catch (err) {
       toastError(errorMessage(err))
     }
@@ -277,14 +442,51 @@
 
   // allow remote content for this one message only (persists), then show it now.
   // nothing else from the sender or domain is trusted.
-  async function trustThisEmail(): Promise<void> {
+  async function trustThisEmail(includeTrackers = false): Promise<void> {
     try {
       await allowRemoteForMessage(detail.id)
-      await loadRemote()
+      await loadRemote(includeTrackers)
     } catch (err) {
       toastError(errorMessage(err))
     }
   }
+
+  // the load buttons, built as data so the split control that carries the
+  // "load the pixels too" menu is written once rather than four times.
+  $: loadActions = [
+    {
+      key: 'once',
+      icon: IconPhoto,
+      label: $t('detail.mailBody.loadOnce'),
+      title: '',
+      run: (withPixels: boolean) => loadRemote(withPixels),
+    },
+    {
+      key: 'email',
+      icon: IconMailCheck,
+      label: $t('detail.mailBody.thisEmail'),
+      title: $t('detail.mailBody.thisEmailTitle'),
+      run: (withPixels: boolean) => trustThisEmail(withPixels),
+    },
+    {
+      key: 'sender',
+      icon: IconUserCheck,
+      label: $t('detail.mailBody.thisSender'),
+      title: $t('detail.mailBody.alwaysLoadFrom').replace('{who}', senderLabel),
+      run: (withPixels: boolean) => trustSender(withPixels),
+    },
+    ...(senderDomain
+      ? [
+          {
+            key: 'domain',
+            icon: IconWorldCheck,
+            label: $t('detail.mailBody.thisDomain'),
+            title: $t('detail.mailBody.alwaysLoadFrom').replace('{who}', senderDomain),
+            run: (withPixels: boolean) => trustDomain(withPixels),
+          },
+        ]
+      : []),
+  ]
 </script>
 
 {#if detail.hasRemoteContent && !remoteLoaded}
@@ -298,25 +500,67 @@
       {/if}
     </div>
     <div class="remote-actions">
-      <button type="button" class="remote-btn" on:click={loadRemote}>
-        <IconPhoto size={14} stroke={1.6} />
-        {$t('detail.mailBody.loadOnce')}
-      </button>
-      <button type="button" class="remote-btn" on:click={trustThisEmail} title={$t('detail.mailBody.thisEmailTitle')}>
-        <IconMailCheck size={14} stroke={1.6} />
-        {$t('detail.mailBody.thisEmail')}
-      </button>
-      <button type="button" class="remote-btn" on:click={trustSender} title={$t('detail.mailBody.alwaysLoadFrom').replace('{who}', senderLabel)}>
-        <IconUserCheck size={14} stroke={1.6} />
-        {$t('detail.mailBody.thisSender')}
-      </button>
-      {#if senderDomain}
-        <button type="button" class="remote-btn" on:click={trustDomain} title={$t('detail.mailBody.alwaysLoadFrom').replace('{who}', senderDomain)}>
-          <IconWorldCheck size={14} stroke={1.6} />
-          {$t('detail.mailBody.thisDomain')}
-        </button>
-      {/if}
+      {#each loadActions as action, i (action.key)}
+        <span class="split">
+          <button type="button" class="remote-btn" class:has-caret={trackers.length > 0} title={action.title} on:click={() => action.run(false)}>
+            <svelte:component this={action.icon} size={14} stroke={1.6} />
+            {action.label}
+          </button>
+          {#if trackers.length > 0}
+            <button
+              type="button"
+              class="remote-caret"
+              aria-label={$t('detail.mailBody.pixelMenuLabel')}
+              aria-expanded={pixelMenu === i}
+              on:click={() => (pixelMenu = pixelMenu === i ? null : i)}
+            >
+              <IconChevronDown size={12} stroke={2} />
+            </button>
+            {#if pixelMenu === i}
+              <div class="pixel-menu">
+                <button type="button" on:click={() => action.run(true)}>
+                  {$t('detail.mailBody.loadWithPixels')}
+                </button>
+              </div>
+            {/if}
+          {/if}
+        </span>
+      {/each}
     </div>
+  </div>
+{/if}
+
+{#if detail.hasRemoteContent && !remoteLoaded && trackers.length > 0}
+  <div class="pixel-bar">
+    <button type="button" class="pixel-summary" aria-expanded={pixelDetails} on:click={() => (pixelDetails = !pixelDetails)}>
+      <IconEyeOff size={14} stroke={1.6} />
+      {$t('detail.mailBody.pixelSummary').replace('{count}', String(trackers.length))}
+      <IconChevronDown size={12} stroke={2} class={pixelDetails ? 'flip' : ''} />
+    </button>
+    {#if pixelDetails}
+      <ul class="pixel-list">
+        {#each trackers as pixel (pixel.url)}
+          <li>
+            <span class="pixel-host">{pixel.host}</span>
+            <span class="pixel-why">{pixel.reasons.map((r) => reasonText(r, $t)).join(', ')}</span>
+          </li>
+        {/each}
+      </ul>
+      <p class="pixel-note">{$t('detail.mailBody.pixelNote')}</p>
+    {/if}
+  </div>
+{/if}
+
+{#if remoteLoaded && pixelsBlocked}
+  <div class="pixel-bar done">
+    <span class="pixel-done-text">
+      <IconEyeOff size={14} stroke={1.6} />
+      {$t('detail.mailBody.pixelsKeptBlocked').replace('{count}', String(trackers.length))}
+      <span class="pixel-hosts" title={trackerHosts.join(', ')}>{trackerHosts.slice(0, 2).join(', ')}</span>
+    </span>
+    <button type="button" class="remote-btn" on:click={() => loadRemote(true)}>
+      {$t('detail.mailBody.loadWithPixels')}
+    </button>
   </div>
 {/if}
 
@@ -335,7 +579,8 @@
         class="plain-link"
         href={segment.href}
         on:click|preventDefault={() => BrowserOpenURL(segment.href ?? '')}
-      >{segment.text}</a>{:else}{segment.text}{/if}{/each}</pre>
+        on:contextmenu={(e) => onPlainContext(e, segment.href ?? '')}
+      >{segment.text}</a>{#if $linkVerdicts.has(segment.href ?? '')}<VerdictBadge verdict={$linkVerdicts.get(segment.href ?? '')!} size={12} />{/if}{:else}{segment.text}{/if}{/each}</pre>
 {/if}
 
 <style>
@@ -390,11 +635,143 @@
     background: var(--surface-raised);
     color: var(--text-primary);
     font-size: var(--fz-label);
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
 
   .remote-btn:hover {
     background: var(--surface-hover);
+  }
+
+  /* a split control: the button does the safe thing, the caret next to it
+     offers to load the tracking pixels as well. */
+  .split {
+    position: relative;
+    display: inline-flex;
+  }
+
+  .remote-btn.has-caret {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+    border-right: none;
+  }
+
+  .remote-caret {
+    display: inline-flex;
+    align-items: center;
+    padding: 0 var(--space-1);
+    border: var(--hairline) solid var(--border-default);
+    border-top-right-radius: var(--radius-control);
+    border-bottom-right-radius: var(--radius-control);
+    background: var(--surface-raised);
+    color: var(--text-secondary);
+    cursor: pointer;
+  }
+
+  .remote-caret:hover {
+    background: var(--surface-hover);
+    color: var(--text-primary);
+  }
+
+  .pixel-menu {
+    position: absolute;
+    top: calc(100% + var(--space-1));
+    right: 0;
+    z-index: 30;
+    border: var(--hairline) solid var(--border-default);
+    border-radius: var(--radius-control);
+    background: var(--surface-overlay);
+    box-shadow: var(--shadow-overlay);
+    white-space: nowrap;
+  }
+
+  .pixel-menu button {
+    display: block;
+    width: 100%;
+    padding: var(--space-2) var(--space-3);
+    border: none;
+    background: transparent;
+    color: var(--text-primary);
+    font-size: var(--fz-label);
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .pixel-menu button:hover {
+    background: var(--surface-hover);
+  }
+
+  /* the tracking-pixel line sits under the blocked-content banner, and after
+     loading it replaces it with what stayed behind. */
+  .pixel-bar {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    border: var(--hairline) solid var(--border-subtle);
+    border-radius: var(--radius-control);
+    margin-bottom: var(--space-2);
+  }
+
+  .pixel-bar.done {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    flex-wrap: wrap;
+  }
+
+  .pixel-summary,
+  .pixel-done-text {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    border: none;
+    background: transparent;
+    padding: 0;
+    color: var(--text-secondary);
+    font-size: var(--fz-meta);
+    text-align: left;
+  }
+
+  .pixel-summary {
+    cursor: pointer;
+  }
+
+  .pixel-summary:hover {
+    color: var(--text-primary);
+  }
+
+  .pixel-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+
+  .pixel-list li {
+    display: flex;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+    font-size: var(--fz-meta);
+  }
+
+  .pixel-host {
+    font-family: var(--font-mono);
+    color: var(--text-primary);
+    word-break: break-all;
+  }
+
+  .pixel-why,
+  .pixel-hosts {
+    color: var(--text-tertiary);
+  }
+
+  .pixel-note {
+    margin: 0;
+    font-size: var(--fz-meta);
+    color: var(--text-tertiary);
   }
 
   /* height is set inline from the measured content height so the pane has a single
@@ -430,6 +807,6 @@
   .plain-link {
     color: var(--accent);
     text-decoration: underline;
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
 </style>

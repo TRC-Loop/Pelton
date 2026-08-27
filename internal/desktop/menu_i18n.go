@@ -12,11 +12,13 @@ type menuStrings struct {
 	fileMenu         string
 	compose          string
 	exportPDF        string
+	closeWindow      string
 	mailboxMenu      string
 	syncNow          string
 	openWindow       string
 	addMailbox       string
 	manageMailboxes  string
+	contacts         string
 	mailMenu         string
 	undo             string
 	markRead         string
@@ -27,6 +29,9 @@ type menuStrings struct {
 	viewMenu         string
 	toggleFullscreen string
 	lowPowerMode     string
+	openInTab        string
+	switchProfile    string
+	closeTab         string
 }
 
 // menuLocales mirrors the frontend's supported languages (en/de/fr/nl/es).
@@ -44,11 +49,13 @@ var menuLocales = map[string]menuStrings{
 		fileMenu:         "File",
 		compose:          "Compose",
 		exportPDF:        "Export Message as PDF…",
+		closeWindow:      "Close Window",
 		mailboxMenu:      "Mailbox",
 		syncNow:          "Sync Now",
 		openWindow:       "Open Pelton",
 		addMailbox:       "Add Mailbox…",
 		manageMailboxes:  "Manage Mailboxes…",
+		contacts:         "Contacts…",
 		mailMenu:         "Mail",
 		undo:             "Undo",
 		markRead:         "Mark as Read",
@@ -59,6 +66,9 @@ var menuLocales = map[string]menuStrings{
 		viewMenu:         "View",
 		toggleFullscreen: "Toggle Fullscreen",
 		lowPowerMode:     "Low Power Mode",
+		openInTab:        "Open in New Tab",
+		switchProfile:    "Switch Profile…",
+		closeTab:         "Close Tab",
 	},
 	"de": {
 		appMenu:          "Pelton",
@@ -69,11 +79,13 @@ var menuLocales = map[string]menuStrings{
 		fileMenu:         "Datei",
 		compose:          "Neue Nachricht",
 		exportPDF:        "Nachricht als PDF exportieren…",
+		closeWindow:      "Fenster schließen",
 		mailboxMenu:      "Postfach",
 		syncNow:          "Jetzt synchronisieren",
 		openWindow:       "Pelton öffnen",
 		addMailbox:       "Postfach hinzufügen…",
 		manageMailboxes:  "Postfächer verwalten…",
+		contacts:         "Kontakte…",
 		mailMenu:         "Nachricht",
 		undo:             "Rückgängig",
 		markRead:         "Als gelesen markieren",
@@ -84,6 +96,9 @@ var menuLocales = map[string]menuStrings{
 		viewMenu:         "Ansicht",
 		toggleFullscreen: "Vollbild umschalten",
 		lowPowerMode:     "Energiesparmodus",
+		openInTab:        "In neuem Tab öffnen",
+		switchProfile:    "Profil wechseln…",
+		closeTab:         "Tab schließen",
 	},
 	"fr": {
 		appMenu:          "Pelton",
@@ -94,11 +109,13 @@ var menuLocales = map[string]menuStrings{
 		fileMenu:         "Fichier",
 		compose:          "Nouveau message",
 		exportPDF:        "Exporter le message en PDF…",
+		closeWindow:      "Fermer la fenêtre",
 		mailboxMenu:      "Boîte mail",
 		syncNow:          "Synchroniser maintenant",
 		openWindow:       "Ouvrir Pelton",
 		addMailbox:       "Ajouter une boîte mail…",
 		manageMailboxes:  "Gérer les boîtes mail…",
+		contacts:         "Contacts…",
 		mailMenu:         "Message",
 		undo:             "Annuler",
 		markRead:         "Marquer comme lu",
@@ -109,6 +126,9 @@ var menuLocales = map[string]menuStrings{
 		viewMenu:         "Affichage",
 		toggleFullscreen: "Basculer le plein écran",
 		lowPowerMode:     "Mode basse consommation",
+		openInTab:        "Ouvrir dans un nouvel onglet",
+		switchProfile:    "Changer de profil…",
+		closeTab:         "Fermer l'onglet",
 	},
 	"nl": {
 		appMenu:          "Pelton",
@@ -119,11 +139,13 @@ var menuLocales = map[string]menuStrings{
 		fileMenu:         "Bestand",
 		compose:          "Nieuw bericht",
 		exportPDF:        "Bericht exporteren als PDF…",
+		closeWindow:      "Venster sluiten",
 		mailboxMenu:      "Mailbox",
 		syncNow:          "Nu synchroniseren",
 		openWindow:       "Pelton openen",
 		addMailbox:       "Mailbox toevoegen…",
 		manageMailboxes:  "Mailboxen beheren…",
+		contacts:         "Contactpersonen…",
 		mailMenu:         "Bericht",
 		undo:             "Ongedaan maken",
 		markRead:         "Als gelezen markeren",
@@ -134,6 +156,9 @@ var menuLocales = map[string]menuStrings{
 		viewMenu:         "Beeld",
 		toggleFullscreen: "Volledig scherm in-/uitschakelen",
 		lowPowerMode:     "Energiebesparende modus",
+		openInTab:        "Openen in nieuw tabblad",
+		switchProfile:    "Profiel wisselen…",
+		closeTab:         "Tabblad sluiten",
 	},
 	"es": {
 		appMenu:          "Pelton",
@@ -144,11 +169,13 @@ var menuLocales = map[string]menuStrings{
 		fileMenu:         "Archivo",
 		compose:          "Redactar",
 		exportPDF:        "Exportar mensaje como PDF…",
+		closeWindow:      "Cerrar ventana",
 		mailboxMenu:      "Buzón",
 		syncNow:          "Sincronizar ahora",
 		openWindow:       "Abrir Pelton",
 		addMailbox:       "Añadir buzón…",
 		manageMailboxes:  "Administrar buzones…",
+		contacts:         "Contactos…",
 		mailMenu:         "Mensaje",
 		undo:             "Deshacer",
 		markRead:         "Marcar como leído",
@@ -159,6 +186,9 @@ var menuLocales = map[string]menuStrings{
 		viewMenu:         "Ver",
 		toggleFullscreen: "Alternar pantalla completa",
 		lowPowerMode:     "Modo de bajo consumo",
+		openInTab:        "Abrir en una pestaña nueva",
+		switchProfile:    "Cambiar de perfil…",
+		closeTab:         "Cerrar pestaña",
 	},
 	"pl": {
 		appMenu:          "Pelton",
@@ -169,11 +199,13 @@ var menuLocales = map[string]menuStrings{
 		fileMenu:         "Plik",
 		compose:          "Napisz",
 		exportPDF:        "Eksportuj wiadomość jako PDF…",
+		closeWindow:      "Zamknij okno",
 		mailboxMenu:      "Skrzynka",
 		syncNow:          "Synchronizuj teraz",
 		openWindow:       "Otwórz Pelton",
 		addMailbox:       "Dodaj skrzynkę…",
 		manageMailboxes:  "Zarządzaj skrzynkami…",
+		contacts:         "Kontakty…",
 		mailMenu:         "Wiadomość",
 		undo:             "Cofnij",
 		markRead:         "Oznacz jako przeczytane",
@@ -184,6 +216,9 @@ var menuLocales = map[string]menuStrings{
 		viewMenu:         "Widok",
 		toggleFullscreen: "Przełącz pełny ekran",
 		lowPowerMode:     "Tryb oszczędzania energii",
+		openInTab:        "Otwórz w nowej karcie",
+		switchProfile:    "Zmień profil…",
+		closeTab:         "Zamknij kartę",
 	},
 }
 

@@ -213,6 +213,7 @@
     aria-selected={selected}
     on:click
     on:dblclick
+    on:auxclick
     on:contextmenu
     on:wheel={onWheel}
   >
@@ -222,7 +223,9 @@
 
     <div class="content">
       <div class="line top">
-        <span class="dot" class:show={unread} aria-hidden="true"></span>
+        {#if unread}
+          <span class="dot" aria-hidden="true"></span>
+        {/if}
         {#if isVip}
           <IconStarFilled size={12} class="vip-star" aria-label={$t('vip.star')} />
         {/if}
@@ -291,7 +294,7 @@
     gap: var(--space-3);
     padding: var(--row-pad-y) var(--row-pad-x);
     border-bottom: var(--hairline) solid var(--border-subtle);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     background: var(--surface-raised);
   }
 
@@ -363,13 +366,9 @@
     width: 7px;
     height: 7px;
     border-radius: 999px;
-    background: transparent;
+    background: var(--text-primary);
     flex-shrink: 0;
     align-self: center;
-  }
-
-  .dot.show {
-    background: var(--text-primary);
   }
 
   .sender {

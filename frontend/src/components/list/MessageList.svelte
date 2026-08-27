@@ -9,6 +9,7 @@
   import MessageRow from './MessageRow.svelte'
   import SearchBar from './SearchBar.svelte'
   import Spinner from '../common/Spinner.svelte'
+  import MessageSkeleton from './MessageSkeleton.svelte'
   import EmptyState from '../common/EmptyState.svelte'
   import ErrorState from '../common/ErrorState.svelte'
   import {
@@ -21,18 +22,25 @@
     IconFlagFilled,
     IconTrash,
     IconX,
+    IconSquare,
+    IconSquareCheck,
+    IconSquareMinus,
     IconClockPause,
     IconDownload,
     IconDownloadOff,
     IconFolderSymlink,
     IconStar,
     IconStarFilled,
+    IconLayoutColumns,
+    IconArchive,
   } from '@tabler/icons-svelte'
   import { selection, searchQuery, openMessageId, openMessage } from '../../stores/selection'
   import {
     messageList,
     loadList,
     loadMore,
+    loadOlder,
+    backfillFailed,
     runSearch,
     patchInList,
     removeFromList,
@@ -44,30 +52,54 @@
   import {
     selectedIds,
     clearSelection,
+    anchorAt,
+    selectOnly,
     toggleSelect,
     selectRange,
   } from '../../stores/listselect'
+  import {
+    expandOffer,
+    expanding,
+    selectAllInList,
+    expandSelection,
+    clearExpandOffer,
+    clearAll,
+  } from '../../stores/selectall'
   import { prefs } from '../../stores/prefs'
   import {
     setSeen,
-    setFlagged,
-    deleteMessage,
     getMessage,
-    setFlagColor,
-    downloadMessageOffline,
     removeOffline,
     archiveMessage,
   } from '../../lib/api'
   import { openReply, openForward } from '../../stores/compose'
-  import { openSnooze } from '../../stores/snooze'
-  import { openMove } from '../../stores/move'
+  import { openSnooze, openSnoozeMany } from '../../stores/snooze'
+  import { openMove, openMoveMany } from '../../stores/move'
   import { recordDeleted } from '../../stores/undodelete'
   import { recordArchived } from '../../stores/undoarchive'
   import { openContextMenu, type MenuEntry } from '../../stores/contextmenu'
-  import { errorMessage, toastError, toastSuccess } from '../../stores/toast'
-  import { isVIPAddress, addVIP, removeVIP } from '../../stores/vip'
+  import { menuHint } from '../../stores/shortcuts'
+  import type { ShortcutAction } from '../../lib/shortcuts'
+  import { openInTab } from '../../stores/tabs'
+  import { errorMessage, toastError } from '../../stores/toast'
+  import { isVIPAddress } from '../../stores/vip'
   import type { Selection, MessageSummary, SwipeAction, EditorMode } from '../../lib/types'
   import { t } from '../../lib/i18n'
+  import {
+    markSeen,
+    markFlagged,
+    markColor,
+    toggleSenderVIP,
+    setOffline,
+    trashMessage,
+    bulkMarkSeen,
+    bulkMarkFlagged,
+    bulkMarkColor,
+    bulkSetOffline,
+    bulkArchive,
+    bulkTrash,
+    reportArchiveExport,
+  } from '../../lib/messageactions'
 
   // the meta-bar title. built-in unified views are localized by key (matching the
   // sidebar), so it stays correct after a language switch; folders and saved
@@ -126,6 +158,14 @@
     }
   })
 
+  // withHint appends an action's shortcut to a button tooltip, so hovering the
+  // delete button says which key does the same thing (#329). Unbound actions,
+  // and hints turned off, leave the tooltip as it was.
+  function withHint(label: string, action: ShortcutAction): string {
+    const hint = menuHint(action)
+    return hint ? `${label}  ${hint}` : label
+  }
+
   // selectionKey identifies a selection so we reload only when it actually
   // changes, not on unrelated store updates.
   function selectionKey(sel: Selection): string {
@@ -138,16 +178,41 @@
     return `folder:${sel.folderId}`
   }
 
+  // resetScroll puts the list back at the top. the container outlives the rows
+  // it holds, so without this a change of content keeps the old offset and a
+  // short result set renders far above the viewport, looking like no results.
+  function resetScroll(): void {
+    scrollTop = 0
+    if (listEl) {
+      listEl.scrollTop = 0
+    }
+  }
+
   let lastKey = ''
   $: if ($selection && selectionKey($selection) !== lastKey) {
     lastKey = selectionKey($selection)
     activeIndex = -1
     clearSelection()
+    resetScroll()
     void loadList($selection)
   }
 
   $: items = $messageList.data?.items ?? []
-  $: hasMore = !($messageList.data?.searching ?? false) && items.length < ($messageList.data?.total ?? 0)
+  // a result set pages too: a broad query matches far more than one page, and
+  // stopping at the first page is what made a match ranked below it look like
+  // no match at all.
+  $: searching = $messageList.data?.searching ?? false
+  $: hasMore = searching
+    ? !($messageList.data?.exhausted ?? false) &&
+      ($messageList.data?.loadedHits ?? items.length) < ($messageList.data?.total ?? 0)
+    : items.length < ($messageList.data?.total ?? 0)
+  // the cache is exhausted but the server still has older mail. hasMore covers
+  // paging what is cached; this covers going back to the server for the rest.
+  $: backfilling = $messageList.data?.backfilling ?? false
+  $: canLoadOlder = !hasMore && ($messageList.data?.hasOlder ?? false) && !($messageList.data?.searching ?? false)
+  // the button shows when auto-backfill is off, or when an automatic attempt
+  // failed and retrying is the user's call.
+  $: showLoadOlder = canLoadOlder && !backfilling && (!$prefs.syncAutoBackfill || $backfillFailed)
 
   // measure once rows first appear and the height is still unknown.
   $: if (items.length > 0 && rowHeight === 0) {
@@ -166,6 +231,30 @@
   // the live multi-selection, intersected with what is still loaded so bulk
   // actions never act on rows that have scrolled out of the data.
   $: selectedItems = items.filter((m) => $selectedIds.has(m.id))
+
+  // select-all is not offered in the unified views unless it is asked for: one
+  // of those lists spans every account, so "everything in this list" is a much
+  // bigger claim there than in a single mailbox. A search result set counts as
+  // a search wherever it was run from, and a saved view is a stored search.
+  $: selectAllAvailable =
+    $prefs.multiSelectEnabled &&
+    (($messageList.data?.searching ?? false) ||
+      $selection.kind !== 'view' ||
+      $prefs.selectAllUnified)
+
+  // the header checkbox is ticked only when every loaded row is in the
+  // selection, and dashed for anything in between.
+  $: allLoadedSelected = items.length > 0 && items.every((m) => $selectedIds.has(m.id))
+
+  // clicking it clears a full selection and otherwise selects, which is what a
+  // checkbox in that state looks like it will do.
+  async function onSelectAllClick(): Promise<void> {
+    if (allLoadedSelected && selectionCount > 0) {
+      clearAll()
+      return
+    }
+    await selectAllInList(items.map((m) => m.id))
+  }
   $: selectionCount = selectedItems.length
 
   // keep the keyboard-nav highlight in sync with whichever message is open,
@@ -185,6 +274,7 @@
   function applySearch(query: string, filter: SearchFilter): void {
     activeIndex = -1
     clearSelection()
+    resetScroll()
     if (query === '' && !filterActive(filter)) {
       void loadList($selection)
     } else {
@@ -211,6 +301,8 @@
     }
     activeIndex = index
     clearSelection()
+    // the row that was opened is where a following shift-click measures from.
+    anchorAt(item.id)
     openMessage(item.id)
     if (!item.seen) {
       patchInList(item.id, { seen: true })
@@ -245,10 +337,18 @@
   // keyboard navigation over the rows.
   async function onKeydown(event: KeyboardEvent): Promise<void> {
     if (event.key === 'Escape' && selectionCount > 0) {
-      clearSelection()
+      clearAll()
       return
     }
     if (items.length === 0) {
+      return
+    }
+    // cmd/ctrl+a while the list has focus. What it reaches is a preference:
+    // the loaded rows with the rest offered, the whole list, or only what is
+    // loaded (#320).
+    if (selectAllAvailable && (event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'a') {
+      event.preventDefault()
+      await selectAllInList(items.map((m) => m.id))
       return
     }
     if (event.key === 'ArrowDown') {
@@ -286,92 +386,61 @@
   // toggleSeen / toggleFlag / remove act on a single row from the context menu,
   // updating the list optimistically and surfacing any backend error.
   async function toggleSeen(item: MessageSummary): Promise<void> {
-    patchInList(item.id, { seen: !item.seen })
-    try {
-      await setSeen(item.id, !item.seen)
-    } catch (err) {
-      toastError(errorMessage(err))
-    }
+    await markSeen(item, !item.seen)
   }
 
   async function toggleFlag(item: MessageSummary): Promise<void> {
-    patchInList(item.id, { flagged: !item.flagged })
-    try {
-      await setFlagged(item.id, !item.flagged)
-    } catch (err) {
-      toastError(errorMessage(err))
-    }
+    await markFlagged(item, !item.flagged)
   }
 
   // toggleVIP stars or unstars a row's sender from the context menu; the vip
   // store drives the live star on every row from that sender.
   async function toggleVIP(item: MessageSummary): Promise<void> {
-    try {
-      if (isVIPAddress(item.fromAddress)) {
-        await removeVIP(item.fromAddress)
-      } else {
-        await addVIP(item.fromAddress)
-      }
-    } catch (err) {
-      toastError(errorMessage(err))
-    }
+    await toggleSenderVIP(item)
   }
 
   async function remove(item: MessageSummary): Promise<void> {
-    try {
-      await deleteMessage(item.id)
-      recordDeleted(item)
-      removeFromList(item.id)
-      if ($openMessageId === item.id) {
-        openMessageId.set(null)
-      }
-    } catch (err) {
-      toastError(errorMessage(err))
-    }
+    await trashMessage(item)
   }
 
   // bulk actions operate on the whole multi-selection, then clear it.
   async function bulkSetSeen(seen: boolean): Promise<void> {
-    const targets = selectedItems
-    for (const item of targets) {
-      patchInList(item.id, { seen })
-    }
-    clearSelection()
-    await Promise.all(
-      targets.map((item) =>
-        setSeen(item.id, seen).catch((err) => toastError(errorMessage(err))),
-      ),
-    )
+    await bulkMarkSeen(selectedItems, seen)
   }
 
   async function bulkSetFlagged(flagged: boolean): Promise<void> {
-    const targets = selectedItems
-    for (const item of targets) {
-      patchInList(item.id, { flagged })
-    }
-    clearSelection()
-    await Promise.all(
-      targets.map((item) =>
-        setFlagged(item.id, flagged).catch((err) => toastError(errorMessage(err))),
-      ),
-    )
+    await bulkMarkFlagged(selectedItems, flagged)
   }
 
   async function bulkDelete(): Promise<void> {
-    const targets = selectedItems
+    await bulkTrash(selectedItems)
+  }
+
+  async function bulkSetColor(color: number): Promise<void> {
+    await bulkMarkColor(selectedItems, color)
+  }
+
+  async function bulkSetOfflineCopies(offline: boolean): Promise<void> {
+    await bulkSetOffline(selectedItems, offline)
+  }
+
+  async function bulkArchiveSelection(): Promise<void> {
+    await bulkArchive(selectedItems)
+  }
+
+  // the move and snooze dialogs take the whole selection, so the folder or the
+  // time is chosen once rather than once per message. Both clear the selection
+  // here: the rows are on their way out of this list either way.
+  function bulkMove(): void {
+    const items = selectedItems
     clearSelection()
-    for (const item of targets) {
-      try {
-        await deleteMessage(item.id)
-        recordDeleted(item)
-        removeFromList(item.id)
-        if ($openMessageId === item.id) {
-          openMessageId.set(null)
-        }
-      } catch (err) {
-        toastError(errorMessage(err))
-      }
-    }
+    openMoveMany(items)
+  }
+
+  function bulkSnooze(): void {
+    const ids = selectedItems.map((m) => m.id)
+    clearSelection()
+    openSnoozeMany(ids)
   }
 
   // reply/forward need the full message (for quoting), so load it first.
@@ -397,12 +466,7 @@
 
   // setColor applies a flag color to a row (0 clears), optimistically.
   async function setColor(item: MessageSummary, color: number): Promise<void> {
-    patchInList(item.id, { flagColor: color })
-    try {
-      await setFlagColor(item.id, color)
-    } catch (err) {
-      toastError(errorMessage(err))
-    }
+    await markColor(item, color)
   }
 
   // archive moves a row to the account's Archive folder, removing it from the
@@ -414,6 +478,7 @@
     }
     try {
       const undo = await archiveMessage(item.id)
+      reportArchiveExport(undo)
       if (undo.messageId) {
         recordArchived(item, undo.messageId, undo.originalFolderId)
       }
@@ -426,18 +491,7 @@
 
   // toggleOffline pins or unpins a row for offline availability.
   async function toggleOffline(item: MessageSummary): Promise<void> {
-    const next = !item.offline
-    patchInList(item.id, { offline: next })
-    try {
-      if (next) {
-        await downloadMessageOffline(item.id)
-        toastSuccess($t('messageList.toast.savedOffline'))
-      } else {
-        await removeOffline(item.id)
-      }
-    } catch (err) {
-      toastError(errorMessage(err))
-    }
+    await setOffline(item, !item.offline)
   }
 
   // performSwipe runs the configured action for a swipe direction on a row.
@@ -471,47 +525,77 @@
   function onContext(event: MouseEvent, item: MessageSummary): void {
     event.preventDefault()
     if (selectionCount > 1 && $selectedIds.has(item.id)) {
+      const n = String(selectionCount)
       const anyUnread = selectedItems.some((m) => !m.seen)
       const anyUnflagged = selectedItems.some((m) => !m.flagged)
+      const anyOnline = selectedItems.some((m) => !m.offline)
       const entries: MenuEntry[] = [
         anyUnread
-          ? { label: $t('messageList.bulk.markReadCount').replace('{n}', String(selectionCount)), icon: IconMailOpened, action: () => void bulkSetSeen(true) }
-          : { label: $t('messageList.bulk.markUnreadCount').replace('{n}', String(selectionCount)), icon: IconMailFilled, action: () => void bulkSetSeen(false) },
+          ? { label: $t('messageList.bulk.markReadCount').replace('{n}', n), icon: IconMailOpened, action: () => void bulkSetSeen(true) }
+          : { label: $t('messageList.bulk.markUnreadCount').replace('{n}', n), icon: IconMailFilled, action: () => void bulkSetSeen(false) },
         anyUnflagged
-          ? { label: $t('messageList.bulk.flagCount').replace('{n}', String(selectionCount)), icon: IconFlagFilled, action: () => void bulkSetFlagged(true) }
-          : { label: $t('messageList.bulk.unflagCount').replace('{n}', String(selectionCount)), icon: IconFlag, action: () => void bulkSetFlagged(false) },
+          ? { label: $t('messageList.bulk.flagCount').replace('{n}', n), icon: IconFlagFilled, action: () => void bulkSetFlagged(true) }
+          : { label: $t('messageList.bulk.unflagCount').replace('{n}', n), icon: IconFlag, action: () => void bulkSetFlagged(false) },
+        // the colour row has no count of its own; it sits under the labels above
+        // and applies to the same selection they name.
+        { kind: 'colors', current: 0, onPick: (color) => void bulkSetColor(color) },
         'separator',
-        { label: $t('messageList.bulk.deleteCount').replace('{n}', String(selectionCount)), icon: IconTrash, danger: true, action: () => void bulkDelete() },
+        { label: $t('messageList.bulk.snoozeCount').replace('{n}', n), icon: IconClockPause, hint: menuHint('snooze'), action: bulkSnooze },
+        { label: $t('messageList.bulk.moveCount').replace('{n}', n), icon: IconFolderSymlink, hint: menuHint('move-to'), action: bulkMove },
+        { label: $t('messageList.bulk.archiveCount').replace('{n}', n), icon: IconArchive, hint: menuHint('archive'), action: () => void bulkArchiveSelection() },
+        anyOnline
+          ? { label: $t('messageList.bulk.downloadCount').replace('{n}', n), icon: IconDownload, action: () => void bulkSetOfflineCopies(true) }
+          : { label: $t('messageList.bulk.removeOfflineCount').replace('{n}', n), icon: IconDownloadOff, action: () => void bulkSetOfflineCopies(false) },
+        'separator',
+        { label: $t('messageList.bulk.deleteCount').replace('{n}', n), icon: IconTrash, danger: true, hint: menuHint('delete-message'), action: () => void bulkDelete() },
       ]
       openContextMenu(event.clientX, event.clientY, entries)
       return
     }
+    // right clicking outside the selection is a fresh start: the row under the
+    // pointer becomes the selection and the menu is about that message, which is
+    // what every other app does and what stops an action landing on a set the
+    // user had forgotten about.
+    if (selectionCount > 0 && !$selectedIds.has(item.id)) {
+      selectOnly(item.id)
+    }
     const entries: MenuEntry[] = [
       { label: $t('messageList.menu.open'), icon: IconMail, action: () => open(items.indexOf(item)) },
-      { label: $t('action.reply'), icon: IconArrowBackUp, action: () => void replyTo(item, false) },
-      { label: $t('shortcut.replyAll'), icon: IconArrowBackUp, action: () => void replyTo(item, true) },
-      { label: $t('action.forward'), icon: IconArrowForwardUp, action: () => void forward(item) },
+      { label: $t('messageList.menu.openInTab'), icon: IconLayoutColumns, action: () => openInTab(item.id, item.subject) },
+      { label: $t('action.reply'), icon: IconArrowBackUp, hint: menuHint('reply'), action: () => void replyTo(item, false) },
+      { label: $t('shortcut.replyAll'), icon: IconArrowBackUp, hint: menuHint('reply-all'), action: () => void replyTo(item, true) },
+      { label: $t('action.forward'), icon: IconArrowForwardUp, hint: menuHint('forward'), action: () => void forward(item) },
       'separator',
       item.seen
-        ? { label: $t('shortcut.markUnread'), icon: IconMailFilled, action: () => void toggleSeen(item) }
-        : { label: $t('shortcut.markRead'), icon: IconMailOpened, action: () => void toggleSeen(item) },
+        ? { label: $t('shortcut.markUnread'), icon: IconMailFilled, hint: menuHint('mark-unread'), action: () => void toggleSeen(item) }
+        : { label: $t('shortcut.markRead'), icon: IconMailOpened, hint: menuHint('mark-read'), action: () => void toggleSeen(item) },
       item.flagged
-        ? { label: $t('messageList.unflag'), icon: IconFlag, action: () => void toggleFlag(item) }
-        : { label: $t('messageList.flag'), icon: IconFlagFilled, action: () => void toggleFlag(item) },
+        ? { label: $t('messageList.unflag'), icon: IconFlag, hint: menuHint('flag'), action: () => void toggleFlag(item) }
+        : { label: $t('messageList.flag'), icon: IconFlagFilled, hint: menuHint('flag'), action: () => void toggleFlag(item) },
       { kind: 'colors', current: item.flagColor, onPick: (color) => void setColor(item, color) },
       isVIPAddress(item.fromAddress)
         ? { label: $t('vip.unmark'), icon: IconStar, action: () => void toggleVIP(item) }
         : { label: $t('vip.mark'), icon: IconStarFilled, action: () => void toggleVIP(item) },
       'separator',
-      { label: $t('messageList.menu.snooze'), icon: IconClockPause, action: () => openSnooze(item.id, item.subject) },
-      { label: $t('messageList.menu.moveTo'), icon: IconFolderSymlink, action: () => openMove(item) },
+      { label: $t('messageList.menu.snooze'), icon: IconClockPause, hint: menuHint('snooze'), action: () => openSnooze(item.id, item.subject) },
+      { label: $t('messageList.menu.moveTo'), icon: IconFolderSymlink, hint: menuHint('move-to'), action: () => openMove(item) },
       item.offline
-        ? { label: $t('messageList.menu.removeOffline'), icon: IconDownloadOff, action: () => void toggleOffline(item) }
-        : { label: $t('shortcut.downloadOffline'), icon: IconDownload, action: () => void toggleOffline(item) },
+        ? { label: $t('messageList.menu.removeOffline'), icon: IconDownloadOff, hint: menuHint('remove-offline'), action: () => void toggleOffline(item) }
+        : { label: $t('shortcut.downloadOffline'), icon: IconDownload, hint: menuHint('download-offline'), action: () => void toggleOffline(item) },
       'separator',
-      { label: $t('action.delete'), icon: IconTrash, danger: true, action: () => void remove(item) },
+      { label: $t('action.delete'), icon: IconTrash, danger: true, hint: menuHint('delete-message'), action: () => void remove(item) },
     ]
     openContextMenu(event.clientX, event.clientY, entries)
+  }
+
+  // middle-click opens a message in a tab, the way it opens a link in a browser.
+  // auxclick rather than mousedown, so the platform's autoscroll never starts.
+  function onRowAux(event: MouseEvent, item: MessageSummary): void {
+    if (event.button !== 1) {
+      return
+    }
+    event.preventDefault()
+    openInTab(item.id, item.subject)
   }
 
   // onScroll updates the virtualization window and pages in more rows near the
@@ -519,7 +603,13 @@
   function onScroll(): void {
     scrollTop = listEl.scrollTop
     viewportHeight = listEl.clientHeight
-    if (!hasMore || $messageList.status === 'loading') {
+    if ($messageList.status === 'loading' || backfilling) {
+      return
+    }
+    // once the cache is paged out, loadMore hands off to the server backfill,
+    // so this still fires when hasMore is false and older mail remains. a
+    // failed backfill stops the automatic retry and waits for the button.
+    if (!hasMore && !(canLoadOlder && $prefs.syncAutoBackfill && !$backfillFailed)) {
       return
     }
     const nearBottom = listEl.scrollTop + listEl.clientHeight >= listEl.scrollHeight - 200
@@ -545,7 +635,24 @@
 
   {#if selectionCount > 0}
     <div class="select-bar">
-      <button type="button" class="clear" aria-label={$t('messageList.clearSelection')} on:click={clearSelection}>
+      {#if selectAllAvailable}
+        <button
+          type="button"
+          class="select-all"
+          role="checkbox"
+          aria-checked={allLoadedSelected ? 'true' : 'mixed'}
+          aria-label={$t('list.selectAll.label')}
+          title={$t('list.selectAll.label')}
+          on:click={onSelectAllClick}
+        >
+          {#if allLoadedSelected}
+            <IconSquareCheck size={16} stroke={1.7} />
+          {:else}
+            <IconSquareMinus size={16} stroke={1.7} />
+          {/if}
+        </button>
+      {/if}
+      <button type="button" class="clear" aria-label={$t('messageList.clearSelection')} on:click={clearAll}>
         <IconX size={15} stroke={1.9} />
       </button>
       {#if $prefs.showSelectedCount}
@@ -553,39 +660,81 @@
       {/if}
       <span class="sel-spacer"></span>
       {#if selectedItems.some((m) => !m.seen)}
-        <button type="button" class="act" title={$t('shortcut.markRead')} on:click={() => bulkSetSeen(true)}>
+        <button type="button" class="act" title={withHint($t('shortcut.markRead'), 'mark-read')} on:click={() => bulkSetSeen(true)}>
           <IconMailOpened size={16} stroke={1.7} />
         </button>
       {:else}
-        <button type="button" class="act" title={$t('shortcut.markUnread')} on:click={() => bulkSetSeen(false)}>
+        <button type="button" class="act" title={withHint($t('shortcut.markUnread'), 'mark-unread')} on:click={() => bulkSetSeen(false)}>
           <IconMailFilled size={16} stroke={1.7} />
         </button>
       {/if}
       {#if selectedItems.some((m) => !m.flagged)}
-        <button type="button" class="act" title={$t('messageList.flag')} on:click={() => bulkSetFlagged(true)}>
+        <button type="button" class="act" title={withHint($t('messageList.flag'), 'flag')} on:click={() => bulkSetFlagged(true)}>
           <IconFlagFilled size={16} stroke={1.7} />
         </button>
       {:else}
-        <button type="button" class="act" title={$t('messageList.unflag')} on:click={() => bulkSetFlagged(false)}>
+        <button type="button" class="act" title={withHint($t('messageList.unflag'), 'flag')} on:click={() => bulkSetFlagged(false)}>
           <IconFlag size={16} stroke={1.7} />
         </button>
       {/if}
-      <button type="button" class="act danger" title={$t('action.delete')} on:click={bulkDelete}>
+      <button type="button" class="act" title={withHint($t('action.archive'), 'archive')} on:click={bulkArchiveSelection}>
+        <IconArchive size={16} stroke={1.7} />
+      </button>
+      <button type="button" class="act" title={withHint($t('messageList.menu.moveTo'), 'move-to')} on:click={bulkMove}>
+        <IconFolderSymlink size={16} stroke={1.7} />
+      </button>
+      <button type="button" class="act danger" title={withHint($t('action.delete'), 'delete-message')} on:click={bulkDelete}>
         <IconTrash size={16} stroke={1.7} />
       </button>
     </div>
   {:else}
     <div class="meta-bar">
+      {#if selectAllAvailable && items.length > 0}
+        <button
+          type="button"
+          class="select-all"
+          role="checkbox"
+          aria-checked="false"
+          aria-label={$t('list.selectAll.label')}
+          title={$t('list.selectAll.label')}
+          on:click={onSelectAllClick}
+        >
+          <IconSquare size={16} stroke={1.7} />
+        </button>
+      {/if}
       <span class="title">{viewTitle($selection)}</span>
       {#if $messageList.data}
         <span class="count">
           {#if $messageList.data.searching}
-            {items.length} {items.length === 1 ? $t('messageList.result') : $t('messageList.results')}
+            <!-- showing the match count, not just the loaded count, is what
+                 tells "that is everything" apart from "there is more below". -->
+            {#if items.length < $messageList.data.total}
+              {$t('messageList.resultsOf')
+                .replace('{loaded}', String(items.length))
+                .replace('{total}', String($messageList.data.total))}
+            {:else}
+              {items.length} {items.length === 1 ? $t('messageList.result') : $t('messageList.results')}
+            {/if}
           {:else}
             {$messageList.data.total} {$messageList.data.total === 1 ? $t('messageList.message') : $t('messageList.messages')}
           {/if}
         </span>
       {/if}
+    </div>
+  {/if}
+
+  <!-- selecting the loaded rows is not the same as selecting the mailbox, so
+       the difference is offered rather than assumed (#320). -->
+  {#if $expandOffer}
+    <div class="expand-offer">
+      <span>
+        {$t('list.selectAll.loadedSelected').replace('{n}', $expandOffer.loaded.toLocaleString())}
+      </span>
+      <button type="button" class="expand-btn" disabled={$expanding} on:click={() => void expandSelection()}>
+        {$expanding
+          ? $t('list.selectAll.expanding')
+          : $t('list.selectAll.expand').replace('{n}', $expandOffer.matching.toLocaleString())}
+      </button>
     </div>
   {/if}
 
@@ -601,7 +750,9 @@
     on:scroll={onScroll}
   >
     {#if $messageList.status === 'loading' && items.length === 0}
-      <Spinner label={$t('messageList.loading')} />
+      <!-- placeholders rather than a spinner, and only once the load has taken
+           long enough to be felt. -->
+      <MessageSkeleton active rows={10} />
     {:else if $messageList.status === 'error'}
       <ErrorState message={$messageList.error} onRetry={() => loadList($selection)} />
     {:else if items.length === 0}
@@ -623,6 +774,7 @@
             selected={item.id === $openMessageId || index === activeIndex}
             checked={$selectedIds.has(item.id)}
             on:click={(e) => onRowClick(e, index)}
+            on:auxclick={(e) => onRowAux(e, item)}
             on:contextmenu={(e) => onContext(e, item)}
             on:swipe={(e) => performSwipe(item, e.detail)}
           />
@@ -632,7 +784,18 @@
         <div class="spacer" style={`height:${bottomPad}px`} aria-hidden="true"></div>
       {/if}
       {#if $messageList.status === 'loading'}
-        <Spinner label={$t('messageList.loadingMore')} inline />
+        <MessageSkeleton active rows={3} inline />
+      {:else if backfilling}
+        <Spinner label={$t('messageList.fetchingOlder')} inline />
+      {:else if showLoadOlder}
+        <div class="load-older">
+          <p class="load-older-note">
+            {$backfillFailed ? $t('messageList.olderFailed') : $t('messageList.olderOnServer')}
+          </p>
+          <button type="button" class="load-older-btn" on:click={() => void loadOlder()}>
+            {$t('messageList.loadOlder')}
+          </button>
+        </div>
       {/if}
     {/if}
   </div>
@@ -677,6 +840,39 @@
     flex-shrink: 0;
   }
 
+  /* the end of the cache when the mailbox itself is not over: older mail is
+     still on the server and one press fetches the next batch. */
+  .load-older {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-6) var(--row-pad-x);
+  }
+
+  .load-older-note {
+    margin: 0;
+    font-size: var(--fz-meta);
+    color: var(--text-tertiary);
+    text-align: center;
+  }
+
+  .load-older-btn {
+    padding: var(--space-2) var(--space-4);
+    font-size: var(--fz-label);
+    font-weight: var(--fw-medium);
+    color: var(--text-secondary);
+    background: var(--surface-sunken);
+    border: var(--hairline) solid var(--border-default);
+    border-radius: var(--radius-control);
+    cursor: var(--cursor-action);
+  }
+
+  .load-older-btn:hover {
+    background: var(--surface-hover);
+    color: var(--text-primary);
+  }
+
   /* the selection toolbar replaces the meta bar while rows are selected. */
   .select-bar {
     display: flex;
@@ -697,6 +893,7 @@
     flex: 1;
   }
 
+  .select-all,
   .clear,
   .act {
     display: inline-flex;
@@ -705,15 +902,51 @@
     border: none;
     background: transparent;
     color: var(--text-secondary);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     padding: var(--space-2);
     border-radius: var(--radius-control);
   }
 
+  .select-all:hover,
   .clear:hover,
   .act:hover {
     background: var(--surface-hover);
     color: var(--text-primary);
+  }
+
+  /* in the quiet bar the checkbox sits with the title, so it takes the tertiary
+     colour rather than announcing itself above an untouched list. */
+  .meta-bar .select-all {
+    padding: 0 var(--space-2) 0 0;
+    color: var(--text-tertiary);
+  }
+
+  .expand-offer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-3);
+    padding: var(--space-2) var(--row-pad-x);
+    font-size: var(--fz-meta);
+    color: var(--text-secondary);
+    background: var(--selection-bg);
+    border-bottom: var(--hairline) solid var(--border-subtle);
+  }
+
+  .expand-btn {
+    padding: 0;
+    font: inherit;
+    color: var(--accent);
+    background: transparent;
+    border: none;
+    cursor: var(--cursor-action);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .expand-btn:disabled {
+    color: var(--text-tertiary);
+    text-decoration: none;
+    cursor: default;
   }
 
   .act.danger:hover {

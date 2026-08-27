@@ -34,6 +34,7 @@ func (a *App) resolveIMAP(account storage.Account) (pimap.Config, error) {
 		Host:     account.IMAPHost,
 		Port:     account.IMAPPort,
 		Username: loginName(account),
+		TLS:      imapTLSMode(account.IMAPTLS),
 		Dial:     a.proxyDial(),
 	}
 
@@ -65,6 +66,7 @@ func (a *App) resolveSMTP(account storage.Account) (psmtp.Config, error) {
 		Host:     account.SMTPHost,
 		Port:     account.SMTPPort,
 		Username: loginName(account),
+		TLS:      smtpTLSMode(account.SMTPTLS),
 		Dial:     a.proxyDial(),
 	}
 

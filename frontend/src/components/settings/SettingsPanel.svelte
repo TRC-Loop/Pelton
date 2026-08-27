@@ -7,25 +7,9 @@
   import {
     IconX,
     IconSearch,
-    IconMenu2,
-    IconPalette,
-    IconList,
-    IconSignature,
-    IconShieldLock,
-    IconBell,
-    IconEye,
-    IconKeyboard,
-    IconInfoCircle,
-    IconHandMove,
-    IconMailbox,
-    IconWriting,
-    IconLanguage,
-    IconBatteryEco,
-    IconBrush,
     IconFolderOpen,
     IconFileExport,
     IconRefresh,
-    IconPlugConnected,
   } from '@tabler/icons-svelte'
   import { createEventDispatcher, onMount } from 'svelte'
   import SegmentedSetting from './SegmentedSetting.svelte'
@@ -37,6 +21,8 @@
   import SignaturesSection from './SignaturesSection.svelte'
   import AddressBookSection from './AddressBookSection.svelte'
   import MailboxesSection from './MailboxesSection.svelte'
+  import ProfilesSection from './ProfilesSection.svelte'
+  import ContactsSection from './ContactsSection.svelte'
   import NetworkSection from './NetworkSection.svelte'
   import ExternalSection from './ExternalSection.svelte'
   import { setEditing as setMenuBarEditing, menuBarNewItems, setNewItemsMode, type NewItemsMode } from '../../stores/menubar'
@@ -45,11 +31,16 @@
   import ThemedIcon from '../common/ThemedIcon.svelte'
   import RowLayoutPreview from './RowLayoutPreview.svelte'
   import AboutSection from './AboutSection.svelte'
+  import EncryptionSection from './EncryptionSection.svelte'
+  import PassphraseDialog from './PassphraseDialog.svelte'
+  import { settingsCategories, settingsGroups } from '../../lib/settingscategories'
+  import { paletteQuickSelect, setPaletteQuickSelect } from '../../stores/palette'
   import ToggleSwitch from '../common/ToggleSwitch.svelte'
   import LanguageSelect from '../common/LanguageSelect.svelte'
   import DateTimePicker from '../common/DateTimePicker.svelte'
   import { pfpDataUri, type PfpStyle } from '../../lib/pfp'
   import { initials } from '../../lib/format'
+  import { sidebar } from '../../stores/accounts'
   import {
     prefs,
     setTheme,
@@ -59,17 +50,24 @@
     setMessageFontSize,
     setToastPosition,
     setNotifyNewMail,
+    setDockBadgeEnabled,
     setPaneLocked,
     setSendDelay,
     setFlagHighlight,
     setShortcutHints,
     setShowAccountEmail,
     setAlwaysLoadImages,
+    setBlockTrackingPixels,
     setAvatarSource,
     setAvatarStyle,
     setMultiSelectEnabled,
+    setSelectAllScope,
+    setSelectAllUnified,
     setShowSelectedCount,
     setSidebarIndentGuides,
+    setShowUnsyncedFolder,
+    setRestoreTabs,
+    setStartupSelection,
     setShowFlaggedCount,
     setViewsPlacement,
     setRowTemplate,
@@ -88,6 +86,10 @@
     setLowPowerMode,
     setAutoSyncInterval,
     setVerboseSync,
+    setSyncProgressBar,
+    setCloseAction,
+    setSyncMessageLimit,
+    setSyncAutoBackfill,
     setDefaultEditorMode,
     setComposeAutocomplete,
     setComposeChips,
@@ -98,19 +100,25 @@
     setMenuBarIcons,
     setTimeFormat,
     setReduceMotion,
+    setHandCursor,
     setThemeDarkTimes,
     setBodyFont,
+    setSenderFonts,
     setUIFont,
     setMonoFont,
+    setLogToFile,
+    setLogLevel,
+    setLogMessageMetadata,
+    setCrashLogs,
   } from '../../stores/prefs'
   import peltonLogo from '../../assets/images/icons/pelton-logo.png'
   import { isMac } from '../../lib/i18n'
-  import { downloadRange, cancelDownload, openLocalesFolder, saveLocaleTemplate } from '../../lib/api'
+  import { downloadRange, cancelDownload, openLocalesFolder, saveLocaleTemplate, getLogStatus, openLogFolder, deleteLogs } from '../../lib/api'
   import en from '../../lib/locales/en'
   import { downloadProgress } from '../../stores/progress'
   import { toastInfo, toastError, errorMessage } from '../../stores/toast'
   import { t } from '../../lib/i18n'
-  import type { ThemePref, DensityPref, EditorMode, ViewsPlacement } from '../../lib/types'
+  import type { ThemePref, DensityPref, EditorMode, ViewsPlacement, CloseAction, LogLevel, LogStatus, SelectAllScope } from '../../lib/types'
 
   let editorModeOptions: { key: EditorMode; label: string }[] = []
   $: editorModeOptions = [
@@ -154,34 +162,8 @@
   // localized search text (synonyms and notable sub-settings) so the search box
   // can find a category by the toggles it holds, not just its title. Nothing is
   // removed here, only grouped and made searchable.
-  $: categories = [
-    { key: 'appearance', group: 'appearance', label: $t('settingsPanel.category.appearance'), keywords: $t('settingsPanel.keywords.appearance'), icon: IconPalette, iconName: 'palette' },
-    { key: 'themes', group: 'appearance', label: $t('settingsPanel.category.themes'), keywords: $t('settingsPanel.keywords.themes'), icon: IconBrush, iconName: 'brush' },
-    { key: 'menubar', group: 'appearance', label: $t('settingsPanel.category.menubar'), keywords: $t('settingsPanel.keywords.menubar'), icon: IconMenu2, iconName: 'menu-2' },
-    { key: 'language', group: 'appearance', label: $t('settings.language'), keywords: $t('settingsPanel.keywords.language'), icon: IconLanguage, iconName: 'language' },
-    { key: 'list', group: 'mail', label: $t('settingsPanel.category.messageList'), keywords: $t('settingsPanel.keywords.list') + ' ' + $t('settingsPanel.keywords.sidebar') + ' ' + $t('settingsPanel.keywords.avatars'), icon: IconList, iconName: 'list' },
-    { key: 'display', group: 'mail', label: $t('settingsPanel.category.reading'), keywords: $t('settingsPanel.keywords.display') + ' ' + $t('settingsPanel.keywords.panes'), icon: IconEye, iconName: 'eye' },
-    { key: 'composing', group: 'mail', label: $t('settingsPanel.category.composingSending'), keywords: $t('settingsPanel.keywords.composing') + ' ' + $t('settingsPanel.keywords.sending'), icon: IconWriting, iconName: 'writing' },
-    { key: 'signatures', group: 'mail', label: $t('settingsPanel.category.signatures'), keywords: $t('settingsPanel.keywords.signatures'), icon: IconSignature, iconName: 'signature' },
-    { key: 'notifications', group: 'mail', label: $t('settingsPanel.category.notifications'), keywords: $t('settingsPanel.keywords.notifications'), icon: IconBell, iconName: 'bell' },
-    { key: 'gestures', group: 'mail', label: $t('settingsPanel.category.gestures'), keywords: $t('settingsPanel.keywords.gestures'), icon: IconHandMove, iconName: 'hand-move' },
-    { key: 'privacy', group: 'privacy', label: $t('settingsPanel.category.privacyNetwork'), keywords: $t('settingsPanel.keywords.privacy') + ' ' + $t('settingsPanel.keywords.network'), icon: IconShieldLock, iconName: 'shield-lock' },
-    { key: 'mailboxes', group: 'accounts', label: $t('settingsPanel.category.accounts'), keywords: $t('settingsPanel.keywords.mailboxes') + ' ' + $t('settingsPanel.keywords.contacts'), icon: IconMailbox, iconName: 'mailbox' },
-    { key: 'external', group: 'accounts', label: $t('settingsPanel.category.integrations'), keywords: $t('settingsPanel.keywords.external') + ' ' + $t('settingsPanel.keywords.sync'), icon: IconPlugConnected, iconName: 'plug-connected' },
-    { key: 'power', group: 'advanced', label: $t('settingsPanel.category.powerSync'), keywords: $t('settingsPanel.keywords.power') + ' ' + $t('settingsPanel.keywords.offline'), icon: IconBatteryEco, iconName: 'battery-eco' },
-    { key: 'shortcuts', group: 'advanced', label: $t('settingsPanel.category.shortcuts'), keywords: $t('settingsPanel.keywords.shortcuts'), icon: IconKeyboard, iconName: 'keyboard' },
-    { key: 'about', group: 'about', label: $t('settingsPanel.category.about'), keywords: $t('settingsPanel.keywords.about'), icon: IconInfoCircle, iconName: 'info-circle' },
-  ]
-
-  // top-level nav groups, in display order. Every category belongs to one.
-  $: navGroups = [
-    { key: 'appearance', label: $t('settingsPanel.group.appearance') },
-    { key: 'mail', label: $t('settingsPanel.group.mail') },
-    { key: 'privacy', label: $t('settingsPanel.group.privacy') },
-    { key: 'accounts', label: $t('settingsPanel.group.accounts') },
-    { key: 'advanced', label: $t('settingsPanel.group.advanced') },
-    { key: 'about', label: $t('settingsPanel.group.about') },
-  ]
+  $: categories = settingsCategories($t)
+  $: navGroups = settingsGroups($t)
 
   // per-setting search index: each entry is one individual setting, mapped to the
   // category that now holds it. `label` is the control's own localized label, so
@@ -193,6 +175,7 @@
     { cat: 'appearance', label: $t('settingsPanel.label.corners'), kw: 'rounded square' },
     { cat: 'appearance', label: $t('settingsPanel.label.interfaceScale'), kw: 'zoom scale size' },
     { cat: 'appearance', label: $t('settingsPanel.toggle.reduceMotion'), kw: 'animation' },
+    { cat: 'appearance', label: $t('settingsPanel.toggle.handCursor'), kw: 'cursor pointer mouse arrow hand' },
     { cat: 'appearance', label: $t('settingsPanel.label.emptyStateImage'), kw: 'background image empty' },
     { cat: 'menubar', label: $t('settingsPanel.toggle.menuBarInApp'), kw: 'menu bar' },
     { cat: 'menubar', label: $t('settingsPanel.toggle.menuBarNativeMinimal'), kw: 'menu bar native' },
@@ -210,14 +193,19 @@
     { cat: 'list', label: $t('settingsPanel.toggle.multiSelect'), kw: 'select multiple' },
     { cat: 'list', label: $t('settingsPanel.toggle.indentGuides'), kw: 'sidebar folders' },
     { cat: 'list', label: $t('settingsPanel.toggle.flaggedCount'), kw: 'sidebar flagged count' },
+    { cat: 'list', label: $t('settingsPanel.label.startupSelection'), kw: 'sidebar startup launch open default folder view last used' },
     { cat: 'list', label: $t('views.setting.label'), kw: 'views saved searches' },
     { cat: 'list', label: $t('settingsPanel.label.senderPhotos'), kw: 'avatar gravatar' },
     { cat: 'list', label: $t('settingsPanel.label.generatedStyle'), kw: 'avatar style' },
     { cat: 'display', label: $t('onboarding.extras.fontSize'), kw: 'message font size' },
     { cat: 'display', label: $t('settingsPanel.label.timeFormat'), kw: 'clock 24 hour' },
     { cat: 'display', label: $t('settingsPanel.label.bodyFont'), kw: 'font' },
+    { cat: 'display', label: $t('settingsPanel.toggle.senderFonts'), kw: 'font email typeface sender' },
+    { cat: 'list', label: $t('settingsPanel.label.selectAllScope'), kw: 'select all bulk selection' },
+    { cat: 'list', label: $t('settingsPanel.toggle.selectAllUnified'), kw: 'select all unified inbox' },
     { cat: 'display', label: $t('settingsPanel.label.uiFont'), kw: 'font interface' },
     { cat: 'display', label: $t('settingsPanel.label.monoFont'), kw: 'font monospace code' },
+    { cat: 'display', label: $t('settingsPanel.label.charsetFallback'), kw: 'encoding charset unicode gibberish mojibake utf8 latin' },
     { cat: 'display', label: $t('settings.lockPanes'), kw: 'panes layout lock' },
     { cat: 'composing', label: $t('settingsPanel.label.defaultEditor'), kw: 'editor html plain markdown' },
     { cat: 'composing', label: $t('settingsPanel.toggle.autocomplete'), kw: 'autocomplete recipients' },
@@ -227,25 +215,40 @@
     { cat: 'signatures', label: $t('settingsPanel.category.signatures'), kw: 'signature footer' },
     { cat: 'notifications', label: $t('settings.toastPosition'), kw: 'notification position' },
     { cat: 'notifications', label: $t('vip.notifyNewMail'), kw: 'new mail notification' },
+    ...(isMac ? [{ cat: 'notifications', label: $t('settingsPanel.toggle.dockBadge'), kw: 'dock badge unread count icon' }] : []),
     { cat: 'notifications', label: $t('vip.manageLabel'), kw: 'vip senders' },
     { cat: 'gestures', label: $t('settingsPanel.toggle.swipeEnabled'), kw: 'swipe gesture' },
     { cat: 'gestures', label: $t('settingsPanel.label.swipeLeft'), kw: 'swipe left' },
     { cat: 'gestures', label: $t('settingsPanel.label.swipeRight'), kw: 'swipe right' },
     { cat: 'privacy', label: $t('settingsPanel.toggle.alwaysLoadImages'), kw: 'remote images tracking' },
+    { cat: 'privacy', label: $t('settingsPanel.toggle.blockTrackingPixels'), kw: 'tracking pixel spy pixel read receipt open tracking' },
     { cat: 'privacy', label: $t('settingsPanel.label.manageWhitelist'), kw: 'trusted senders allowlist' },
     { cat: 'privacy', label: $t('settingsPanel.category.network'), kw: 'proxy connection tls socks' },
+    { cat: 'privacy', label: $t('settingsPanel.toggle.logToFile'), kw: 'log logging debug file troubleshooting' },
+    { cat: 'privacy', label: $t('settingsPanel.toggle.crashLogs'), kw: 'crash report stack trace panic' },
     { cat: 'mailboxes', label: $t('settingsPanel.category.mailboxes'), kw: 'accounts imap smtp servers' },
     { cat: 'mailboxes', label: $t('settingsPanel.category.contacts'), kw: 'address book people' },
     { cat: 'external', label: $t('settingsPanel.category.external'), kw: 'default mail client links browser' },
     { cat: 'external', label: $t('settingsPanel.category.importExport'), kw: 'backup restore transfer' },
-    { cat: 'external', label: $t('import.title'), kw: 'thunderbird migrate eml mbox switch move' },
+    { cat: 'external', label: $t('import.tb.title'), kw: 'thunderbird migrate switch move' },
+    { cat: 'external', label: $t('import.files.title'), kw: 'eml mbox archive file import' },
+    { cat: 'external', label: $t('mcp.permissions'), kw: 'mcp agent ai permissions write send delete' },
+    { cat: 'external', label: $t('mcp.log'), kw: 'mcp agent ai audit log history' },
     { cat: 'power', label: $t('settingsPanel.toggle.lowPowerMode'), kw: 'battery energy' },
     { cat: 'power', label: $t('settingsPanel.label.autoSyncInterval'), kw: 'sync interval' },
     { cat: 'power', label: $t('settingsPanel.toggle.verboseSync'), kw: 'sync status' },
+    { cat: 'power', label: $t('settingsPanel.toggle.syncProgressBar'), kw: 'sync progress bar percent count' },
+    { cat: 'power', label: $t('settingsPanel.label.closeAction'), kw: 'close button tray background quit exit' },
+    { cat: 'power', label: $t('settingsPanel.label.syncMessageLimit'), kw: 'sync limit messages older initial download' },
+    { cat: 'power', label: $t('settingsPanel.toggle.syncAutoBackfill'), kw: 'older mail backfill scroll load more' },
     { cat: 'power', label: $t('settingsPanel.toggle.offlineIndicator'), kw: 'offline' },
     { cat: 'power', label: $t('settingsPanel.toggle.flagColorSync'), kw: 'flag color sync' },
     { cat: 'power', label: $t('settingsPanel.label.downloadOffline'), kw: 'download offline cache' },
+    { cat: 'encryption', label: $t('encryption.import'), kw: 'pgp gpg openpgp key import' },
+    { cat: 'encryption', label: $t('encryption.signingTitle'), kw: 'pgp sign key account' },
+    { cat: 'encryption', label: $t('encryption.revocationTitle'), kw: 'smime revocation ocsp crl certificate withdrawn' },
     { cat: 'shortcuts', label: $t('settingsPanel.toggle.shortcutHints'), kw: 'keyboard hints' },
+    { cat: 'shortcuts', label: $t('settingsPanel.toggle.paletteQuickSelect'), kw: 'command palette quick select numbers' },
     { cat: 'shortcuts', label: $t('onboarding.extras.appVim'), kw: 'vim navigation' },
     { cat: 'shortcuts', label: $t('settings.shortcuts'), kw: 'keyboard keys hotkeys' },
     { cat: 'about', label: $t('settingsPanel.category.about'), kw: 'version license update' },
@@ -296,6 +299,30 @@
   ]
   function onAutoSyncInterval(event: CustomEvent<string>): void {
     setAutoSyncInterval(Number(event.detail))
+  }
+
+  // how many of a folder's newest messages a first sync fetches. "all" is the
+  // pre-#175 behavior of downloading the whole mailbox up front.
+  $: syncLimitOptions = [
+    { key: '50', label: '50' },
+    { key: '100', label: '100' },
+    { key: '250', label: '250' },
+    { key: '500', label: '500' },
+    { key: '1000', label: '1000' },
+    { key: '0', label: $t('settingsPanel.syncLimit.all') },
+  ]
+
+  function onSyncMessageLimit(event: CustomEvent<string>): void {
+    setSyncMessageLimit(Number(event.detail))
+  }
+
+  // what the window's close button does.
+  $: closeActionOptions = [
+    { key: 'background', label: $t('settingsPanel.closeAction.background') },
+    { key: 'quit', label: $t('settingsPanel.closeAction.quit') },
+  ]
+  function onCloseAction(event: CustomEvent<string>): void {
+    setCloseAction(event.detail as CloseAction)
   }
 
   // swipe gesture actions (trackpad). shown in the two direction dropdowns.
@@ -349,7 +376,7 @@
   }
 
   import { bodyFonts, uiFonts, monoFonts } from '../../lib/fonts'
-  import { listSystemFonts } from '../../lib/api'
+  import { listSystemFonts, getSetting, setSetting } from '../../lib/api'
 
   $: bodyFontOptions = bodyFonts.map((f) => ({ key: f.key, label: f.label ?? $t(f.labelKey ?? '') }))
   $: uiFontOptions = uiFonts.map((f) => ({ key: f.key, label: f.label ?? $t(f.labelKey ?? '') }))
@@ -364,7 +391,61 @@
       .catch(() => (systemFonts = []))
   })
 
+  // how mail that names no encoding, or names one nothing knows, is read. It is
+  // a parser setting rather than a ui preference, so it is read from and written
+  // to the store directly. 'auto' detects from the bytes and is what almost
+  // everyone should leave it on; the named encodings are for someone who
+  // receives mail from one system that is always wrong in the same way.
+  const charsetKey = 'charset_fallback'
+  const charsetOptions = [
+    'windows-1252',
+    'iso-8859-2',
+    'iso-8859-7',
+    'iso-8859-9',
+    'koi8-r',
+    'windows-1251',
+    'shift_jis',
+    'euc-jp',
+    'gb18030',
+    'big5',
+    'euc-kr',
+    'utf-8',
+  ]
+  let charsetFallback = 'auto'
+  onMount(async () => {
+    try {
+      const stored = await getSetting(charsetKey)
+      if (stored.found && stored.value !== '') {
+        charsetFallback = stored.value
+      }
+    } catch {
+      // the store is not open yet; the default is what the parser uses anyway.
+    }
+  })
+
+  function onCharsetFallback(event: Event): void {
+    charsetFallback = (event.currentTarget as HTMLSelectElement).value
+    void setSetting(charsetKey, charsetFallback)
+  }
+
   // select handlers (the cast lives in script; inline ts casts break the parser).
+  // the startup target is stored as an opaque string ('last', 'view:<key>' or
+  // 'folder:<id>'), so the select works directly on it.
+  function onStartupSelection(event: Event): void {
+    setStartupSelection((event.currentTarget as HTMLSelectElement).value)
+  }
+
+  // unified view names are localized by key in the sidebar; reuse that here so
+  // the setting and the row it points at read the same.
+  function unifiedViewName(key: string, fallback: string): string {
+    const lookup = key === 'inbox' ? 'sidebar.unifiedInbox' : `sidebar.view.${key}`
+    const translated = $t(lookup)
+    return translated === lookup ? fallback : translated
+  }
+
+  function onSelectAllScope(event: Event): void {
+    setSelectAllScope((event.currentTarget as HTMLSelectElement).value as SelectAllScope)
+  }
   function onBodyFont(event: Event): void {
     setBodyFont((event.currentTarget as HTMLSelectElement).value)
   }
@@ -459,6 +540,72 @@
   function confirmEnableImages(): void {
     setAlwaysLoadImages(true)
     confirmImages = false
+  }
+
+  // logging (#211). the status comes from the backend rather than the prefs
+  // store because it describes the disk (folder, size, an unread crash report)
+  // and because --debug can have logging on with the setting off.
+  let logStatus: LogStatus | null = null
+  let confirmDeleteLogs = false
+
+  let logLevelOptions: { key: LogLevel; label: string }[] = []
+  $: logLevelOptions = [
+    { key: 'debug', label: $t('settingsPanel.logLevel.debug') },
+    { key: 'info', label: $t('settingsPanel.logLevel.info') },
+    { key: 'warn', label: $t('settingsPanel.logLevel.warn') },
+    { key: 'error', label: $t('settingsPanel.logLevel.error') },
+  ]
+
+  async function refreshLogStatus(): Promise<void> {
+    try {
+      logStatus = await getLogStatus()
+    } catch {
+      logStatus = null
+    }
+  }
+
+  // re-read whenever the privacy section is shown, so the size and the folder
+  // are current rather than whatever they were at startup.
+  $: if (active === 'privacy') {
+    void refreshLogStatus()
+  }
+
+  function onLogToFile(checked: boolean): void {
+    setLogToFile(checked)
+    // the backend opens or closes the file as part of saving the setting, so
+    // give it a moment before reading the state back.
+    setTimeout(refreshLogStatus, 200)
+  }
+
+  async function onOpenLogFolder(): Promise<void> {
+    try {
+      await openLogFolder()
+    } catch (err) {
+      toastError(errorMessage(err))
+    }
+  }
+
+  async function onDeleteLogs(): Promise<void> {
+    confirmDeleteLogs = false
+    try {
+      await deleteLogs()
+      await refreshLogStatus()
+      toastInfo($t('settingsPanel.logs.deleted'))
+    } catch (err) {
+      toastError(errorMessage(err))
+    }
+  }
+
+  // formatBytes keeps the size next to the folder readable without pulling in a
+  // formatting library for one number.
+  function formatBytes(bytes: number): string {
+    if (bytes < 1024) {
+      return `${bytes} B`
+    }
+    if (bytes < 1024 * 1024) {
+      return `${Math.round(bytes / 1024)} KB`
+    }
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
   }
 
   // the remote-image allowlist manager (trusted senders/domains) opens in a modal.
@@ -724,6 +871,15 @@
             />
           </div>
           <p class="hint">{$t('settingsPanel.hint.reduceMotion')}</p>
+          <div class="toggle">
+            <span class="row-label">{$t('settingsPanel.toggle.handCursor')}</span>
+            <ToggleSwitch
+              checked={$prefs.handCursor}
+              label={$t('settingsPanel.toggle.handCursor')}
+              on:change={(e) => setHandCursor(e.detail)}
+            />
+          </div>
+          <p class="hint">{$t('settingsPanel.hint.handCursor')}</p>
 
           <div class="field">
             <span class="row-label">{$t('settingsPanel.label.emptyStateImage')}</span>
@@ -898,6 +1054,31 @@
             />
           </div>
 
+          <div class="row" class:disabled={!$prefs.multiSelectEnabled}>
+            <span class="row-label">{$t('settingsPanel.label.selectAllScope')}</span>
+            <select
+              class="select"
+              value={$prefs.selectAllScope}
+              disabled={!$prefs.multiSelectEnabled}
+              on:change={onSelectAllScope}
+            >
+              <option value="offer">{$t('settingsPanel.selectAllScope.offer')}</option>
+              <option value="all">{$t('settingsPanel.selectAllScope.all')}</option>
+              <option value="loaded">{$t('settingsPanel.selectAllScope.loaded')}</option>
+            </select>
+          </div>
+          <p class="hint">{$t('settingsPanel.hint.selectAllScope')}</p>
+          <div class="toggle" class:disabled={!$prefs.multiSelectEnabled} title={$t('settingsPanel.hint.selectAllUnified')}>
+            <span class="row-label">{$t('settingsPanel.toggle.selectAllUnified')}</span>
+            <ToggleSwitch
+              checked={$prefs.selectAllUnified}
+              disabled={!$prefs.multiSelectEnabled}
+              label={$t('settingsPanel.toggle.selectAllUnified')}
+              on:change={(e) => setSelectAllUnified(e.detail)}
+            />
+          </div>
+          <p class="hint">{$t('settingsPanel.hint.selectAllUnified')}</p>
+
           <h4 class="subhead">{$t('settingsPanel.category.sidebar')}</h4>
           <div class="toggle" title={$t('settingsPanel.hint.indentGuides')}>
             <span class="row-label">{$t('settingsPanel.toggle.indentGuides')}</span>
@@ -905,6 +1086,14 @@
               checked={$prefs.sidebarIndentGuides}
               label={$t('settingsPanel.toggle.indentGuides')}
               on:change={(e) => setSidebarIndentGuides(e.detail)}
+            />
+          </div>
+          <div class="toggle" title={$t('settingsPanel.hint.unsyncedFolder')}>
+            <span class="row-label">{$t('settingsPanel.toggle.unsyncedFolder')}</span>
+            <ToggleSwitch
+              checked={$prefs.showUnsyncedFolder}
+              label={$t('settingsPanel.toggle.unsyncedFolder')}
+              on:change={(e) => setShowUnsyncedFolder(e.detail)}
             />
           </div>
           <div class="toggle" title={$t('settingsPanel.hint.flaggedCount')}>
@@ -915,6 +1104,27 @@
               on:change={(e) => setShowFlaggedCount(e.detail)}
             />
           </div>
+          <div class="row">
+            <span class="row-label">{$t('settingsPanel.label.startupSelection')}</span>
+            <select class="select" value={$prefs.startupSelection} on:change={onStartupSelection}>
+              <option value="last">{$t('settingsPanel.startup.lastUsed')}</option>
+              {#if $sidebar.data}
+                <optgroup label={$t('sidebar.unifiedViews.heading')}>
+                  {#each $sidebar.data.views as view (view.key)}
+                    <option value={`view:${view.key}`}>{unifiedViewName(view.key, view.label)}</option>
+                  {/each}
+                </optgroup>
+                {#each $sidebar.data.accounts as account (account.id)}
+                  <optgroup label={account.email}>
+                    {#each $sidebar.data.foldersByAccount[account.id] ?? [] as folder (folder.id)}
+                      <option value={`folder:${folder.id}`}>{folder.imapPath}</option>
+                    {/each}
+                  </optgroup>
+                {/each}
+              {/if}
+            </select>
+          </div>
+          <p class="hint">{$t('settingsPanel.hint.startupSelection')}</p>
           <SegmentedSetting
             label={$t('views.setting.label')}
             value={$prefs.viewsPlacement}
@@ -980,6 +1190,16 @@
             </div>
           {/if}
 
+          <div class="toggle" title={$t('settingsPanel.hint.blockTrackingPixels')}>
+            <span class="row-label">{$t('settingsPanel.toggle.blockTrackingPixels')}</span>
+            <ToggleSwitch
+              checked={$prefs.blockTrackingPixels}
+              label={$t('settingsPanel.toggle.blockTrackingPixels')}
+              on:change={(e) => setBlockTrackingPixels(e.detail)}
+            />
+          </div>
+          <p class="hint">{$t('settingsPanel.hint.blockTrackingPixelsDetail')}</p>
+
           <div class="field">
             <span class="row-label">{$t('settingsPanel.label.manageWhitelist')}</span>
             <p class="hint">{$t('settingsPanel.hint.manageWhitelist')}</p>
@@ -987,6 +1207,78 @@
               {$t('settingsPanel.button.manageWhitelist')}
             </button>
           </div>
+
+          <h4 class="subhead">{$t('settingsPanel.category.logs')}</h4>
+          <p class="hint">{$t('settingsPanel.hint.logsIntro')}</p>
+          <div class="toggle" title={$t('settingsPanel.hint.logToFile')}>
+            <span class="row-label">{$t('settingsPanel.toggle.logToFile')}</span>
+            <ToggleSwitch
+              checked={$prefs.logToFile}
+              label={$t('settingsPanel.toggle.logToFile')}
+              on:change={(e) => onLogToFile(e.detail)}
+            />
+          </div>
+          {#if logStatus?.forced}
+            <p class="hint">{$t('settingsPanel.hint.logForced')}</p>
+          {/if}
+          {#if $prefs.logToFile}
+            <SegmentedSetting
+              label={$t('settingsPanel.label.logLevel')}
+              value={$prefs.logLevel}
+              options={logLevelOptions}
+              on:change={(e) => setLogLevel(e.detail as LogLevel)}
+            />
+            <p class="hint">{$t('settingsPanel.hint.logLevel')}</p>
+            <div class="toggle" title={$t('settingsPanel.hint.logMessageMetadata')}>
+              <span class="row-label">{$t('settingsPanel.toggle.logMessageMetadata')}</span>
+              <ToggleSwitch
+                checked={$prefs.logMessageMetadata}
+                label={$t('settingsPanel.toggle.logMessageMetadata')}
+                on:change={(e) => setLogMessageMetadata(e.detail)}
+              />
+            </div>
+            <p class="hint">{$t('settingsPanel.hint.logMessageMetadataDetail')}</p>
+          {/if}
+          <div class="toggle" title={$t('settingsPanel.hint.crashLogs')}>
+            <span class="row-label">{$t('settingsPanel.toggle.crashLogs')}</span>
+            <ToggleSwitch
+              checked={$prefs.crashLogs}
+              label={$t('settingsPanel.toggle.crashLogs')}
+              on:change={(e) => setCrashLogs(e.detail)}
+            />
+          </div>
+          <p class="hint">{$t('settingsPanel.hint.crashLogs')}</p>
+          {#if logStatus}
+            <div class="field">
+              <span class="row-label">{$t('settingsPanel.label.logFolder')}</span>
+              <p class="hint path">{logStatus.dir}</p>
+              <p class="hint">
+                {$t('settingsPanel.hint.logSize').replace('{size}', formatBytes(logStatus.sizeBytes))}
+              </p>
+              <div class="log-actions">
+                <button type="button" class="action-btn" on:click={onOpenLogFolder}>
+                  {$t('settingsPanel.button.openLogFolder')}
+                </button>
+                <button
+                  type="button"
+                  class="action-btn"
+                  disabled={logStatus.sizeBytes === 0}
+                  on:click={() => (confirmDeleteLogs = true)}
+                >
+                  {$t('settingsPanel.button.deleteLogs')}
+                </button>
+              </div>
+            </div>
+            {#if confirmDeleteLogs}
+              <div class="warn">
+                <p>{$t('settingsPanel.warn.deleteLogs')}</p>
+                <div class="warn-actions">
+                  <button type="button" class="ghost-btn" on:click={() => (confirmDeleteLogs = false)}>{$t('settingsPanel.button.cancel')}</button>
+                  <button type="button" class="danger-btn" on:click={onDeleteLogs}>{$t('settingsPanel.button.deleteLogs')}</button>
+                </div>
+              </div>
+            {/if}
+          {/if}
 
           <div class="merged-block">
             <NetworkSection />
@@ -1010,6 +1302,19 @@
               on:change={(e) => setNotifyNewMail(e.detail)}
             />
           </div>
+          <!-- only macOS has a dock tile to badge, so the row would be a dead
+               switch on Windows and Linux. -->
+          {#if isMac}
+            <div class="toggle">
+              <span class="row-label">{$t('settingsPanel.toggle.dockBadge')}</span>
+              <ToggleSwitch
+                checked={$prefs.dockBadge}
+                label={$t('settingsPanel.toggle.dockBadge')}
+                on:change={(e) => setDockBadgeEnabled(e.detail)}
+              />
+            </div>
+            <p class="hint">{$t('settingsPanel.hint.dockBadge')}</p>
+          {/if}
           <div class="field">
             <span class="row-label">{$t('vip.manageLabel')}</span>
             <p class="hint">{$t('vip.manageHint')}</p>
@@ -1021,6 +1326,15 @@
       {:else if active === 'display'}
         <section>
           <h3>{$t('settingsPanel.category.reading')}</h3>
+          <div class="toggle" title={$t('settingsPanel.hint.restoreTabs')}>
+            <span class="row-label">{$t('settingsPanel.toggle.restoreTabs')}</span>
+            <ToggleSwitch
+              checked={$prefs.restoreTabs}
+              label={$t('settingsPanel.toggle.restoreTabs')}
+              on:change={(e) => setRestoreTabs(e.detail)}
+            />
+          </div>
+          <p class="hint">{$t('settingsPanel.hint.restoreTabs')}</p>
           <SegmentedSetting
             label={$t('onboarding.extras.fontSize')}
             value={String($prefs.messageFontSize)}
@@ -1053,6 +1367,15 @@
             </select>
           </div>
           <p class="hint">{$t('settingsPanel.hint.bodyFont')}</p>
+          <div class="toggle" title={$t('settingsPanel.hint.senderFonts')}>
+            <span class="row-label">{$t('settingsPanel.toggle.senderFonts')}</span>
+            <ToggleSwitch
+              checked={$prefs.senderFonts}
+              label={$t('settingsPanel.toggle.senderFonts')}
+              on:change={(e) => setSenderFonts(e.detail)}
+            />
+          </div>
+          <p class="hint">{$t('settingsPanel.hint.senderFonts')}</p>
           <div class="row">
             <span class="row-label">{$t('settingsPanel.label.uiFont')}</span>
             <select class="select" value={$prefs.uiFont} on:change={onUIFont}>
@@ -1089,6 +1412,16 @@
             </select>
           </div>
           <p class="hint">{$t('settingsPanel.hint.monoFont')}</p>
+          <div class="row">
+            <span class="row-label">{$t('settingsPanel.label.charsetFallback')}</span>
+            <select class="select" value={charsetFallback} on:change={onCharsetFallback}>
+              <option value="auto">{$t('settingsPanel.charset.auto')}</option>
+              {#each charsetOptions as name}
+                <option value={name}>{name}</option>
+              {/each}
+            </select>
+          </div>
+          <p class="hint">{$t('settingsPanel.hint.charsetFallback')}</p>
           <TechToggles />
 
           <h4 class="subhead">{$t('settings.panes')}</h4>
@@ -1143,6 +1476,15 @@
       {:else if active === 'power'}
         <section>
           <h3>{$t('settingsPanel.category.powerSync')}</h3>
+          <SegmentedSetting
+            label={$t('settingsPanel.label.closeAction')}
+            value={$prefs.closeAction}
+            options={closeActionOptions}
+            on:change={onCloseAction}
+          />
+          <p class="hint">
+            {$t('settingsPanel.hint.closeAction')}
+          </p>
           <div class="toggle" title={$t('settingsPanel.hint.lowPowerToggle')}>
             <span class="row-label">{$t('settingsPanel.toggle.lowPowerMode')}</span>
             <ToggleSwitch
@@ -1173,6 +1515,37 @@
           </div>
           <p class="hint">
             {$t('settingsPanel.hint.verboseSyncDetail')}
+          </p>
+          <div class="toggle" title={$t('settingsPanel.hint.syncProgressBar')}>
+            <span class="row-label">{$t('settingsPanel.toggle.syncProgressBar')}</span>
+            <ToggleSwitch
+              checked={$prefs.syncProgressBar}
+              label={$t('settingsPanel.toggle.syncProgressBar')}
+              on:change={(e) => setSyncProgressBar(e.detail)}
+            />
+          </div>
+          <p class="hint">
+            {$t('settingsPanel.hint.syncProgressBarDetail')}
+          </p>
+          <StepSlider
+            label={$t('settingsPanel.label.syncMessageLimit')}
+            value={String($prefs.syncMessageLimit)}
+            options={syncLimitOptions}
+            on:change={onSyncMessageLimit}
+          />
+          <p class="hint">
+            {$t('settingsPanel.hint.syncMessageLimit')}
+          </p>
+          <div class="toggle" title={$t('settingsPanel.hint.syncAutoBackfill')}>
+            <span class="row-label">{$t('settingsPanel.toggle.syncAutoBackfill')}</span>
+            <ToggleSwitch
+              checked={$prefs.syncAutoBackfill}
+              label={$t('settingsPanel.toggle.syncAutoBackfill')}
+              on:change={(e) => setSyncAutoBackfill(e.detail)}
+            />
+          </div>
+          <p class="hint">
+            {$t('settingsPanel.hint.syncAutoBackfillDetail')}
           </p>
 
           <h4 class="subhead">{$t('settingsPanel.category.offline')}</h4>
@@ -1234,6 +1607,14 @@
             <AddressBookSection />
           </div>
         </section>
+      {:else if active === 'contacts'}
+        <section>
+          <ContactsSection />
+        </section>
+      {:else if active === 'profiles'}
+        <section>
+          <ProfilesSection />
+        </section>
       {:else if active === 'external'}
         <section>
           <ExternalSection />
@@ -1288,6 +1669,11 @@
           />
           <p class="hint">{$t('settingsPanel.hint.undoSend')}</p>
         </section>
+      {:else if active === 'encryption'}
+        <section>
+          <h3>{$t('settingsPanel.category.encryption')}</h3>
+          <EncryptionSection />
+        </section>
       {:else if active === 'shortcuts'}
         <section>
           <h3>{$t('settings.shortcuts')}</h3>
@@ -1297,6 +1683,14 @@
               checked={$prefs.showShortcutHints}
               label={$t('settingsPanel.toggle.shortcutHints')}
               on:change={(e) => setShortcutHints(e.detail)}
+            />
+          </div>
+          <div class="toggle" title={$t('settingsPanel.hint.paletteQuickSelect')}>
+            <span class="row-label">{$t('settingsPanel.toggle.paletteQuickSelect')}</span>
+            <ToggleSwitch
+              checked={$paletteQuickSelect}
+              label={$t('settingsPanel.toggle.paletteQuickSelect')}
+              on:change={(e) => setPaletteQuickSelect(e.detail)}
             />
           </div>
           <div class="toggle" title={$t('settingsPanel.hint.appVim')}>
@@ -1340,6 +1734,8 @@
   {/await}
 {/if}
 
+<PassphraseDialog />
+
 <style>
   .screen {
     position: fixed;
@@ -1348,6 +1744,9 @@
     display: flex;
     flex-direction: column;
     background: var(--surface-base);
+    /* covers the whole window, so it has to keep the macOS traffic lights clear
+       itself; zero on every other platform. */
+    padding-top: var(--titlebar-lights);
   }
 
   .head {
@@ -1370,7 +1769,7 @@
     border: none;
     background: transparent;
     color: var(--text-secondary);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     padding: var(--space-2);
     border-radius: var(--radius-control);
   }
@@ -1431,7 +1830,7 @@
     border: none;
     background: transparent;
     color: var(--text-tertiary);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     padding: 0;
   }
 
@@ -1468,7 +1867,7 @@
     background: transparent;
     border-radius: var(--radius-control);
     color: var(--text-secondary);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     text-align: left;
     font-size: var(--fz-list);
   }
@@ -1541,6 +1940,19 @@
     padding: var(--space-3) 0;
   }
 
+  /* the log folder path, shown so it can be read and typed somewhere else. */
+  .hint.path {
+    font-family: var(--font-mono);
+    word-break: break-all;
+  }
+
+  .log-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    margin-top: var(--space-2);
+  }
+
   .row-label {
     font-size: var(--fz-body);
     color: var(--text-primary);
@@ -1596,7 +2008,7 @@
     background: var(--surface-raised);
     border-radius: var(--radius-control);
     color: var(--text-primary);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     text-align: left;
   }
 
@@ -1623,7 +2035,7 @@
     color: var(--text-primary);
     font-size: var(--fz-label);
     border-radius: var(--radius-control);
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
 
   .edit-menubar:hover {
@@ -1662,7 +2074,7 @@
     border: var(--hairline) solid var(--border-default);
     border-radius: var(--radius-card);
     background: var(--surface-raised);
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
 
   .style-card:hover {
@@ -1692,7 +2104,7 @@
     background: var(--surface-raised);
     color: var(--text-primary);
     font-size: var(--fz-label);
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
 
   .action-btn:hover {
@@ -1767,7 +2179,7 @@
     padding: var(--space-2) var(--space-4);
     border-radius: var(--radius-control);
     font-size: var(--fz-label);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     border: var(--hairline) solid var(--border-default);
   }
 
@@ -1788,7 +2200,7 @@
     justify-content: space-between;
     gap: var(--space-4);
     padding: var(--space-2) 0;
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
 
   .toggle.disabled {
@@ -1807,7 +2219,7 @@
     background: var(--surface-raised);
     color: var(--text-primary);
     font: inherit;
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
 
   .download-row {
@@ -1835,7 +2247,7 @@
     background: var(--surface-raised);
     color: var(--text-secondary);
     font-size: var(--fz-meta);
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
 
   .preset-btn:hover {
@@ -1866,7 +2278,7 @@
     background: var(--surface-raised);
     color: var(--text-primary);
     font-size: var(--fz-label);
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
 
   .lang-tool-btn:hover {

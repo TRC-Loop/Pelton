@@ -37,23 +37,43 @@ const accounts: Account[] = [
     id: 1,
     email: 'spud@pelton.email',
     displayName: 'Spud McPelton',
+    localLabel: '',
+    useLocalLabel: false,
     username: '',
     imapHost: 'imap.pelton.email',
     imapPort: 993,
     smtpHost: 'smtp.pelton.email',
     smtpPort: 465,
     local: false,
+    imapTls: 'ssl',
+    smtpTls: 'ssl',
+    exportOnArchive: false,
+    exportDir: '',
+    exportSubfolders: 'none',
+    exportNameTemplate: '',
+    pgpDefault: '',
+    passwordPromptDismissed: false,
   },
   {
     id: 2,
     email: 'harvest@pelton-potato.island',
     displayName: 'Potato Island Co-op',
+    localLabel: '',
+    useLocalLabel: false,
     username: '',
     imapHost: 'imap.pelton-potato.island',
     imapPort: 993,
     smtpHost: 'smtp.pelton-potato.island',
     smtpPort: 465,
     local: false,
+    imapTls: 'ssl',
+    smtpTls: 'ssl',
+    exportOnArchive: false,
+    exportDir: '',
+    exportSubfolders: 'none',
+    exportNameTemplate: '',
+    pgpDefault: '',
+    passwordPromptDismissed: false,
   },
 ]
 
@@ -65,10 +85,15 @@ function foldersFor(accountId: number, inboxUnread: number, inboxTotal: number):
     imapPath: name,
     delimiter: '/',
     parentId: null,
+    syncExcluded: false,
     role,
     unreadCount: unread,
     totalCount: total,
     attributes: [],
+    pinned: false,
+    // the demo folders carry their role directly, so none of them is an
+    // override of anything.
+    roleOverride: '',
   })
   const base = accountId * 100
   return [
@@ -126,6 +151,8 @@ function msg(
     offline: false,
     snoozeUntil: '',
     senderVip: false,
+    // the demo mail is not signed, so there is no verdict to show.
+    smime: { status: '', signer: '', email: '', issuer: '', detail: '' },
     ...opts,
   }
 }
@@ -169,7 +196,7 @@ export function demoViews(): UnifiedView[] {
 
 /** demoList returns the sample inbox for any folder or view selection. */
 export function demoList(): MessageList {
-  return { messages, total: 63 }
+  return { messages, total: 63, hasOlder: false }
 }
 
 /** demoMessage returns the shared potato body wrapped as the given message. */
@@ -181,12 +208,19 @@ export function demoMessage(id: number): MessageDetail {
     toAddresses: 'spud@pelton.email',
     ccAddresses: '',
     bodyPlain: 'Hey, quick one about the potato shipment...',
+    bodyQuote: 'Hey, quick one about the potato shipment...',
     bodyHtmlSafe: sharedBodyHtml,
+    phishing: { level: 'none' },
     unsubscribe: null,
+    // the demo mail says what encoding it uses, so nothing was guessed.
+    charsetGuess: '',
+    // the demo mail is not protected, so there is nothing to decrypt.
+    pgpState: '',
     isHtml: true,
     hasRemoteContent: false,
     remoteAllowed: true,
     remoteHosts: [],
+    trackingPixels: [],
     attachments: summary.hasAttachments
       ? [{ id: id * 10, filename: 'q4-potato-yields.xlsx', contentType: 'application/vnd.ms-excel', sizeBytes: 48213, inline: false }]
       : [],

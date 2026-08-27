@@ -5,10 +5,11 @@
   // in-app webview.
   import { onDestroy, onMount } from 'svelte'
   import { createEventDispatcher } from 'svelte'
-  import { IconBrandGithub, IconBug, IconLicense, IconScale, IconX, IconRefresh, IconUsers, IconWorld, IconBook2 } from '@tabler/icons-svelte'
+  import Modal from '../common/Modal.svelte'
+  import { IconBrandGithub, IconBug, IconLicense, IconScale, IconRefresh, IconUsers, IconWorld, IconBook2, IconFolderOpen, IconClipboard } from '@tabler/icons-svelte'
   import { BrowserOpenURL } from '../../../wailsjs/runtime/runtime'
   import { APP } from '../../lib/app-info'
-  import { appVersion, checkForUpdates, defaultMailClientStatus, setDefaultMailClient, isNightly, type UpdateCheckResult } from '../../lib/api'
+  import { appVersion, checkForUpdates, defaultMailClientStatus, setDefaultMailClient, isNightly, getDiagnostics, openLogFolder, type UpdateCheckResult } from '../../lib/api'
   import nightlyLogo from '../../assets/images/icons/pelton-nightly-logo.png'
   import { onUpdateAvailable } from '../../lib/events'
   import { prefs, setUpdateCheckFrequency } from '../../stores/prefs'
@@ -65,6 +66,29 @@
       toastError(errorMessage(err))
     } finally {
       settingDefault = false
+    }
+  }
+
+  // diagnostics (#211): the build and platform summary that starts a bug
+  // report, and a shortcut to the log folder. Copying is the only way any of
+  // this leaves the machine, and it takes a click to do it.
+  let copiedDiagnostics = false
+
+  async function onCopyDiagnostics(): Promise<void> {
+    try {
+      await navigator.clipboard.writeText(await getDiagnostics())
+      copiedDiagnostics = true
+      setTimeout(() => (copiedDiagnostics = false), 2000)
+    } catch (err) {
+      toastError(errorMessage(err))
+    }
+  }
+
+  async function onOpenLogFolder(): Promise<void> {
+    try {
+      await openLogFolder()
+    } catch (err) {
+      toastError(errorMessage(err))
     }
   }
 
@@ -131,14 +155,9 @@
     BrowserOpenURL(url)
   }
 
-  function onKeydown(event: KeyboardEvent): void {
-    if (event.key === 'Escape') {
-      showLicenses = false
-    }
-  }
 </script>
 
-<svelte:window on:keydown={showLicenses ? onKeydown : undefined} on:resize={showViewportInfo ? refreshViewportInfo : undefined} />
+<svelte:window on:resize={showViewportInfo ? refreshViewportInfo : undefined} />
 
 <div class="about">
   <div class="identity">
@@ -207,6 +226,21 @@
     </button>
   </div>
 
+  <div class="row">
+    <span class="row-label">{$t('about.diagnostics.label')}</span>
+    <div class="diag-actions">
+      <button type="button" class="action-btn" on:click={onOpenLogFolder}>
+        <IconFolderOpen size={14} stroke={1.8} />
+        {$t('settingsPanel.button.openLogFolder')}
+      </button>
+      <button type="button" class="action-btn" on:click={onCopyDiagnostics}>
+        <IconClipboard size={14} stroke={1.8} />
+        {copiedDiagnostics ? $t('about.diagnostics.copied') : $t('about.diagnostics.copy')}
+      </button>
+    </div>
+  </div>
+  <p class="hint">{$t('about.diagnostics.hint')}</p>
+
   <div class="update-block">
     <SegmentedSetting label={$t('about.update.label')} value={$prefs.updateCheckFrequency} options={updateCheckOptions} on:change={onUpdateFrequency} />
     <p class="hint">{$t('about.update.hint')}</p>
@@ -242,23 +276,11 @@
 </div>
 
 {#if showLicenses}
-  <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
-  <div class="overlay" on:click={() => (showLicenses = false)}>
-    <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions a11y-no-noninteractive-element-interactions -->
-    <div class="modal" role="dialog" aria-modal="true" aria-label={$t('about.licenses')} tabindex="-1" on:click|stopPropagation>
-      <header>
-        <span class="m-title">{$t('about.licenses')}</span>
-        <button type="button" class="m-close" aria-label={$t('about.close')} on:click={() => (showLicenses = false)}>
-          <IconX size={18} stroke={1.8} />
-        </button>
-      </header>
-      <div class="m-body">
-        {#await import('./LicensesView.svelte') then m}
-          <svelte:component this={m.default} />
-        {/await}
-      </div>
-    </div>
-  </div>
+  <Modal title={$t('about.licenses')} size="large" on:close={() => (showLicenses = false)}>
+    {#await import('./LicensesView.svelte') then m}
+      <svelte:component this={m.default} />
+    {/await}
+  </Modal>
 {/if}
 
 <style>
@@ -337,7 +359,7 @@
     background: var(--surface-raised);
     color: var(--text-primary);
     font-size: var(--fz-label);
-    cursor: pointer;
+    cursor: var(--cursor-action);
   }
 
   .links button:hover {
@@ -387,7 +409,8 @@
     line-height: 1.5;
   }
 
-  .update-actions {
+  .update-actions,
+  .diag-actions {
     display: inline-flex;
     align-items: center;
     gap: var(--space-2);
@@ -403,7 +426,7 @@
     background: var(--surface-raised);
     color: var(--text-primary);
     font-size: var(--fz-label);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     white-space: nowrap;
   }
 
@@ -416,61 +439,4 @@
     cursor: default;
   }
 
-  .overlay {
-    position: fixed;
-    inset: 0;
-    z-index: 140;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: var(--space-5);
-    background: var(--scrim, rgba(0, 0, 0, 0.4));
-  }
-
-  .modal {
-    width: 100%;
-    max-width: 640px;
-    max-height: 82vh;
-    display: flex;
-    flex-direction: column;
-    border: var(--hairline) solid var(--border-default);
-    border-radius: var(--radius-card);
-    background: var(--surface-overlay);
-    box-shadow: var(--shadow-overlay);
-    overflow: hidden;
-  }
-
-  .modal header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: var(--space-4) var(--space-5);
-    border-bottom: var(--hairline) solid var(--border-subtle);
-  }
-
-  .m-title {
-    font-size: var(--fz-heading);
-    font-weight: var(--fw-semibold);
-    color: var(--text-primary);
-  }
-
-  .m-close {
-    display: inline-flex;
-    border: none;
-    background: transparent;
-    color: var(--text-secondary);
-    cursor: pointer;
-    padding: var(--space-1);
-    border-radius: var(--radius-control);
-  }
-
-  .m-close:hover {
-    background: var(--surface-hover);
-    color: var(--text-primary);
-  }
-
-  .m-body {
-    padding: var(--space-4) var(--space-5);
-    overflow-y: auto;
-  }
 </style>

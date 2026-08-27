@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/TRC-Loop/Pelton/internal/crypto"
 	"github.com/TRC-Loop/Pelton/internal/smtp"
 )
 
@@ -52,13 +51,24 @@ type ComposeRequest struct {
 	// later"). Empty means send immediately, subject to the undo-send delay
 	// below. When set it must be in the future.
 	SendAt string `json:"sendAt"`
+	// Protection is the pgp treatment for this one message: "none", "sign",
+	// "encrypt" or "signencrypt". Empty means none. The compose window resolves
+	// it from the account default and what the keys actually allow, and the
+	// send refuses rather than falling back to plaintext.
+	Protection string `json:"protection"`
 }
 
 // SendMessage builds the mime message and enqueues it in the durable outbox. The
 // background worker transmits it when smtp credentials are configured. This call
 // returns once the message is safely queued, so the ui can confirm immediately.
-// Crypto mode is none here; the per-message pgp toggle is a later ui addition
-// that would pass a mode and options through to smtp.Enqueue.
+//
+// Signing and encryption happen here, at enqueue time, not when the worker
+// transmits: the queue holds the finished bytes, so a message sits in the
+// outbox already protected and a passphrase is only ever needed while the user
+// is still in front of the send button. Anything that would stop the protection
+// from being applied fails the send outright, because the alternative is
+// quietly putting a message the user marked as protected on the wire in
+// plaintext.
 func (a *App) SendMessage(req ComposeRequest) (int64, error) {
 	if err := a.ready(); err != nil {
 		return 0, err
@@ -74,7 +84,16 @@ func (a *App) SendMessage(req ComposeRequest) (int64, error) {
 		return 0, err
 	}
 
-	id, err := smtp.Enqueue(a.ctx, a.queue, req.AccountID, msg, nil, crypto.ModeNone, crypto.Options{}, notBefore)
+	account, err := a.store.GetAccount(a.ctx, req.AccountID)
+	if err != nil {
+		return 0, err
+	}
+	mode, opts, engine, err := a.protectionOptions(*account, req)
+	if err != nil {
+		return 0, err
+	}
+
+	id, err := smtp.Enqueue(a.ctx, a.queue, req.AccountID, msg, engine, mode, opts, notBefore)
 	if err != nil {
 		return 0, err
 	}
@@ -82,7 +101,8 @@ func (a *App) SendMessage(req ComposeRequest) (int64, error) {
 
 	// harvest every recipient into the address book so autocomplete learns from
 	// who the user writes to. best effort: a failure here must not fail the send.
-	for _, group := range [][]AddressDTO{req.To, req.Cc, req.Bcc} {
+	// Turned off, nothing is remembered and autocomplete offers only contacts.
+	for _, group := range harvestGroups(a.harvestAddresses(), req) {
 		for _, addr := range group {
 			if err := a.store.RecordAddress(a.ctx, addr.Email, addr.Name); err != nil {
 				a.log.Error("record recipient address", "email", addr.Email, "err", err)
@@ -90,6 +110,15 @@ func (a *App) SendMessage(req ComposeRequest) (int64, error) {
 		}
 	}
 	return id, nil
+}
+
+// harvestGroups is the recipient lists to learn from, or none when learning
+// from mail is off.
+func harvestGroups(harvest bool, req ComposeRequest) [][]AddressDTO {
+	if !harvest {
+		return nil
+	}
+	return [][]AddressDTO{req.To, req.Cc, req.Bcc}
 }
 
 // CancelSend pulls a still-queued message back out of the outbox, returning
@@ -108,6 +137,40 @@ func (a *App) CancelSend(id int64) (bool, error) {
 		a.emit(EventOutboxChanged, nil)
 	}
 	return cancelled, nil
+}
+
+// RetrySend puts a failed message back in the send queue, returning whether it
+// was requeued. False means it is no longer failed, which the ui treats as
+// "already handled" rather than an error.
+func (a *App) RetrySend(id int64) (bool, error) {
+	if err := a.ready(); err != nil {
+		return false, err
+	}
+	retried, err := a.queue.Retry(a.ctx, id)
+	if err != nil {
+		return false, err
+	}
+	if retried {
+		a.emit(EventOutboxChanged, nil)
+	}
+	return retried, nil
+}
+
+// DiscardFailedSend removes a failed message from the outbox, returning whether
+// it was removed. The message is not recoverable afterwards, so the ui confirms
+// before calling this.
+func (a *App) DiscardFailedSend(id int64) (bool, error) {
+	if err := a.ready(); err != nil {
+		return false, err
+	}
+	discarded, err := a.queue.Discard(a.ctx, id)
+	if err != nil {
+		return false, err
+	}
+	if discarded {
+		a.emit(EventOutboxChanged, nil)
+	}
+	return discarded, nil
 }
 
 // ClearSentOutbox removes rows already marked sent. The ui calls it after showing
@@ -181,10 +244,37 @@ func (a *App) buildMessage(req ComposeRequest) (*smtp.Message, error) {
 // live imap connection and credentials, which arrive with the account-setup and
 // keyring step; until then drafts are local only.
 // TODO(backend): once credentials exist, also AppendToDrafts on the imap client.
+// A draft of a message the user chose to encrypt is not stored as it stands:
+// the point of encrypting it was that its contents are not to sit around
+// readable, and an unsent draft is no different from a sent one in that
+// respect. Sealed holds the whole request encrypted to the sender's own key,
+// Request is left empty, and Locked says the passphrase is needed to read it
+// back. Ordinary drafts are unchanged.
 type DraftDTO struct {
 	ID      int64          `json:"id"`
 	SavedAt string         `json:"savedAt"`
 	Request ComposeRequest `json:"request"`
+	// Locked is true when this draft is sealed and could not be opened with a
+	// passphrase Pelton currently holds.
+	Locked bool `json:"locked"`
+	// AccountID and Protection survive sealing so the drafts list can still say
+	// which mailbox a locked draft belongs to and that it is protected.
+	AccountID  int64  `json:"accountId"`
+	Protection string `json:"protection"`
+}
+
+// storedDraft is a draft as it sits in the settings table. It is kept separate
+// from DraftDTO so the sealed ciphertext has somewhere to live that the
+// frontend never sees: the ui gets Locked and the metadata, never the armor.
+type storedDraft struct {
+	ID      int64          `json:"id"`
+	SavedAt string         `json:"savedAt"`
+	Request ComposeRequest `json:"request"`
+	// Sealed is the armored, encrypted request, set only for a draft of a
+	// message the user chose to encrypt. Request is empty when it is set.
+	Sealed     string `json:"sealed,omitempty"`
+	AccountID  int64  `json:"accountId"`
+	Protection string `json:"protection"`
 }
 
 // draftsKey is the settings key holding the json array of local drafts.
@@ -201,14 +291,35 @@ func (a *App) SaveDraft(id int64, req ComposeRequest) (int64, error) {
 		return 0, err
 	}
 
+	entry := storedDraft{
+		ID:         id,
+		SavedAt:    time.Now().UTC().Format(time.RFC3339),
+		Request:    req,
+		AccountID:  req.AccountID,
+		Protection: req.Protection,
+	}
+	// a draft of a message set to encrypt is sealed to the sender's own key
+	// rather than written out as it stands. Failing to seal fails the save: the
+	// alternative is quietly storing in the clear the one thing the user asked
+	// not to be.
+	if encrypts(req.Protection) {
+		sealed, err := a.sealDraft(req)
+		if err != nil {
+			return 0, err
+		}
+		entry.Sealed = sealed
+		entry.Request = ComposeRequest{AccountID: req.AccountID, Protection: req.Protection}
+	}
+
 	if id == 0 {
-		id = time.Now().UnixNano()
-		drafts = append(drafts, DraftDTO{ID: id})
+		entry.ID = time.Now().UnixNano()
+		id = entry.ID
+		drafts = append(drafts, entry)
 	}
 	for i := range drafts {
 		if drafts[i].ID == id {
-			drafts[i].Request = req
-			drafts[i].SavedAt = time.Now().UTC().Format(time.RFC3339)
+			entry.ID = id
+			drafts[i] = entry
 		}
 	}
 	if err := a.store.SetJSON(a.ctx, draftsKey, drafts); err != nil {
@@ -217,12 +328,75 @@ func (a *App) SaveDraft(id int64, req ComposeRequest) (int64, error) {
 	return id, nil
 }
 
-// ListDrafts returns the locally saved drafts, newest first by save time.
+// ListDrafts returns the locally saved drafts, newest first by save time. A
+// sealed draft is opened when a passphrase for its key is already held, and
+// otherwise comes back marked Locked with no content, for UnsealDraft to open.
 func (a *App) ListDrafts() ([]DraftDTO, error) {
 	if err := a.ready(); err != nil {
 		return nil, err
 	}
-	return a.loadDrafts()
+	drafts, err := a.loadDrafts()
+	if err != nil {
+		return nil, err
+	}
+	out := make([]DraftDTO, 0, len(drafts))
+	for _, draft := range drafts {
+		out = append(out, a.toDraftDTO(draft))
+	}
+	return out, nil
+}
+
+// toDraftDTO opens a sealed draft when a passphrase for it is already held, and
+// otherwise hands back an empty one marked Locked. Nothing prompts from here:
+// listing drafts must not put a passphrase dialog in front of anybody.
+func (a *App) toDraftDTO(draft storedDraft) DraftDTO {
+	dto := DraftDTO{
+		ID:         draft.ID,
+		SavedAt:    draft.SavedAt,
+		Request:    draft.Request,
+		AccountID:  draft.AccountID,
+		Protection: draft.Protection,
+	}
+	if draft.Sealed == "" {
+		return dto
+	}
+	req, err := a.unsealDraft(draft, nil)
+	if err != nil {
+		dto.Locked = true
+		return dto
+	}
+	dto.Request = req
+	return dto
+}
+
+// UnsealDraft opens a locked draft with a passphrase and returns it. The
+// passphrase is held for the rest of the session, so a user working through
+// several protected drafts is asked once.
+func (a *App) UnsealDraft(id int64, passphrase string) (DraftDTO, error) {
+	if err := a.ready(); err != nil {
+		return DraftDTO{}, err
+	}
+	drafts, err := a.loadDrafts()
+	if err != nil {
+		return DraftDTO{}, err
+	}
+	for _, draft := range drafts {
+		if draft.ID != id {
+			continue
+		}
+		if draft.Sealed == "" {
+			return a.toDraftDTO(draft), nil
+		}
+		req, err := a.unsealDraft(draft, []byte(passphrase))
+		if err != nil {
+			return DraftDTO{}, err
+		}
+		dto := a.toDraftDTO(draft)
+		dto.Request = req
+		dto.Locked = false
+		return dto, nil
+	}
+	return DraftDTO{}, fmt.Errorf("pelton: draft %d not found", id)
 }
 
 // DeleteDraft removes a local draft by id.
@@ -244,8 +418,8 @@ func (a *App) DeleteDraft(id int64) error {
 }
 
 // loadDrafts reads the drafts json, treating an unset key as an empty list.
-func (a *App) loadDrafts() ([]DraftDTO, error) {
-	var drafts []DraftDTO
+func (a *App) loadDrafts() ([]storedDraft, error) {
+	var drafts []storedDraft
 	err := a.store.GetJSON(a.ctx, draftsKey, &drafts)
 	if err != nil {
 		if isSettingMissing(err) {

@@ -5,11 +5,15 @@
   // honest, always-visible window into background activity.
   import { onDestroy, onMount } from 'svelte'
   import { IconSend, IconAlertTriangle, IconRefresh, IconCheck, IconDownload, IconBatteryEco, IconX, IconBug, IconWifiOff } from '@tabler/icons-svelte'
-  import { outbox, syncing, lastSynced, syncFolder } from '../../stores/outbox'
+  import { outbox, syncing, lastSynced, syncFolder, syncServer, syncAccount, syncCounts } from '../../stores/outbox'
   import { online } from '../../stores/network'
+  import { failedSyncs, showSyncFailure } from '../../stores/syncfailures'
   import { downloadProgress, attachmentProgress } from '../../stores/progress'
   import { formatRelative } from '../../lib/format'
   import { cancelDownload, isDevMode, isNightly } from '../../lib/api'
+  import ProfileChip from './ProfileChip.svelte'
+  import AgentProposals from './AgentProposals.svelte'
+  import { profiles, currentProfile } from '../../stores/profiles'
   import { prefs, setLowPowerMode } from '../../stores/prefs'
   import OutboxPanel from './OutboxPanel.svelte'
   import { t } from '../../lib/i18n'
@@ -46,6 +50,32 @@
       ? Math.round(($attachmentProgress.bytesDone / $attachmentProgress.bytesTotal) * 100)
       : 0
 
+  // the sync line. Verbose names the mailbox, and the account and server behind
+  // it, which is the difference between two identical "Syncing INBOX" lines and
+  // knowing which mailbox is the slow one.
+  $: syncLabel = buildSyncLabel($prefs.verboseSync, $syncFolder, $syncAccount, $syncServer)
+
+  function buildSyncLabel(verbose: boolean, folder: string, account: string, server: string): string {
+    if (!verbose || folder === '') {
+      return $t('common.statusBar.syncing')
+    }
+    if (account !== '' && server !== '') {
+      return $t('common.statusBar.syncingMailboxFull')
+        .replace('{mailbox}', folder)
+        .replace('{account}', account)
+        .replace('{server}', server)
+    }
+    if (server !== '') {
+      return $t('common.statusBar.syncingMailboxOn').replace('{mailbox}', folder).replace('{server}', server)
+    }
+    return $t('common.statusBar.syncingMailbox').replace('{mailbox}', folder)
+  }
+
+  // a total of 0 means no folder has been reconciled yet, so there is nothing
+  // honest to draw a proportion from and the bar sweeps instead.
+  $: determinate = $syncCounts.total > 0
+  $: percent = determinate ? Math.min(100, Math.round(($syncCounts.done / $syncCounts.total) * 100)) : 0
+
   let panelOpen = false
 
   $: pending = $outbox.filter((r) => r.state === 'queued' || r.state === 'sending')
@@ -56,9 +86,16 @@
   let tick = Date.now()
   const timer = setInterval(() => (tick = Date.now()), 30000)
   onDestroy(() => clearInterval(timer))
-  $: syncedLabel = $lastSynced ? relativeAt($lastSynced, tick) : ''
-  function relativeAt(ts: number, _tick: number): string {
-    return formatRelative(ts)
+  // one mailbox is named; more than one is counted, since the names would not
+  // fit and the dialog lists them anyway.
+  $: failedLabel =
+    $failedSyncs.length === 1
+      ? $t('common.statusBar.syncFailedOne').replace('{mailbox}', $failedSyncs[0].email)
+      : $t('common.statusBar.syncFailedMany').replace('{n}', String($failedSyncs.length))
+
+  $: syncedLabel = $lastSynced ? relativeAt($lastSynced, tick, $t) : ''
+  function relativeAt(ts: number, _tick: number, translate: (key: string) => string): string {
+    return formatRelative(ts, translate)
   }
 </script>
 
@@ -75,6 +112,12 @@
         <IconBug size={13} stroke={1.8} />
         {$t('common.statusBar.devMode')}
       </span>
+    {/if}
+    <!-- which profile you are writing from. Only once there is more than one:
+         an install with a single profile has no question to answer. -->
+    {#if $profiles.length > 1 && $currentProfile}
+      <AgentProposals />
+      <ProfileChip />
     {/if}
     {#if pending.length > 0 || failed.length > 0}
       <button type="button" class="outbox-btn" class:has-failed={failed.length > 0} on:click={() => (panelOpen = !panelOpen)}>
@@ -164,12 +207,35 @@
     {#if $syncing}
       <span class="sync syncing">
         <IconRefresh size={13} stroke={1.7} class="spin" />
-        {#if $prefs.verboseSync && $syncFolder}
-          {$t('common.statusBar.syncingMailbox').replace('{mailbox}', $syncFolder)}
-        {:else}
-          {$t('common.statusBar.syncing')}
+        <span class="sync-text">{syncLabel}</span>
+        {#if $prefs.syncProgressBar}
+          <!-- the bar sits after the text at a fixed width, so a label that
+               grows from "Syncing" to a mailbox name and a count does not shove
+               it sideways while you are watching it. -->
+          <span
+            class="bar"
+            class:indeterminate={!determinate}
+            role="progressbar"
+            aria-valuemin={0}
+            aria-valuemax={determinate ? $syncCounts.total : undefined}
+            aria-valuenow={determinate ? $syncCounts.done : undefined}
+            aria-label={$t('common.statusBar.syncProgress')}
+          >
+            <span class="bar-fill" style={determinate ? `width:${percent}%` : ''}></span>
+          </span>
+          {#if determinate}
+            <span class="counts">{$syncCounts.done.toLocaleString()} / {$syncCounts.total.toLocaleString()}</span>
+          {/if}
         {/if}
       </span>
+    {:else if $failedSyncs.length > 0}
+      <!-- a run that failed one mailbox out of several used to report a clean
+           sync, which is how a mailbox goes quiet for weeks without anyone
+           noticing (#322). -->
+      <button type="button" class="sync sync-failed" on:click={() => showSyncFailure($failedSyncs[0])}>
+        <IconAlertTriangle size={13} stroke={1.8} />
+        {failedLabel}
+      </button>
     {:else if $lastSynced}
       <span class="sync">
         <IconCheck size={13} stroke={1.7} />
@@ -257,7 +323,7 @@
     border: none;
     background: transparent;
     color: var(--text-tertiary);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     padding: 1px;
     border-radius: var(--radius-control);
   }
@@ -274,7 +340,7 @@
     background: transparent;
     color: var(--text-secondary);
     font-size: var(--fz-meta);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     padding: var(--space-1) var(--space-2);
     border-radius: var(--radius-control);
   }
@@ -321,7 +387,7 @@
     background: transparent;
     color: var(--warning, var(--text-secondary));
     font-size: var(--fz-meta);
-    cursor: pointer;
+    cursor: var(--cursor-action);
     padding: var(--space-1) var(--space-2);
     border-radius: var(--radius-control);
   }
@@ -358,6 +424,69 @@
 
   .sync.syncing {
     color: var(--text-secondary);
+  }
+
+  .sync-failed {
+    padding: 0;
+    font: inherit;
+    color: var(--danger);
+    background: transparent;
+    border: none;
+    cursor: var(--cursor-action);
+  }
+  .sync-failed:hover {
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  /* the label is the only part allowed to change width; the bar and the count
+     keep their own space so nothing shifts as a sync runs. */
+  .sync-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 46ch;
+  }
+
+  .bar {
+    position: relative;
+    flex-shrink: 0;
+    width: 90px;
+    height: 4px;
+    overflow: hidden;
+    border-radius: var(--radius-control);
+    background: var(--surface-sunken);
+  }
+
+  .bar-fill {
+    display: block;
+    height: 100%;
+    width: 0;
+    border-radius: inherit;
+    background: var(--accent);
+    transition: width 200ms linear;
+  }
+
+  /* nothing to be proportional about yet, so it sweeps rather than sitting at
+     zero and looking stuck. */
+  .bar.indeterminate .bar-fill {
+    width: 40%;
+    animation: sweep 1.1s ease-in-out infinite;
+  }
+
+  @keyframes sweep {
+    0% {
+      transform: translateX(-100%);
+    }
+    100% {
+      transform: translateX(250%);
+    }
+  }
+
+  .counts {
+    flex-shrink: 0;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-tertiary);
   }
 
   .sync :global(.spin) {

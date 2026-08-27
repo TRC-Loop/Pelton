@@ -3,12 +3,15 @@
 // single unsubscribe function, and keeps the event-name strings in one place.
 
 import { EventsOn } from '../../wailsjs/runtime/runtime'
+import type { AccountSyncState } from './types'
 
 // event names, matching the go constants exactly.
 export const EventNames = {
   mailNew: 'mail:new',
+  mailRepaired: 'mail:repaired',
   syncProgress: 'sync:progress',
   syncState: 'sync:state',
+  accountSyncState: 'sync:accounts',
   outboxChanged: 'outbox:changed',
   menu: 'menu:action',
   downloadProgress: 'download:progress',
@@ -16,7 +19,10 @@ export const EventNames = {
   updateAvailable: 'update:available',
   mailtoCompose: 'mailto:compose',
   viewsChanged: 'views:changed',
+  profileChanged: 'profile:changed',
   importProgress: 'import:progress',
+  agentProposals: 'agent:proposals',
+  openMessage: 'message:open',
 } as const
 
 // payloads, mirroring the go event structs.
@@ -26,16 +32,46 @@ export interface MailNewEvent {
   count: number
 }
 
+// MailRepairedEvent reports messages whose stored text was replaced because it
+// had been cached in an encoding nothing could read.
+export interface MailRepairedEvent {
+  accountId: number
+  folderId: number
+  count: number
+}
+
+// SyncProgressEvent reports a running sync or backfill. An empty folder means
+// the run is over.
 export interface SyncProgressEvent {
   accountId: number
+  // who is syncing and where from, for the verbose line.
+  accountEmail: string
+  server: string
   folder: string
+  // message bodies fetched so far in this run, and how many the reconcile
+  // plans have asked for up to now. total grows as folders open, and 0 means
+  // nothing is known yet, which the bar shows as indeterminate rather than
+  // guessing.
   done: number
   total: number
+  // the same counts for the folder named above.
+  folderDone: number
+  folderTotal: number
+  // mailboxes rather than messages.
+  foldersDone: number
+  foldersTotal: number
 }
 
 export interface SyncStateEvent {
   running: boolean
   error: string
+}
+
+// AccountSyncStateEvent carries how every account fared, fired when a sync run
+// ends. A run that failed one account out of several used to report nothing at
+// all, which is how a mailbox can go quiet for weeks.
+export interface AccountSyncStateEvent {
+  states: AccountSyncState[]
 }
 
 export interface DownloadProgressEvent {
@@ -70,6 +106,10 @@ export interface ImportProgressEvent {
   failed: number
   bytesDone: number
   bytesTotal: number
+  // which mailbox is being read, counting from 1, out of fileTotal. Bytes say
+  // how far along the import is; these say where it is.
+  fileIndex: number
+  fileTotal: number
   folders: string[]
   error: string
 }
@@ -95,12 +135,27 @@ export interface MailtoDraft {
   body: string
 }
 
+// OpenMessageEvent asks the ui to show one specific message, which today only
+// happens when a new-mail notification is clicked. The folder travels with it
+// so the list can move to where the message lives first.
+export interface OpenMessageEvent {
+  messageId: number
+  accountId: number
+  folderId: number
+}
+
 // Unsubscribe removes an event listener.
 export type Unsubscribe = () => void
 
 // onMailNew fires when sync or idle pulled new messages.
 export function onMailNew(cb: (e: MailNewEvent) => void): Unsubscribe {
   return EventsOn(EventNames.mailNew, (e: MailNewEvent) => cb(e))
+}
+
+// onMailRepaired fires when a sync rewrote the text of cached messages, so the
+// list and any open message show the fixed text without a reload.
+export function onMailRepaired(cb: (e: MailRepairedEvent) => void): Unsubscribe {
+  return EventsOn(EventNames.mailRepaired, (e: MailRepairedEvent) => cb(e))
 }
 
 // onSyncProgress fires per folder as a sync runs.
@@ -111,6 +166,11 @@ export function onSyncProgress(cb: (e: SyncProgressEvent) => void): Unsubscribe 
 // onSyncState fires when background sync starts or stops.
 export function onSyncState(cb: (e: SyncStateEvent) => void): Unsubscribe {
   return EventsOn(EventNames.syncState, (e: SyncStateEvent) => cb(e))
+}
+
+// onAccountSyncState fires when a sync run ends, with each account's outcome.
+export function onAccountSyncState(cb: (e: AccountSyncStateEvent) => void): Unsubscribe {
+  return EventsOn(EventNames.accountSyncState, (e: AccountSyncStateEvent) => cb(e))
 }
 
 // onOutboxChanged fires when the outbox contents or a message state change. it
@@ -157,4 +217,23 @@ export function onImportProgress(cb: (e: ImportProgressEvent) => void): Unsubscr
 // carries no payload; subscribers reload the views store.
 export function onViewsChanged(cb: () => void): Unsubscribe {
   return EventsOn(EventNames.viewsChanged, () => cb())
+}
+
+// onProfileChanged fires when the app switches profile, or when the profile it
+// is in is edited. Everything the ui holds is scoped to a profile, so the
+// subscriber reloads rather than patching.
+export function onProfileChanged(cb: () => void): Unsubscribe {
+  return EventsOn(EventNames.profileChanged, () => cb())
+}
+
+// onAgentProposals fires when an agent proposes a message, or one is approved
+// or discarded, so the approval queue matches what is stored.
+export function onAgentProposals(cb: () => void): Unsubscribe {
+  return EventsOn(EventNames.agentProposals, () => cb())
+}
+
+// onOpenMessage fires when something outside the ui asks for one message to be
+// shown. Today that is a clicked new-mail notification on Windows.
+export function onOpenMessage(cb: (e: OpenMessageEvent) => void): Unsubscribe {
+  return EventsOn(EventNames.openMessage, (e: OpenMessageEvent) => cb(e))
 }
