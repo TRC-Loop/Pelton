@@ -85,27 +85,16 @@ jobs:
             // without needing separate category sections.
             prs.sort((a, b) => a.title.localeCompare(b.title));
 
-            // A release body is capped at 125000 characters by the API, and a
-            // release the size of 2026.4 (65 merged pull requests) blows
-            // straight past it: bot-written bodies alone run to tens of
-            // thousands of characters each. Exceeding it fails the whole
-            // request, so the length is managed here rather than discovered at
-            // tag time.
+            // One line per pull request. Embedding the full bodies was both
+            // unreadable at release size and over the API's 125000-character
+            // body limit, which is a hard failure: 2026.4's 69 pull requests
+            // came to 214238 characters of body text, much of it bot-written
+            // sections restating the diff. The titles carry the change; anyone
+            // who wants the detail follows the number.
             const BODY_LIMIT = 125000;
-            const PER_PR_LIMIT = 1200;
 
-            // Bots delimit their generated sections with a matched pair of html
-            // comments. Those sections restate the diff and are the bulk of the
-            // length, so they go before anything is measured.
-            function stripGenerated(text) {
-              return text.replace(
-                /<!--\s*This is an auto-generated comment[\s\S]*?end of auto-generated comment[^>]*-->/g,
-                "",
-              );
-            }
-
-            // clip cuts at the last line break before the limit, so a body is
-            // never truncated mid-sentence or mid-html-tag.
+            // clip cuts at the last line break before the limit, so the body is
+            // never truncated mid-line.
             function clip(text, max) {
               if (text.length <= max) return text;
               const cut = text.slice(0, max);
@@ -113,8 +102,7 @@ jobs:
               return `${(lastBreak > max / 2 ? cut.slice(0, lastBreak) : cut).trimEnd()}\n\n_(shortened)_`;
             }
 
-            const detailed = [];
-            const brief = [];
+            const entries = [];
             for (const pr of prs) {
               const labels = pr.labels.map((l) => l.name);
               if (labels.some((l) => EXCLUDE_LABELS.has(l))) continue;
@@ -124,15 +112,7 @@ jobs:
               // (GitHub's autolinker fights explicit links on this exact text
               // and mangles the href).
               const avatar = `<img src="${pr.user.avatar_url}&s=32" width="16" height="16" valign="middle" style="border-radius:50%;">`;
-              const credit = `${avatar} @${pr.user.login} in #${pr.number}`;
-              const body = clip(stripGenerated(pr.body || "").trim(), PER_PR_LIMIT);
-
-              brief.push(`- **${pr.title}** - ${credit}`);
-              detailed.push(
-                body
-                  ? `<details>\n<summary><strong>${pr.title}</strong> - ${credit}</summary>\n\n${body}\n\n</details>`
-                  : `- **${pr.title}** - ${credit}`
-              );
+              entries.push(`- **${pr.title}** - ${avatar} @${pr.user.login} in #${pr.number}`);
             }
 
             // assemble is called twice: once with the per-pull-request bodies
@@ -161,20 +141,10 @@ jobs:
               `Warranty and liability: [DISCLAIMER.md](https://github.com/${owner}/${repo}/blob/main/DISCLAIMER.md) - [pelton.app/terms](https://pelton.app/terms)`,
             ].join("\n");
 
-            function render(entries) {
-              return assemble(entries).concat(disclaimer).join("\n\n");
-            }
-
-            let body = render(detailed);
+            let body = assemble(entries).concat(disclaimer).join("\n\n");
+            // one line each is short, but a release is never blocked on length.
             if (body.length > BODY_LIMIT) {
-              core.warning(
-                `changelog came to ${body.length} characters, over the ${BODY_LIMIT} limit: falling back to one line per pull request`,
-              );
-              body = render(brief);
-            }
-            // last resort, so an unusual release still gets a draft.
-            if (body.length > BODY_LIMIT) {
-              core.warning(`changelog still ${body.length} characters: truncating`);
+              core.warning(`changelog came to ${body.length} characters: truncating`);
               body = `${clip(body, BODY_LIMIT - disclaimer.length - 200)}\n\n${disclaimer}`;
             }
 
