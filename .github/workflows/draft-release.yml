@@ -85,7 +85,36 @@ jobs:
             // without needing separate category sections.
             prs.sort((a, b) => a.title.localeCompare(b.title));
 
-            const entries = [];
+            // A release body is capped at 125000 characters by the API, and a
+            // release the size of 2026.4 (65 merged pull requests) blows
+            // straight past it: bot-written bodies alone run to tens of
+            // thousands of characters each. Exceeding it fails the whole
+            // request, so the length is managed here rather than discovered at
+            // tag time.
+            const BODY_LIMIT = 125000;
+            const PER_PR_LIMIT = 1200;
+
+            // Bots delimit their generated sections with a matched pair of html
+            // comments. Those sections restate the diff and are the bulk of the
+            // length, so they go before anything is measured.
+            function stripGenerated(text) {
+              return text.replace(
+                /<!--\s*This is an auto-generated comment[\s\S]*?end of auto-generated comment[^>]*-->/g,
+                "",
+              );
+            }
+
+            // clip cuts at the last line break before the limit, so a body is
+            // never truncated mid-sentence or mid-html-tag.
+            function clip(text, max) {
+              if (text.length <= max) return text;
+              const cut = text.slice(0, max);
+              const lastBreak = cut.lastIndexOf("\n");
+              return `${(lastBreak > max / 2 ? cut.slice(0, lastBreak) : cut).trimEnd()}\n\n_(shortened)_`;
+            }
+
+            const detailed = [];
+            const brief = [];
             for (const pr of prs) {
               const labels = pr.labels.map((l) => l.name);
               if (labels.some((l) => EXCLUDE_LABELS.has(l))) continue;
@@ -96,36 +125,58 @@ jobs:
               // and mangles the href).
               const avatar = `<img src="${pr.user.avatar_url}&s=32" width="16" height="16" valign="middle" style="border-radius:50%;">`;
               const credit = `${avatar} @${pr.user.login} in #${pr.number}`;
-              const body = (pr.body || "").trim();
+              const body = clip(stripGenerated(pr.body || "").trim(), PER_PR_LIMIT);
 
-              entries.push(
+              brief.push(`- **${pr.title}** - ${credit}`);
+              detailed.push(
                 body
                   ? `<details>\n<summary><strong>${pr.title}</strong> - ${credit}</summary>\n\n${body}\n\n</details>`
                   : `- **${pr.title}** - ${credit}`
               );
             }
 
-            const parts = [];
-            if (entries.length > 0) {
-              parts.push(`## Changes\n\n${entries.join("\n")}`);
-            }
-            if (PREVIOUS_TAG) {
-              parts.push(`**Full Changelog**: https://github.com/${owner}/${repo}/compare/${PREVIOUS_TAG}...${CURRENT_TAG}`);
+            // assemble is called twice: once with the per-pull-request bodies
+            // and, only if that is still too long, once with a single line each.
+            // A release with too much to say loses the detail rather than
+            // failing to publish at all.
+            function assemble(entries) {
+              const parts = [];
+              if (entries.length > 0) {
+                parts.push(`## Changes\n\n${entries.join("\n")}`);
+              }
+              if (PREVIOUS_TAG) {
+                parts.push(`**Full Changelog**: https://github.com/${owner}/${repo}/compare/${PREVIOUS_TAG}...${CURRENT_TAG}`);
+              }
+              return parts;
             }
 
             // downloads straight from this page skip the confirmation on
-            // pelton.app, so the disclaimer has to be on the release itself
-            parts.push(
-              [
-                "---",
-                "",
-                "Pelton is free software under the GPL-3.0, provided without warranty and used at your own risk. It connects to your real mailboxes, deletions can be permanent, and Pelton is not a backup tool. Keep your own backup of anything you cannot afford to lose.",
-                "",
-                `Warranty and liability: [DISCLAIMER.md](https://github.com/${owner}/${repo}/blob/main/DISCLAIMER.md) - [pelton.app/terms](https://pelton.app/terms)`,
-              ].join("\n")
-            );
+            // pelton.app, so the disclaimer has to be on the release itself.
+            // It is never dropped, whichever way the changelog is shortened.
+            const disclaimer = [
+              "---",
+              "",
+              "Pelton is free software under the GPL-3.0, provided without warranty and used at your own risk. It connects to your real mailboxes, deletions can be permanent, and Pelton is not a backup tool. Keep your own backup of anything you cannot afford to lose.",
+              "",
+              `Warranty and liability: [DISCLAIMER.md](https://github.com/${owner}/${repo}/blob/main/DISCLAIMER.md) - [pelton.app/terms](https://pelton.app/terms)`,
+            ].join("\n");
 
-            const body = parts.join("\n\n");
+            function render(entries) {
+              return assemble(entries).concat(disclaimer).join("\n\n");
+            }
+
+            let body = render(detailed);
+            if (body.length > BODY_LIMIT) {
+              core.warning(
+                `changelog came to ${body.length} characters, over the ${BODY_LIMIT} limit: falling back to one line per pull request`,
+              );
+              body = render(brief);
+            }
+            // last resort, so an unusual release still gets a draft.
+            if (body.length > BODY_LIMIT) {
+              core.warning(`changelog still ${body.length} characters: truncating`);
+              body = `${clip(body, BODY_LIMIT - disclaimer.length - 200)}\n\n${disclaimer}`;
+            }
 
             // getReleaseByTag only ever finds published releases, never
             // drafts, so a re-run would create a new duplicate draft each
