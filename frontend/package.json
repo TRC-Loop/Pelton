@@ -32,7 +32,7 @@
     "@replit/codemirror-vim": "^6.4.0",
     "@tabler/icons": "^3.46.0",
     "@tabler/icons-svelte": "^3.46.0",
-    "@tiptap/core": "^3.30.2",
+    "@tiptap/core": "^3.30.4",
     "@tiptap/extension-link": "^3.30.2",
     "@tiptap/pm": "^3.30.2",
     "@tiptap/starter-kit": "^3.30.2",
