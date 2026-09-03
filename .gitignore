@@ -12,6 +12,10 @@ frontend/package.json.md5
 /Pelton
 /Pelton.exe
 
+# nix build output symlink(s) (`nix build`, `packaging/nix/package.nix`)
+/result
+/result-*
+
 .DS_Store
 
 # Created by https://www.toptal.com/developers/gitignore/api/macos,windows,linux,go,node,visualstudiocode
