@@ -9,6 +9,10 @@ name: Checks
 # frontend type check went in with a green tick and only surfaced when someone
 # built by hand or when release.yml failed.
 #
+# main.go embeds all:frontend/dist, so nothing in Go compiles until the frontend
+# has been built. The frontend job therefore runs first and hands its dist to
+# the three Go jobs as an artifact, rather than each of them running vite again.
+#
 # Deliberately not here:
 #   * gofmt. Several files carry pre-existing drift (internal/desktop/bind_pgp.go,
 #     internal/desktop/bind_settings.go, internal/desktop/run.go,
@@ -42,75 +46,11 @@ env:
 
 jobs:
   # ---------------------------------------------------------------------------
-  # Linux build, vet and the whole test suite. webkit2_41 matches what the
-  # release and nightly workflows build Linux with, so this compiles the same
-  # code path they do.
-  # ---------------------------------------------------------------------------
-  backend:
-    name: Go build, vet and test
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-go@v5
-        with:
-          go-version: ${{ env.GO_VERSION }}
-
-      # the desktop package links against gtk and webkit through cgo, so the
-      # headers have to be present even to type-check it.
-      - name: Install system build dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev build-essential pkg-config
-
-      - name: Build
-        run: go build -tags webkit2_41 ./...
-
-      - name: Vet
-        run: go vet -tags webkit2_41 ./...
-
-      - name: Test
-        run: go test -tags webkit2_41 ./internal/...
-
-  # ---------------------------------------------------------------------------
-  # Windows compiles from Linux because the Windows backend is pure Go
-  # (go-webview2), no cgo and no toolchain needed. macOS does need cgo and a
-  # real SDK, so it gets its own runner.
-  # ---------------------------------------------------------------------------
-  cross-windows:
-    name: Windows compile
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-go@v5
-        with:
-          go-version: ${{ env.GO_VERSION }}
-
-      - name: Build for windows
-        env:
-          GOOS: windows
-          GOARCH: amd64
-          CGO_ENABLED: "0"
-        run: go build ./...
-
-  cross-darwin:
-    name: macOS compile
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-go@v5
-        with:
-          go-version: ${{ env.GO_VERSION }}
-
-      - name: Build for darwin
-        run: go build ./...
-
-  # ---------------------------------------------------------------------------
   # svelte-check has to come out clean. The type check is the only thing that
   # catches a broken hand-maintained wails binding, since those files are
   # written by hand and nothing generates or verifies them.
+  #
+  # This job also produces the dist the Go jobs embed.
   # ---------------------------------------------------------------------------
   frontend:
     name: Svelte check and build
@@ -136,3 +76,94 @@ jobs:
 
       - name: Build
         run: pnpm --dir frontend run build
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend/dist
+          retention-days: 1
+          if-no-files-found: error
+
+  # ---------------------------------------------------------------------------
+  # Linux build, vet and the whole test suite. webkit2_41 matches what the
+  # release and nightly workflows build Linux with, so this compiles the same
+  # code path they do.
+  # ---------------------------------------------------------------------------
+  backend:
+    name: Go build, vet and test
+    runs-on: ubuntu-latest
+    needs: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend/dist
+
+      # the desktop package links against gtk and webkit through cgo, so the
+      # headers have to be present even to type-check it.
+      - name: Install system build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev build-essential pkg-config
+
+      - name: Build
+        run: go build -tags webkit2_41 ./...
+
+      - name: Vet
+        run: go vet -tags webkit2_41 ./...
+
+      - name: Test
+        run: go test -tags webkit2_41 ./internal/...
+
+  # ---------------------------------------------------------------------------
+  # Windows compiles from Linux because the Windows backend is pure Go
+  # (go-webview2), no cgo and no toolchain needed. macOS does need cgo and a
+  # real SDK, so it gets its own runner.
+  # ---------------------------------------------------------------------------
+  cross-windows:
+    name: Windows compile
+    runs-on: ubuntu-latest
+    needs: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend/dist
+
+      - name: Build for windows
+        env:
+          GOOS: windows
+          GOARCH: amd64
+          CGO_ENABLED: "0"
+        run: go build ./...
+
+  cross-darwin:
+    name: macOS compile
+    runs-on: macos-latest
+    needs: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend/dist
+
+      - name: Build for darwin
+        run: go build ./...
