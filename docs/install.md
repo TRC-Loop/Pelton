@@ -41,6 +41,25 @@ Every release ships builds for macOS, Windows and Linux on the [GitHub releases 
 
     You will not get automatic updates this way; download the next release yourself or enable the update check in Settings, which compares versions against the GitHub releases API and nothing else.
 
+=== "Nix (flakes)"
+
+    Pelton ships a flake. Point it at a release tag, not the bare repo, or
+    you will get unreleased code off the default branch:
+
+    ```sh
+    nix run github:TRC-Loop/Pelton/v<version>
+    ```
+
+    or into your profile, for a `pelton` on `$PATH` and a desktop entry:
+
+    ```sh
+    nix profile install github:TRC-Loop/Pelton/v<version>
+    ```
+
+    The underlying derivation also lives at `packaging/nix/package.nix` for
+    anyone who would rather `callPackage` it into their own nixpkgs-based
+    config. Linux only for now.
+
 ## Build from source
 
 You need Go, Node with pnpm, and the Wails CLI matching the version pinned in `go.mod`:
