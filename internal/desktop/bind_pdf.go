@@ -6,8 +6,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-
-	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 // Exporting a message as a pdf. Wails v2 exposes no print or pdf api, and the
@@ -55,8 +53,7 @@ func (a *App) ExportMessagePrintView(id int64) error {
 	if err := os.WriteFile(path, []byte(doc), 0o600); err != nil {
 		return fmt.Errorf("pelton: write print view: %w", err)
 	}
-	runtime.BrowserOpenURL(a.ctx, "file://"+path)
-	return nil
+	return openPath(path)
 }
 
 // printMeta is the header block shown above the body in the print view.
