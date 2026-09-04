@@ -25,7 +25,7 @@ func (c *Client) MoveMessages(uids []imap.UID, mailbox string) error {
 	if len(uids) == 0 {
 		return nil
 	}
-	if c.raw.Mailbox() == nil {
+	if c.selectedMailbox() == nil {
 		return fmt.Errorf("imap: no mailbox selected for move")
 	}
 	if c.raw.Caps().Has(imap.CapMove) {
