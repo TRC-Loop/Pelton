@@ -215,7 +215,7 @@ The first release of a quarter (INCR `0`) drops the trailing `.0`, so it reads a
 ## <img src="https://api.iconify.design/tabler/messages.svg?color=white" width="26" style="vertical-align: -4px;"> Contact & Community
 
 * **Discord:** Join the discussion at [discord.gg/UzPNGZYy6V](https://discord.gg/UzPNGZYy6V)
-* **Email:** Reach out directly via [pelton@arne.sh](mailto:pelton@arne.sh)
+* **Email:** Reach out directly via [contact@pelton.app](mailto:contact@pelton.app)
 
 ## <img src="https://api.iconify.design/tabler/users.svg?color=white" width="26" style="vertical-align: -4px;"> Contributing
 
