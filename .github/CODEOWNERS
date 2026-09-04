@@ -1,0 +1,4 @@
+# Every path is owned by the maintainer, so any pull request gets a review
+# request automatically. Later, more specific lines win over earlier ones, so
+# anything added below this must be narrower than the catch-all.
+* @TRC-Loop
