@@ -9,7 +9,7 @@ Two ways, either is fine:
 
 - [Open a private security advisory](https://github.com/TRC-Loop/Pelton/security/advisories/new)
   on GitHub.
-- Email <pelton@arne.sh> with `security` in the subject.
+- Email <security@pelton.app>.
 
 Please include, as far as you can:
 
