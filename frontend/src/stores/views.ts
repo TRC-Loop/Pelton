@@ -5,6 +5,8 @@
 import { writable, get } from 'svelte/store'
 import type { View } from '../lib/types'
 import { listViews } from '../lib/api'
+import { selection, selectView } from './selection'
+import { t } from '../lib/i18n'
 
 export const views = writable<View[]>([])
 
@@ -34,10 +36,35 @@ export function closeViewEditor(): void {
 // underlying error.
 export async function loadViews(): Promise<void> {
   try {
-    views.set(await listViews())
+    const list = await listViews()
+    views.set(list)
+    leaveDeletedView(list)
   } catch {
+    // the list is emptied, but the selection is left alone: a request that
+    // failed says nothing about whether the view the user is reading still
+    // exists, and moving them off it would be worse than a momentarily empty
+    // sidebar.
     views.set([])
   }
+}
+
+// leaveDeletedView sends the list back to the unified inbox when the saved View
+// it is showing is no longer among the saved views.
+//
+// Deleting the view you are reading used to leave the selection pointing at it,
+// so the list kept querying a view that was gone while the sidebar row it came
+// from had disappeared. It lives here rather than next to the delete button
+// because every path that removes a view refreshes through loadViews, including
+// one deleted from the editor or in another window.
+function leaveDeletedView(list: View[]): void {
+  const sel = get(selection)
+  if (sel.kind !== 'savedView') {
+    return
+  }
+  if (list.some((v) => v.id === sel.viewId)) {
+    return
+  }
+  selectView('inbox', get(t)('sidebar.unifiedInbox'))
 }
 
 // upsertView merges a saved view into the store without a full reload, so the
