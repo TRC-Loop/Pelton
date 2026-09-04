@@ -20,6 +20,29 @@ import (
 // not open competing logins for the same account at once.
 var syncMu sync.Mutex
 
+const (
+	// idleRetry is how long an idle loop waits after a connection it did not
+	// expect to lose.
+	idleRetry = 15 * time.Second
+	// idleNoCredentialsRetry is how long it waits when the account has no
+	// password. Longer, because nothing changes until the user types one.
+	idleNoCredentialsRetry = 60 * time.Second
+)
+
+// idleRetryWait says how long to wait before opening an account's idle
+// connection again.
+//
+// A missing password used to end the loop for good. That made a mailbox
+// unfixable without a restart: the user typed the password, the account still
+// received nothing, and only the next launch brought it back. Waiting is the
+// whole point, since a password can arrive at any moment.
+func idleRetryWait(err error) time.Duration {
+	if errors.Is(err, errNoCredentials) {
+		return idleNoCredentialsRetry
+	}
+	return idleRetry
+}
+
 // startBackgroundServices launches the outbox worker and the initial sync plus
 // per-account idle loops. Credentials come from the keyring (added by the
 // wizard) with an environment fallback for the legacy cli account.
@@ -116,11 +139,22 @@ func (a *App) runInitialSyncAndIdle() {
 		if account.Local {
 			continue
 		}
-		if err := a.syncAccount(account); err != nil && !errors.Is(err, errNoCredentials) {
-			a.log.Error("initial sync", "account", account.Email, "err", err)
+		if err := a.syncAccount(account); err != nil {
+			// a missing password is not an error to shout about, but dropping it
+			// without a word left the one case that needs explaining with no
+			// trace at all, even with file logging on.
+			if errors.Is(err, errNoCredentials) {
+				a.log.Warn("mailbox has no password, not syncing", "account", account.Email)
+			} else {
+				a.log.Error("initial sync", "account", account.Email, "err", err)
+			}
 		}
 		goSafe("waiting for new mail", func() { a.idleLoop(account) })
 	}
+	// the marks from this pass are pushed like any other run's. without it a
+	// mailbox that failed its first sync stayed unmarked until some later run
+	// happened to end, which for a mailbox with no password is never.
+	a.emitAccountSyncStates()
 	// contacts ride along with the mail sync (#168). It is one cheap request
 	// per address book when nothing changed, and it runs after the mail so a
 	// slow contacts server never delays the inbox.
@@ -341,14 +375,13 @@ func (a *App) idleLoop(account storage.Account) {
 	ctx := a.sessionCtx()
 	for ctx.Err() == nil {
 		if err := a.idleSession(ctx, account); err != nil && ctx.Err() == nil {
-			if errors.Is(err, errNoCredentials) {
-				return
+			if !errors.Is(err, errNoCredentials) {
+				a.log.Error("idle session", "account", account.Email, "err", err)
 			}
-			a.log.Error("idle session", "account", account.Email, "err", err)
 			select {
 			case <-ctx.Done():
 				return
-			case <-time.After(15 * time.Second):
+			case <-time.After(idleRetryWait(err)):
 			}
 		}
 	}

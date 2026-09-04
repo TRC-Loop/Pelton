@@ -148,6 +148,11 @@ func (a *App) toProfileDTOs(profiles []mailimport.Profile) ([]ThunderbirdProfile
 // already configured are skipped. Passwords are not importable, so each new
 // account needs its password entered once before it can sync; the returned
 // count is how many were created.
+//
+// Each account is started the same way the wizard starts one. Without that an
+// imported account was inert: it never opened an idle connection, and nothing
+// recorded that it could not log in, so it carried no marker and the mailbox
+// looked healthy while no mail ever arrived in it.
 func (a *App) ImportThunderbirdAccounts(profilePath string, emails []string) (int, error) {
 	if err := a.ready(); err != nil {
 		return 0, err
@@ -168,6 +173,7 @@ func (a *App) ImportThunderbirdAccounts(profilePath string, emails []string) (in
 	}
 
 	created := 0
+	var started []int64
 	for _, acc := range profile.Accounts {
 		key := strings.ToLower(acc.Email)
 		if !want[key] || have[key] || acc.Kind != "imap" {
@@ -182,13 +188,32 @@ func (a *App) ImportThunderbirdAccounts(profilePath string, emails []string) (in
 			SMTPHost:    acc.SMTPHost,
 			SMTPPort:    acc.SMTPPort,
 		}
-		if _, err := a.store.CreateAccount(a.ctx, &account); err != nil {
+		id, err := a.store.CreateAccount(a.ctx, &account)
+		if err != nil {
 			return created, err
 		}
 		have[key] = true
+		started = append(started, id)
 		created++
 	}
+	// started after the loop rather than inside it, so a failure halfway through
+	// does not leave half the accounts syncing while the error says nothing was
+	// imported.
+	for _, id := range started {
+		if err := a.startImportedAccount(id); err != nil {
+			a.log.Error("start imported mailbox", "account", id, "err", err)
+		}
+	}
 	return created, nil
+}
+
+// startImportedAccount starts one freshly imported account, through the
+// App.startAccount seam so a test can see which accounts were started.
+func (a *App) startImportedAccount(accountID int64) error {
+	if a.startAccount != nil {
+		return a.startAccount(accountID)
+	}
+	return a.StartAccountSync(accountID)
 }
 
 // ChooseMailFiles opens a file picker for messages and archives to import and
