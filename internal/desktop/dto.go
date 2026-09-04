@@ -303,6 +303,19 @@ func toFolderDTO(f storage.Folder) FolderDTO {
 // mail cached but invisible to the unified views, and no list of localized or
 // provider-specific names would ever be complete. The manual override is the
 // escape hatch that does not depend on guessing (#186).
+// folderSelectable reports whether a folder can be opened on the server. A
+// \Noselect (or \NonExistent) folder is a container in the hierarchy, not a
+// mailbox: SELECT on one is refused, so sync has to leave it alone.
+func folderSelectable(f storage.Folder) bool {
+	for _, attr := range f.Attributes {
+		switch strings.ToLower(strings.TrimPrefix(attr, "\\")) {
+		case "noselect", "nonexistent":
+			return false
+		}
+	}
+	return true
+}
+
 func folderRole(f storage.Folder) string {
 	if role := f.RoleOverride; role != "" && validFolderRole(role) {
 		return role

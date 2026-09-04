@@ -244,7 +244,10 @@ func (a *App) syncFolders(client *pimap.Client, accountID int64) error {
 	// synced makes the bar lie (#173).
 	folders := make([]storage.Folder, 0, len(all))
 	for _, f := range all {
-		if !f.SyncExcluded {
+		// a container the server marks \Noselect holds no mail and cannot be
+		// selected, so syncing one fails every single time. It is kept as a row
+		// because the tree needs it as a parent, but it is not synced.
+		if !f.SyncExcluded && folderSelectable(f) {
 			folders = append(folders, f)
 		}
 	}
@@ -253,12 +256,22 @@ func (a *App) syncFolders(client *pimap.Client, accountID int64) error {
 	a.syncTally.begin(len(folders))
 
 	newTotal := 0
+	// a folder that fails does not stop the others: mail the rest of the account
+	// can still fetch is worth having. But the failure is carried out of here,
+	// because reporting the account as synced when a folder did not sync is what
+	// makes a mailbox go quiet with nothing to show for it.
+	var failedFolders []string
+	var firstFolderErr error
 	for i, f := range folders {
 		a.syncTally.enterFolder(i, f.Name)
 		a.emitSyncProgress(accountID, email, client.Addr(), a.syncTally.counts())
 		res, err := engine.SyncFolder(a.ctx, f)
 		if err != nil {
 			a.log.Error("sync folder", "folder", f.Name, "err", err)
+			failedFolders = append(failedFolders, f.Name)
+			if firstFolderErr == nil {
+				firstFolderErr = err
+			}
 			continue
 		}
 		if res.New > 0 {
@@ -285,7 +298,24 @@ func (a *App) syncFolders(client *pimap.Client, accountID int64) error {
 			goSafe("collecting addresses", a.harvestAddressBook)
 		}
 	}
-	return nil
+	return folderSyncError(failedFolders, len(folders), firstFolderErr)
+}
+
+// folderSyncError turns the folders that failed in one run into the error the
+// account's sync outcome records, or nil when they all got through.
+//
+// The first failure is wrapped rather than described, so the reason survives:
+// the ui classifies a sync failure by what the error is, and the detail dialog
+// shows the server's own words.
+func folderSyncError(failed []string, total int, first error) error {
+	if first == nil {
+		return nil
+	}
+	if len(failed) == 1 {
+		return fmt.Errorf("sync folder %q: %w", failed[0], first)
+	}
+	return fmt.Errorf("%d of %d folders failed to sync, starting with %q: %w",
+		len(failed), total, failed[0], first)
 }
 
 // findInboxFolder returns the account's INBOX folder row. IMAP's INBOX is a
