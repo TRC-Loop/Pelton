@@ -173,6 +173,13 @@ func (i *Index) Search(q Query) (Results, error) {
 	}
 
 	req := bleve.NewSearchRequestOptions(i.build(q), limit, offset, false)
+	// Score alone is not a total order. Equal scores are the normal case, not an
+	// edge case: every message in a thread shares a subject, and a newsletter
+	// scores the same every month. Bleve's order among equal scores is not
+	// stable between queries, so paging by offset could return one message on
+	// two pages and never return another at all. Date breaks the tie the way a
+	// mail client should, and the document id makes the order total.
+	req.SortBy([]string{"-_score", "-date", "_id"})
 	res, err := i.idx.Search(req)
 	if err != nil {
 		return Results{}, fmt.Errorf("search: query %q: %w", q.Text, err)
