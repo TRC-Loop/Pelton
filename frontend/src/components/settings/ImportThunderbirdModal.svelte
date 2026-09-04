@@ -30,6 +30,7 @@
   } from '../../lib/api'
   import { onImportProgress, type ImportProgressEvent } from '../../lib/events'
   import { loadSidebar } from '../../stores/accounts'
+  import { promptForMissingPasswords } from '../../stores/passwordprompt'
   import { toastError, toastSuccess, errorMessage } from '../../stores/toast'
   import { formatBytes } from '../../lib/format'
   import type { ThunderbirdProfile } from '../../lib/types'
@@ -180,6 +181,13 @@
       chosen = profiles.find((p) => p.path === chosen?.path) ?? chosen
       await loadSidebar()
       toastSuccess(`${created} ${get(t)('import.accountsAdded')}`)
+      // Thunderbird keeps its own passwords, so an imported mailbox arrives
+      // without one and cannot sync until it has one. Asking here, while the
+      // user is still setting up, is the difference between a mailbox that
+      // works and one that quietly never receives anything.
+      if (created > 0) {
+        await promptForMissingPasswords()
+      }
     } catch (err) {
       toastError(errorMessage(err))
     }

@@ -66,6 +66,11 @@ type App struct {
 	// learn it is to try, and a restart tries again. See bind_account_manage.go.
 	rejectedLogins   map[int64]struct{}
 	rejectedLoginsMu sync.Mutex
+	// startAccount runs an account's first sync and parks it on idle. It is a
+	// field only so a test can watch which accounts an import starts without
+	// the call reaching a real server or the os keyring. nil means
+	// StartAccountSync, which is what the app always uses.
+	startAccount func(accountID int64) error
 	// startedAt is when the process came up, for the process overlay's uptime.
 	startedAt time.Time
 	// runtimeReady is set once wails has handed us its context in startup.
