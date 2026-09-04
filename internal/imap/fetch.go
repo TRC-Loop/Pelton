@@ -78,20 +78,25 @@ func (c *Client) Select(mailbox string) (*Mailbox, error) {
 	// go-imap encodes non-ASCII names as modified UTF-7 when needed
 	data, err := c.raw.Select(mailbox, nil).Wait()
 	if err != nil {
+		c.setSelectedMailbox(nil)
 		return nil, fmt.Errorf("imap: select %q: %w", mailbox, err)
 	}
-	return &Mailbox{
+	m := &Mailbox{
 		Name:        mailbox,
 		NumMessages: data.NumMessages,
 		UIDNext:     data.UIDNext,
 		UIDValidity: data.UIDValidity,
-	}, nil
+	}
+	// recorded from the response we already hold rather than read back off the
+	// client afterwards, which is racy. See Client.selected.
+	c.setSelectedMailbox(m)
+	return m, nil
 }
 
 // FetchRecentHeaders returns up to limit recent messages, newest first. No
 // bodies are fetched, so it stays cheap on large mailboxes.
 func (c *Client) FetchRecentHeaders(limit int) ([]MessageHeader, error) {
-	mbox := c.raw.Mailbox()
+	mbox := c.selectedMailbox()
 	if mbox == nil {
 		return nil, fmt.Errorf("imap: no mailbox selected")
 	}
@@ -260,7 +265,7 @@ func (c *Client) FetchRawMessage(uid imap.UID) ([]byte, error) {
 // mailboxes CONDSTORE would let us ask only for what changed since last sync,
 // but a full compare is correct and is enough for now.
 func (c *Client) FetchAllFlags() ([]MessageHeader, error) {
-	mbox := c.raw.Mailbox()
+	mbox := c.selectedMailbox()
 	if mbox == nil {
 		return nil, fmt.Errorf("imap: no mailbox selected")
 	}

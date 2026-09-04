@@ -98,7 +98,7 @@ func (c *Client) expungeAll() error {
 // searchDeleted returns the uids currently carrying \Deleted in the selected
 // mailbox.
 func (c *Client) searchDeleted() ([]imap.UID, error) {
-	if c.raw.Mailbox() == nil {
+	if c.selectedMailbox() == nil {
 		return nil, fmt.Errorf("imap: no mailbox selected")
 	}
 	criteria := &imap.SearchCriteria{Flag: []imap.Flag{imap.FlagDeleted}}

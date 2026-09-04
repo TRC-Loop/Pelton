@@ -11,7 +11,7 @@ import (
 // header matches messageID. It backs undo-archive: after a move the message has a
 // new UID in the destination, so we relocate it by its stable rfc Message-ID.
 func (c *Client) SearchByMessageID(messageID string) ([]imap.UID, error) {
-	if c.raw.Mailbox() == nil {
+	if c.selectedMailbox() == nil {
 		return nil, fmt.Errorf("imap: no mailbox selected for search")
 	}
 	if messageID == "" {
@@ -32,7 +32,7 @@ func (c *Client) SearchByMessageID(messageID string) ([]imap.UID, error) {
 // walks a date range and fetches whatever is not cached yet. A mailbox must be
 // selected first.
 func (c *Client) SearchSince(since time.Time) ([]imap.UID, error) {
-	if c.raw.Mailbox() == nil {
+	if c.selectedMailbox() == nil {
 		return nil, fmt.Errorf("imap: no mailbox selected for search")
 	}
 	criteria := &imap.SearchCriteria{Since: since}

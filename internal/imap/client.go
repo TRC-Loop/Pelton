@@ -10,6 +10,7 @@ import (
 	"io"
 	"net"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/emersion/go-imap/v2"
@@ -94,6 +95,32 @@ type Client struct {
 	raw     *imapclient.Client
 	cfg     Config
 	updates chan MailboxUpdate
+
+	// selected is the mailbox Select last opened, guarded because the caller
+	// and go-imap's reader goroutine both touch it.
+	//
+	// go-imap's own Client.Mailbox() cannot be used for this. completeCommand
+	// closes the channel that unblocks Wait() before it assigns the client's
+	// mailbox, so Select().Wait() can return while Mailbox() is still nil and
+	// the very next call reports "no mailbox selected". The window is small but
+	// a sync selects a mailbox and fetches from it immediately, which is
+	// exactly the pattern that loses the race.
+	selectedMu sync.Mutex
+	selected   *Mailbox
+}
+
+// selectedMailbox returns the mailbox Select opened, or nil when none is open.
+func (c *Client) selectedMailbox() *Mailbox {
+	c.selectedMu.Lock()
+	defer c.selectedMu.Unlock()
+	return c.selected
+}
+
+// setSelectedMailbox records what Select opened.
+func (c *Client) setSelectedMailbox(m *Mailbox) {
+	c.selectedMu.Lock()
+	defer c.selectedMu.Unlock()
+	c.selected = m
 }
 
 // Addr is the server this client is connected to, as host:port. Sync puts it in
