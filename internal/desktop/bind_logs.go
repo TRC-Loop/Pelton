@@ -7,8 +7,6 @@ import (
 	"runtime"
 	"strings"
 
-	wailsruntime "github.com/wailsapp/wails/v2/pkg/runtime"
-
 	"github.com/TRC-Loop/Pelton/internal/logging"
 )
 
@@ -71,8 +69,7 @@ func (a *App) OpenLogFolder() error {
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return err
 	}
-	wailsruntime.BrowserOpenURL(a.ctx, "file://"+dir)
-	return nil
+	return openPath(dir)
 }
 
 // OpenCrashReport opens the pending crash file in whatever the system opens
@@ -83,7 +80,9 @@ func (a *App) OpenCrashReport() error {
 	if !ok {
 		return errNoCrashReport
 	}
-	wailsruntime.BrowserOpenURL(a.ctx, "file://"+crash.Path)
+	if err := openPath(crash.Path); err != nil {
+		return err
+	}
 	return logging.AcknowledgeCrashes(dir)
 }
 

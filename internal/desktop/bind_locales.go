@@ -186,8 +186,7 @@ func (a *App) OpenLocalesFolder() error {
 	if err != nil {
 		return err
 	}
-	wailsruntime.BrowserOpenURL(a.ctx, "file://"+dir)
-	return nil
+	return openPath(dir)
 }
 
 // SaveLocaleTemplate writes a translation template (built by the frontend
