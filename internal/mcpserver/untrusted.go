@@ -12,9 +12,10 @@ import (
 // Everything a mail message carries was written by whoever sent it. Subjects,
 // sender names and bodies are attacker-controlled text, and a message can be
 // written to look like an instruction to whatever agent ends up reading it.
-// Pelton's own tools are read-only, so nothing here can be made to act, but an
-// agent holding Pelton's tools alongside write-capable ones is a path from a
-// stranger's email into a real action.
+// Pelton's own write tools make that worse than it used to be: whatever the
+// user has granted is reachable from text a stranger wrote, and so is any
+// write-capable tool the agent holds from elsewhere. Either way it is a path
+// from a stranger's email into a real action.
 //
 // So mail content is handed over labelled: a notice on every result that
 // carries it, fenced delimiters around each body, and metadata a client can
