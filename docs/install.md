@@ -43,16 +43,17 @@ Every release ships builds for macOS, Windows and Linux on the [GitHub releases 
 
 === "Nix (flakes)"
 
-    Pelton ships a flake. With flakes enabled:
+    Pelton ships a flake. Point it at a release tag, not the bare repo, or
+    you will get unreleased code off the default branch:
 
     ```sh
-    nix run github:TRC-Loop/Pelton
+    nix run github:TRC-Loop/Pelton/v<version>
     ```
 
     or into your profile, for a `pelton` on `$PATH` and a desktop entry:
 
     ```sh
-    nix profile install github:TRC-Loop/Pelton
+    nix profile install github:TRC-Loop/Pelton/v<version>
     ```
 
     The underlying derivation also lives at `packaging/nix/package.nix` for

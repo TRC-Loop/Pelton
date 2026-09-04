@@ -1,6 +1,6 @@
 # Pelton - email client (Wails + Svelte)
 
-.PHONY: build build-mac build-win build-linux dmg run run-nightly app-dev dev clean tidy deps licenses icon disclaimer
+.PHONY: build build-mac build-win build-linux build-nix dmg run run-nightly app-dev dev clean tidy deps licenses icon disclaimer
 
 # version string injected into the binary. it prefers the latest git tag (with a
 # short commit suffix on untagged commits) and falls back to "dev". it is wired
@@ -49,6 +49,11 @@ build-linux:
 	wails build -platform linux/amd64 -ldflags "$(LDFLAGS)"
 	cp build/linux/pelton.desktop build/bin/pelton.desktop
 	@echo "linux binary + pelton.desktop in build/bin (install the .desktop and an icon named 'pelton')"
+
+# nix packaging build: same as build-linux but tagged for nixpkgs'
+# webkitgtk_4_1 (nixpkgs dropped the older webkit2gtk 4.0 build)
+build-nix:
+	wails build -tags webkit2_41 -ldflags "$(LDFLAGS)" -o pelton
 
 # run the whole app in dev mode: make sure go + npm deps are present, regenerate
 # the typescript bindings from the go methods, then launch wails dev with hot

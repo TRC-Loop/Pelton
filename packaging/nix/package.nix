@@ -7,6 +7,7 @@
   pnpm_10,
   nodejs_22,
   wails,
+  gnumake,
   pkg-config,
   gtk3,
   webkitgtk_4_1,
@@ -30,7 +31,7 @@ buildGoModule (finalAttrs: {
 
   overrideModAttrs = {
     preBuild = ''
-      wails build -tags webkit2_41 -o pelton
+      make build-nix VERSION=${finalAttrs.version}
     '';
   };
 
@@ -40,6 +41,7 @@ buildGoModule (finalAttrs: {
     pnpm_10
     nodejs_22
     wails
+    gnumake
   ]
   ++ lib.optionals stdenv.hostPlatform.isLinux [
     wrapGAppsHook3
@@ -67,7 +69,7 @@ buildGoModule (finalAttrs: {
   buildPhase = ''
     runHook preBuild
 
-    wails build -tags webkit2_41 -ldflags "-X main.version=${finalAttrs.version}" -o pelton
+    make build-nix VERSION=${finalAttrs.version}
 
     runHook postBuild
   '';
@@ -78,8 +80,8 @@ buildGoModule (finalAttrs: {
     runHook preInstall
 
     install -Dm755 build/bin/pelton $out/bin/pelton
-    install -Dm644 build/linux/pelton.desktop $out/share/applications/sh.arne.Pelton.desktop
-    install -Dm644 build/linux/pelton.metainfo.xml $out/share/metainfo/sh.arne.Pelton.metainfo.xml
+    install -Dm644 build/linux/pelton.desktop $out/share/applications/pelton.desktop
+    install -Dm644 build/linux/pelton.metainfo.xml $out/share/metainfo/pelton.metainfo.xml
     install -Dm644 build/icons/pelton-512.png $out/share/icons/hicolor/512x512/apps/pelton.png
 
     runHook postInstall
@@ -94,7 +96,7 @@ buildGoModule (finalAttrs: {
   meta = {
     description = "Privacy-focused, cross-platform desktop email client";
     homepage = "https://pelton.app";
-    changelog = "https://github.com/TRC-Loop/Pelton/releases/tag/v${finalAttrs.version}";
+    changelog = "https://github.com/TRC-Loop/Pelton/releases/tag/v${lib.head (lib.splitString "+" finalAttrs.version)}";
     license = lib.licenses.gpl3Plus;
     platforms = lib.platforms.linux;
     mainProgram = "pelton";
