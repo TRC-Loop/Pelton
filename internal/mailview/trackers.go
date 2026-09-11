@@ -351,6 +351,34 @@ func stripRemoteImages(html string) string {
 	return remoteBackgroundAttrPattern.ReplaceAllString(out, "")
 }
 
+// mediaElementPattern matches a whole video or audio element, its inner source
+// elements and all. Unlike img these have a closing tag, so the contents go
+// with them rather than being left loose in the body.
+var mediaElementPattern = regexp.MustCompile(`(?is)<video\b[^>]*>.*?</\s*video\s*>|<audio\b[^>]*>.*?</\s*audio\s*>|<(?:video|audio)\b[^>]*/?>`)
+
+// stripRemoteMedia removes a video or audio element that would stream from a
+// remote server, for the same reason stripRemoteImages removes a remote image:
+// until the reader has asked for remote content, nothing in a message may
+// reach out. The whole element goes rather than just its source, since a
+// player with nothing to play is worse than no player.
+//
+// A source inside the element counts as well as the element's own: mail
+// offering the same clip in several formats carries the url on those instead.
+func stripRemoteMedia(html string) string {
+	if html == "" {
+		return html
+	}
+	return mediaElementPattern.ReplaceAllStringFunc(html, func(tag string) string {
+		for _, m := range srcAttrPattern.FindAllStringSubmatch(tag, -1) {
+			src := strings.ToLower(strings.TrimSpace(stdhtml.UnescapeString(m[1] + m[2] + m[3])))
+			if strings.HasPrefix(src, "http://") || strings.HasPrefix(src, "https://") {
+				return ""
+			}
+		}
+		return tag
+	})
+}
+
 // remoteBackgroundAttrPattern matches a background="http(s)://..." attribute,
 // the old table-cell way of loading an image.
 var remoteBackgroundAttrPattern = regexp.MustCompile(`(?i)\sbackground\s*=\s*(?:"https?://[^"]*"|'https?://[^']*'|https?://[^\s>]+)`)

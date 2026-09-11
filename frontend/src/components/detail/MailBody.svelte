@@ -98,6 +98,7 @@
   body{padding:4px 2px;word-wrap:break-word;overflow-wrap:break-word;}
   a{color:#1a56db;}
   img{max-width:100%;height:auto;}
+  video{max-width:100%;height:auto;}
   blockquote{margin:0 0 0 8px;padding-left:10px;border-left:2px solid #94a3b8;color:#55606c;}
   table{max-width:100%;}
   pre{white-space:pre-wrap;}
@@ -108,7 +109,12 @@
   .pelton-vt-error{color:#9a6700;}
   .pelton-phish{display:inline-block;margin-left:3px;font-weight:700;font-size:0.85em;color:#c0392b;cursor:default;}`
     const imgSrc = allowRemote ? 'data: https: http:' : 'data:'
-    const csp = `default-src 'none'; img-src ${imgSrc}; style-src 'unsafe-inline'; font-src data:; script-src 'nonce-${nonce}'`
+    // media rides on the same choice as images: a message that embeds a video
+    // can only reach out once the reader has allowed remote content for it.
+    // The sanitizer has already removed remote media before that point, so this
+    // is the second of the two locks rather than the only one.
+    const mediaSrc = allowRemote ? 'data: https: http:' : 'data:'
+    const csp = `default-src 'none'; img-src ${imgSrc}; media-src ${mediaSrc}; style-src 'unsafe-inline'; font-src data:; script-src 'nonce-${nonce}'`
     const cspMeta = `<meta http-equiv="Content-Security-Policy" content="${csp}">`
     const open = '<sty' + 'le>'
     const close = '</sty' + 'le>'

@@ -107,6 +107,21 @@ func buildPolicy(allowRemote, allowFonts bool) *bluemonday.Policy {
 		p.AllowAttrs("color", "size").OnElements("font")
 	}
 
+	// video and audio a message embeds itself. autoplay is deliberately not in
+	// the list: a message may offer to play, never start on its own. poster is
+	// left out too, because bluemonday only scheme-checks src on these elements,
+	// so a poster url would reach the renderer unchecked.
+	//
+	// These are remote content like an image, and they follow the same rule: the
+	// url schemes below strip an http(s) source until the reader allows remote
+	// content, and Sanitize takes the whole element with it so no dead player is
+	// left behind.
+	p.AllowElements("video", "audio", "source")
+	p.AllowAttrs("controls", "loop", "muted", "preload", "width", "height").OnElements("video")
+	p.AllowAttrs("controls", "loop", "muted", "preload").OnElements("audio")
+	p.AllowAttrs("src").OnElements("video", "audio", "source")
+	p.AllowAttrs("type").OnElements("source")
+
 	// tables are heavily used by html mail.
 	p.AllowTables()
 
@@ -150,7 +165,7 @@ func Sanitize(html string, allowRemote, allowFonts bool) string {
 	if allowRemote {
 		return p.Sanitize(html)
 	}
-	return p.Sanitize(stripRemoteImages(html))
+	return p.Sanitize(stripRemoteMedia(stripRemoteImages(html)))
 }
 
 // HasRemoteContent reports whether the raw html references any remote http(s)
