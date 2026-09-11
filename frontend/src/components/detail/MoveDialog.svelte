@@ -50,8 +50,15 @@
     .filter((f) => (query.trim() ? f.name.toLowerCase().includes(query.toLowerCase()) : true))
 
   async function move(folder: Folder): Promise<void> {
-    const targets = $moveTargets
-    if (targets.length === 0 || busy) {
+    // a selection can span folders, so the picked one may already hold some of
+    // the targets. Those are left alone: the move is refused for them, and the
+    // rows would have left the list for a move that never happened.
+    if (busy) {
+      return
+    }
+    const targets = $moveTargets.filter((m) => m.folderId !== folder.id)
+    if (targets.length === 0) {
+      closeMove()
       return
     }
     busy = true

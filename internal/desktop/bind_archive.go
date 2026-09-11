@@ -65,15 +65,19 @@ func (a *App) MoveMessage(id, destFolderID int64) (ArchiveUndoDTO, error) {
 }
 
 // moveMessageTo performs the server move of a cached message to dest, then drops
-// the local row and its files. It is the shared core of archive and move. Moving
-// to the message's current folder is a no-op.
+// the local row and its files. It is the shared core of archive and move.
+//
+// Asking for a move into the folder the message already sits in is an error
+// rather than a silent success: the caller drops the row from the list on
+// success, so reporting one for a move that never happened made the message
+// look deleted until the next sync brought it back.
 func (a *App) moveMessageTo(m *storage.Message, dest storage.Folder) (ArchiveUndoDTO, error) {
 	source, err := a.store.GetFolder(a.ctx, m.FolderID)
 	if err != nil {
 		return ArchiveUndoDTO{}, err
 	}
 	if dest.ID == source.ID {
-		return ArchiveUndoDTO{}, nil // already there
+		return ArchiveUndoDTO{}, fmt.Errorf("pelton: this message is already in %s", dest.Name)
 	}
 	account, err := a.store.GetAccount(a.ctx, m.AccountID)
 	if err != nil {
