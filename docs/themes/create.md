@@ -175,10 +175,10 @@ Publishing a theme is a manual step, there's no in-app upload button, you submit
 - Add a `preview.png` screenshot if you don't already have one, and write your theme's own `README.md`, replacing the template's instructions.
 - Keep the `LICENSE` file (the template's is CC0, swap it for your own if you want a different license for the theme itself).
 
-Your theme's folder (`README.md`, `LICENSE`, `my-theme.peltontheme`, `preview.png`) needs to land inside a `themes/my-theme/` folder in a clone of [peltonapp/pelton-themes](https://github.com/peltonapp/pelton-themes), the gallery repo, alongside `source/`:
+Your theme's folder (`README.md`, `LICENSE`, `my-theme.peltontheme`, `preview.png`) needs to land inside a `themes/my-theme/` folder in a clone of [peltonapp/themes](https://github.com/peltonapp/themes), the gallery repo, alongside `source/`:
 
 ```bash
-git clone https://github.com/peltonapp/pelton-themes.git
+git clone https://github.com/peltonapp/themes.git
 cp -r ../my-theme pelton-themes/themes/my-theme
 cd pelton-themes
 python3 scripts/validate_theme.py themes/my-theme
@@ -189,7 +189,7 @@ python3 scripts/validate_theme.py themes/my-theme
 From there, pick one of two ways in:
 
 - **Pull request** (preferred if you're comfortable with git): commit `themes/my-theme/` and open a PR. CI validates it again and a maintainer reviews, then generates a metadata header (version, compatibility, author, license) above your README content automatically.
-- **Issue form**: open a ["Submit a theme"](https://github.com/peltonapp/pelton-themes/issues/new?template=submit_theme.yml) issue and attach your files, a maintainer turns it into a PR for you. GitHub won't let you attach a `.peltontheme` file directly to an issue, since it's already a zip, rename it to `.zip` before attaching (or drop it inside a new `.zip`), the repo's CI renames it back automatically once it lands.
+- **Issue form**: open a ["Submit a theme"](https://github.com/peltonapp/themes/issues/new?template=submit_theme.yml) issue and attach your files, a maintainer turns it into a PR for you. GitHub won't let you attach a `.peltontheme` file directly to an issue, since it's already a zip, rename it to `.zip` before attaching (or drop it inside a new `.zip`), the repo's CI renames it back automatically once it lands.
 
 Once merged, your theme shows up on [themes.pelton.app](https://themes.pelton.app) for anyone to install.
 

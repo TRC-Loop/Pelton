@@ -22,8 +22,8 @@ description: "The full contributor guidelines for Pelton: ways to help, the code
 
 **There are multiple ways you can Contribute to the Pelton Project:**
 
-1. [Submit a Theme ↗](https://github.com/peltonapp/pelton-themes/issues/new?template=submit_theme.yml)
-2. [Contribute to the Website (pelton.app) ↗](https://github.com/peltonapp/pelton.app)
+1. [Submit a Theme ↗](https://github.com/peltonapp/themes/issues/new?template=submit_theme.yml)
+2. [Contribute to the Website (pelton.app) ↗](https://github.com/peltonapp/website)
 3. [Submitting a Feature (Request)](https://github.com/peltonapp/Pelton/issues)
 4. [Reporting a Bug](https://github.com/peltonapp/Pelton/issues)
 5. [Requesting a Language or translating Pelton](https://github.com/peltonapp/Pelton/issues)

@@ -43,7 +43,7 @@ Out of scope are the security practices of the email providers you connect to,
 issues that require an attacker to already have full access to your unlocked
 device, and the content of third-party themes or MCP servers you install
 yourself. Reports about the website belong in the
-[pelton.app repository](https://github.com/peltonapp/pelton.app), same contact.
+[pelton.app repository](https://github.com/peltonapp/website), same contact.
 
 ## What Pelton does not do
 
